@@ -15,9 +15,9 @@
       </div>
     </div>
     <div class="form-row">
-      <div><label>Marca</label><input name="marca"></div>
-      <div><label>Modelo</label><input name="modelo"></div>
-      <div><label>Versión</label><input name="version"></div>
+      <div><label>Marca</label><select id="marca" name="marca" data-placeholder-libre="Marca nueva"></select></div>
+      <div><label>Modelo</label><select id="modelo" name="modelo" data-placeholder-libre="Modelo nuevo"></select></div>
+      <div><label>Versión</label><select id="version" name="version" data-placeholder-libre="Versión nueva"></select></div>
       <div><label>Año</label><input type="number" name="anio"></div>
     </div>
     <div class="form-row">
@@ -29,4 +29,9 @@
     <button class="btn btn-primary" style="margin-top:20px;" type="submit">Publicar</button>
   </form>
 </div>
+<script src="{{ url_for('static', filename='js/catalogo.js') }}"></script>
+<script>
+  const catalogo = {{ catalogo_json | safe }};
+  initCatalogoSelects(catalogo, 'marca', 'modelo', 'version');
+</script>
 {% endblock %}

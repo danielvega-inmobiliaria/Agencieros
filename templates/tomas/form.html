@@ -2,26 +2,19 @@
 {% block title %}Nueva toma — Agencieros{% endblock %}
 {% block header %}Ficha de inspección — Toma de vehículo{% endblock %}
 {% block content %}
-<div class="panel">
-  <form method="post">
+<form method="post" id="tomaForm">
+  <div class="panel">
     <div class="form-row">
-      <div><label>Marca</label><input name="marca" value="{{ prefill.marca }}"></div>
-      <div><label>Modelo</label><input name="modelo" value="{{ prefill.modelo }}"></div>
-      <div><label>Versión</label><input name="version" value="{{ prefill.version }}"></div>
+      <div><label>Marca</label><select id="marca" name="marca" data-placeholder-libre="Marca nueva"></select></div>
+      <div><label>Modelo</label><select id="modelo" name="modelo" data-placeholder-libre="Modelo nuevo"></select></div>
+      <div><label>Versión</label><select id="version" name="version" data-placeholder-libre="Versión nueva"></select></div>
       <div><label>Año</label><input type="number" name="anio" value="{{ prefill.anio }}"></div>
       <div><label>Evaluador</label><input name="evaluador"></div>
     </div>
-  </form>
-</div>
+  </div>
 
-<div class="panel">
-  <h2>Puntos a evaluar</h2>
-  <form method="post" id="tomaForm">
-    <input type="hidden" name="marca" value="{{ prefill.marca }}">
-    <input type="hidden" name="modelo" value="{{ prefill.modelo }}">
-    <input type="hidden" name="version" value="{{ prefill.version }}">
-    <input type="hidden" name="anio" value="{{ prefill.anio }}">
-    <input type="hidden" name="evaluador" id="evaluador_hidden">
+  <div class="panel">
+    <h2>Puntos a evaluar</h2>
     <table>
       <tr><th>Punto</th><th>Calificación</th></tr>
       {% for key, label in puntos %}
@@ -38,12 +31,15 @@
     <label>Observaciones generales</label>
     <textarea name="observaciones"></textarea>
     <button class="btn btn-primary" style="margin-top:20px;" type="submit">Guardar toma</button>
-  </form>
-</div>
+  </div>
+</form>
+<script src="{{ url_for('static', filename='js/catalogo.js') }}"></script>
 <script>
-  // Copiamos el evaluador del primer form al submit del segundo (misma página, dos forms por prolijidad visual).
-  document.getElementById('tomaForm').addEventListener('submit', function () {
-    document.getElementById('evaluador_hidden').value = document.querySelector('input[name="evaluador"]').value;
+  const catalogo = {{ catalogo_json | safe }};
+  initCatalogoSelects(catalogo, 'marca', 'modelo', 'version', {
+    marca: {{ prefill.marca | tojson }},
+    modelo: {{ prefill.modelo | tojson }},
+    version: {{ prefill.version | tojson }}
   });
 </script>
 {% endblock %}

@@ -299,3 +299,43 @@ def execute(sql, args=()):
     cur = db.execute(sql, args)
     db.commit()
     return cur.lastrowid
+
+
+def obtener_catalogo():
+    """Universo de Marca/Modelo/Versión ya usados en toda la app (precios_base
+    + vehículos + pedidos + red + tomas + tasaciones), para que todos los
+    formularios ofrezcan siempre las mismas opciones y no se generen
+    duplicados por mayúsculas, tildes o espacios distintos.
+
+    Devuelve {marca: {modelo: [versiones]}}. Se recalcula en cada request
+    (context_processor en app.py) así una marca/modelo/versión nueva cargada
+    en cualquier módulo queda disponible para elegir en el resto al toque.
+    """
+    filas = query(
+        """
+        SELECT marca, modelo, version FROM precios_base
+        UNION SELECT marca, modelo, version FROM vehiculos
+            WHERE marca IS NOT NULL AND TRIM(marca) != ''
+        UNION SELECT marca, modelo, version FROM pedidos_clientes
+            WHERE marca IS NOT NULL AND TRIM(marca) != ''
+        UNION SELECT permuta_marca, permuta_modelo, permuta_version FROM pedidos_clientes
+            WHERE permuta_marca IS NOT NULL AND TRIM(permuta_marca) != ''
+        UNION SELECT marca, modelo, version FROM red_publicaciones
+            WHERE marca IS NOT NULL AND TRIM(marca) != ''
+        UNION SELECT marca, modelo, version FROM tomas_vehiculo
+            WHERE marca IS NOT NULL AND TRIM(marca) != ''
+        UNION SELECT marca, modelo, version FROM tasaciones
+            WHERE marca IS NOT NULL AND TRIM(marca) != ''
+        """
+    )
+    catalogo = {}
+    for fila in filas:
+        marca, modelo, version = fila["marca"], fila["modelo"], fila["version"]
+        if not marca:
+            continue
+        modelos = catalogo.setdefault(marca, {})
+        if modelo:
+            versiones = modelos.setdefault(modelo, [])
+            if version and version not in versiones:
+                versiones.append(version)
+    return catalogo

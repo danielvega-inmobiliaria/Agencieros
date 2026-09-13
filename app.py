@@ -1,7 +1,8 @@
+import json
 import os
 from flask import Flask, redirect, url_for, session
 
-from database import init_db, close_db
+from database import init_db, close_db, obtener_catalogo
 
 
 def create_app():
@@ -34,6 +35,15 @@ def create_app():
     app.register_blueprint(tasacion_bp)
     app.register_blueprint(finanzas_bp)
     app.register_blueprint(red_bp)
+
+    @app.context_processor
+    def _inject_catalogo():
+        # Catálogo unificado de Marca/Modelo/Versión (ver database.obtener_catalogo)
+        # disponible en todos los templates para armar los selects en cascada.
+        try:
+            return {"catalogo_json": json.dumps(obtener_catalogo(), ensure_ascii=False)}
+        except Exception:
+            return {"catalogo_json": "{}"}
 
     @app.before_request
     def _require_login():

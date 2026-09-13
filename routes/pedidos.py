@@ -1,3 +1,5 @@
+from datetime import date
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 
 from database import query, execute
@@ -46,15 +48,33 @@ def _buscar_matches_permuta(marca, modelo, excluir_pedido_id=None):
     return propios, red
 
 
+def _con_fecha_y_dias(pedido):
+    """Convierte un Row de pedidos_clientes en dict, agregando fecha en
+    formato DD/MM/YYYY y los días transcurridos desde que se cargó —
+    para poder evaluar de un vistazo cuánto tiempo lleva cada pedido."""
+    d = dict(pedido)
+    d["fecha_str"] = "-"
+    d["dias_transcurridos"] = None
+    if d.get("created_at"):
+        try:
+            fecha = date.fromisoformat(d["created_at"][:10])
+            d["fecha_str"] = fecha.strftime("%d/%m/%Y")
+            d["dias_transcurridos"] = (date.today() - fecha).days
+        except ValueError:
+            pass
+    return d
+
+
 @bp.route("/")
 def index():
     estado_filtro = request.args.get("estado", "buscando")
     if estado_filtro == "todos":
-        pedidos = query("SELECT * FROM pedidos_clientes ORDER BY created_at DESC")
+        pedidos_raw = query("SELECT * FROM pedidos_clientes ORDER BY created_at DESC")
     else:
-        pedidos = query(
+        pedidos_raw = query(
             "SELECT * FROM pedidos_clientes WHERE estado = ? ORDER BY created_at DESC", (estado_filtro,)
         )
+    pedidos = [_con_fecha_y_dias(p) for p in pedidos_raw]
     return render_template(
         "pedidos/index.html",
         pedidos=pedidos,
