@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Stock — Agencieros{% endblock %}
+{% block header %}Stock de vehículos{% endblock %}
+{% block content %}
+<div class="tabs">
+  <a class="tab {{ 'active' if estado_filtro == 'todos' else '' }}" href="{{ url_for('stock.index', estado='todos') }}">Todos ({{ conteos.values()|sum }})</a>
+  {% for e in estados %}
+  <a class="tab {{ 'active' if estado_filtro == e else '' }}" href="{{ url_for('stock.index', estado=e) }}">{{ estado_label[e] }} ({{ conteos.get(e, 0) }})</a>
+  {% endfor %}
+  <div style="margin-left:auto; display:flex; gap:8px;">
+    <form method="post" action="{{ url_for('stock.sincronizar') }}">
+      <button class="btn btn-secondary btn-sm" type="submit">↻ Sincronizar desde STOCK</button>
+    </form>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('stock.nuevo') }}">+ Cargar vehículo</a>
+  </div>
+</div>
+
+<div class="panel">
+  <table>
+    <tr><th>Vehículo</th><th>Año</th><th>Km</th><th>Estado</th><th>Publicado</th><th></th></tr>
+    {% for v in vehiculos %}
+    <tr>
+      <td>{{ v.marca }} {{ v.modelo }} {{ v.version }}</td>
+      <td>{{ v.anio }}</td>
+      <td>{{ "{:,.0f}".format(v.km).replace(",", ".") if v.km else '-' }}</td>
+      <td><span class="badge {{ v.estado }}">{{ estado_label[v.estado] }}</span></td>
+      <td>${{ "{:,.0f}".format(v.valor_publicado or 0).replace(",", ".") }}</td>
+      <td><a class="btn btn-secondary btn-sm" href="{{ url_for('stock.detalle', vehiculo_id=v.id) }}">Ver</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6">No hay vehículos en este estado.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

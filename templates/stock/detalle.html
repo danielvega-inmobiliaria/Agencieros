@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ vehiculo.marca }} {{ vehiculo.modelo }} — Agencieros{% endblock %}
+{% block header %}{{ vehiculo.marca }} {{ vehiculo.modelo }} {{ vehiculo.version }} ({{ vehiculo.anio }}){% endblock %}
+{% block content %}
+<div class="grid-2">
+  <div class="panel">
+    <h2>Ficha del vehículo <span class="badge {{ vehiculo.estado }}">{{ vehiculo.estado.replace('_',' ') }}</span></h2>
+    <table>
+      <tr><td>Kilómetros</td><td>{{ "{:,.0f}".format(vehiculo.km).replace(",", ".") if vehiculo.km else '-' }}</td></tr>
+      <tr><td>Combustible</td><td>{{ vehiculo.combustible or '-' }}</td></tr>
+      <tr><td>Caja</td><td>{{ vehiculo.caja or '-' }}</td></tr>
+      <tr><td>Color</td><td>{{ vehiculo.color or '-' }}</td></tr>
+      <tr><td>Dominio</td><td>{{ vehiculo.dominio or '-' }}</td></tr>
+      {% if vehiculo.ubicacion %}<tr><td>Ubicación</td><td>{{ vehiculo.ubicacion }}</td></tr>{% endif %}
+      {% if vehiculo.estado_general %}<tr><td>Estado general</td><td>{{ vehiculo.estado_general }}</td></tr>{% endif %}
+      <tr><td>Fecha de ingreso</td><td>{{ vehiculo.fecha_ingreso }}</td></tr>
+      {% if vehiculo.fecha_venta %}<tr><td>Fecha de venta</td><td>{{ vehiculo.fecha_venta }}</td></tr>{% endif %}
+    </table>
+    {% if vehiculo.equipamiento %}<p><b>Equipamiento:</b> {{ vehiculo.equipamiento }}</p>{% endif %}
+    {% if vehiculo.observaciones %}<p><b>Observaciones:</b> {{ vehiculo.observaciones }}</p>{% endif %}
+    {% if vehiculo.documentacion %}<p><b>Documentación:</b> {{ vehiculo.documentacion }}</p>{% endif %}
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('stock.editar', vehiculo_id=vehiculo.id) }}">Editar</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('tomas.nueva', marca=vehiculo.marca, modelo=vehiculo.modelo, version=vehiculo.version, anio=vehiculo.anio) }}">Hacer toma / inspección</a>
+  </div>
+
+  <div class="panel">
+    <h2>Control económico</h2>
+    <div class="stat-row">
+      <div class="stat"><div class="n">${{ "{:,.0f}".format(vehiculo.valor_compra or 0).replace(",", ".") }}</div><div class="l">Valor de compra</div></div>
+      <div class="stat"><div class="n">${{ "{:,.0f}".format(vehiculo.gastos or 0).replace(",", ".") }}</div><div class="l">Gastos / reparaciones</div></div>
+      <div class="stat"><div class="n">${{ "{:,.0f}".format(vehiculo.valor_publicado or 0).replace(",", ".") }}</div><div class="l">Precio publicado{% if vehiculo.condiciones_pago %}<br>{{ vehiculo.condiciones_pago }}{% endif %}</div></div>
+      {% if vehiculo.valor_vendido %}<div class="stat"><div class="n">${{ "{:,.0f}".format(vehiculo.valor_vendido).replace(",", ".") }}</div><div class="l">Precio vendido</div></div>{% endif %}
+    </div>
+    <hr style="border-color:var(--border); margin:18px 0;">
+    <div class="stat-row">
+      <div class="stat"><div class="n">${{ "{:,.0f}".format(rent.costo_total).replace(",", ".") }}</div><div class="l">Costo total</div></div>
+      <div class="stat"><div class="n" style="color: {{ 'var(--green)' if rent.ganancia_bruta >= 0 else 'var(--red)' }};">${{ "{:,.0f}".format(rent.ganancia_bruta).replace(",", ".") }}</div><div class="l">Ganancia {{ 'estimada' if vehiculo.estado != 'vendido' else 'neta' }}</div></div>
+      <div class="stat"><div class="n">{{ "%.1f"|format(rent.rentabilidad_pct) }}%</div><div class="l">Rentabilidad</div></div>
+      <div class="stat"><div class="n">{{ rent.dias_en_stock if rent.dias_en_stock is not none else '-' }}</div><div class="l">Días en stock</div></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,277 @@
+import os
+import sqlite3
+from datetime import date
+from flask import g
+from werkzeug.security import generate_password_hash
+
+DB_PATH = os.path.join(os.path.dirname(__file__), "data", "agencieros.db")
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS usuarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    nombre TEXT,
+    agencia_nombre TEXT,
+    is_admin INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS vehiculos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    marca TEXT NOT NULL,
+    modelo TEXT NOT NULL,
+    version TEXT,
+    anio INTEGER,
+    km INTEGER,
+    combustible TEXT,
+    caja TEXT,
+    color TEXT,
+    dominio TEXT,
+    estado TEXT NOT NULL DEFAULT 'disponible',
+    equipamiento TEXT,
+    observaciones TEXT,
+    documentacion TEXT,
+    valor_compra REAL DEFAULT 0,
+    gastos REAL DEFAULT 0,
+    valor_publicado REAL DEFAULT 0,
+    valor_vendido REAL,
+    fecha_ingreso TEXT DEFAULT (date('now')),
+    fecha_venta TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS vehiculo_fotos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vehiculo_id INTEGER NOT NULL,
+    url TEXT NOT NULL,
+    orden INTEGER DEFAULT 0,
+    FOREIGN KEY (vehiculo_id) REFERENCES vehiculos(id)
+);
+
+CREATE TABLE IF NOT EXISTS pedidos_clientes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cliente_nombre TEXT NOT NULL,
+    telefono TEXT,
+    marca TEXT,
+    modelo TEXT,
+    version TEXT,
+    anio_desde INTEGER,
+    anio_hasta INTEGER,
+    precio_maximo REAL,
+    forma_pago TEXT,
+    estado TEXT DEFAULT 'buscando',
+    observaciones TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS precios_base (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    marca TEXT NOT NULL,
+    modelo TEXT NOT NULL,
+    version TEXT NOT NULL,
+    anio INTEGER NOT NULL,
+    precio_referencia REAL NOT NULL,
+    fuente TEXT DEFAULT 'InfoAuto',
+    fecha_actualizacion TEXT DEFAULT (date('now'))
+);
+
+CREATE TABLE IF NOT EXISTS tomas_vehiculo (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vehiculo_id INTEGER,
+    marca TEXT,
+    modelo TEXT,
+    version TEXT,
+    anio INTEGER,
+    evaluador TEXT,
+    motor TEXT,
+    caja TEXT,
+    embrague TEXT,
+    frenos TEXT,
+    suspension TEXT,
+    direccion TEXT,
+    interior TEXT,
+    tapizados TEXT,
+    cubiertas TEXT,
+    electricidad TEXT,
+    aire_acondicionado TEXT,
+    documentacion TEXT,
+    observaciones TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (vehiculo_id) REFERENCES vehiculos(id)
+);
+
+CREATE TABLE IF NOT EXISTS inspeccion_visual (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    toma_id INTEGER,
+    vista TEXT NOT NULL,
+    imagen_url TEXT,
+    FOREIGN KEY (toma_id) REFERENCES tomas_vehiculo(id)
+);
+
+CREATE TABLE IF NOT EXISTS inspeccion_marcadores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    inspeccion_visual_id INTEGER NOT NULL,
+    pos_x REAL,
+    pos_y REAL,
+    tipo TEXT,
+    gravedad TEXT,
+    descripcion TEXT,
+    foto_url TEXT,
+    FOREIGN KEY (inspeccion_visual_id) REFERENCES inspeccion_visual(id)
+);
+
+CREATE TABLE IF NOT EXISTS tasaciones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    marca TEXT,
+    modelo TEXT,
+    version TEXT,
+    anio INTEGER,
+    valor_referencia REAL,
+    estado_mecanico TEXT,
+    estado_estetico TEXT,
+    gastos_estimados REAL,
+    precio_max_recomendado REAL,
+    riesgo TEXT,
+    margen_esperado REAL,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS red_publicaciones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agencia_nombre TEXT NOT NULL,
+    tipo TEXT NOT NULL,
+    marca TEXT,
+    modelo TEXT,
+    version TEXT,
+    anio INTEGER,
+    precio REAL,
+    descripcion TEXT,
+    contacto TEXT,
+    estado TEXT DEFAULT 'activo',
+    created_at TEXT DEFAULT (datetime('now'))
+);
+"""
+
+# Datos de ejemplo para que la app se pueda probar de entrada.
+# Mismos modelos que aparecen en el prototipo visual de referencia.
+_SEED_PRECIOS = [
+    # marca, modelo, version, anio, precio_referencia
+    ("Toyota", "Hilux", "4x4 SRV", 2023, 46200000),
+    ("Toyota", "Hilux", "4x4 SRV", 2022, 39800000),
+    ("Toyota", "Hilux", "4x4 SRV", 2021, 32500000),
+    ("Toyota", "Hilux", "4x4 SRV", 2020, 27900000),
+    ("Toyota", "Hilux", "4x4 SRV", 2019, 24100000),
+    ("Chevrolet", "Onix", "LTZ", 2023, 21500000),
+    ("Chevrolet", "Onix", "LTZ", 2022, 18200000),
+    ("Chevrolet", "Onix", "LTZ", 2021, 16400000),
+    ("Chevrolet", "Onix", "LTZ", 2020, 14800000),
+    ("Volkswagen", "Amarok", "V6 Highline", 2023, 41000000),
+    ("Volkswagen", "Amarok", "V6 Highline", 2022, 34500000),
+    ("Volkswagen", "Amarok", "V6 Highline", 2021, 31200000),
+    ("Volkswagen", "Amarok", "V6 Highline", 2020, 28900000),
+    ("Ford", "Focus", "SE", 2019, 14300000),
+    ("Ford", "Focus", "SE", 2018, 12700000),
+    ("Ford", "Focus", "SE", 2017, 11200000),
+    ("Renault", "Duster", "Privilege", 2023, 24800000),
+    ("Renault", "Duster", "Privilege", 2022, 21100000),
+    ("Renault", "Duster", "Privilege", 2021, 18600000),
+    ("Renault", "Duster", "Privilege", 2020, 16400000),
+]
+
+
+def get_db():
+    if "db" not in g:
+        g.db = sqlite3.connect(DB_PATH)
+        g.db.row_factory = sqlite3.Row
+        g.db.execute("PRAGMA foreign_keys = ON")
+    return g.db
+
+
+def close_db(e=None):
+    db = g.pop("db", None)
+    if db is not None:
+        db.close()
+
+
+def _migrar_vehiculos(conn):
+    """Agrega a `vehiculos` las columnas que necesita la sincronización con
+    STOCK, sin tocar bases ya existentes (ALTER TABLE solo si falta la
+    columna)."""
+    columnas_actuales = {row[1] for row in conn.execute("PRAGMA table_info(vehiculos)")}
+    nuevas_columnas = {
+        "carpeta_stock": "TEXT",
+        "ubicacion": "TEXT",
+        "condiciones_pago": "TEXT",
+        "estado_general": "TEXT",
+    }
+    for columna, tipo in nuevas_columnas.items():
+        if columna not in columnas_actuales:
+            conn.execute(f"ALTER TABLE vehiculos ADD COLUMN {columna} {tipo}")
+
+    # Único índice: una carpeta de STOCK no puede mapear a más de un vehículo.
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_vehiculos_carpeta_stock "
+        "ON vehiculos(carpeta_stock) WHERE carpeta_stock IS NOT NULL"
+    )
+
+
+def init_db():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
+    conn.executescript(SCHEMA)
+    _migrar_vehiculos(conn)
+
+    cur = conn.execute("SELECT COUNT(*) FROM precios_base")
+    if cur.fetchone()[0] == 0:
+        conn.executemany(
+            """INSERT INTO precios_base (marca, modelo, version, anio, precio_referencia)
+               VALUES (?, ?, ?, ?, ?)""",
+            _SEED_PRECIOS,
+        )
+
+    cur = conn.execute("SELECT COUNT(*) FROM usuarios")
+    if cur.fetchone()[0] == 0:
+        conn.execute(
+            """INSERT INTO usuarios (email, password_hash, nombre, agencia_nombre, is_admin)
+               VALUES (?, ?, ?, ?, 1)""",
+            ("admin@agencieros.com", generate_password_hash("admin1234"), "Admin", "Agencieros"),
+        )
+
+    cur = conn.execute("SELECT COUNT(*) FROM vehiculos")
+    if cur.fetchone()[0] == 0:
+        conn.executemany(
+            """INSERT INTO vehiculos
+               (marca, modelo, version, anio, km, combustible, caja, color, dominio, estado,
+                valor_compra, gastos, valor_publicado, valor_vendido, fecha_ingreso, fecha_venta)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            [
+                ("Toyota", "Hilux", "4x4 SRV", 2021, 45000, "Diésel", "Automática", "Gris",
+                 "AE123CD", "disponible", 27000000, 900000, 32500000, None, str(date.today()), None),
+                ("Chevrolet", "Onix", "LTZ", 2020, 38000, "Nafta", "Manual", "Blanco",
+                 "AF456GH", "disponible", 12500000, 400000, 14800000, None, str(date.today()), None),
+                ("Volkswagen", "Amarok", "V6 Highline", 2020, 50000, "Diésel", "Automática", "Negro",
+                 "AG789JK", "en_reparacion", 24000000, 1800000, 28900000, None, str(date.today()), None),
+                ("Ford", "Focus", "SE", 2018, 60000, "Nafta", "Manual", "Rojo",
+                 "AH012LM", "disponible", 10800000, 350000, 12700000, None, str(date.today()), None),
+                ("Renault", "Duster", "Privilege", 2021, 42000, "Nafta", "Manual", "Gris",
+                 "AJ345NP", "por_ingresar", 15200000, 0, 18600000, None, str(date.today()), None),
+            ],
+        )
+
+    conn.commit()
+    conn.close()
+
+
+def query(sql, args=(), one=False):
+    cur = get_db().execute(sql, args)
+    rows = cur.fetchall()
+    return (rows[0] if rows else None) if one else rows
+
+
+def execute(sql, args=()):
+    db = get_db()
+    cur = db.execute(sql, args)
+    db.commit()
+    return cur.lastrowid
