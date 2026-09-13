@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Consulta de precios — Agencieros{% endblock %}
+{% block header %}Consulta de precios{% endblock %}
+{% block content %}
+<div class="hero-search">
+  <h1>¿Qué vehículo querés consultar?</h1>
+  <p>Elegí marca, modelo, versión y año para ver el valor de referencia.</p>
+  <div class="select-row">
+    <select id="marca">
+      <option value="">Marca</option>
+      {% for m in marcas %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+    </select>
+    <select id="modelo" disabled><option value="">Modelo</option></select>
+    <select id="version" disabled><option value="">Versión</option></select>
+    <select id="anio" disabled><option value="">Año</option></select>
+    <button class="btn btn-primary" id="btnBuscar" disabled>Ver precio</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Cómo funciona</h2>
+  <p style="color:var(--text-dim); font-size:14px;">
+    Este es el gancho de Agencieros: la misma consulta que hoy pagás en una guía de precios,
+    pero con toda la gestión de tu agencia incluida. Desde el resultado podés iniciar la
+    toma del vehículo o guardarlo directo en tu stock.
+  </p>
+</div>
+
+<script>
+const marcaSel = document.getElementById('marca');
+const modeloSel = document.getElementById('modelo');
+const versionSel = document.getElementById('version');
+const anioSel = document.getElementById('anio');
+const btn = document.getElementById('btnBuscar');
+
+function resetSelect(sel, placeholder) {
+  sel.innerHTML = `<option value="">${placeholder}</option>`;
+  sel.disabled = true;
+}
+
+marcaSel.addEventListener('change', async () => {
+  resetSelect(modeloSel, 'Modelo'); resetSelect(versionSel, 'Versión'); resetSelect(anioSel, 'Año'); btn.disabled = true;
+  if (!marcaSel.value) return;
+  const res = await fetch(`/precios/api/modelos?marca=${encodeURIComponent(marcaSel.value)}`);
+  const data = await res.json();
+  data.forEach(m => modeloSel.innerHTML += `<option value="${m}">${m}</option>`);
+  modeloSel.disabled = false;
+});
+
+modeloSel.addEventListener('change', async () => {
+  resetSelect(versionSel, 'Versión'); resetSelect(anioSel, 'Año'); btn.disabled = true;
+  if (!modeloSel.value) return;
+  const res = await fetch(`/precios/api/versiones?marca=${encodeURIComponent(marcaSel.value)}&modelo=${encodeURIComponent(modeloSel.value)}`);
+  const data = await res.json();
+  data.forEach(v => versionSel.innerHTML += `<option value="${v}">${v}</option>`);
+  versionSel.disabled = false;
+});
+
+versionSel.addEventListener('change', async () => {
+  resetSelect(anioSel, 'Año'); btn.disabled = true;
+  if (!versionSel.value) return;
+  const res = await fetch(`/precios/api/anios?marca=${encodeURIComponent(marcaSel.value)}&modelo=${encodeURIComponent(modeloSel.value)}&version=${encodeURIComponent(versionSel.value)}`);
+  const data = await res.json();
+  data.forEach(a => anioSel.innerHTML += `<option value="${a}">${a}</option>`);
+  anioSel.disabled = false;
+});
+
+anioSel.addEventListener('change', () => { btn.disabled = !anioSel.value; });
+
+btn.addEventListener('click', () => {
+  const params = new URLSearchParams({ marca: marcaSel.value, modelo: modeloSel.value, version: versionSel.value, anio: anioSel.value });
+  window.location.href = `/precios/buscar?${params.toString()}`;
+});
+</script>
+{% endblock %}

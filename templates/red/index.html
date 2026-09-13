@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Red de Agencieros{% endblock %}
+{% block header %}Red de Agencieros{% endblock %}
+{% block content %}
+<div class="tabs">
+  <a class="tab {{ 'active' if tipo_filtro == 'todos' else '' }}" href="{{ url_for('red.index', tipo='todos') }}">Todos</a>
+  <a class="tab {{ 'active' if tipo_filtro == 'ofrezco' else '' }}" href="{{ url_for('red.index', tipo='ofrezco') }}">Ofrecen</a>
+  <a class="tab {{ 'active' if tipo_filtro == 'busco' else '' }}" href="{{ url_for('red.index', tipo='busco') }}">Buscan</a>
+  <a class="btn btn-primary btn-sm" style="margin-left:auto;" href="{{ url_for('red.nueva') }}">+ Publicar</a>
+</div>
+<div class="panel">
+  <p style="color:var(--text-dim); font-size:13px;">
+    Hoy es un tablero compartido de una sola base — para que sea una red real entre agencias
+    distintas falta multi-tenant (login por agencia) y notificaciones automáticas. Ver PROYECTO.md.
+  </p>
+  <table>
+    <tr><th>Tipo</th><th>Agencia</th><th>Vehículo</th><th>Precio</th><th>Contacto</th><th></th></tr>
+    {% for p in publicaciones %}
+    <tr>
+      <td><span class="badge {{ 'disponible' if p.tipo == 'ofrezco' else 'por_ingresar' }}">{{ 'Ofrece' if p.tipo == 'ofrezco' else 'Busca' }}</span></td>
+      <td>{{ p.agencia_nombre }}</td>
+      <td>{{ p.marca }} {{ p.modelo }} {{ p.version }} {{ p.anio or '' }}</td>
+      <td>{{ "$" + "{:,.0f}".format(p.precio).replace(",", ".") if p.precio else '-' }}</td>
+      <td>{{ p.contacto or '-' }}</td>
+      <td><a class="btn btn-secondary btn-sm" href="{{ url_for('red.cerrar', pub_id=p.id) }}">Cerrar</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6">Todavía no hay publicaciones.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

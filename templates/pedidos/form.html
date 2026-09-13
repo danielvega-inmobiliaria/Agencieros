@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Nuevo pedido — Agencieros{% endblock %}
+{% block header %}Nuevo pedido de cliente{% endblock %}
+{% block content %}
+<div class="panel">
+  <form method="post">
+    <div class="form-row">
+      <div><label>Cliente</label><input name="cliente_nombre" required></div>
+      <div><label>Teléfono</label><input name="telefono"></div>
+    </div>
+    <div class="form-row">
+      <div><label>Marca</label><input name="marca"></div>
+      <div><label>Modelo</label><input name="modelo"></div>
+      <div><label>Versión</label><input name="version"></div>
+    </div>
+    <div class="form-row">
+      <div><label>Año desde</label><input type="number" name="anio_desde"></div>
+      <div><label>Año hasta</label><input type="number" name="anio_hasta"></div>
+      <div><label>Precio máximo</label><input type="number" step="0.01" name="precio_maximo"></div>
+      <div><label>Forma de pago</label><input name="forma_pago" placeholder="Contado / Permuta / Cuotas"></div>
+    </div>
+    <label>Observaciones</label>
+    <textarea name="observaciones"></textarea>
+    <button class="btn btn-primary" style="margin-top:20px;" type="submit">Guardar pedido</button>
+  </form>
+</div>
+{% endblock %}

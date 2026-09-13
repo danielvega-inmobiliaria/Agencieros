@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Nueva publicación — Red de Agencieros{% endblock %}
+{% block header %}Publicar en la Red de Agencieros{% endblock %}
+{% block content %}
+<div class="panel">
+  <form method="post">
+    <div class="form-row">
+      <div><label>Tu agencia</label><input name="agencia_nombre" value="{{ session.get('agencia_nombre','') }}" required></div>
+      <div>
+        <label>Tipo de publicación</label>
+        <select name="tipo">
+          <option value="ofrezco">Ofrezco un vehículo</option>
+          <option value="busco">Busco un vehículo</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div><label>Marca</label><input name="marca"></div>
+      <div><label>Modelo</label><input name="modelo"></div>
+      <div><label>Versión</label><input name="version"></div>
+      <div><label>Año</label><input type="number" name="anio"></div>
+    </div>
+    <div class="form-row">
+      <div><label>Precio</label><input type="number" step="0.01" name="precio"></div>
+      <div><label>Contacto</label><input name="contacto" placeholder="WhatsApp / teléfono"></div>
+    </div>
+    <label>Descripción</label>
+    <textarea name="descripcion"></textarea>
+    <button class="btn btn-primary" style="margin-top:20px;" type="submit">Publicar</button>
+  </form>
+</div>
+{% endblock %}

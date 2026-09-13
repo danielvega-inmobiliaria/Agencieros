@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Finanzas — Agencieros{% endblock %}
+{% block header %}Historial financiero{% endblock %}
+{% block content %}
+<div class="cards">
+  <div class="card">
+    <div class="label">Capital invertido (stock activo)</div>
+    <div class="value">${{ "{:,.0f}".format(capital_invertido).replace(",", ".") }}</div>
+  </div>
+  <div class="card">
+    <div class="label">Capital inmovilizado</div>
+    <div class="value">${{ "{:,.0f}".format(capital_inmovilizado).replace(",", ".") }}</div>
+    <div class="sub">En reparación / por ingresar</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="panel">
+    <h2>Ganancia por mes</h2>
+    <table>
+      <tr><th>Mes</th><th>Unidades</th><th>Ganancia</th></tr>
+      {% for g in ganancia_mensual %}
+      <tr><td>{{ g.mes }}</td><td>{{ g.unidades }}</td><td>${{ "{:,.0f}".format(g.ganancia or 0).replace(",", ".") }}</td></tr>
+      {% else %}
+      <tr><td colspan="3">Todavía no hay ventas registradas.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  <div class="panel">
+    <h2>Ganancia por año</h2>
+    <table>
+      <tr><th>Año</th><th>Ganancia</th></tr>
+      {% for g in ganancia_anual %}
+      <tr><td>{{ g.anio }}</td><td>${{ "{:,.0f}".format(g.ganancia or 0).replace(",", ".") }}</td></tr>
+      {% else %}
+      <tr><td colspan="2">Todavía no hay ventas registradas.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Ranking de rentabilidad (vehículos vendidos)</h2>
+  <table>
+    <tr><th>Vehículo</th><th>Costo total</th><th>Vendido</th><th>Ganancia</th><th>Rentabilidad</th></tr>
+    {% for r in ranking %}
+    <tr>
+      <td>{{ r.marca }} {{ r.modelo }} {{ r.version }} ({{ r.anio }})</td>
+      <td>${{ "{:,.0f}".format((r.valor_compra or 0) + (r.gastos or 0)).replace(",", ".") }}</td>
+      <td>${{ "{:,.0f}".format(r.valor_vendido).replace(",", ".") }}</td>
+      <td style="color: {{ 'var(--green)' if r.ganancia >= 0 else 'var(--red)' }};">${{ "{:,.0f}".format(r.ganancia).replace(",", ".") }}</td>
+      <td>{{ r.rentabilidad_pct }}%</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5">Todavía no hay vehículos vendidos.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Banco de pedidos — Agencieros{% endblock %}
+{% block header %}Banco de pedidos{% endblock %}
+{% block content %}
+<div class="tabs">
+  <a class="tab {{ 'active' if estado_filtro == 'buscando' else '' }}" href="{{ url_for('pedidos.index', estado='buscando') }}">Buscando</a>
+  <a class="tab {{ 'active' if estado_filtro == 'resuelto' else '' }}" href="{{ url_for('pedidos.index', estado='resuelto') }}">Resueltos</a>
+  <a class="tab {{ 'active' if estado_filtro == 'todos' else '' }}" href="{{ url_for('pedidos.index', estado='todos') }}">Todos</a>
+  <a class="btn btn-primary btn-sm" style="margin-left:auto;" href="{{ url_for('pedidos.nuevo') }}">+ Nuevo pedido</a>
+</div>
+
+<div class="panel">
+  <table>
+    <tr><th>Cliente</th><th>Teléfono</th><th>Busca</th><th>Precio máx.</th><th>Forma de pago</th><th>Estado</th><th></th></tr>
+    {% for p in pedidos %}
+    <tr>
+      <td>{{ p.cliente_nombre }}</td>
+      <td>{{ p.telefono or '-' }}</td>
+      <td>{{ p.marca }} {{ p.modelo }} {{ p.version }} {% if p.anio_desde or p.anio_hasta %}({{ p.anio_desde or '' }}{% if p.anio_hasta %}–{{ p.anio_hasta }}{% endif %}){% endif %}</td>
+      <td>{{ "$" + "{:,.0f}".format(p.precio_maximo).replace(",", ".") if p.precio_maximo else '-' }}</td>
+      <td>{{ p.forma_pago or '-' }}</td>
+      <td><span class="badge {{ p.estado }}">{{ p.estado }}</span></td>
+      <td>
+        {% if p.estado == 'buscando' %}
+        <a class="btn btn-secondary btn-sm" href="{{ url_for('pedidos.resolver', pedido_id=p.id) }}">Resuelto</a>
+        <a class="btn btn-secondary btn-sm" href="{{ url_for('pedidos.cancelar', pedido_id=p.id) }}">Cancelar</a>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7">No hay pedidos en este estado.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

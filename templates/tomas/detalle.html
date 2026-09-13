@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Toma — Agencieros{% endblock %}
+{% block header %}{{ toma.marca }} {{ toma.modelo }} {{ toma.version }} ({{ toma.anio or '-' }}){% endblock %}
+{% block content %}
+<div class="panel">
+  <h2>Evaluación técnica {% if toma.evaluador %}— {{ toma.evaluador }}{% endif %}</h2>
+  <table>
+    <tr><th>Punto</th><th>Calificación</th></tr>
+    {% for key, label in puntos %}
+    <tr><td>{{ label }}</td><td>{{ toma[key] or '-' }}</td></tr>
+    {% endfor %}
+  </table>
+  {% if toma.observaciones %}<p style="margin-top:16px;"><b>Observaciones:</b> {{ toma.observaciones }}</p>{% endif %}
+</div>
+<div class="panel">
+  <h2>Inspección visual de chapa</h2>
+  <p style="color:var(--text-dim);">Pendiente de vincular con esta toma — ver módulo Inspección visual.</p>
+  <a class="btn btn-secondary btn-sm" href="{{ url_for('inspeccion.index') }}">Ir a Inspección visual</a>
+</div>
+{% endblock %}

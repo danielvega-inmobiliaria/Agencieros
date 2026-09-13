@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ingresar — Agencieros</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div style="max-width:380px; margin:80px auto; padding:0 16px;">
+    <div class="brand" style="border:none; text-align:center; margin-bottom:24px;">AGENCIEROS<span>Consultá, tasá, comprá, vendé.</span></div>
+    <div class="panel">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
+      <form method="post">
+        <label>Email</label>
+        <input type="email" name="email" value="admin@agencieros.com" required>
+        <label>Contraseña</label>
+        <input type="password" name="password" value="admin1234" required>
+        <button class="btn btn-primary" style="width:100%; margin-top:20px;" type="submit">Ingresar</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

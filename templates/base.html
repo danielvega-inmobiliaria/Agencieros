@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Agencieros{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">AGENCIEROS<span>Todo el negocio automotor en una app</span></div>
+      <a class="nav-item {{ 'active' if request.endpoint == 'precios.index' else '' }}" href="{{ url_for('precios.index') }}">🔎 Consulta de precios</a>
+      <a class="nav-item {{ 'active' if request.endpoint == 'dashboard.index' else '' }}" href="{{ url_for('dashboard.index') }}">🏠 Dashboard</a>
+      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('stock.') else '' }}" href="{{ url_for('stock.index') }}">🚗 Stock de vehículos</a>
+      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('pedidos.') else '' }}" href="{{ url_for('pedidos.index') }}">📋 Banco de pedidos</a>
+      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('tomas.') else '' }}" href="{{ url_for('tomas.index') }}">🚙 Toma de vehículos</a>
+      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('inspeccion.') else '' }}" href="{{ url_for('inspeccion.index') }}">🩹 Inspección visual</a>
+      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('tasacion.') else '' }}" href="{{ url_for('tasacion.index') }}">🧮 Tasación inteligente</a>
+      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('finanzas.') else '' }}" href="{{ url_for('finanzas.index') }}">💰 Finanzas</a>
+      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('red.') else '' }}" href="{{ url_for('red.index') }}">🤝 Red de Agencieros</a>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <h1>{% block header %}{% endblock %}</h1>
+        <div class="user">
+          {% if session.get('user_nombre') %}
+            {{ session.get('agencia_nombre') }} · {{ session.get('user_nombre') }} · <a href="{{ url_for('auth.logout') }}">Salir</a>
+          {% endif %}
+        </div>
+      </div>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>

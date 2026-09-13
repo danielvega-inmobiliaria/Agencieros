@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Agencieros{% endblock %}
+{% block header %}Dashboard{% endblock %}
+{% block content %}
+<div class="cards">
+  <div class="card">
+    <div class="label">Disponibles</div>
+    <div class="value">{{ stock_counts.get('disponible', 0) }}</div>
+  </div>
+  <div class="card">
+    <div class="label">Por ingresar</div>
+    <div class="value">{{ stock_counts.get('por_ingresar', 0) }}</div>
+  </div>
+  <div class="card">
+    <div class="label">En reparación</div>
+    <div class="value">{{ stock_counts.get('en_reparacion', 0) }}</div>
+  </div>
+  <div class="card">
+    <div class="label">Pedidos activos</div>
+    <div class="value">{{ pedidos_activos }}</div>
+  </div>
+  <div class="card">
+    <div class="label">Vendidos este mes</div>
+    <div class="value">{{ ventas_mes.c }}</div>
+    <div class="sub">Ganancia: ${{ "{:,.0f}".format(ventas_mes.ganancia or 0).replace(",", ".") }}</div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Últimos vehículos cargados</h2>
+  <table>
+    <tr><th>Vehículo</th><th>Año</th><th>Estado</th><th>Publicado</th><th></th></tr>
+    {% for v in ultimos_vehiculos %}
+    <tr>
+      <td>{{ v.marca }} {{ v.modelo }} {{ v.version }}</td>
+      <td>{{ v.anio }}</td>
+      <td><span class="badge {{ v.estado }}">{{ v.estado.replace('_',' ') }}</span></td>
+      <td>${{ "{:,.0f}".format(v.valor_publicado or 0).replace(",", ".") }}</td>
+      <td><a class="btn btn-secondary btn-sm" href="{{ url_for('stock.detalle', vehiculo_id=v.id) }}">Ver</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5">Todavía no hay vehículos cargados.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

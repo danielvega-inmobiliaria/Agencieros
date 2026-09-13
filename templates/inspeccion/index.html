@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Inspección visual — Agencieros{% endblock %}
+{% block header %}Inspección visual de chapa{% endblock %}
+{% block content %}
+<div class="panel">
+  <p style="color:var(--text-dim);">
+    5 vistas del vehículo, cada una con marcadores arrastrables para indicar golpes, rayones,
+    vidrios rotos, ópticas, paragolpes y abolladuras (con gravedad, descripción y foto opcional).
+    La base de datos ya está lista (<code>inspeccion_visual</code> / <code>inspeccion_marcadores</code>);
+    falta el editor visual interactivo — queda anotado en PROYECTO.md como próximo paso.
+  </p>
+  <div class="cards">
+    {% for key, label in vistas %}
+    <div class="card">
+      <div class="label">{{ label }}</div>
+      <div class="stub-box" style="margin-top:10px; padding:24px;">Cargar imagen (próximamente)</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

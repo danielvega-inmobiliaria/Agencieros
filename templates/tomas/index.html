@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Toma de vehículos — Agencieros{% endblock %}
+{% block header %}Toma de vehículos{% endblock %}
+{% block content %}
+<div class="tabs">
+  <a class="btn btn-primary btn-sm" style="margin-left:auto;" href="{{ url_for('tomas.nueva') }}">+ Nueva toma</a>
+</div>
+<div class="panel">
+  <table>
+    <tr><th>Vehículo</th><th>Evaluador</th><th>Fecha</th><th></th></tr>
+    {% for t in tomas %}
+    <tr>
+      <td>{{ t.marca }} {{ t.modelo }} {{ t.version }} {{ t.anio or '' }}</td>
+      <td>{{ t.evaluador or '-' }}</td>
+      <td>{{ t.created_at }}</td>
+      <td><a class="btn btn-secondary btn-sm" href="{{ url_for('tomas.detalle', toma_id=t.id) }}">Ver</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4">Todavía no se registraron tomas.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}
