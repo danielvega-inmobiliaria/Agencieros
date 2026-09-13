@@ -65,4 +65,6 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    # host="0.0.0.0": escucha en toda la red local, no solo en esta PC,
+    # así se puede entrar desde el celu (u otra compu) conectado al mismo WiFi.
+    app.run(host="0.0.0.0", debug=True, port=5000)
