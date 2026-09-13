@@ -43,8 +43,13 @@
         </div>
       </div>
 
-      <label>Gastos estimados de reparación <span style="color:var(--text-dim); font-weight:400;">(sugerido: ${{ "{:,.0f}".format(gastos_estimados_sugerido).replace(",", ".") }}, suma de los daños marcados)</span></label>
+      <label>Gastos estimados de reparación <span style="color:var(--text-dim); font-weight:400;">(sugerido: ${{ "{:,.0f}".format(gastos_estimados_sugerido).replace(",", ".") }})</span></label>
       <input type="number" step="0.01" name="gastos_estimados" value="{{ form.get('gastos_estimados', gastos_estimados_sugerido) }}">
+      {% if costo_puntos_tecnicos or costo_danios_visuales %}
+      <p style="color:var(--text-dim); font-size:11.5px; margin-top:4px;">
+        Suma de: ${{ "{:,.0f}".format(costo_puntos_tecnicos).replace(",", ".") }} de los puntos técnicos del Paso 1 (ej: tapizados, cubiertas) + ${{ "{:,.0f}".format(costo_danios_visuales).replace(",", ".") }} de los daños marcados en las fotos del Paso 2.
+      </p>
+      {% endif %}
 
       <button type="submit" class="btn btn-primary" style="margin-top:18px;">Calcular tasación</button>
     </form>

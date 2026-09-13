@@ -8,10 +8,17 @@
     <div class="stat"><div class="n">{{ estado_mecanico_sugerido }}</div><div class="l">Estado mecánico sugerido</div></div>
   </div>
   <table style="margin-top:16px;">
-    <tr><th>Punto</th><th>Calificación</th></tr>
-    {% for codigo, label in puntos %}
-    <tr><td>{{ label }}</td><td>{{ toma[codigo] or '-' }}</td></tr>
+    <tr><th>Punto</th><th>Calificación</th><th>Costo estimado</th></tr>
+    {% for p in puntos_data %}
+    <tr>
+      <td>{{ p.label }}</td>
+      <td>{{ p.calificacion or '-' }}</td>
+      <td>{% if p.costo %}${{ "{:,.0f}".format(p.costo).replace(",", ".") }}{% else %}-{% endif %}</td>
+    </tr>
     {% endfor %}
+    {% if costo_puntos_tecnicos %}
+    <tr><td><b>Total reparación/limpieza (Paso 1)</b></td><td></td><td><b>${{ "{:,.0f}".format(costo_puntos_tecnicos).replace(",", ".") }}</b></td></tr>
+    {% endif %}
   </table>
   {% if toma.observaciones %}<p style="color:var(--text-dim); margin-top:16px;"><b>Observaciones:</b> {{ toma.observaciones }}</p>{% endif %}
 </div>

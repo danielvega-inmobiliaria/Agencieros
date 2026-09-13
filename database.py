@@ -240,6 +240,22 @@ def _migrar_pedidos(conn):
             conn.execute(f"ALTER TABLE pedidos_clientes ADD COLUMN {columna} {tipo}")
 
 
+def _migrar_tomas_costos(conn):
+    """Agrega a `tomas_vehiculo` un costo estimado de reparación por cada
+    uno de los 12 puntos técnicos evaluados (motor, caja, tapizados, etc.),
+    para poder sumarlos y sugerir los gastos de reparación en el paso de
+    Tasación, sin tocar bases existentes."""
+    columnas_actuales = {row[1] for row in conn.execute("PRAGMA table_info(tomas_vehiculo)")}
+    puntos = [
+        "motor", "caja", "embrague", "frenos", "suspension", "direccion", "interior",
+        "tapizados", "cubiertas", "electricidad", "aire_acondicionado", "documentacion",
+    ]
+    for codigo in puntos:
+        columna = f"costo_{codigo}"
+        if columna not in columnas_actuales:
+            conn.execute(f"ALTER TABLE tomas_vehiculo ADD COLUMN {columna} REAL")
+
+
 def _migrar_inspeccion_marcadores(conn):
     """Agrega el costo estimado de reparación de cada daño marcado en la
     Inspección visual, para poder sumarlos y sugerir los gastos de
@@ -263,6 +279,7 @@ def init_db():
     conn.executescript(SCHEMA)
     _migrar_vehiculos(conn)
     _migrar_pedidos(conn)
+    _migrar_tomas_costos(conn)
     _migrar_inspeccion_marcadores(conn)
     _migrar_tasaciones(conn)
 

@@ -82,10 +82,28 @@ def _marcadores_de_toma(toma_id):
 
 
 def _costo_reparacion_sugerido(marcadores):
-    """Suma de los costos de reparación cargados en cada daño marcado —
-    se ofrece como punto de partida (editable) para 'Gastos estimados' en
-    el paso de Tasación."""
+    """Suma de los costos de reparación cargados en cada daño marcado en la
+    Inspección visual — una de las dos fuentes que arman el 'Gastos
+    estimados' sugerido en el paso de Tasación (la otra es
+    _costo_puntos_tecnicos)."""
     return sum(m["costo_reparacion"] or 0 for m in marcadores)
+
+
+def _costo_puntos_tecnicos(toma):
+    """Suma de los costos de reparación cargados punto por punto en la Toma
+    técnica (ej: tapizados en mal estado por suciedad o roturas → costo de
+    limpieza/arreglo). La otra fuente que arma el 'Gastos estimados'
+    sugerido en Tasación es _costo_reparacion_sugerido (daños visuales)."""
+    return sum(toma[f"costo_{codigo}"] or 0 for codigo, _ in PUNTOS)
+
+
+def _puntos_con_costo(toma):
+    """Arma, para cada uno de los 12 puntos técnicos, su calificación y el
+    costo de reparación cargado — lista lista para tabla en los templates."""
+    return [
+        {"codigo": codigo, "label": label, "calificacion": toma[codigo], "costo": toma[f"costo_{codigo}"]}
+        for codigo, label in PUNTOS
+    ]
 
 
 def _links_comparables(marca, modelo, version, anio):
@@ -137,12 +155,22 @@ def nueva():
     }
     if request.method == "POST":
         f = request.form
+
+        def _costo(codigo):
+            valor = f.get(f"costo_{codigo}")
+            try:
+                return float(valor) if valor else None
+            except ValueError:
+                return None
+
+        columnas_costo = ", ".join(f"costo_{codigo}" for codigo, _ in PUNTOS)
+        placeholders_costo = ", ".join("?" for _ in PUNTOS)
         toma_id = execute(
-            """INSERT INTO tomas_vehiculo
+            f"""INSERT INTO tomas_vehiculo
                (vehiculo_id, marca, modelo, version, anio, evaluador, motor, caja, embrague, frenos, suspension,
                 direccion, interior, tapizados, cubiertas, electricidad, aire_acondicionado,
-                documentacion, observaciones)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                documentacion, observaciones, {columnas_costo})
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,{placeholders_costo})""",
             (
                 f.get("vehiculo_id") or None,
                 f.get("marca"), f.get("modelo"), f.get("version"), f.get("anio") or None,
@@ -151,6 +179,7 @@ def nueva():
                 f.get("direccion"), f.get("interior"), f.get("tapizados"), f.get("cubiertas"),
                 f.get("electricidad"), f.get("aire_acondicionado"), f.get("documentacion"),
                 f.get("observaciones"),
+                *[_costo(codigo) for codigo, _ in PUNTOS],
             ),
         )
         flash("Toma registrada. Ahora sumá las fotos y marcá los daños de la carrocería.", "success")
@@ -174,11 +203,12 @@ def detalle(toma_id):
     return render_template(
         "tomas/detalle.html",
         toma=toma,
-        puntos=PUNTOS,
+        puntos_data=_puntos_con_costo(toma),
         fotos_cargadas=fotos_cargadas,
         total_marcadores=len(marcadores),
         estado_mecanico_sugerido=_calcular_estado_mecanico(toma),
         estado_estetico_sugerido=_calcular_estado_estetico(marcadores),
+        costo_puntos_tecnicos=_costo_puntos_tecnicos(toma),
         tasacion=tasacion,
     )
 
@@ -333,7 +363,9 @@ def tasacion(toma_id):
         one=True,
     )
     valor_referencia_sugerido = precio_base["precio_referencia"] if precio_base else ""
-    gastos_estimados_sugerido = _costo_reparacion_sugerido(marcadores)
+    costo_puntos_tecnicos = _costo_puntos_tecnicos(toma)
+    costo_danios_visuales = _costo_reparacion_sugerido(marcadores)
+    gastos_estimados_sugerido = costo_puntos_tecnicos + costo_danios_visuales
     links_comparables = _links_comparables(toma["marca"], toma["modelo"], toma["version"], toma["anio"])
 
     tasacion_previa = query(
@@ -394,6 +426,8 @@ def tasacion(toma_id):
         estado_estetico_sugerido=estado_estetico_sugerido,
         valor_referencia_sugerido=valor_referencia_sugerido,
         gastos_estimados_sugerido=gastos_estimados_sugerido,
+        costo_puntos_tecnicos=costo_puntos_tecnicos,
+        costo_danios_visuales=costo_danios_visuales,
         links_comparables=links_comparables,
         form=request.form,
     )

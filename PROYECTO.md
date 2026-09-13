@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 13/09/2026 — 18:05 ART_
+_Última actualización: 13/09/2026 — 20:24 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -23,7 +23,7 @@ _Última actualización: 13/09/2026 — 18:05 ART_
 1. **Consulta de precios** (gancho comercial) — marca/modelo/versión/año → precio de referencia. Base inicial con valores tipo InfoAuto (carga manual por ahora, sin integración por API).
 2. **Stock de vehículos** — estados Disponible / Por ingresar / En reparación / Vendido. Ficha completa (características, equipamiento, km, combustible, caja, observaciones, documentación, historial) + galería de fotos propia (subida real de archivos, separada de la Inspección visual).
 3. **Banco de pedidos** — clientes que buscan un vehículo. Aviso automático cuando ingresa una unidad que matchea.
-4-6. **Toma y tasación** (un solo módulo/ítem de menú, flujo en 3 pasos secuenciales — unificado 13/09/2026): **Paso 1** Toma técnica (motor, caja, embrague, frenos, suspensión, dirección, interior, tapizados, cubiertas, electricidad, aire acondicionado, documentación — calificación Excelente/Bueno/Regular/Malo); **Paso 2** Fotos + Inspección visual de chapa (subida real de foto por cada una de las 5 vistas — frente/trasera/lateral izq/lateral der/superior — con click sobre la imagen para ubicar marcadores de daño: golpe/rayón/vidrio roto/óptica/paragolpes/abolladura, con gravedad leve/moderado/grave y descripción); **Paso 3** Tasación (estado mecánico y estético pre-sugeridos automáticamente a partir de los pasos 1 y 2, editables; valor de referencia autocompletado si hay match en `precios_base`; calcula precio máximo recomendado, riesgo y margen esperado). Las tomas pueden iniciarse sueltas o vinculadas a un vehículo puntual de Stock (botón "Hacer toma / tasación" en la ficha). Las rutas viejas `/inspeccion/` y `/tasacion/` quedaron como redirects de compatibilidad hacia este flujo.
+4-6. **Toma y tasación** (un solo módulo/ítem de menú, flujo en 3 pasos secuenciales — unificado 13/09/2026): **Paso 1** Toma técnica (motor, caja, embrague, frenos, suspensión, dirección, interior, tapizados, cubiertas, electricidad, aire acondicionado, documentación — calificación Excelente/Bueno/Regular/Malo, y **costo estimado de reparación/limpieza cargable en cada punto individual**, ej. tapizados sucio o cubiertas gastadas); **Paso 2** Fotos + Inspección visual de chapa (subida real de foto por cada una de las 5 vistas — frente/trasera/lateral izq/lateral der/superior — con click sobre la imagen para ubicar marcadores de daño: golpe/rayón/vidrio roto/óptica/paragolpes/abolladura, con gravedad leve 🟢/moderado 🟡/grave 🔴 y **costo estimado de reparación por marcador**, con subtotal por vista); **Paso 3** Tasación (estado mecánico y estético pre-sugeridos automáticamente a partir de los pasos 1 y 2, editables; valor de referencia autocompletado desde `precios_base` con links de comparables reales en MercadoLibre/RosarioGarage/Facebook Marketplace; gastos estimados de reparación sugeridos = suma de los costos del Paso 1 + los del Paso 2, desglose visible; calcula el "Valor de toma" — precio máximo recomendado ya descontados reparación y margen — más riesgo y margen esperado). Las tomas pueden iniciarse sueltas o vinculadas a un vehículo puntual de Stock (botón "Hacer toma / tasación" en la ficha). Las rutas viejas `/inspeccion/` y `/tasacion/` quedaron como redirects de compatibilidad hacia este flujo.
 7. **Control económico** — valor de compra, gastos, reparaciones, gastos administrativos, precio publicado/vendido → ganancia bruta/neta, rentabilidad, días en stock.
 8. **Historial financiero** — tablero: ganancia mensual/anual, capital invertido, capital inmovilizado, vehículos más/menos rentables.
 9. **Red de Agencieros** — marketplace privado entre agencias: publicar disponibles, pedir vehículos, compartir oportunidades, buscar unidades, contactar agencias, notificaciones, calificar operaciones.
@@ -73,6 +73,7 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - [ ] Auth real (hoy es login simple tipo PresupuestoPRO, sin registro de agencias ni roles).
 
 ### 🟢 IDEAS FUTURAS
+- [ ] Comparables de mercado (MercadoLibre/RosarioGarage/Facebook Marketplace) en Tasación: hoy son links de búsqueda que abre el agenciero manualmente (decisión deliberada, para no depender de scraping frágil ni pisar los ToS de esos sitios). A futuro se podría evaluar una integración real (API o scraping propio) si hace falta traer el precio automáticamente.
 - [ ] Base de Mercado Agencieros: una vez con operaciones reales cargadas, generar valores propios más allá de InfoAuto.
 - [ ] Notificaciones push/WhatsApp para matches del Banco de pedidos y novedades de la Red.
 - [ ] App mobile / PWA (el prototipo visual que subió Daniel está pensado como mobile-first).
@@ -83,7 +84,7 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 ## Cambios recientes
 
-### Sesión 13/09/2026 — Stock↔fotos/inspección, Toma+Inspección+Tasación unificadas, bandeja de mensajes (vista previa)
+### Sesión 13/09/2026 — Stock↔fotos/inspección, Toma+Inspección+Tasación unificadas, bandeja de mensajes (vista previa), acceso mobile, costos de reparación y comparables de mercado
 - Sincronización de Stock con las fichas de `03_AUTOMOTOR/STOCK` (`sync_stock.py`), sin pisar campos financieros ya cargados a mano.
 - Catálogo unificado de Marca/Modelo/Versión en toda la app (selects en cascada con "+ nueva/o..." como escape hatch) — evita duplicados por tipeo.
 - Banco de pedidos: forma de pago desplegable (contado/cuotas/permuta), con campos de financiación y de vehículo en permuta + match automático contra pedidos propios y Red de Agencieros. Fecha y días transcurridos visibles en el listado.
@@ -91,6 +92,11 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - Mensajes: maqueta de bandeja unificada (WhatsApp/Instagram/Facebook/Email) con datos de ejemplo — vista previa, todavía sin conexión real.
 - **Toma de vehículos + Inspección visual + Tasación fusionadas en un solo ítem de menú ("Toma y tasación"), flujo de 3 pasos secuenciales**: Paso 1 datos técnicos, Paso 2 fotos reales de las 5 vistas + marcado interactivo de daños (click sobre la imagen), Paso 3 tasación con estado mecánico/estético sugeridos automáticamente (ajustables) y valor de referencia autocompletado desde `precios_base`. Las tomas pueden iniciarse desde un vehículo puntual de Stock. `/inspeccion/` y `/tasacion/` quedaron como redirects de compatibilidad.
 - Stock: galería de fotos real del vehículo (subida múltiple, eliminar) — sistema separado de las fotos de Inspección visual.
+- **Acceso desde el celular arreglado**: el server de Flask escuchaba solo en `127.0.0.1` (`app.run(host="0.0.0.0", ...)` agregado en `app.py`) + hacía falta reiniciar el proceso para que tome el cambio (bajar el archivo nuevo no alcanza, Flask no relee código de un proceso ya corriendo) + regla de Firewall de Windows para el puerto 5000. Confirmado funcionando desde el celu por Daniel.
+- **Colores de los marcadores de daño** en la inspección visual: Grave = rojo, Moderado = amarillo, Leve = verde (antes Moderado y Leve eran difíciles de diferenciar).
+- **Costo de reparación por daño marcado** (Paso 2): cada marcador de daño sobre la foto tiene su propio costo estimado de arreglo, con subtotal por vista.
+- **Costo de reparación por punto técnico** (Paso 1): cada uno de los 12 puntos evaluados (motor, caja, embrague, frenos, suspensión, dirección, interior, tapizados, cubiertas, electricidad, aire acondicionado, documentación) tiene su propio campo de costo estimado de arreglo/limpieza — ej. tapizados en mal estado por suciedad o roturas. Se ve reflejado en el hub de la toma con el total del Paso 1.
+- **Tasación (Paso 3) mejorada**: junto al valor de referencia (valor de tabla de `precios_base`) aparecen botones para abrir una búsqueda de ese vehículo en MercadoLibre, RosarioGarage y Facebook Marketplace (comparables reales — sin scraping, son links de búsqueda que abre el agenciero). Los "Gastos estimados de reparación" se sugieren automáticamente sumando el costo cargado en el Paso 1 (puntos técnicos) + el del Paso 2 (daños visuales), con el desglose de ambas fuentes a la vista. El resultado final quedó etiquetado como "Valor de toma" (precio máx. recomendado, ya descontados reparación y margen).
 
 ### Sesión 15/07/2026 — Arranque del proyecto
 - Leído el brief completo (docx "Instrucciones Iniciales") con la definición de los 11 módulos, el naming (Agencieros) y la estrategia comercial (consulta de precios como gancho).
