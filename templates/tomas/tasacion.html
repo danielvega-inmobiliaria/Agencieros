@@ -14,8 +14,19 @@
       Estado mecánico y estético sugeridos a partir de la Toma técnica y la Inspección visual. Podés ajustarlos antes de calcular.
     </p>
     <form method="post">
-      <label>Valor de referencia</label>
+      <label>Valor de referencia <span style="color:var(--text-dim); font-weight:400;">(valor de tabla{% if valor_referencia_sugerido %}: ${{ "{:,.0f}".format(valor_referencia_sugerido).replace(",", ".") }}{% endif %})</span></label>
       <input type="number" step="0.01" name="valor_referencia" value="{{ form.get('valor_referencia', valor_referencia_sugerido) }}" required>
+
+      {% if links_comparables %}
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+        {% for l in links_comparables %}
+        <a class="btn btn-secondary btn-sm" href="{{ l.url }}" target="_blank" rel="noopener">Ver en {{ l.label }} ↗</a>
+        {% endfor %}
+      </div>
+      <p style="color:var(--text-dim); font-size:11.5px; margin-top:6px;">
+        Abren una búsqueda de ese vehículo en cada sitio, para cotejar el valor de tabla contra publicaciones reales.
+      </p>
+      {% endif %}
 
       <div class="form-row">
         <div>
@@ -32,8 +43,8 @@
         </div>
       </div>
 
-      <label>Gastos estimados de reparación</label>
-      <input type="number" step="0.01" name="gastos_estimados" value="{{ form.get('gastos_estimados', 0) }}">
+      <label>Gastos estimados de reparación <span style="color:var(--text-dim); font-weight:400;">(sugerido: ${{ "{:,.0f}".format(gastos_estimados_sugerido).replace(",", ".") }}, suma de los daños marcados)</span></label>
+      <input type="number" step="0.01" name="gastos_estimados" value="{{ form.get('gastos_estimados', gastos_estimados_sugerido) }}">
 
       <button type="submit" class="btn btn-primary" style="margin-top:18px;">Calcular tasación</button>
     </form>
@@ -44,7 +55,7 @@
     {% if resultado %}
     <div class="price-result">
       <div class="amount">${{ "{:,.0f}".format(resultado.precio_max_recomendado).replace(",", ".") }}</div>
-      <div class="meta">Precio máximo recomendado de compra</div>
+      <div class="meta">Valor de toma (precio máx. recomendado, ya descontados reparación y margen)</div>
     </div>
     <div class="stat-row" style="justify-content:center; margin-top:14px;">
       <div class="stat"><div class="n">{{ resultado.riesgo }}</div><div class="l">Riesgo</div></div>

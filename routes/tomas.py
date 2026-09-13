@@ -1,5 +1,6 @@
 import os
 import time
+from urllib.parse import quote_plus
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 
@@ -78,6 +79,31 @@ def _marcadores_de_toma(toma_id):
            WHERE iv.toma_id = ?""",
         (toma_id,),
     )
+
+
+def _costo_reparacion_sugerido(marcadores):
+    """Suma de los costos de reparación cargados en cada daño marcado —
+    se ofrece como punto de partida (editable) para 'Gastos estimados' en
+    el paso de Tasación."""
+    return sum(m["costo_reparacion"] or 0 for m in marcadores)
+
+
+def _links_comparables(marca, modelo, version, anio):
+    """Búsquedas rápidas de precios de referencia en la web (MercadoLibre,
+    RosarioGarage, Facebook Marketplace) para el vehículo de la toma. No
+    hacemos scraping automático (es frágil y varios sitios lo bloquean) —
+    generamos el link de búsqueda y lo abre el agenciero en una pestaña
+    nueva, para cotejar a ojo contra el 'valor de tabla'."""
+    partes = [p for p in [marca, modelo, version, str(anio) if anio else ""] if p]
+    consulta = " ".join(partes).strip()
+    if not consulta:
+        return []
+    slug_ml = quote_plus(consulta).replace("+", "-")
+    return [
+        {"label": "MercadoLibre", "url": f"https://listado.mercadolibre.com.ar/{slug_ml}"},
+        {"label": "RosarioGarage", "url": f"https://www.google.com/search?q=site:rosariogarage.com.ar+{quote_plus(consulta)}"},
+        {"label": "Facebook Marketplace", "url": f"https://www.google.com/search?q=facebook+marketplace+{quote_plus(consulta)}"},
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -183,6 +209,7 @@ def inspeccion(toma_id):
             "label": label,
             "imagen_url": vista_row["imagen_url"] if vista_row else None,
             "marcadores": marcadores,
+            "costo_total": sum(m["costo_reparacion"] or 0 for m in marcadores),
         })
 
     return render_template(
@@ -259,11 +286,16 @@ def agregar_marcador(toma_id, vista):
     tipo = f.get("tipo") if f.get("tipo") in dict(TIPOS_DANIO) else "golpe"
     gravedad = f.get("gravedad") if f.get("gravedad") in dict(GRAVEDADES) else "leve"
     descripcion = (f.get("descripcion") or "").strip()
+    try:
+        costo_reparacion = float(f.get("costo_reparacion")) if f.get("costo_reparacion") else None
+    except ValueError:
+        costo_reparacion = None
 
     execute(
-        """INSERT INTO inspeccion_marcadores (inspeccion_visual_id, pos_x, pos_y, tipo, gravedad, descripcion)
-           VALUES (?,?,?,?,?,?)""",
-        (vista_row["id"], pos_x, pos_y, tipo, gravedad, descripcion),
+        """INSERT INTO inspeccion_marcadores
+           (inspeccion_visual_id, pos_x, pos_y, tipo, gravedad, descripcion, costo_reparacion)
+           VALUES (?,?,?,?,?,?,?)""",
+        (vista_row["id"], pos_x, pos_y, tipo, gravedad, descripcion, costo_reparacion),
     )
     flash("Marcador agregado.", "success")
     return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
@@ -301,6 +333,8 @@ def tasacion(toma_id):
         one=True,
     )
     valor_referencia_sugerido = precio_base["precio_referencia"] if precio_base else ""
+    gastos_estimados_sugerido = _costo_reparacion_sugerido(marcadores)
+    links_comparables = _links_comparables(toma["marca"], toma["modelo"], toma["version"], toma["anio"])
 
     tasacion_previa = query(
         "SELECT * FROM tasaciones WHERE toma_id = ? ORDER BY id DESC LIMIT 1", (toma_id,), one=True
@@ -359,5 +393,7 @@ def tasacion(toma_id):
         estado_mecanico_sugerido=estado_mecanico_sugerido,
         estado_estetico_sugerido=estado_estetico_sugerido,
         valor_referencia_sugerido=valor_referencia_sugerido,
+        gastos_estimados_sugerido=gastos_estimados_sugerido,
+        links_comparables=links_comparables,
         form=request.form,
     )

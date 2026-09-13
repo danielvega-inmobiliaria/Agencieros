@@ -240,6 +240,15 @@ def _migrar_pedidos(conn):
             conn.execute(f"ALTER TABLE pedidos_clientes ADD COLUMN {columna} {tipo}")
 
 
+def _migrar_inspeccion_marcadores(conn):
+    """Agrega el costo estimado de reparación de cada daño marcado en la
+    Inspección visual, para poder sumarlos y sugerir los gastos de
+    reparación en el paso de Tasación."""
+    columnas_actuales = {row[1] for row in conn.execute("PRAGMA table_info(inspeccion_marcadores)")}
+    if "costo_reparacion" not in columnas_actuales:
+        conn.execute("ALTER TABLE inspeccion_marcadores ADD COLUMN costo_reparacion REAL")
+
+
 def _migrar_tasaciones(conn):
     """Vincula `tasaciones` con la Toma de la que surgió (flujo unificado
     Toma → Fotos/Inspección visual → Tasación), sin tocar bases existentes."""
@@ -254,6 +263,7 @@ def init_db():
     conn.executescript(SCHEMA)
     _migrar_vehiculos(conn)
     _migrar_pedidos(conn)
+    _migrar_inspeccion_marcadores(conn)
     _migrar_tasaciones(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")

@@ -226,12 +226,12 @@ form textarea { min-height: 80px; }
   transform: translate(-50%, -50%); border: 2px solid #fff; cursor: pointer;
   box-shadow: 0 0 0 1px rgba(0,0,0,.45);
 }
-.marcador-dot.g-leve { background: var(--gold); }
-.marcador-dot.g-moderado { background: #e08a3c; }
+.marcador-dot.g-leve { background: var(--green); }
+.marcador-dot.g-moderado { background: #f2c94c; }
 .marcador-dot.g-grave { background: var(--red); }
 .dot-chip { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
-.dot-chip.g-leve { background: var(--gold); }
-.dot-chip.g-moderado { background: #e08a3c; }
+.dot-chip.g-leve { background: var(--green); }
+.dot-chip.g-moderado { background: #f2c94c; }
 .dot-chip.g-grave { background: var(--red); }
 .marcador-form {
   background: var(--navy-bg); border: 1px solid var(--border); border-radius: 10px;
