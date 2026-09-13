@@ -80,6 +80,8 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - [ ] Base de Mercado Agencieros: una vez con operaciones reales cargadas, generar valores propios más allá de InfoAuto.
 - [ ] Notificaciones push/WhatsApp para matches del Banco de pedidos y novedades de la Red.
 - [ ] App mobile / PWA (el prototipo visual que subió Daniel está pensado como mobile-first).
+- [ ] Bandeja unificada de contacto (tipo Kommo/CRM omnicanal): centralizar en una sola vista Mail, WhatsApp, Messenger, Instagram, Telegram, LinkedIn, etc. — leads y consultas de clientes en un solo lugar. (Pedido por Daniel 13/09/2026.)
+- [ ] Generador automático de contenido para redes al tomar un vehículo: a partir de los datos ya cargados en Toma/Ficha, armar de una una historia de WhatsApp, un posteo para Facebook, uno para Instagram y la publicación para Marketplace. (Pedido por Daniel 13/09/2026.)
 
 ---
 
