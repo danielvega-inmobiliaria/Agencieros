@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template
 
 from database import query
+from routes.mensajes import contar_no_leidos
 
 bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 
@@ -23,10 +24,13 @@ def index():
     ultimos_vehiculos = query(
         "SELECT * FROM vehiculos ORDER BY created_at DESC LIMIT 5"
     )
+    # Indicador de mensajes sin leer (bandeja unificada — vista previa con datos de ejemplo).
+    mensajes_no_leidos = contar_no_leidos()
     return render_template(
         "dashboard.html",
         stock_counts=stock_counts,
         pedidos_activos=pedidos_activos,
         ventas_mes=ventas_mes,
         ultimos_vehiculos=ultimos_vehiculos,
+        mensajes_no_leidos=mensajes_no_leidos,
     )

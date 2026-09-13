@@ -117,6 +117,11 @@ def _por_id(conv_id):
     return None
 
 
+def contar_no_leidos():
+    """Total de mensajes sin leer (para el indicador del Dashboard)."""
+    return sum(c["no_leidos"] for c in CONVERSACIONES)
+
+
 @bp.route("/")
 def index():
     conv_id = request.args.get("id", type=int)

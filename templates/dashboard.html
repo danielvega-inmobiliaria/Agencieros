@@ -24,6 +24,11 @@
     <div class="value">{{ ventas_mes.c }}</div>
     <div class="sub">Ganancia: ${{ "{:,.0f}".format(ventas_mes.ganancia or 0).replace(",", ".") }}</div>
   </div>
+  <a class="card" href="{{ url_for('mensajes.index') }}" style="display:block;">
+    <div class="label">Mensajes sin leer</div>
+    <div class="value">{{ mensajes_no_leidos }}</div>
+    <div class="sub" style="color:var(--gold-light);">Vista previa · ver bandeja</div>
+  </a>
 </div>
 
 <div class="panel">
