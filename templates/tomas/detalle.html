@@ -1,20 +1,42 @@
 {% extends "base.html" %}
 {% block title %}Toma — Agencieros{% endblock %}
-{% block header %}{{ toma.marca }} {{ toma.modelo }} {{ toma.version }} ({{ toma.anio or '-' }}){% endblock %}
+{% block header %}{{ toma.marca }} {{ toma.modelo }} {{ toma.version }}{% if toma.anio %} ({{ toma.anio }}){% endif %}{% endblock %}
 {% block content %}
 <div class="panel">
-  <h2>Evaluación técnica {% if toma.evaluador %}— {{ toma.evaluador }}{% endif %}</h2>
-  <table>
+  <h2>Paso 1 · Datos técnicos {% if toma.evaluador %}— {{ toma.evaluador }}{% endif %}</h2>
+  <div class="stat-row">
+    <div class="stat"><div class="n">{{ estado_mecanico_sugerido }}</div><div class="l">Estado mecánico sugerido</div></div>
+  </div>
+  <table style="margin-top:16px;">
     <tr><th>Punto</th><th>Calificación</th></tr>
-    {% for key, label in puntos %}
-    <tr><td>{{ label }}</td><td>{{ toma[key] or '-' }}</td></tr>
+    {% for codigo, label in puntos %}
+    <tr><td>{{ label }}</td><td>{{ toma[codigo] or '-' }}</td></tr>
     {% endfor %}
   </table>
-  {% if toma.observaciones %}<p style="margin-top:16px;"><b>Observaciones:</b> {{ toma.observaciones }}</p>{% endif %}
+  {% if toma.observaciones %}<p style="color:var(--text-dim); margin-top:16px;"><b>Observaciones:</b> {{ toma.observaciones }}</p>{% endif %}
 </div>
+
 <div class="panel">
-  <h2>Inspección visual de chapa</h2>
-  <p style="color:var(--text-dim);">Pendiente de vincular con esta toma — ver módulo Inspección visual.</p>
-  <a class="btn btn-secondary btn-sm" href="{{ url_for('inspeccion.index') }}">Ir a Inspección visual</a>
+  <h2>Paso 2 · Fotos e inspección visual</h2>
+  <p style="color:var(--text-dim); font-size:13px;">
+    {{ fotos_cargadas }}/5 fotos cargadas · {{ total_marcadores }} daño(s) marcado(s) · Estado estético sugerido: <strong>{{ estado_estetico_sugerido }}</strong>
+  </p>
+  <a class="btn btn-primary btn-sm" href="{{ url_for('tomas.inspeccion', toma_id=toma.id) }}">
+    {{ 'Continuar con las fotos' if fotos_cargadas < 5 else 'Ver / editar inspección visual' }}
+  </a>
+</div>
+
+<div class="panel">
+  <h2>Paso 3 · Tasación</h2>
+  {% if tasacion %}
+  <div class="stat-row">
+    <div class="stat"><div class="n">${{ "{:,.0f}".format(tasacion.precio_max_recomendado).replace(",", ".") }}</div><div class="l">Precio máx. recomendado</div></div>
+    <div class="stat"><div class="n">{{ tasacion.riesgo }}</div><div class="l">Riesgo</div></div>
+    <div class="stat"><div class="n">${{ "{:,.0f}".format(tasacion.margen_esperado).replace(",", ".") }}</div><div class="l">Margen esperado</div></div>
+  </div>
+  <a class="btn btn-secondary btn-sm" style="margin-top:14px;" href="{{ url_for('tomas.tasacion', toma_id=toma.id) }}">Volver a tasar</a>
+  {% else %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('tomas.tasacion', toma_id=toma.id) }}">Tasar este vehículo</a>
+  {% endif %}
 </div>
 {% endblock %}

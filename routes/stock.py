@@ -1,6 +1,8 @@
+import os
+import uuid
 from datetime import date
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 
 from database import query, execute
 from sync_stock import sync_stock
@@ -14,6 +16,7 @@ ESTADO_LABEL = {
     "en_reparacion": "En reparación",
     "vendido": "Vendido",
 }
+EXTENSIONES_PERMITIDAS = {"jpg", "jpeg", "png", "webp", "gif"}
 
 
 def _rentabilidad(v):
@@ -127,7 +130,71 @@ def detalle(vehiculo_id):
     if not vehiculo:
         flash("Vehículo no encontrado.", "error")
         return redirect(url_for("stock.index"))
-    return render_template("stock/detalle.html", vehiculo=vehiculo, rent=_rentabilidad(vehiculo), estado_label=ESTADO_LABEL)
+    fotos = query("SELECT * FROM vehiculo_fotos WHERE vehiculo_id = ? ORDER BY orden, id", (vehiculo_id,))
+    return render_template(
+        "stock/detalle.html", vehiculo=vehiculo, rent=_rentabilidad(vehiculo), estado_label=ESTADO_LABEL, fotos=fotos
+    )
+
+
+@bp.route("/<int:vehiculo_id>/fotos", methods=["POST"])
+def subir_fotos(vehiculo_id):
+    vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (vehiculo_id,), one=True)
+    if not vehiculo:
+        flash("Vehículo no encontrado.", "error")
+        return redirect(url_for("stock.index"))
+
+    archivos = [a for a in request.files.getlist("fotos") if a and a.filename]
+    if not archivos:
+        flash("Elegí al menos una foto para subir.", "error")
+        return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
+
+    orden_actual = query(
+        "SELECT COALESCE(MAX(orden), -1) o FROM vehiculo_fotos WHERE vehiculo_id = ?", (vehiculo_id,), one=True
+    )["o"]
+    carpeta = os.path.join(current_app.root_path, "static", "uploads", "vehiculos", str(vehiculo_id))
+    os.makedirs(carpeta, exist_ok=True)
+
+    subidas, rechazadas = 0, 0
+    for archivo in archivos:
+        ext = archivo.filename.rsplit(".", 1)[-1].lower() if "." in archivo.filename else ""
+        if ext not in EXTENSIONES_PERMITIDAS:
+            rechazadas += 1
+            continue
+        orden_actual += 1
+        nombre_archivo = f"{uuid.uuid4().hex}.{ext}"
+        archivo.save(os.path.join(carpeta, nombre_archivo))
+        url = url_for("static", filename=f"uploads/vehiculos/{vehiculo_id}/{nombre_archivo}")
+        execute(
+            "INSERT INTO vehiculo_fotos (vehiculo_id, url, orden) VALUES (?,?,?)",
+            (vehiculo_id, url, orden_actual),
+        )
+        subidas += 1
+
+    if subidas:
+        mensaje = f"{subidas} foto(s) agregada(s)."
+        if rechazadas:
+            mensaje += f" {rechazadas} archivo(s) con formato no soportado fueron ignorados."
+        flash(mensaje, "success")
+    else:
+        flash("Ninguna foto se pudo subir (formato no soportado — usá JPG, PNG, WEBP o GIF).", "error")
+    return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
+
+
+@bp.route("/<int:vehiculo_id>/fotos/<int:foto_id>/eliminar", methods=["POST"])
+def eliminar_foto(vehiculo_id, foto_id):
+    foto = query(
+        "SELECT * FROM vehiculo_fotos WHERE id = ? AND vehiculo_id = ?", (foto_id, vehiculo_id), one=True
+    )
+    if foto:
+        execute("DELETE FROM vehiculo_fotos WHERE id = ?", (foto_id,))
+        ruta_local = os.path.join(current_app.root_path, foto["url"].lstrip("/"))
+        try:
+            if os.path.isfile(ruta_local):
+                os.remove(ruta_local)
+        except OSError:
+            pass
+        flash("Foto eliminada.", "success")
+    return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
 
 @bp.route("/<int:vehiculo_id>/editar", methods=["GET", "POST"])

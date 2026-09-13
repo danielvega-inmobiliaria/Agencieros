@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 15/07/2026 — 20:45 ART_
+_Última actualización: 13/09/2026 — 18:05 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -21,11 +21,9 @@ _Última actualización: 15/07/2026 — 20:45 ART_
 
 ## Módulos (11)
 1. **Consulta de precios** (gancho comercial) — marca/modelo/versión/año → precio de referencia. Base inicial con valores tipo InfoAuto (carga manual por ahora, sin integración por API).
-2. **Stock de vehículos** — estados Disponible / Por ingresar / En reparación / Vendido. Ficha completa (fotos, características, equipamiento, km, combustible, caja, observaciones, documentación, historial).
+2. **Stock de vehículos** — estados Disponible / Por ingresar / En reparación / Vendido. Ficha completa (características, equipamiento, km, combustible, caja, observaciones, documentación, historial) + galería de fotos propia (subida real de archivos, separada de la Inspección visual).
 3. **Banco de pedidos** — clientes que buscan un vehículo. Aviso automático cuando ingresa una unidad que matchea.
-4. **Toma de vehículos** — ficha de inspección técnica: motor, caja, embrague, frenos, suspensión, dirección, interior, tapizados, cubiertas, electricidad, aire acondicionado, documentación. Calificación Excelente/Bueno/Regular/Malo.
-5. **Inspección visual de chapa** — 5 vistas (frente, trasera, lateral izq/der, superior) con marcadores arrastrables sobre la imagen (golpes, rayones, vidrios rotos, ópticas, paragolpes, abolladuras), cada uno con gravedad, descripción y foto opcional.
-6. **Tasación inteligente** — a partir de valor de referencia + estado mecánico + estado estético + gastos estimados, calcula precio máximo recomendado de compra, riesgo y margen esperado.
+4-6. **Toma y tasación** (un solo módulo/ítem de menú, flujo en 3 pasos secuenciales — unificado 13/09/2026): **Paso 1** Toma técnica (motor, caja, embrague, frenos, suspensión, dirección, interior, tapizados, cubiertas, electricidad, aire acondicionado, documentación — calificación Excelente/Bueno/Regular/Malo); **Paso 2** Fotos + Inspección visual de chapa (subida real de foto por cada una de las 5 vistas — frente/trasera/lateral izq/lateral der/superior — con click sobre la imagen para ubicar marcadores de daño: golpe/rayón/vidrio roto/óptica/paragolpes/abolladura, con gravedad leve/moderado/grave y descripción); **Paso 3** Tasación (estado mecánico y estético pre-sugeridos automáticamente a partir de los pasos 1 y 2, editables; valor de referencia autocompletado si hay match en `precios_base`; calcula precio máximo recomendado, riesgo y margen esperado). Las tomas pueden iniciarse sueltas o vinculadas a un vehículo puntual de Stock (botón "Hacer toma / tasación" en la ficha). Las rutas viejas `/inspeccion/` y `/tasacion/` quedaron como redirects de compatibilidad hacia este flujo.
 7. **Control económico** — valor de compra, gastos, reparaciones, gastos administrativos, precio publicado/vendido → ganancia bruta/neta, rentabilidad, días en stock.
 8. **Historial financiero** — tablero: ganancia mensual/anual, capital invertido, capital inmovilizado, vehículos más/menos rentables.
 9. **Red de Agencieros** — marketplace privado entre agencias: publicar disponibles, pedir vehículos, compartir oportunidades, buscar unidades, contactar agencias, notificaciones, calificar operaciones.
@@ -70,8 +68,6 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - [ ] Decidir modelo de negocio/planes de suscripción (no está definido en el código todavía) — mirar precios de deConcesionarias ($80k-$1,9M/mes) y MOBU como referencia de mercado.
 
 ### 🟡 IMPORTANTE
-- [ ] Inspección visual de chapa (módulo 5): hoy es un stub — falta el canvas interactivo para arrastrar marcadores sobre las 5 vistas del auto. Requiere JS más elaborado (ej. Fabric.js o similar).
-- [ ] Subida real de fotos de vehículos (hoy `vehiculo_fotos` existe en el schema pero no hay UI de carga de archivos).
 - [ ] Red de Agencieros (módulo 9) hoy es de un solo tenant/DB — para que sea red real entre agencias distintas hace falta multi-tenant (cada agencia con su login) y notificaciones.
 - [ ] Algoritmo de valuación (módulo 11): la fórmula de Tasación es una primera versión simple (factores fijos), no aprende de operaciones reales todavía.
 - [ ] Auth real (hoy es login simple tipo PresupuestoPRO, sin registro de agencias ni roles).
@@ -86,6 +82,15 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 13/09/2026 — Stock↔fotos/inspección, Toma+Inspección+Tasación unificadas, bandeja de mensajes (vista previa)
+- Sincronización de Stock con las fichas de `03_AUTOMOTOR/STOCK` (`sync_stock.py`), sin pisar campos financieros ya cargados a mano.
+- Catálogo unificado de Marca/Modelo/Versión en toda la app (selects en cascada con "+ nueva/o..." como escape hatch) — evita duplicados por tipeo.
+- Banco de pedidos: forma de pago desplegable (contado/cuotas/permuta), con campos de financiación y de vehículo en permuta + match automático contra pedidos propios y Red de Agencieros. Fecha y días transcurridos visibles en el listado.
+- Dashboard: indicador de mensajes sin leer.
+- Mensajes: maqueta de bandeja unificada (WhatsApp/Instagram/Facebook/Email) con datos de ejemplo — vista previa, todavía sin conexión real.
+- **Toma de vehículos + Inspección visual + Tasación fusionadas en un solo ítem de menú ("Toma y tasación"), flujo de 3 pasos secuenciales**: Paso 1 datos técnicos, Paso 2 fotos reales de las 5 vistas + marcado interactivo de daños (click sobre la imagen), Paso 3 tasación con estado mecánico/estético sugeridos automáticamente (ajustables) y valor de referencia autocompletado desde `precios_base`. Las tomas pueden iniciarse desde un vehículo puntual de Stock. `/inspeccion/` y `/tasacion/` quedaron como redirects de compatibilidad.
+- Stock: galería de fotos real del vehículo (subida múltiple, eliminar) — sistema separado de las fotos de Inspección visual.
 
 ### Sesión 15/07/2026 — Arranque del proyecto
 - Leído el brief completo (docx "Instrucciones Iniciales") con la definición de los 11 módulos, el naming (Agencieros) y la estrategia comercial (consulta de precios como gancho).

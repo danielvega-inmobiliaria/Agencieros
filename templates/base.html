@@ -14,9 +14,7 @@
       <a class="nav-item {{ 'active' if request.endpoint == 'dashboard.index' else '' }}" href="{{ url_for('dashboard.index') }}">🏠 Dashboard</a>
       <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('stock.') else '' }}" href="{{ url_for('stock.index') }}">🚗 Stock de vehículos</a>
       <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('pedidos.') else '' }}" href="{{ url_for('pedidos.index') }}">📋 Banco de pedidos</a>
-      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('tomas.') else '' }}" href="{{ url_for('tomas.index') }}">🚙 Toma de vehículos</a>
-      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('inspeccion.') else '' }}" href="{{ url_for('inspeccion.index') }}">🩹 Inspección visual</a>
-      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('tasacion.') else '' }}" href="{{ url_for('tasacion.index') }}">🧮 Tasación inteligente</a>
+      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('tomas.') else '' }}" href="{{ url_for('tomas.index') }}">🚙 Toma y tasación</a>
       <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('finanzas.') else '' }}" href="{{ url_for('finanzas.index') }}">💰 Finanzas</a>
       <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('red.') else '' }}" href="{{ url_for('red.index') }}">🤝 Red de Agencieros</a>
       <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('mensajes.') else '' }}" href="{{ url_for('mensajes.index') }}">💬 Mensajes <span style="font-size:10px; color:var(--gold-light); font-weight:400;">(preview)</span></a>

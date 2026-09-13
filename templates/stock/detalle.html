@@ -20,7 +20,7 @@
     {% if vehiculo.observaciones %}<p><b>Observaciones:</b> {{ vehiculo.observaciones }}</p>{% endif %}
     {% if vehiculo.documentacion %}<p><b>Documentación:</b> {{ vehiculo.documentacion }}</p>{% endif %}
     <a class="btn btn-secondary btn-sm" href="{{ url_for('stock.editar', vehiculo_id=vehiculo.id) }}">Editar</a>
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('tomas.nueva', marca=vehiculo.marca, modelo=vehiculo.modelo, version=vehiculo.version, anio=vehiculo.anio) }}">Hacer toma / inspección</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('tomas.nueva', vehiculo_id=vehiculo.id, marca=vehiculo.marca, modelo=vehiculo.modelo, version=vehiculo.version, anio=vehiculo.anio) }}">Hacer toma / tasación</a>
   </div>
 
   <div class="panel">
@@ -39,5 +39,27 @@
       <div class="stat"><div class="n">{{ rent.dias_en_stock if rent.dias_en_stock is not none else '-' }}</div><div class="l">Días en stock</div></div>
     </div>
   </div>
+</div>
+
+<div class="panel">
+  <h2>Fotos del vehículo</h2>
+  {% if fotos %}
+  <div class="foto-gallery">
+    {% for foto in fotos %}
+    <div class="foto-item">
+      <img src="{{ foto.url }}" alt="Foto de {{ vehiculo.marca }} {{ vehiculo.modelo }}">
+      <form method="post" action="{{ url_for('stock.eliminar_foto', vehiculo_id=vehiculo.id, foto_id=foto.id) }}">
+        <button type="submit" class="btn-eliminar-foto" title="Eliminar foto">✕</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p style="color:var(--text-dim); font-size:13px;">Todavía no hay fotos cargadas.</p>
+  {% endif %}
+  <form method="post" action="{{ url_for('stock.subir_fotos', vehiculo_id=vehiculo.id) }}" enctype="multipart/form-data" class="foto-upload-form">
+    <input type="file" name="fotos" accept="image/*" multiple required>
+    <button type="submit" class="btn btn-primary btn-sm">Subir fotos</button>
+  </form>
 </div>
 {% endblock %}

@@ -240,12 +240,21 @@ def _migrar_pedidos(conn):
             conn.execute(f"ALTER TABLE pedidos_clientes ADD COLUMN {columna} {tipo}")
 
 
+def _migrar_tasaciones(conn):
+    """Vincula `tasaciones` con la Toma de la que surgió (flujo unificado
+    Toma → Fotos/Inspección visual → Tasación), sin tocar bases existentes."""
+    columnas_actuales = {row[1] for row in conn.execute("PRAGMA table_info(tasaciones)")}
+    if "toma_id" not in columnas_actuales:
+        conn.execute("ALTER TABLE tasaciones ADD COLUMN toma_id INTEGER REFERENCES tomas_vehiculo(id)")
+
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.executescript(SCHEMA)
     _migrar_vehiculos(conn)
     _migrar_pedidos(conn)
+    _migrar_tasaciones(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")
     if cur.fetchone()[0] == 0:

@@ -3,6 +3,7 @@
 {% block header %}Ficha de inspección — Toma de vehículo{% endblock %}
 {% block content %}
 <form method="post" id="tomaForm">
+  <input type="hidden" name="vehiculo_id" value="{{ prefill.vehiculo_id or '' }}">
   <div class="panel">
     <div class="form-row">
       <div><label>Marca</label><select id="marca" name="marca" data-placeholder-libre="Marca nueva"></select></div>

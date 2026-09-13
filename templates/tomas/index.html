@@ -1,22 +1,32 @@
 {% extends "base.html" %}
-{% block title %}Toma de vehículos — Agencieros{% endblock %}
-{% block header %}Toma de vehículos{% endblock %}
+{% block title %}Toma y tasación — Agencieros{% endblock %}
+{% block header %}Toma y tasación{% endblock %}
 {% block content %}
 <div class="tabs">
+  <span style="color:var(--text-dim); font-size:13px; align-self:center;">Datos técnicos → Fotos y chapa → Tasación, en un mismo flujo.</span>
   <a class="btn btn-primary btn-sm" style="margin-left:auto;" href="{{ url_for('tomas.nueva') }}">+ Nueva toma</a>
 </div>
+
 <div class="panel">
   <table>
-    <tr><th>Vehículo</th><th>Evaluador</th><th>Fecha</th><th></th></tr>
-    {% for t in tomas %}
+    <tr><th>Vehículo</th><th>Evaluador</th><th>Fecha</th><th>Fotos</th><th>Tasación</th><th></th></tr>
+    {% for d in tomas_data %}
     <tr>
-      <td>{{ t.marca }} {{ t.modelo }} {{ t.version }} {{ t.anio or '' }}</td>
-      <td>{{ t.evaluador or '-' }}</td>
-      <td>{{ t.created_at }}</td>
-      <td><a class="btn btn-secondary btn-sm" href="{{ url_for('tomas.detalle', toma_id=t.id) }}">Ver</a></td>
+      <td>{{ d.toma.marca }} {{ d.toma.modelo }} {{ d.toma.version }} {% if d.toma.anio %}({{ d.toma.anio }}){% endif %}</td>
+      <td>{{ d.toma.evaluador or '-' }}</td>
+      <td>{{ d.toma.created_at[:10] if d.toma.created_at else '-' }}</td>
+      <td>{{ d.fotos_cargadas }}/5</td>
+      <td>
+        {% if d.tasacion %}
+        <span class="badge disponible">${{ "{:,.0f}".format(d.tasacion.precio_max_recomendado).replace(",", ".") }}</span>
+        {% else %}
+        <span class="badge por_ingresar">pendiente</span>
+        {% endif %}
+      </td>
+      <td><a class="btn btn-secondary btn-sm" href="{{ url_for('tomas.detalle', toma_id=d.toma.id) }}">Ver</a></td>
     </tr>
     {% else %}
-    <tr><td colspan="4">Todavía no se registraron tomas.</td></tr>
+    <tr><td colspan="6">Todavía no hay tomas registradas.</td></tr>
     {% endfor %}
   </table>
 </div>

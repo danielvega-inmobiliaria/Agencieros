@@ -1,9 +1,14 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+import os
+import time
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 
 from database import query, execute
+from routes.tasacion import FACTOR_MECANICO, FACTOR_ESTETICO, MARGEN_OBJETIVO
 
 bp = Blueprint("tomas", __name__, url_prefix="/tomas")
 
+# --- Paso 1: datos técnicos ---
 PUNTOS = [
     ("motor", "Motor"), ("caja", "Caja"), ("embrague", "Embrague"), ("frenos", "Frenos"),
     ("suspension", "Suspensión"), ("direccion", "Dirección"), ("interior", "Interior"),
@@ -11,17 +16,94 @@ PUNTOS = [
     ("aire_acondicionado", "Aire acondicionado"), ("documentacion", "Documentación"),
 ]
 CALIFICACIONES = ["Excelente", "Bueno", "Regular", "Malo"]
+PUNTAJE_CALIFICACION = {"Excelente": 4, "Bueno": 3, "Regular": 2, "Malo": 1}
 
+# --- Paso 2: fotos + inspección visual de chapa ---
+VISTAS = [
+    ("frente", "Frente"), ("trasera", "Trasera"), ("lateral_izq", "Lateral izquierdo"),
+    ("lateral_der", "Lateral derecho"), ("superior", "Vista superior"),
+]
+TIPOS_DANIO = [
+    ("golpe", "Golpe"), ("rayon", "Rayón"), ("vidrio_roto", "Vidrio roto"),
+    ("optica", "Óptica"), ("paragolpes", "Paragolpes"), ("abolladura", "Abolladura"),
+]
+GRAVEDADES = [("leve", "Leve"), ("moderado", "Moderado"), ("grave", "Grave")]
+PESO_GRAVEDAD = {"leve": 0.4, "moderado": 0.8, "grave": 1.6}
+EXTENSIONES_PERMITIDAS = {"jpg", "jpeg", "png", "webp", "gif"}
+
+
+def _toma_o_none(toma_id):
+    toma = query("SELECT * FROM tomas_vehiculo WHERE id = ?", (toma_id,), one=True)
+    if not toma:
+        flash("Toma no encontrada.", "error")
+    return toma
+
+
+def _promedio_a_categoria(promedio):
+    if promedio >= 3.5:
+        return "Excelente"
+    if promedio >= 2.5:
+        return "Bueno"
+    if promedio >= 1.5:
+        return "Regular"
+    return "Malo"
+
+
+def _calcular_estado_mecanico(toma):
+    """Sugerencia de estado mecánico a partir de las calificaciones de los
+    12 puntos de la Toma técnica (promedio, mapeado a la categoría más
+    cercana). Ajustable a mano en el paso de Tasación."""
+    valores = [toma[codigo] for codigo, _ in PUNTOS if toma[codigo] in PUNTAJE_CALIFICACION]
+    if not valores:
+        return "Bueno"
+    promedio = sum(PUNTAJE_CALIFICACION[v] for v in valores) / len(valores)
+    return _promedio_a_categoria(promedio)
+
+
+def _calcular_estado_estetico(marcadores):
+    """Sugerencia de estado estético a partir de la cantidad y gravedad de
+    los daños marcados en la Inspección visual. Sin daños marcados (o sin
+    fotos todavía) se sugiere 'Bueno' como punto de partida neutro."""
+    if not marcadores:
+        return "Bueno"
+    descuento = sum(PESO_GRAVEDAD.get(m["gravedad"], 0.5) for m in marcadores)
+    promedio = max(1.0, 4.0 - descuento)
+    return _promedio_a_categoria(promedio)
+
+
+def _marcadores_de_toma(toma_id):
+    return query(
+        """SELECT im.* FROM inspeccion_marcadores im
+           JOIN inspeccion_visual iv ON iv.id = im.inspeccion_visual_id
+           WHERE iv.toma_id = ?""",
+        (toma_id,),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Paso 1 · Toma técnica
+# ---------------------------------------------------------------------------
 
 @bp.route("/")
 def index():
     tomas = query("SELECT * FROM tomas_vehiculo ORDER BY created_at DESC")
-    return render_template("tomas/index.html", tomas=tomas)
+    tomas_data = []
+    for t in tomas:
+        fotos_cargadas = query(
+            "SELECT COUNT(*) c FROM inspeccion_visual WHERE toma_id = ? AND imagen_url IS NOT NULL",
+            (t["id"],), one=True,
+        )["c"]
+        tasacion = query(
+            "SELECT * FROM tasaciones WHERE toma_id = ? ORDER BY id DESC LIMIT 1", (t["id"],), one=True
+        )
+        tomas_data.append({"toma": t, "fotos_cargadas": fotos_cargadas, "tasacion": tasacion})
+    return render_template("tomas/index.html", tomas_data=tomas_data)
 
 
 @bp.route("/nueva", methods=["GET", "POST"])
 def nueva():
     prefill = {
+        "vehiculo_id": request.args.get("vehiculo_id", ""),
         "marca": request.args.get("marca", ""),
         "modelo": request.args.get("modelo", ""),
         "version": request.args.get("version", ""),
@@ -31,11 +113,12 @@ def nueva():
         f = request.form
         toma_id = execute(
             """INSERT INTO tomas_vehiculo
-               (marca, modelo, version, anio, evaluador, motor, caja, embrague, frenos, suspension,
+               (vehiculo_id, marca, modelo, version, anio, evaluador, motor, caja, embrague, frenos, suspension,
                 direccion, interior, tapizados, cubiertas, electricidad, aire_acondicionado,
                 documentacion, observaciones)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
+                f.get("vehiculo_id") or None,
                 f.get("marca"), f.get("modelo"), f.get("version"), f.get("anio") or None,
                 f.get("evaluador"),
                 f.get("motor"), f.get("caja"), f.get("embrague"), f.get("frenos"), f.get("suspension"),
@@ -44,15 +127,237 @@ def nueva():
                 f.get("observaciones"),
             ),
         )
-        flash("Toma de vehículo registrada.", "success")
-        return redirect(url_for("tomas.detalle", toma_id=toma_id))
+        flash("Toma registrada. Ahora sumá las fotos y marcá los daños de la carrocería.", "success")
+        return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
     return render_template("tomas/form.html", puntos=PUNTOS, calificaciones=CALIFICACIONES, prefill=prefill)
 
 
 @bp.route("/<int:toma_id>")
 def detalle(toma_id):
-    toma = query("SELECT * FROM tomas_vehiculo WHERE id = ?", (toma_id,), one=True)
+    toma = _toma_o_none(toma_id)
     if not toma:
-        flash("Toma no encontrada.", "error")
         return redirect(url_for("tomas.index"))
-    return render_template("tomas/detalle.html", toma=toma, puntos=PUNTOS)
+    fotos_cargadas = query(
+        "SELECT COUNT(*) c FROM inspeccion_visual WHERE toma_id = ? AND imagen_url IS NOT NULL",
+        (toma_id,), one=True,
+    )["c"]
+    marcadores = _marcadores_de_toma(toma_id)
+    tasacion = query(
+        "SELECT * FROM tasaciones WHERE toma_id = ? ORDER BY id DESC LIMIT 1", (toma_id,), one=True
+    )
+    return render_template(
+        "tomas/detalle.html",
+        toma=toma,
+        puntos=PUNTOS,
+        fotos_cargadas=fotos_cargadas,
+        total_marcadores=len(marcadores),
+        estado_mecanico_sugerido=_calcular_estado_mecanico(toma),
+        estado_estetico_sugerido=_calcular_estado_estetico(marcadores),
+        tasacion=tasacion,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Paso 2 · Fotos + inspección visual de chapa
+# ---------------------------------------------------------------------------
+
+@bp.route("/<int:toma_id>/inspeccion")
+def inspeccion(toma_id):
+    toma = _toma_o_none(toma_id)
+    if not toma:
+        return redirect(url_for("tomas.index"))
+
+    vistas_data = []
+    for codigo, label in VISTAS:
+        vista_row = query(
+            "SELECT * FROM inspeccion_visual WHERE toma_id = ? AND vista = ?", (toma_id, codigo), one=True
+        )
+        marcadores = []
+        if vista_row:
+            marcadores = query(
+                "SELECT * FROM inspeccion_marcadores WHERE inspeccion_visual_id = ? ORDER BY id",
+                (vista_row["id"],),
+            )
+        vistas_data.append({
+            "codigo": codigo,
+            "label": label,
+            "imagen_url": vista_row["imagen_url"] if vista_row else None,
+            "marcadores": marcadores,
+        })
+
+    return render_template(
+        "tomas/inspeccion.html",
+        toma=toma,
+        vistas_data=vistas_data,
+        tipos=TIPOS_DANIO,
+        gravedades=GRAVEDADES,
+        tipos_label=dict(TIPOS_DANIO),
+        gravedades_label=dict(GRAVEDADES),
+    )
+
+
+@bp.route("/<int:toma_id>/inspeccion/<vista>/foto", methods=["POST"])
+def subir_foto(toma_id, vista):
+    toma = _toma_o_none(toma_id)
+    if not toma:
+        return redirect(url_for("tomas.index"))
+    if vista not in dict(VISTAS):
+        flash("Vista inválida.", "error")
+        return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
+
+    archivo = request.files.get("foto")
+    if not archivo or archivo.filename == "":
+        flash("Elegí una foto para subir.", "error")
+        return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
+
+    ext = archivo.filename.rsplit(".", 1)[-1].lower() if "." in archivo.filename else ""
+    if ext not in EXTENSIONES_PERMITIDAS:
+        flash("Formato de imagen no soportado (usá JPG, PNG, WEBP o GIF).", "error")
+        return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
+
+    carpeta = os.path.join(current_app.root_path, "static", "uploads", "inspeccion", str(toma_id))
+    os.makedirs(carpeta, exist_ok=True)
+    nombre_archivo = f"{vista}_{int(time.time())}.{ext}"
+    archivo.save(os.path.join(carpeta, nombre_archivo))
+    imagen_url = url_for("static", filename=f"uploads/inspeccion/{toma_id}/{nombre_archivo}")
+
+    vista_row = query(
+        "SELECT * FROM inspeccion_visual WHERE toma_id = ? AND vista = ?", (toma_id, vista), one=True
+    )
+    if vista_row:
+        execute("UPDATE inspeccion_visual SET imagen_url = ? WHERE id = ?", (imagen_url, vista_row["id"]))
+    else:
+        execute(
+            "INSERT INTO inspeccion_visual (toma_id, vista, imagen_url) VALUES (?,?,?)",
+            (toma_id, vista, imagen_url),
+        )
+    flash(f"Foto de '{dict(VISTAS)[vista]}' cargada.", "success")
+    return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
+
+
+@bp.route("/<int:toma_id>/inspeccion/<vista>/marcador", methods=["POST"])
+def agregar_marcador(toma_id, vista):
+    toma = _toma_o_none(toma_id)
+    if not toma:
+        return redirect(url_for("tomas.index"))
+
+    vista_row = query(
+        "SELECT * FROM inspeccion_visual WHERE toma_id = ? AND vista = ?", (toma_id, vista), one=True
+    )
+    if not vista_row:
+        flash("Subí una foto de esa vista antes de marcar daños.", "error")
+        return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
+
+    f = request.form
+    try:
+        pos_x = float(f.get("pos_x"))
+        pos_y = float(f.get("pos_y"))
+    except (TypeError, ValueError):
+        flash("No se pudo ubicar el marcador sobre la imagen, probá de nuevo.", "error")
+        return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
+
+    tipo = f.get("tipo") if f.get("tipo") in dict(TIPOS_DANIO) else "golpe"
+    gravedad = f.get("gravedad") if f.get("gravedad") in dict(GRAVEDADES) else "leve"
+    descripcion = (f.get("descripcion") or "").strip()
+
+    execute(
+        """INSERT INTO inspeccion_marcadores (inspeccion_visual_id, pos_x, pos_y, tipo, gravedad, descripcion)
+           VALUES (?,?,?,?,?,?)""",
+        (vista_row["id"], pos_x, pos_y, tipo, gravedad, descripcion),
+    )
+    flash("Marcador agregado.", "success")
+    return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
+
+
+@bp.route("/<int:toma_id>/inspeccion/marcador/<int:marcador_id>/eliminar", methods=["POST"])
+def eliminar_marcador(toma_id, marcador_id):
+    toma = _toma_o_none(toma_id)
+    if not toma:
+        return redirect(url_for("tomas.index"))
+    execute("DELETE FROM inspeccion_marcadores WHERE id = ?", (marcador_id,))
+    flash("Marcador eliminado.", "success")
+    return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
+
+
+# ---------------------------------------------------------------------------
+# Paso 3 · Tasación
+# ---------------------------------------------------------------------------
+
+@bp.route("/<int:toma_id>/tasacion", methods=["GET", "POST"])
+def tasacion(toma_id):
+    toma = _toma_o_none(toma_id)
+    if not toma:
+        return redirect(url_for("tomas.index"))
+
+    marcadores = _marcadores_de_toma(toma_id)
+    estado_mecanico_sugerido = _calcular_estado_mecanico(toma)
+    estado_estetico_sugerido = _calcular_estado_estetico(marcadores)
+
+    precio_base = query(
+        """SELECT precio_referencia FROM precios_base
+           WHERE marca = ? AND modelo = ? AND (version = ? OR ? IS NULL OR ? = '')
+           ORDER BY anio DESC LIMIT 1""",
+        (toma["marca"], toma["modelo"], toma["version"], toma["version"], toma["version"]),
+        one=True,
+    )
+    valor_referencia_sugerido = precio_base["precio_referencia"] if precio_base else ""
+
+    tasacion_previa = query(
+        "SELECT * FROM tasaciones WHERE toma_id = ? ORDER BY id DESC LIMIT 1", (toma_id,), one=True
+    )
+    resultado = None
+
+    if request.method == "POST":
+        f = request.form
+        valor_referencia = float(f.get("valor_referencia") or 0)
+        estado_mecanico = f.get("estado_mecanico") or estado_mecanico_sugerido
+        estado_estetico = f.get("estado_estetico") or estado_estetico_sugerido
+        gastos_estimados = float(f.get("gastos_estimados") or 0)
+
+        factor = FACTOR_MECANICO[estado_mecanico] * FACTOR_ESTETICO[estado_estetico]
+        valor_ajustado = valor_referencia * factor
+        precio_max_recomendado = valor_ajustado - gastos_estimados - (valor_referencia * MARGEN_OBJETIVO)
+        margen_esperado = valor_ajustado - precio_max_recomendado - gastos_estimados
+
+        malos = [estado_mecanico, estado_estetico].count("Malo")
+        regulares = [estado_mecanico, estado_estetico].count("Regular")
+        if malos >= 1 or gastos_estimados > valor_referencia * 0.25:
+            riesgo = "Alto"
+        elif regulares >= 1:
+            riesgo = "Medio"
+        else:
+            riesgo = "Bajo"
+
+        resultado = {
+            "precio_max_recomendado": round(precio_max_recomendado),
+            "riesgo": riesgo,
+            "margen_esperado": round(margen_esperado),
+        }
+
+        execute(
+            """INSERT INTO tasaciones
+               (toma_id, marca, modelo, version, anio, valor_referencia, estado_mecanico, estado_estetico,
+                gastos_estimados, precio_max_recomendado, riesgo, margen_esperado)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                toma_id, toma["marca"], toma["modelo"], toma["version"], toma["anio"],
+                valor_referencia, estado_mecanico, estado_estetico, gastos_estimados,
+                resultado["precio_max_recomendado"], riesgo, resultado["margen_esperado"],
+            ),
+        )
+        flash("Tasación registrada.", "success")
+        tasacion_previa = query(
+            "SELECT * FROM tasaciones WHERE toma_id = ? ORDER BY id DESC LIMIT 1", (toma_id,), one=True
+        )
+
+    return render_template(
+        "tomas/tasacion.html",
+        toma=toma,
+        resultado=resultado,
+        tasacion_previa=tasacion_previa,
+        opciones=CALIFICACIONES,
+        estado_mecanico_sugerido=estado_mecanico_sugerido,
+        estado_estetico_sugerido=estado_estetico_sugerido,
+        valor_referencia_sugerido=valor_referencia_sugerido,
+        form=request.form,
+    )

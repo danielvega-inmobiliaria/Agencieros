@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Fotos e inspección visual — Agencieros{% endblock %}
+{% block header %}Paso 2 · Fotos e inspección visual{% endblock %}
+{% block content %}
+<div class="tabs">
+  <a class="btn btn-secondary btn-sm" href="{{ url_for('tomas.detalle', toma_id=toma.id) }}">← Volver a la toma</a>
+  <span style="color:var(--text-dim); font-size:13px; align-self:center; margin-left:12px;">{{ toma.marca }} {{ toma.modelo }} {{ toma.version }}{% if toma.anio %} ({{ toma.anio }}){% endif %}</span>
+  <a class="btn btn-primary btn-sm" style="margin-left:auto;" href="{{ url_for('tomas.tasacion', toma_id=toma.id) }}">Continuar a Tasación →</a>
+</div>
+
+<p style="color:var(--text-dim); font-size:13px; margin-bottom:18px;">
+  Subí una foto de cada vista y hacé clic sobre la imagen donde haya un golpe, rayón u otro daño para marcarlo.
+</p>
+
+<div class="cards" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start;">
+  {% for v in vistas_data %}
+  <div class="panel vista-card">
+    <h2>{{ v.label }}</h2>
+
+    {% if v.imagen_url %}
+    <div class="vista-imgwrap" id="wrap-{{ v.codigo }}">
+      <img src="{{ v.imagen_url }}" alt="{{ v.label }}">
+      {% for m in v.marcadores %}
+      <span class="marcador-dot g-{{ m.gravedad }}" style="left:{{ m.pos_x }}%; top:{{ m.pos_y }}%;"
+            title="{{ tipos_label.get(m.tipo, m.tipo) }} · {{ gravedades_label.get(m.gravedad, m.gravedad) }}{% if m.descripcion %}: {{ m.descripcion }}{% endif %}"></span>
+      {% endfor %}
+    </div>
+
+    <div class="marcador-form" id="form-{{ v.codigo }}" hidden>
+      <form method="post" action="{{ url_for('tomas.agregar_marcador', toma_id=toma.id, vista=v.codigo) }}">
+        <input type="hidden" name="pos_x" id="posx-{{ v.codigo }}">
+        <input type="hidden" name="pos_y" id="posy-{{ v.codigo }}">
+        <div class="form-row">
+          <div>
+            <label>Tipo de daño</label>
+            <select name="tipo">{% for cod, lab in tipos %}<option value="{{ cod }}">{{ lab }}</option>{% endfor %}</select>
+          </div>
+          <div>
+            <label>Gravedad</label>
+            <select name="gravedad">{% for cod, lab in gravedades %}<option value="{{ cod }}">{{ lab }}</option>{% endfor %}</select>
+          </div>
+        </div>
+        <label>Descripción (opcional)</label>
+        <input type="text" name="descripcion" placeholder="Ej: rayón de 10cm en la puerta">
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <button type="submit" class="btn btn-primary btn-sm">Guardar marcador</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="cancelarMarcador('{{ v.codigo }}')">Cancelar</button>
+        </div>
+      </form>
+    </div>
+
+    {% if v.marcadores %}
+    <ul class="marcador-list">
+      {% for m in v.marcadores %}
+      <li>
+        <span class="dot-chip g-{{ m.gravedad }}"></span>{{ tipos_label.get(m.tipo, m.tipo) }} · {{ gravedades_label.get(m.gravedad, m.gravedad) }}{% if m.descripcion %} — {{ m.descripcion }}{% endif %}
+        <form method="post" action="{{ url_for('tomas.eliminar_marcador', toma_id=toma.id, marcador_id=m.id) }}" style="display:inline;">
+          <button type="submit" class="btn-link">eliminar</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('tomas.subir_foto', toma_id=toma.id, vista=v.codigo) }}" enctype="multipart/form-data" class="reemplazar-foto">
+      <input type="file" name="foto" accept="image/*" required>
+      <button type="submit" class="btn btn-secondary btn-sm">Reemplazar foto</button>
+    </form>
+
+    {% else %}
+    <div class="stub-box" style="padding:24px;">
+      <p style="margin-top:0;">Todavía no hay foto de esta vista.</p>
+      <form method="post" action="{{ url_for('tomas.subir_foto', toma_id=toma.id, vista=v.codigo) }}" enctype="multipart/form-data" class="subir-foto-form">
+        <input type="file" name="foto" accept="image/*" required>
+        <button type="submit" class="btn btn-primary btn-sm">Subir foto</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<script src="{{ url_for('static', filename='js/inspeccion.js') }}"></script>
+{% endblock %}
