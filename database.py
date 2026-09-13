@@ -217,11 +217,35 @@ def _migrar_vehiculos(conn):
     )
 
 
+def _migrar_pedidos(conn):
+    """Agrega a `pedidos_clientes` los campos de financiación (efectivo /
+    cuota) y los del vehículo que el cliente ofrece en permuta, sin tocar
+    bases ya existentes."""
+    columnas_actuales = {row[1] for row in conn.execute("PRAGMA table_info(pedidos_clientes)")}
+    nuevas_columnas = {
+        "efectivo_disponible": "REAL",
+        "cuota_maxima": "REAL",
+        "permuta_marca": "TEXT",
+        "permuta_modelo": "TEXT",
+        "permuta_version": "TEXT",
+        "permuta_anio": "INTEGER",
+        "permuta_km": "INTEGER",
+        "permuta_combustible": "TEXT",
+        "permuta_caja": "TEXT",
+        "permuta_color": "TEXT",
+        "permuta_observaciones": "TEXT",
+    }
+    for columna, tipo in nuevas_columnas.items():
+        if columna not in columnas_actuales:
+            conn.execute(f"ALTER TABLE pedidos_clientes ADD COLUMN {columna} {tipo}")
+
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.executescript(SCHEMA)
     _migrar_vehiculos(conn)
+    _migrar_pedidos(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")
     if cur.fetchone()[0] == 0:

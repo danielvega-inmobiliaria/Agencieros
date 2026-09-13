@@ -17,11 +17,56 @@
       <div><label>Año desde</label><input type="number" name="anio_desde"></div>
       <div><label>Año hasta</label><input type="number" name="anio_hasta"></div>
       <div><label>Precio máximo</label><input type="number" step="0.01" name="precio_maximo"></div>
-      <div><label>Forma de pago</label><input name="forma_pago" placeholder="Contado / Permuta / Cuotas"></div>
+      <div>
+        <label>Forma de pago</label>
+        <select name="forma_pago" id="forma_pago" onchange="actualizarFormaPago()">
+          {% for f in formas_pago %}
+          <option value="{{ f }}">{{ forma_pago_label[f] }}</option>
+          {% endfor %}
+        </select>
+      </div>
     </div>
+
+    <div id="campos-financiacion" class="form-row" style="display:none;">
+      <div><label>Efectivo disponible</label><input type="number" step="0.01" name="efectivo_disponible" placeholder="$"></div>
+      <div><label>Cuota máxima que puede pagar</label><input type="number" step="0.01" name="cuota_maxima" placeholder="$ por mes"></div>
+    </div>
+
+    <div id="campos-permuta" style="display:none;">
+      <h2 style="font-size:14px; margin:16px 0 8px;">Vehículo que entrega en permuta</h2>
+      <div class="form-row">
+        <div><label>Marca</label><input name="permuta_marca"></div>
+        <div><label>Modelo</label><input name="permuta_modelo"></div>
+        <div><label>Versión</label><input name="permuta_version"></div>
+        <div><label>Año</label><input type="number" name="permuta_anio"></div>
+      </div>
+      <div class="form-row">
+        <div><label>Kilómetros</label><input type="number" name="permuta_km"></div>
+        <div><label>Combustible</label><input name="permuta_combustible"></div>
+        <div><label>Caja</label><input name="permuta_caja"></div>
+        <div><label>Color</label><input name="permuta_color"></div>
+      </div>
+      <label>Observaciones del vehículo que entrega</label>
+      <textarea name="permuta_observaciones" placeholder="Estado general, deudas, detalles a tener en cuenta..."></textarea>
+      <p style="color:var(--text-muted, #7b8794); font-size:12px; margin-top:6px;">
+        Al guardar, lo cotejamos automáticamente contra tus pedidos propios y contra la Red de Agencieros
+        para ver si ese vehículo ya tiene comprador.
+      </p>
+    </div>
+
     <label>Observaciones</label>
     <textarea name="observaciones"></textarea>
     <button class="btn btn-primary" style="margin-top:20px;" type="submit">Guardar pedido</button>
   </form>
 </div>
+
+<script>
+  function actualizarFormaPago() {
+    var v = document.getElementById('forma_pago').value;
+    var conFinanciacion = (v === 'cuotas' || v === 'permuta');
+    document.getElementById('campos-financiacion').style.display = conFinanciacion ? 'grid' : 'none';
+    document.getElementById('campos-permuta').style.display = (v === 'permuta') ? 'block' : 'none';
+  }
+  actualizarFormaPago();
+</script>
 {% endblock %}

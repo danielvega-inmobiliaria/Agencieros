@@ -4,6 +4,47 @@ from database import query, execute
 
 bp = Blueprint("pedidos", __name__, url_prefix="/pedidos")
 
+FORMAS_PAGO = ["contado", "cuotas", "permuta"]
+FORMA_PAGO_LABEL = {
+    "contado": "Contado",
+    "cuotas": "Cuotas",
+    "permuta": "Permuta",
+}
+
+
+def _buscar_matches_permuta(marca, modelo, excluir_pedido_id=None):
+    """Cruza el vehículo que el cliente ofrece en permuta contra:
+    - otros pedidos propios (clientes buscando ese mismo marca/modelo), y
+    - la Red de Agencieros (publicaciones tipo 'busco' de otras agencias).
+    Así el agenciero ve de una si ese auto de permuta ya tiene comprador."""
+    if not marca:
+        return [], []
+
+    cond_propios = "estado = 'buscando' AND LOWER(marca) = LOWER(?)"
+    params_propios = [marca]
+    if excluir_pedido_id:
+        cond_propios += " AND id != ?"
+        params_propios.append(excluir_pedido_id)
+    if modelo:
+        cond_propios += " AND LOWER(modelo) = LOWER(?)"
+        params_propios.append(modelo)
+    propios = query(
+        f"SELECT * FROM pedidos_clientes WHERE {cond_propios} ORDER BY created_at DESC",
+        tuple(params_propios),
+    )
+
+    cond_red = "tipo = 'busco' AND estado = 'activo' AND LOWER(marca) = LOWER(?)"
+    params_red = [marca]
+    if modelo:
+        cond_red += " AND LOWER(modelo) = LOWER(?)"
+        params_red.append(modelo)
+    red = query(
+        f"SELECT * FROM red_publicaciones WHERE {cond_red} ORDER BY created_at DESC",
+        tuple(params_red),
+    )
+
+    return propios, red
+
 
 @bp.route("/")
 def index():
@@ -14,27 +55,68 @@ def index():
         pedidos = query(
             "SELECT * FROM pedidos_clientes WHERE estado = ? ORDER BY created_at DESC", (estado_filtro,)
         )
-    return render_template("pedidos/index.html", pedidos=pedidos, estado_filtro=estado_filtro)
+    return render_template(
+        "pedidos/index.html",
+        pedidos=pedidos,
+        estado_filtro=estado_filtro,
+        forma_pago_label=FORMA_PAGO_LABEL,
+    )
 
 
 @bp.route("/nuevo", methods=["GET", "POST"])
 def nuevo():
     if request.method == "POST":
         f = request.form
-        execute(
+        forma_pago = f.get("forma_pago", "contado")
+        con_financiacion = forma_pago in ("cuotas", "permuta")
+        es_permuta = forma_pago == "permuta"
+
+        pedido_id = execute(
             """INSERT INTO pedidos_clientes
                (cliente_nombre, telefono, marca, modelo, version, anio_desde, anio_hasta,
-                precio_maximo, forma_pago, observaciones)
-               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                precio_maximo, forma_pago, observaciones,
+                efectivo_disponible, cuota_maxima,
+                permuta_marca, permuta_modelo, permuta_version, permuta_anio, permuta_km,
+                permuta_combustible, permuta_caja, permuta_color, permuta_observaciones)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 f.get("cliente_nombre"), f.get("telefono"), f.get("marca"), f.get("modelo"),
                 f.get("version"), f.get("anio_desde") or None, f.get("anio_hasta") or None,
-                float(f.get("precio_maximo") or 0) or None, f.get("forma_pago"), f.get("observaciones"),
+                float(f.get("precio_maximo") or 0) or None, forma_pago, f.get("observaciones"),
+                float(f.get("efectivo_disponible") or 0) if con_financiacion and f.get("efectivo_disponible") else None,
+                float(f.get("cuota_maxima") or 0) if con_financiacion and f.get("cuota_maxima") else None,
+                f.get("permuta_marca") if es_permuta else None,
+                f.get("permuta_modelo") if es_permuta else None,
+                f.get("permuta_version") if es_permuta else None,
+                (f.get("permuta_anio") or None) if es_permuta else None,
+                (f.get("permuta_km") or None) if es_permuta else None,
+                f.get("permuta_combustible") if es_permuta else None,
+                f.get("permuta_caja") if es_permuta else None,
+                f.get("permuta_color") if es_permuta else None,
+                f.get("permuta_observaciones") if es_permuta else None,
             ),
         )
-        flash("Pedido guardado. Te avisamos automáticamente si ingresa un vehículo que matchea.", "success")
+
+        mensaje = "Pedido guardado. Te avisamos automáticamente si ingresa un vehículo que matchea."
+        if es_permuta and f.get("permuta_marca"):
+            propios, red = _buscar_matches_permuta(
+                f.get("permuta_marca"), f.get("permuta_modelo"), excluir_pedido_id=pedido_id
+            )
+            if propios or red:
+                partes = []
+                if propios:
+                    nombres = ", ".join(p["cliente_nombre"] for p in propios)
+                    partes.append(f"{len(propios)} pedido(s) propio(s) buscando ese vehículo ({nombres})")
+                if red:
+                    agencias = ", ".join(r["agencia_nombre"] for r in red)
+                    partes.append(f"{len(red)} publicación(es) de la Red buscando ese vehículo ({agencias})")
+                mensaje = "⚡ El vehículo de permuta matchea con " + " y ".join(partes) + "."
+            else:
+                mensaje = "Pedido guardado. El vehículo de permuta no matchea con nadie por ahora."
+
+        flash(mensaje, "success")
         return redirect(url_for("pedidos.index"))
-    return render_template("pedidos/form.html")
+    return render_template("pedidos/form.html", formas_pago=FORMAS_PAGO, forma_pago_label=FORMA_PAGO_LABEL)
 
 
 @bp.route("/<int:pedido_id>/resolver")
