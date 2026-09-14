@@ -146,6 +146,20 @@ form textarea { min-height: 80px; }
   background: var(--navy-bg); color: var(--text); font-size: 14px;
 }
 .select-row input[type="text"]::placeholder { color: var(--text-dim); }
+.select-row .autocomplete-wrap { min-width: 160px; }
+.select-row .autocomplete-wrap input[type="text"] { width: 100%; min-width: 0; }
+
+/* --- Desplegable propio de autocompletar (Año/Marca/Modelo en Consulta de
+   precios y en Toma/Stock/Pedidos/Red) — reemplaza <input list>+<datalist>
+   nativo, que en iOS Safari se confunde con las sugerencias del teclado. */
+.autocomplete-wrap { position: relative; }
+.autocomplete-dropdown {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 50; margin-top: 2px;
+  background: var(--navy-card); border: 1px solid var(--border); border-radius: 8px;
+  max-height: 240px; overflow-y: auto; box-shadow: 0 10px 24px rgba(0,0,0,.4);
+}
+.autocomplete-item { padding: 10px 12px; font-size: 14px; color: var(--text); cursor: pointer; }
+.autocomplete-item:hover, .autocomplete-item.active { background: var(--navy-card-2); }
 
 .price-result { text-align: center; padding: 20px; }
 .price-result .amount { font-size: 42px; font-weight: 800; color: var(--gold-light); }
@@ -252,6 +266,30 @@ form textarea { min-height: 80px; }
   margin-top: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
 }
 .vista-card input[type="file"] { width: auto; padding: 6px; font-size: 12px; }
+
+/* --- Tabla responsive (Paso 1 · Toma técnica: Punto/Calificación/Costo/
+   Comentario) --- en pantallas chicas esta tabla de 4 columnas se cortaba:
+   Costo y Comentario quedaban fuera de la pantalla sin forma cómoda de
+   verlos. En vez de habilitar solo un scroll horizontal (que en la práctica
+   seguía siendo difícil de notar/usar en el celu), cada fila pasa a ser una
+   tarjeta apilada, con el nombre de la columna arriba de cada valor. */
+@media (max-width: 700px) {
+  .tabla-responsive thead,
+  .tabla-responsive .fila-header { display: none; }
+  .tabla-responsive, .tabla-responsive tbody, .tabla-responsive tr, .tabla-responsive td {
+    display: block; width: 100%;
+  }
+  .tabla-responsive tr {
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; margin-bottom: 12px; background: var(--navy-bg);
+  }
+  .tabla-responsive td { border-bottom: none; padding: 6px 0; }
+  .tabla-responsive td[data-label]::before {
+    content: attr(data-label);
+    display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--text-dim); margin-bottom: 3px;
+  }
+}
 
 /* --- Galería de fotos del vehículo (Stock) --- */
 .foto-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin: 14px 0; }
