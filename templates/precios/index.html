@@ -4,12 +4,15 @@
 {% block content %}
 <div class="hero-search">
   <h1>¿Qué vehículo querés consultar?</h1>
-  <p>Escribí la marca, o arrancá directo por el modelo si no la tenés a mano.</p>
+  <p>Arrancá por el Año: así Marca, Modelo y Versión te sugieren solo lo que corresponde a ese año.</p>
   <div class="select-row">
-    <input type="text" id="marca" list="marcas-list" placeholder="Marca (opcional)" autocomplete="off">
-    <datalist id="marcas-list">
-      {% for m in marcas %}<option value="{{ m }}">{% endfor %}
+    <input type="text" id="anio" list="anios-list" placeholder="Año" autocomplete="off">
+    <datalist id="anios-list">
+      {% for a in anios %}<option value="{{ a }}">{% endfor %}
     </datalist>
+
+    <input type="text" id="marca" list="marcas-list" placeholder="Marca (opcional)" autocomplete="off">
+    <datalist id="marcas-list"></datalist>
 
     <input type="text" id="modelo" list="modelos-list" placeholder="Modelo" autocomplete="off">
     <datalist id="modelos-list"></datalist>
@@ -17,7 +20,7 @@
     <select id="marcaDisambiguar" style="display:none;"><option value="">¿Cuál marca?</option></select>
 
     <select id="version" disabled><option value="">Versión</option></select>
-    <select id="anio" disabled><option value="">Año</option></select>
+    <select id="anioDisambiguar" style="display:none;"><option value="">¿Qué año?</option></select>
     <button class="btn btn-primary" id="btnBuscar" disabled>Ver precio</button>
   </div>
 </div>
@@ -32,12 +35,14 @@
 </div>
 
 <script>
+const anioInput = document.getElementById('anio');
 const marcaInput = document.getElementById('marca');
 const modeloInput = document.getElementById('modelo');
 const marcaDisambiguar = document.getElementById('marcaDisambiguar');
+const anioDisambiguar = document.getElementById('anioDisambiguar');
+const marcasList = document.getElementById('marcas-list');
 const modelosList = document.getElementById('modelos-list');
 const versionSel = document.getElementById('version');
-const anioSel = document.getElementById('anio');
 const btn = document.getElementById('btnBuscar');
 
 function resetSelect(sel, placeholder) {
@@ -45,86 +50,123 @@ function resetSelect(sel, placeholder) {
   sel.disabled = true;
 }
 
-function resetDesdeModelo() {
+function resetDesdeCambio() {
   resetSelect(versionSel, 'Versión');
-  resetSelect(anioSel, 'Año');
   btn.disabled = true;
   marcaDisambiguar.style.display = 'none';
   marcaDisambiguar.innerHTML = '<option value="">¿Cuál marca?</option>';
+  anioDisambiguar.style.display = 'none';
+  anioDisambiguar.innerHTML = '<option value="">¿Qué año?</option>';
 }
 
-async function cargarModelos(marca) {
-  const url = marca ? `/precios/api/modelos?marca=${encodeURIComponent(marca)}` : '/precios/api/modelos';
+async function cargarMarcas(anio) {
+  const url = anio ? `/precios/api/marcas?anio=${encodeURIComponent(anio)}` : '/precios/api/marcas';
   const res = await fetch(url);
+  const data = await res.json();
+  marcasList.innerHTML = data.map(m => `<option value="${m}">`).join('');
+}
+
+async function cargarModelos(marca, anio) {
+  const params = new URLSearchParams();
+  if (marca) params.set('marca', marca);
+  if (anio) params.set('anio', anio);
+  const res = await fetch(`/precios/api/modelos?${params.toString()}`);
   const data = await res.json();
   modelosList.innerHTML = data.map(m => `<option value="${m}">`).join('');
 }
 
-async function cargarVersiones(marca, modelo) {
-  const res = await fetch(`/precios/api/versiones?marca=${encodeURIComponent(marca)}&modelo=${encodeURIComponent(modelo)}`);
+async function cargarVersiones(marca, modelo, anio) {
+  const params = new URLSearchParams({ marca, modelo });
+  if (anio) params.set('anio', anio);
+  const res = await fetch(`/precios/api/versiones?${params.toString()}`);
   const data = await res.json();
   resetSelect(versionSel, 'Versión');
   data.forEach(v => versionSel.innerHTML += `<option value="${v}">${v}</option>`);
   versionSel.disabled = false;
 }
 
-// Datalist de modelos con el universo completo desde el arranque, así se
-// puede buscar directo por modelo sin elegir marca antes.
-cargarModelos('');
+// Al arrancar, sin Año todavía elegido: universo completo de marcas y
+// modelos (se van acotando apenas se completa algún campo).
+cargarMarcas('');
+cargarModelos('', '');
+
+anioInput.addEventListener('change', () => {
+  resetDesdeCambio();
+  const anio = anioInput.value.trim();
+  cargarMarcas(anio);
+  cargarModelos(marcaInput.value.trim(), anio);
+  if (modeloInput.value.trim()) modeloInput.dispatchEvent(new Event('change'));
+});
 
 marcaInput.addEventListener('change', () => {
-  resetDesdeModelo();
-  cargarModelos(marcaInput.value.trim());
-  // Si ya había un modelo tipeado, lo revalidamos contra la marca nueva.
+  resetDesdeCambio();
+  cargarModelos(marcaInput.value.trim(), anioInput.value.trim());
   if (modeloInput.value.trim()) modeloInput.dispatchEvent(new Event('change'));
 });
 
 modeloInput.addEventListener('change', async () => {
-  resetDesdeModelo();
+  resetDesdeCambio();
   const modelo = modeloInput.value.trim();
   if (!modelo) return;
 
+  const anio = anioInput.value.trim();
   let marca = marcaInput.value.trim();
   if (!marca) {
     // Búsqueda directa por modelo, sin marca elegida todavía.
-    const res = await fetch(`/precios/api/marcas_por_modelo?modelo=${encodeURIComponent(modelo)}`);
+    const params = new URLSearchParams({ modelo });
+    if (anio) params.set('anio', anio);
+    const res = await fetch(`/precios/api/marcas_por_modelo?${params.toString()}`);
     const marcas = await res.json();
     if (marcas.length === 1) {
       marca = marcas[0];
       marcaInput.value = marca;
     } else if (marcas.length > 1) {
-      // Varias marcas comparten ese modelo: selector chico solo con esas
-      // opciones, nunca el desplegable completo de marcas.
+      // Varias marcas comparten ese modelo (en ese año): selector chico
+      // solo con esas opciones, nunca el desplegable completo de marcas.
       marcas.forEach(m => marcaDisambiguar.innerHTML += `<option value="${m}">${m}</option>`);
       marcaDisambiguar.style.display = '';
       return;
     } else {
-      return; // modelo no encontrado en la base todavía
+      return; // modelo no encontrado (en ese año, si estaba elegido)
     }
   }
-  await cargarVersiones(marca, modelo);
+  await cargarVersiones(marca, modelo, anio);
 });
 
 marcaDisambiguar.addEventListener('change', async () => {
   if (!marcaDisambiguar.value) return;
   marcaInput.value = marcaDisambiguar.value;
   marcaDisambiguar.style.display = 'none';
-  await cargarVersiones(marcaDisambiguar.value, modeloInput.value.trim());
+  await cargarVersiones(marcaDisambiguar.value, modeloInput.value.trim(), anioInput.value.trim());
 });
 
 versionSel.addEventListener('change', async () => {
-  resetSelect(anioSel, 'Año'); btn.disabled = true;
+  btn.disabled = true;
+  anioDisambiguar.style.display = 'none';
   if (!versionSel.value) return;
+  if (anioInput.value.trim()) { btn.disabled = false; return; }
+  // No se puso Año todavía (se puede buscar sin seguir el orden
+  // recomendado): lo resolvemos acá para no trabar la búsqueda.
   const res = await fetch(`/precios/api/anios?marca=${encodeURIComponent(marcaInput.value)}&modelo=${encodeURIComponent(modeloInput.value)}&version=${encodeURIComponent(versionSel.value)}`);
-  const data = await res.json();
-  data.forEach(a => anioSel.innerHTML += `<option value="${a}">${a}</option>`);
-  anioSel.disabled = false;
+  const anios = await res.json();
+  if (anios.length === 1) {
+    anioInput.value = anios[0];
+    btn.disabled = false;
+  } else if (anios.length > 1) {
+    anios.forEach(a => anioDisambiguar.innerHTML += `<option value="${a}">${a}</option>`);
+    anioDisambiguar.style.display = '';
+  }
 });
 
-anioSel.addEventListener('change', () => { btn.disabled = !anioSel.value; });
+anioDisambiguar.addEventListener('change', () => {
+  if (!anioDisambiguar.value) return;
+  anioInput.value = anioDisambiguar.value;
+  anioDisambiguar.style.display = 'none';
+  btn.disabled = false;
+});
 
 btn.addEventListener('click', () => {
-  const params = new URLSearchParams({ marca: marcaInput.value, modelo: modeloInput.value, version: versionSel.value, anio: anioSel.value });
+  const params = new URLSearchParams({ marca: marcaInput.value, modelo: modeloInput.value, version: versionSel.value, anio: anioInput.value });
   window.location.href = `/precios/buscar?${params.toString()}`;
 });
 </script>

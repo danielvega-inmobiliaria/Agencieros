@@ -7,52 +7,91 @@ bp = Blueprint("precios", __name__, url_prefix="/precios")
 
 @bp.route("/")
 def index():
-    marcas = [r["marca"] for r in query("SELECT DISTINCT marca FROM precios_base ORDER BY marca")]
-    return render_template("precios/index.html", marcas=marcas)
+    # La búsqueda arranca por Año: mostramos el universo completo de años
+    # cargados para el datalist inicial (ver charla 13-14/09/2026 — antes
+    # arrancaba por Marca, ahora Marca/Modelo/Versión se acotan solos una
+    # vez elegido el Año).
+    anios = [r["anio"] for r in query("SELECT DISTINCT anio FROM precios_base ORDER BY anio DESC")]
+    return render_template("precios/index.html", anios=anios)
+
+
+@bp.route("/api/marcas")
+def api_marcas():
+    """Marcas para el datalist. Con Año ya elegido, solo las marcas que
+    tienen algún precio cargado para ese año — así no se ofrecen marcas
+    que en ese año no tienen ninguna versión con precio."""
+    anio = request.args.get("anio", "")
+    if anio:
+        rows = query("SELECT DISTINCT marca FROM precios_base WHERE anio = ? ORDER BY marca", (anio,))
+    else:
+        rows = query("SELECT DISTINCT marca FROM precios_base ORDER BY marca")
+    return jsonify([r["marca"] for r in rows])
 
 
 @bp.route("/api/modelos")
 def api_modelos():
-    """Modelos para el datalist de autocompletar. Con marca elegida, solo
-    los de esa marca (como antes). Sin marca —búsqueda directa por
-    modelo, sin pasar primero por el desplegable de marcas— devuelve el
-    universo completo para que el campo Modelo funcione solo."""
+    """Modelos para el datalist de autocompletar, acotados por Marca y/o
+    Año (los que ya estén elegidos). Sin marca —búsqueda directa por
+    modelo— devuelve el universo (filtrado por año si corresponde)."""
     marca = request.args.get("marca", "")
+    anio = request.args.get("anio", "")
+    sql = "SELECT DISTINCT modelo FROM precios_base WHERE 1=1"
+    params = []
     if marca:
-        rows = query(
-            "SELECT DISTINCT modelo FROM precios_base WHERE marca = ? ORDER BY modelo", (marca,)
-        )
-    else:
-        rows = query("SELECT DISTINCT modelo FROM precios_base ORDER BY modelo")
+        sql += " AND marca = ?"
+        params.append(marca)
+    if anio:
+        sql += " AND anio = ?"
+        params.append(anio)
+    sql += " ORDER BY modelo"
+    rows = query(sql, tuple(params))
     return jsonify([r["modelo"] for r in rows])
 
 
 @bp.route("/api/marcas_por_modelo")
 def api_marcas_por_modelo():
     """Cuando se busca directo por modelo sin elegir marca antes: dice qué
-    marca(s) tienen ese modelo, para autocompletarla sola si es una única
-    marca, o mostrar un selector chico con solo esas opciones (nunca el
-    desplegable completo) si el modelo existe en más de una marca."""
+    marca(s) tienen ese modelo (acotado también por Año, si ya está
+    elegido), para autocompletarla sola si es una única marca, o mostrar
+    un selector chico con solo esas opciones si el modelo existe en más
+    de una marca."""
     modelo = request.args.get("modelo", "")
-    rows = query(
-        "SELECT DISTINCT marca FROM precios_base WHERE modelo = ? ORDER BY marca", (modelo,)
-    )
+    anio = request.args.get("anio", "")
+    sql = "SELECT DISTINCT marca FROM precios_base WHERE modelo = ?"
+    params = [modelo]
+    if anio:
+        sql += " AND anio = ?"
+        params.append(anio)
+    sql += " ORDER BY marca"
+    rows = query(sql, tuple(params))
     return jsonify([r["marca"] for r in rows])
 
 
 @bp.route("/api/versiones")
 def api_versiones():
+    """Versiones para Marca+Modelo. Con Año elegido, solo las que
+    realmente tienen precio cargado para ese año puntual — el resto no
+    se muestra (pedido explícito: no mezclar versiones de otros años)."""
     marca = request.args.get("marca", "")
     modelo = request.args.get("modelo", "")
-    rows = query(
-        "SELECT DISTINCT version FROM precios_base WHERE marca = ? AND modelo = ? ORDER BY version",
-        (marca, modelo),
-    )
+    anio = request.args.get("anio", "")
+    sql = "SELECT DISTINCT version FROM precios_base WHERE marca = ? AND modelo = ?"
+    params = [marca, modelo]
+    if anio:
+        sql += " AND anio = ?"
+        params.append(anio)
+    sql += " ORDER BY version"
+    rows = query(sql, tuple(params))
     return jsonify([r["version"] for r in rows])
 
 
 @bp.route("/api/anios")
 def api_anios():
+    """Años disponibles para una Marca+Modelo+Versión puntual. Resguardo
+    para cuando se llega a elegir la Versión sin haber puesto el Año
+    primero (el flujo recomendado es Año primero, pero no es
+    obligatorio): si hay un solo año posible se completa solo, si hay
+    varios se le pregunta al agenciero cuál."""
     marca = request.args.get("marca", "")
     modelo = request.args.get("modelo", "")
     version = request.args.get("version", "")
