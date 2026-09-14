@@ -10,15 +10,15 @@
 </div>
 
 <div class="panel">
-  <table>
-    <tr><th>Cliente</th><th>Teléfono</th><th>Busca</th><th>Precio máx.</th><th>Forma de pago</th><th>Fecha</th><th>Días</th><th>Estado</th><th></th></tr>
+  <table class="tabla-responsive">
+    <tr class="fila-header"><th>Cliente</th><th>Teléfono</th><th>Busca</th><th>Precio máx.</th><th>Forma de pago</th><th>Fecha</th><th>Días</th><th>Estado</th><th></th></tr>
     {% for p in pedidos %}
     <tr>
-      <td>{{ p.cliente_nombre }}</td>
-      <td>{{ p.telefono or '-' }}</td>
-      <td>{{ p.marca }} {{ p.modelo }} {{ p.version }} {% if p.anio_desde or p.anio_hasta %}({{ p.anio_desde or '' }}{% if p.anio_hasta %}–{{ p.anio_hasta }}{% endif %}){% endif %}</td>
-      <td>{{ "$" + "{:,.0f}".format(p.precio_maximo).replace(",", ".") if p.precio_maximo else '-' }}</td>
-      <td>
+      <td data-label="Cliente">{{ p.cliente_nombre }}</td>
+      <td data-label="Teléfono">{{ p.telefono or '-' }}</td>
+      <td data-label="Busca">{{ p.marca }} {{ p.modelo }} {{ p.version }} {% if p.anio_desde or p.anio_hasta %}({{ p.anio_desde or '' }}{% if p.anio_hasta %}–{{ p.anio_hasta }}{% endif %}){% endif %}</td>
+      <td data-label="Precio máx.">{{ "$" + "{:,.0f}".format(p.precio_maximo).replace(",", ".") if p.precio_maximo else '-' }}</td>
+      <td data-label="Forma de pago">
         {{ forma_pago_label.get(p.forma_pago, p.forma_pago) if p.forma_pago else '-' }}
         {% if p.forma_pago in ('cuotas', 'permuta') and (p.efectivo_disponible or p.cuota_maxima) %}
         <br><span style="color:var(--text-muted, #7b8794); font-size:11.5px;">
@@ -33,9 +33,9 @@
         </span>
         {% endif %}
       </td>
-      <td>{{ p.fecha_str }}</td>
-      <td>{{ p.dias_transcurridos if p.dias_transcurridos is not none else '-' }}</td>
-      <td><span class="badge {{ p.estado }}">{{ p.estado }}</span></td>
+      <td data-label="Fecha">{{ p.fecha_str }}</td>
+      <td data-label="Días">{{ p.dias_transcurridos if p.dias_transcurridos is not none else '-' }}</td>
+      <td data-label="Estado"><span class="badge {{ p.estado }}">{{ p.estado }}</span></td>
       <td>
         {% if p.estado == 'buscando' %}
         <a class="btn btn-secondary btn-sm" href="{{ url_for('pedidos.resolver', pedido_id=p.id) }}">Resuelto</a>

@@ -13,15 +13,15 @@
     Hoy es un tablero compartido de una sola base — para que sea una red real entre agencias
     distintas falta multi-tenant (login por agencia) y notificaciones automáticas. Ver PROYECTO.md.
   </p>
-  <table>
-    <tr><th>Tipo</th><th>Agencia</th><th>Vehículo</th><th>Precio</th><th>Contacto</th><th></th></tr>
+  <table class="tabla-responsive">
+    <tr class="fila-header"><th>Tipo</th><th>Agencia</th><th>Vehículo</th><th>Precio</th><th>Contacto</th><th></th></tr>
     {% for p in publicaciones %}
     <tr>
-      <td><span class="badge {{ 'disponible' if p.tipo == 'ofrezco' else 'por_ingresar' }}">{{ 'Ofrece' if p.tipo == 'ofrezco' else 'Busca' }}</span></td>
-      <td>{{ p.agencia_nombre }}</td>
-      <td>{{ p.marca }} {{ p.modelo }} {{ p.version }} {{ p.anio or '' }}</td>
-      <td>{{ "$" + "{:,.0f}".format(p.precio).replace(",", ".") if p.precio else '-' }}</td>
-      <td>{{ p.contacto or '-' }}</td>
+      <td data-label="Tipo"><span class="badge {{ 'disponible' if p.tipo == 'ofrezco' else 'por_ingresar' }}">{{ 'Ofrece' if p.tipo == 'ofrezco' else 'Busca' }}</span></td>
+      <td data-label="Agencia">{{ p.agencia_nombre }}</td>
+      <td data-label="Vehículo">{{ p.marca }} {{ p.modelo }} {{ p.version }} {{ p.anio or '' }}</td>
+      <td data-label="Precio">{{ "$" + "{:,.0f}".format(p.precio).replace(",", ".") if p.precio else '-' }}</td>
+      <td data-label="Contacto">{{ p.contacto or '-' }}</td>
       <td><a class="btn btn-secondary btn-sm" href="{{ url_for('red.cerrar', pub_id=p.id) }}">Cerrar</a></td>
     </tr>
     {% else %}

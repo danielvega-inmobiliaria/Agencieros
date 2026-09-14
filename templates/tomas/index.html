@@ -8,15 +8,15 @@
 </div>
 
 <div class="panel">
-  <table>
-    <tr><th>Vehículo</th><th>Evaluador</th><th>Fecha</th><th>Fotos</th><th>Tasación</th><th></th></tr>
+  <table class="tabla-responsive">
+    <tr class="fila-header"><th>Vehículo</th><th>Evaluador</th><th>Fecha</th><th>Fotos</th><th>Tasación</th><th></th></tr>
     {% for d in tomas_data %}
     <tr>
-      <td>{{ d.toma.marca }} {{ d.toma.modelo }} {{ d.toma.version }} {% if d.toma.anio %}({{ d.toma.anio }}){% endif %}</td>
-      <td>{{ d.toma.evaluador or '-' }}</td>
-      <td>{{ d.toma.created_at[:10] if d.toma.created_at else '-' }}</td>
-      <td>{{ d.fotos_cargadas }}/5</td>
-      <td>
+      <td data-label="Vehículo">{{ d.toma.marca }} {{ d.toma.modelo }} {{ d.toma.version }} {% if d.toma.anio %}({{ d.toma.anio }}){% endif %}</td>
+      <td data-label="Evaluador">{{ d.toma.evaluador or '-' }}</td>
+      <td data-label="Fecha">{{ d.toma.created_at[:10] if d.toma.created_at else '-' }}</td>
+      <td data-label="Fotos">{{ d.fotos_cargadas }}/5</td>
+      <td data-label="Tasación">
         {% if d.tasacion %}
         <span class="badge disponible">${{ "{:,.0f}".format(d.tasacion.precio_max_recomendado).replace(",", ".") }}</span>
         {% else %}

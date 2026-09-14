@@ -16,15 +16,15 @@
 </div>
 
 <div class="panel">
-  <table>
-    <tr><th>Vehículo</th><th>Año</th><th>Km</th><th>Estado</th><th>Publicado</th><th></th></tr>
+  <table class="tabla-responsive">
+    <tr class="fila-header"><th>Vehículo</th><th>Año</th><th>Km</th><th>Estado</th><th>Publicado</th><th></th></tr>
     {% for v in vehiculos %}
     <tr>
-      <td>{{ v.marca }} {{ v.modelo }} {{ v.version }}</td>
-      <td>{{ v.anio }}</td>
-      <td>{{ "{:,.0f}".format(v.km).replace(",", ".") if v.km else '-' }}</td>
-      <td><span class="badge {{ v.estado }}">{{ estado_label[v.estado] }}</span></td>
-      <td>${{ "{:,.0f}".format(v.valor_publicado or 0).replace(",", ".") }}</td>
+      <td data-label="Vehículo">{{ v.marca }} {{ v.modelo }} {{ v.version }}</td>
+      <td data-label="Año">{{ v.anio }}</td>
+      <td data-label="Km">{{ "{:,.0f}".format(v.km).replace(",", ".") if v.km else '-' }}</td>
+      <td data-label="Estado"><span class="badge {{ v.estado }}">{{ estado_label[v.estado] }}</span></td>
+      <td data-label="Publicado">${{ "{:,.0f}".format(v.valor_publicado or 0).replace(",", ".") }}</td>
       <td><a class="btn btn-secondary btn-sm" href="{{ url_for('stock.detalle', vehiculo_id=v.id) }}">Ver</a></td>
     </tr>
     {% else %}

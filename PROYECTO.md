@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 14/09/2026 — 16:32 ART_
+_Última actualización: 14/09/2026 — 16:52 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -87,6 +87,14 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 14/09/2026 (continuación 4) — Tabla responsive aplicada a TODOS los listados de la app (no solo Toma técnica)
+Daniel reportó el mismo problema de mobile (columnas cortadas, sin forma cómoda de ver todo) pero en el Dashboard ("Últimos vehículos cargados"). Al revisar, era el mismo patrón sin arreglar en TODAS las tablas de listado de la app — el fix de la sesión anterior solo había cubierto la tabla de Paso 1 de Toma técnica.
+- Aplicada la misma clase `.tabla-responsive` (tarjetas apiladas en mobile, ya probada) a las tablas de: **Dashboard** (últimos vehículos), **Toma y tasación** (listado de tomas), **Stock** (listado de vehículos), **Red de Agencieros** (publicaciones), **Banco de pedidos** (listado de pedidos) y **Finanzas** (las 3 tablas: ganancia por mes, por año, y ranking de rentabilidad).
+- No se tocaron: la ficha de un vehículo en Stock (`stock/detalle.html`, tabla de 2 columnas dato/valor — no se corta) ni el historial de precios en Consulta (`precios/resultado.html`, también 2 columnas) — esas no tienen el problema.
+- **Verificación:** esta vez, antes de avisar que estaba resuelto, corrí el flujo real contra la base de datos de Daniel para las 6 páginas tocadas (`/dashboard/`, `/tomas/`, `/stock/`, `/red/`, `/pedidos/`, `/finanzas/`) — todas 200 OK. Además, después de escribir los archivos en su compu, releí el tamaño de cada uno para confirmar que quedaron guardados de verdad (por el susto de la vez pasada con `tasacion.html`).
+- **Archivos tocados:** `templates/dashboard.html`, `templates/tomas/index.html`, `templates/stock/index.html`, `templates/red/index.html`, `templates/pedidos/index.html`, `templates/finanzas/index.html`.
+- **Pendiente:** que Daniel confirme desde el celu que ahora se ve bien en estas 6 pantallas.
 
 ### Sesión 14/09/2026 (continuación 3) — Bug crítico: TypeError al calcular la Tasación (rompía toda la pantalla)
 Daniel reportó `TypeError: 'builtin_function_or_method' object is not iterable` al llegar al Paso 3 desde el Paso 2, tanto en la compu como en el celu — la pantalla de Tasación no cargaba directamente. Era una regresión introducida en el rediseño de este mismo día (sesión "continuación").
