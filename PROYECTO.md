@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 14/09/2026 — 16:52 ART_
+_Última actualización: 14/09/2026 — 19:00 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -19,7 +19,7 @@ _Última actualización: 14/09/2026 — 16:52 ART_
 
 **Visión a largo plazo:** que AGENCIEROS sea el estándar de agencias de autos en Argentina. Con masa crítica de usuarios, las operaciones cargadas por las agencias generan un "Valor de Mercado Agencieros" propio, potencialmente más representativo que una guía tradicional.
 
-## Módulos (11)
+## Módulos (12)
 1. **Consulta de precios** (gancho comercial) — marca/modelo/versión/año → precio de referencia. Base inicial con valores tipo InfoAuto (carga manual por ahora, sin integración por API).
 2. **Stock de vehículos** — estados Disponible / Por ingresar / En reparación / Vendido. Ficha completa (características, equipamiento, km, combustible, caja, observaciones, documentación, historial) + galería de fotos propia (subida real de archivos, separada de la Inspección visual).
 3. **Banco de pedidos** — clientes que buscan un vehículo. Aviso automático cuando ingresa una unidad que matchea.
@@ -29,6 +29,7 @@ _Última actualización: 14/09/2026 — 16:52 ART_
 9. **Red de Agencieros** — marketplace privado entre agencias: publicar disponibles, pedir vehículos, compartir oportunidades, buscar unidades, contactar agencias, notificaciones, calificar operaciones.
 10. **Base propia de valuaciones** — actualización mensual, inicialmente sobre InfoAuto; a futuro historial de precios y tendencias propias.
 11. **Algoritmo de valuación** — extiende precios más allá del rango de InfoAuto (+5/10 años) considerando antigüedad, km, historial, marca, demanda y operaciones reales registradas en la plataforma.
+12. **Financiación** (nuevo 14/09/2026) — la agencia financia directo al comprador (no es un simulador de crédito bancario externo). Simulador de cuotas por sistema francés (cuota fija) disponible libremente para cualquier consulta antes de cerrar una venta (sin necesidad de tener el vehículo marcado como vendido todavía); al confirmar la venta, el plan se guarda como real (opcionalmente atado a un vehículo de Stock) y genera el cronograma de cuotas con fecha de vencimiento. Panel de control por plan: cobrado vs. adeudado, cuotas vencidas, registro de pagos (totales o parciales), cierre automático a "Finalizado" cuando se cobran todas las cuotas.
 
 ## Stack / Tecnología
 Igual patrón que `APP_PRESUPUESTOPRO` (ya probado y funcionando con Daniel):
@@ -39,8 +40,8 @@ Igual patrón que `APP_PRESUPUESTOPRO` (ya probado y funcionando con Daniel):
 
 ## Archivos importantes
 - `app.py` — factory de la app, registra todos los blueprints.
-- `database.py` — conexión SQLite + schema completo (11 módulos) + seed de datos de ejemplo (precios_base, usuario admin).
-- `routes/` — un blueprint por módulo: `auth`, `dashboard`, `precios`, `stock`, `pedidos`, `tomas`, `inspeccion`, `tasacion`, `finanzas`, `red`.
+- `database.py` — conexión SQLite + schema completo (12 módulos) + seed de datos de ejemplo (precios_base, usuario admin).
+- `routes/` — un blueprint por módulo: `auth`, `dashboard`, `precios`, `stock`, `pedidos`, `tomas`, `inspeccion`, `tasacion`, `finanzas`, `red`, `financiacion`.
 - `templates/` — Jinja2, layout `base.html` con sidebar (tema navy + dorado inspirado en el prototipo visual que Daniel subió).
 - `static/css/style.css` — estilos.
 
@@ -55,6 +56,7 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 - **deConcesionarias** (deconcesionarias.com.ar) — el más fuerte. +90 agencias/concesionarios, 82.300 autos bajo gestión, 32.700 ventas/año, certificado oficial por Mercado Libre. Ya tiene: cotización por patente + análisis de mercado en vivo (= nuestro módulo 1 + parte del 6), peritaje digital (= módulo 4/5), multipublicador a 10+ portales, e-CRM con "lista de deseos" que **matchea cliente-stock y avisa automático** (= nuestro módulo 3, ya resuelto por ellos, hasta con el nombre "el Tinder automotor"), subastas privadas entre agencias (≈ módulo 9), WhatsApp con bot de IA, negocios digitales (seguros/garantías comisionables), app mobile. Precio: desde $80.000/mes (1 usuario, 15 autos) hasta $1.900.000/mes.
 - **MOBU** (mobu.market) — ERP multimoneda genérico con vertical para agencias. Ya tiene: ganancia real por unidad con gastos imputados, **tasación asistida con IA usando comparables de MercadoLibre** (= nuestro módulo 6/11), permuta que auto-genera stock ya tasado, créditos/cuotas, comisiones de vendedores, panel "sobre/subvaluado vs. mercado".
+- **LUCY.CRM** (crm.lucy.ar) — agregado por Daniel 14/09/2026, producto 100% nacional. CRM especializado organizado en 4 áreas: Comercial (leads, ventas, inventario — se solapa con nuestros módulos 1-3), Contable (gastos, pagos, movimientos — ≈ módulo 7/8), Gestoría (transferencias, patentes, multas — no tenemos nada parecido hoy) y Servicios (seguimiento de unidades en taller). Publica directo a MercadoLibre y a ComunidAuto (una red/comunidad de agencias — vale la pena mirarla también como referencia para nuestro módulo 9 de Red), genera placas para historias de redes, multi-sucursal. Precio: 4 planes mensuales — Starter $250.000 (3 usuarios/20 unidades), Standar $320.000 (5 usuarios/50 unidades), Pro $390.000 (10 usuarios/100 unidades), Enterprise $435.600 (ilimitado) — más un add-on "Lucy × REM" con bot conversacional 24/7 para captar leads (precio a consultar). Al igual que deConcesionarias, el precio de entrada de Lucy sigue muy por encima de lo que hoy paga un agenciero chico solo por la guía de precios — refuerza el ángulo de "precio de entrada bajo" como diferencial de AGENCIEROS.
 - Otros con menor porte: AutoSite, DeAutos.io, Autosoft, Auto360, Octosis DMS, Nodum (ERP por VIN), PymeCar/FN Software.
 - **InfoAuto ya tiene app propia** (InfoAuto Argentina, Google Play / App Store) con consultas ilimitadas, fichas técnicas y fotos — no es solo la revista impresa. Esto debilita el ángulo original de "ellos no tienen app, nosotros sí".
 
@@ -63,30 +65,75 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ## Pendientes
 
 ### 🔴 CRÍTICO
-- [ ] **Redefinir el diferencial real de AGENCIEROS a la luz de la competencia** (ver sección de arriba) antes de seguir construyendo funcionalidades — decidir si el foco es precio bajo para agencias chicas, red abierta entre independientes, o un nicho distinto.
-- [ ] Definir fuente real de datos de precios (¿InfoAuto tiene API? ¿se carga a mano mes a mes?) — hoy `precios_base` tiene datos de ejemplo cargados a mano.
-- [ ] Decidir modelo de negocio/planes de suscripción (no está definido en el código todavía) — mirar precios de deConcesionarias ($80k-$1,9M/mes) y MOBU como referencia de mercado.
+- [ ] **Redefinir el diferencial real de AGENCIEROS a la luz de la competencia** (deConcesionarias, MOBU y ahora también **LUCY.CRM** — ver sección de arriba) antes de seguir construyendo funcionalidades — decidir si el foco es precio bajo para agencias chicas, red abierta entre independientes, o un nicho distinto.
+- [x] ~~Definir fuente real de datos de precios~~ → **Decidido 14/09/2026: carga manual por ahora** (no se va a integrar API de InfoAuto en esta etapa). Sigue pendiente como tarea operativa, no de producto: mantener `precios_base` actualizado a mano.
+- [ ] **Decidir modelo de negocio/planes de suscripción** — Decidido 14/09/2026: va a ser **con planes de suscripción** (no freemium, no por transacción). Falta definir: cantidad de planes, qué incluye cada uno (usuarios, vehículos en stock, módulos), y precios — usar como referencia de mercado a deConcesionarias ($80k-$1,9M/mes), MOBU y ahora LUCY.CRM (Starter $250k → Enterprise $435,6k/mes), todos muy por encima de los ~$16.800 que hoy paga un agenciero chico solo por la guía de precios — ahí está el hueco de precio de entrada que definimos como diferencial.
 
 ### 🟡 IMPORTANTE
-- [ ] Red de Agencieros (módulo 9) hoy es de un solo tenant/DB — para que sea red real entre agencias distintas hace falta multi-tenant (cada agencia con su login) y notificaciones.
-- [ ] Algoritmo de valuación (módulo 11): la fórmula de Tasación es una primera versión simple (factores fijos), no aprende de operaciones reales todavía.
-- [ ] Auth real (hoy es login simple tipo PresupuestoPRO, sin registro de agencias ni roles).
-- [ ] **Imprimir informe de tasación:** agregar botón/vista de impresión del resultado de la Tasación.
-- [ ] **Ampliar checklist de Toma técnica de 12 a 41 puntos:** Daniel compartió una foto de un checklist físico completo (ejemplo Peugeot 308) con 41 puntos de inspección — falta transcribir la lista completa y migrar `PUNTOS`/las columnas `comentario_<codigo>`/`costo_<codigo>` en `database.py` y `routes/tomas.py`.
-- [ ] **Vínculo Toma→Stock al tomar un vehículo:** definir y programar qué pasa cuando se toma un vehículo — ¿se carga automático a Stock?, ¿se marca "En reparación"?, ¿se asigna fecha de entrega estimada? Hoy no hay ningún vínculo automático entre una Toma tasada y el módulo Stock.
-- [ ] **Certificado HTTPS:** evaluar si conviene para evitar el cartel del navegador "Estás a punto de enviar información no segura" al cargar datos en la red local (hoy la app corre sin HTTPS).
+- [ ] **Financiación (módulo 12, nuevo 14/09/2026):** falta que Daniel pruebe el flujo real desde el navegador/celu (simulador → guardar plan → registrar pagos) y confirme que el cálculo de cuotas (sistema francés) da los números esperados. Pendiente de decidir a futuro: ¿agregar un botón directo "Simular financiación" desde `stock/detalle.html` cuando el vehículo está vendido (hoy se llega solo entrando a Financiación → Simulador y eligiendo el vehículo de una lista)? ¿Enviar recordatorio automático (push/WhatsApp, ver pendiente relacionado abajo) cuando una cuota está por vencer o ya venció?
+- [ ] Red de Agencieros (módulo 9) hoy es de un solo tenant/DB — para que sea red real entre agencias distintas hace falta multi-tenant (cada agencia con su login) y notificaciones. **Decidido 14/09/2026: se implementa recién cuando cerremos la funcionalidad core de la app — no es prioridad ahora, queda deliberadamente después en la cola.**
+- [ ] Algoritmo de valuación (módulo 11): la fórmula de Tasación es una primera versión simple (factores fijos), no aprende de operaciones reales todavía. **Agregado 14/09/2026: hacer configurable el % de utilidad** — hoy está hardcodeado en `MARGEN_OBJETIVO = 0.15` (`routes/tasacion.py` línea 11, comentario "15% de ganancia esperada sobre el valor de referencia"), fijo para todas las tasaciones y no editable desde ningún lado de la app. Falta decidir cómo se vuelve ajustable (¿un campo en el formulario de Tasación por cada toma? ¿una configuración general de la agencia? ¿ambas, con la general como default?).
+- [ ] **Auth real** (hoy es login simple tipo PresupuestoPRO, sin registro de agencias ni roles). **Alcance confirmado 14/09/2026:** registro de agencia + validación por mail, y cobro por Mercado Pago (mismo patrón ya resuelto en PresupuestoPRO) — esto conecta directo con el pendiente 🔴 de modelo de negocio/planes de suscripción: la suscripción paga por Mercado Pago va a depender de que Auth real ya esté armado.
+- [x] ~~Imprimir informe de tasación~~ → **Confirmado 14/09/2026: sí, hay que hacerlo.** Falta diseñar el formato de salida (queda como tarea de diseño antes de programarlo).
+- [ ] **Ampliar checklist de Toma técnica de 12 a 41 puntos:** Daniel compartió una foto de un checklist físico completo (ejemplo Peugeot 308) con 41 puntos de inspección — falta transcribir la lista completa y migrar `PUNTOS`/las columnas `comentario_<codigo>`/`costo_<codigo>` en `database.py` y `routes/tomas.py`. **14/09/2026: Daniel pasa la lista cuando se la pidamos — mencionó que hay otra versión de checklist con 2 o 3 ítems más, confirmar cuál usar antes de transcribir.**
+- [ ] **Vínculo Toma→Stock al tomar un vehículo:** **Confirmado 14/09/2026: sí** — se carga automático a Stock (a definir si queda "En reparación" u otro estado) **y/o fecha de entrega programada** si la carga automática completa a Stock no se puede resolver de una. Hoy no hay ningún vínculo automático entre una Toma tasada y el módulo Stock.
+- [x] ~~Certificado HTTPS~~ → **Descartado 14/09/2026: no hace falta por ahora** — el cartel de "sitio no seguro" es un problema de correr en red local sin HTTPS; una vez que se despliegue en web (ej. Railway) va a andar con HTTPS de forma nativa y este problema deja de existir solo.
 
 ### 🟢 IDEAS FUTURAS
-- [ ] Comparables de mercado (MercadoLibre/RosarioGarage/Facebook Marketplace) en Tasación: hoy son links de búsqueda que abre el agenciero manualmente (decisión deliberada, para no depender de scraping frágil ni pisar los ToS de esos sitios). A futuro se podría evaluar una integración real (API o scraping propio) si hace falta traer el precio automáticamente.
-- [ ] Base de Mercado Agencieros: una vez con operaciones reales cargadas, generar valores propios más allá de InfoAuto.
-- [ ] Notificaciones push/WhatsApp para matches del Banco de pedidos y novedades de la Red.
-- [ ] App mobile / PWA (el prototipo visual que subió Daniel está pensado como mobile-first).
-- [ ] Bandeja unificada de contacto (tipo Kommo/CRM omnicanal): centralizar en una sola vista Mail, WhatsApp, Messenger, Instagram, Telegram, LinkedIn, etc. — leads y consultas de clientes en un solo lugar. (Pedido por Daniel 13/09/2026.)
-- [ ] Generador automático de contenido para redes al tomar un vehículo: a partir de los datos ya cargados en Toma/Ficha, armar de una una historia de WhatsApp, un posteo para Facebook, uno para Instagram y la publicación para Marketplace. (Pedido por Daniel 13/09/2026.)
+- [ ] **Comparables de mercado — integración real:** hoy son links de búsqueda manuales. Daniel preguntó 14/09/2026 cómo se implementaría — propuesta técnica:
+  - **MercadoLibre: sí es viable.** Tiene una API pública oficial y gratuita (`api.mercadolibre.com/sites/MLA/search?q=...`), sin necesidad de aprobación para búsquedas básicas, devuelve JSON con precio/título/link/miniatura de cada aviso. Se podría traer los N avisos más relevantes de marca+modelo+versión+año y mostrar un rango (mín/promedio/máx) al lado del valor de tabla en Tasación, en vez de solo el link de búsqueda — sin scraping, 100% dentro de sus términos de uso.
+  - **RosarioGarage y Facebook Marketplace: no conviene.** Ninguno tiene una API pública real para esto (Facebook Marketplace requiere acuerdo comercial con Meta, fuera de alcance para una app chica) — scrapearlos sería exactamente lo que decidimos evitar desde el principio (frágil, pisa ToS). Recomendación: dejarlos como link de búsqueda manual como están hoy, e invertir el esfuerzo de integración solo en MercadoLibre.
+  - Detalles a resolver si se encara: cachear resultados (no pegarle a la API en cada tecleo), límites de uso de la API gratuita, y qué mostrar cuando no hay resultados para ese modelo/año exacto.
+- [ ] **Base de "Mercado Agencieros" propia — cómo se configuraría:** Daniel preguntó 14/09/2026. Depende de tener volumen real de operaciones cargadas en la plataforma entre varias agencias — o sea, depende de que la Red de Agencieros ya sea multi-tenant (ver pendiente 🟡), no solo de "esperar datos". Propuesta cuando llegue el momento: agregar por marca+modelo+versión+año los `valor_vendido` reales de `vehiculos` con estado 'vendido' (la señal más confiable, más que `valor_referencia` de tasaciones que es solo una estimación), calculando un promedio o mediana, con más peso a las ventas más recientes y descartando outliers. Definir un mínimo de operaciones cargadas por modelo antes de mostrar un "Valor de Mercado Agencieros" (con 1 o 2 ventas no alcanza para confiar en el número). No hay nada para construir todavía — es un plan a futuro, condicionado al multi-tenant.
+- [x] Notificaciones push/WhatsApp para matches del Banco de pedidos y novedades de la Red. **Confirmado 14/09/2026: sí, hay que implementarlo.**
+- [ ] App mobile / PWA (el prototipo visual que subió Daniel está pensado como mobile-first). **14/09/2026: Daniel confirmó que es el paso siguiente, una vez verificado el funcionamiento de la app web.**
+- [ ] Bandeja unificada de contacto (tipo Kommo/CRM omnicanal): centralizar en una sola vista Mail, WhatsApp, Messenger, Instagram, Telegram, LinkedIn, etc. — leads y consultas de clientes en un solo lugar. (Pedido por Daniel 13/09/2026. **Reconfirmado 14/09/2026: "me interesa mucho" — alto interés de Daniel, aunque sigue en Ideas futuras por orden de implementación.**)
+- [ ] Generador automático de contenido para redes al tomar un vehículo: a partir de los datos ya cargados en Toma/Ficha, armar de una una historia de WhatsApp, un posteo para Facebook, uno para Instagram y la publicación para Marketplace. (Pedido por Daniel 13/09/2026. **Reconfirmado 14/09/2026 con mucho entusiasmo — "sería un golazo!!".**)
 
 ---
 
 ## Cambios recientes
+
+### Sesión 14/09/2026 (continuación 8) — Nuevo módulo: Financiación (crédito propio, cuotas, cobro/deuda)
+Daniel pidió una sección de financiación donde calcular crédito y cuotas, con control de lo cobrado y adeudado. Antes de programar se confirmaron 3 decisiones con Daniel (AskUserQuestion):
+- **Es financiación propia de la agencia** (no un simulador de crédito bancario externo) — la agencia le vende en cuotas al cliente y cobra ella misma, con ledger real de cobro/deuda.
+- **El simulador de cuotas está disponible libre, para cualquier consulta antes de cerrar una venta** (no depende de tener el vehículo ya marcado como vendido en Stock) — recién al guardar el plan queda un registro real, opcionalmente atado a un vehículo de Stock.
+- **Sistema francés (cuota fija)** para el cálculo de cuotas.
+
+**Qué se construyó:**
+- `database.py`: 2 tablas nuevas — `financiaciones` (cliente, vehículo opcional, monto financiado, tasa mensual, cantidad de cuotas, valor de cuota, estado activo/finalizado/cancelado) y `financiacion_cuotas` (una fila por cuota: número, vencimiento, monto, monto pagado, fecha de pago, estado).
+- `routes/financiacion.py` (blueprint nuevo, registrado en `app.py`): cálculo de cuota por sistema francés (`_calcular_cuota_frances`) y del cronograma completo mes a mes con interés/amortización/saldo (`_generar_cronograma`, con ajuste de centavos en la última cuota para que el saldo cierre en $0 exacto). Rutas: `/financiacion/` (listado + resumen de cobrado/adeudado/vencidas), `/financiacion/simulador` (calculadora libre, GET/POST, sin persistir hasta que se guarda), `/financiacion/nuevo` (persiste el plan + genera las cuotas), `/financiacion/<id>` (detalle con cronograma y botón "Registrar pago" por cuota, admite pago parcial), `/financiacion/<id>/cuota/<id>/pagar`, `/financiacion/<id>/cancelar`. Al cobrarse la última cuota pendiente el plan pasa solo a "Finalizado".
+- Templates nuevos: `templates/financiacion/index.html`, `simulador.html`, `detalle.html` — mismo estilo navy/dorado y mismas clases (`.tabla-responsive`, `.badge`, `.card`) que el resto de la app, sin CSS nuevo.
+- Ítem de menú nuevo en `templates/base.html`: "🏦 Financiación".
+- **Verificación:** copiado todo al entorno de prueba con la base de datos real de Daniel y corrido con el cliente de test de Flask — simulación de cuotas, guardado de un plan real, y registro de un pago, los tres devolvieron 200 y el HTML esperado (cronograma, plan creado, cuota marcada "Pagada"). También se re-probaron de paso `/dashboard`, `/stock/`, `/finanzas/`, `/precios/`, `/tomas/`, `/red/`, `/pedidos/` para confirmar que el cambio en `database.py`/`app.py` no rompió nada existente — todas 200.
+- Escritos en la compu de Daniel y confirmado el tamaño de cada archivo contra lo esperado (mismo protocolo desde el incidente del hardlink).
+- **Archivos tocados:** `app.py`, `database.py`, `templates/base.html` (modificados), `routes/financiacion.py`, `templates/financiacion/index.html`, `templates/financiacion/simulador.html`, `templates/financiacion/detalle.html` (nuevos).
+- **Pendiente:** que Daniel pruebe el flujo real desde el navegador/celu y confirme que los números de cuota le cierran (queda anotado en Pendientes → 🟡 IMPORTANTE). Falta también el commit/push (bloque de Git Bash de esta respuesta).
+
+### Sesión 14/09/2026 (continuación 7) — Repaso de pendientes 🟢 IDEAS FUTURAS con decisiones de Daniel
+- **Comparables de mercado — cómo implementarlo:** propuesta técnica agregada — usar la API pública gratuita de MercadoLibre (`api.mercadolibre.com/sites/MLA/search`) para traer precios reales sin scraping; RosarioGarage y Facebook Marketplace quedan como link manual (no tienen API viable para esto, scrapearlos violaría lo que ya habíamos decidido evitar).
+- **Base de Mercado Agencieros — cómo se configuraría:** depende de que la Red sea multi-tenant primero (no es solo "esperar datos"). Plan cuando llegue el momento: promediar `valor_vendido` real por marca/modelo/versión/año, con mínimo de operaciones antes de mostrar el número.
+- **Notificaciones push/WhatsApp:** confirmado que sí, a implementar.
+- **App mobile/PWA:** confirmado como paso siguiente, una vez verificado el funcionamiento de la app web.
+- **Bandeja unificada de contacto:** Daniel reconfirmó mucho interés ("me interesa mucho").
+- **Generador de contenido para redes:** Daniel reconfirmó con mucho entusiasmo ("sería un golazo!!").
+- **Archivos tocados:** `PROYECTO.md` únicamente (decisiones/scoping de producto, no hay código nuevo).
+
+### Sesión 14/09/2026 (continuación 6) — Repaso completo de pendientes 🟡 IMPORTANTE con decisiones de Daniel
+- **Red de Agencieros multi-tenant:** confirmado que se implementa recién al cerrar la funcionalidad core — deliberadamente después en la cola, no ahora.
+- **Algoritmo de valuación — % de utilidad:** Daniel preguntó de dónde sale hoy. Respuesta: está hardcodeado en `MARGEN_OBJETIVO = 0.15` en `routes/tasacion.py` (15% fijo, no editable desde la UI). Se agrega como pendiente hacerlo configurable — falta decidir si es por toma, por agencia (configuración general), o ambas.
+- **Auth real:** alcance confirmado — registro de agencia + validación por mail + cobro por Mercado Pago (mismo patrón que PresupuestoPRO). Queda enganchado con el pendiente 🔴 de modelo de negocio (la suscripción paga depende de esto).
+- **Imprimir informe de tasación:** confirmado que sí. Falta diseñar el formato de salida antes de programarlo.
+- **Checklist 41 puntos:** Daniel lo pasa cuando se lo pidamos — ojo que mencionó que hay otra versión del checklist con 2-3 ítems más, hay que confirmar cuál usar.
+- **Vínculo Toma→Stock:** confirmado que sí — carga automática a Stock y/o fecha de entrega programada si la carga completa no se puede resolver de entrada.
+- **Certificado HTTPS:** descartado — no hace falta en local, se resuelve solo al desplegar en web.
+- **Archivos tocados:** `PROYECTO.md` únicamente (decisiones de producto).
+
+### Sesión 14/09/2026 (continuación 5) — Decisiones de negocio + nuevo competidor (LUCY.CRM)
+- **Nuevo competidor sumado:** LUCY.CRM (crm.lucy.ar), producto nacional — investigado y agregado a la sección Competencia con sus 4 áreas (Comercial/Contable/Gestoría/Servicios), publicación a MercadoLibre y ComunidAuto, y sus 4 planes de precio ($250k-$435,6k/mes). Refuerza el mismo patrón que deConcesionarias y MOBU: todos arriba de $250k/mes, muy lejos de los ~$16.800 que paga hoy un agenciero chico solo por la guía de precios.
+- **Decidido: fuente de precios** — carga manual de `precios_base`, no se integra API de InfoAuto por ahora.
+- **Decidido: modelo de negocio** — va a ser con planes de suscripción. Falta definir cantidad de planes, qué incluye cada uno y los precios (queda como pendiente 🔴, ahora con LUCY.CRM sumado como referencia de mercado además de deConcesionarias y MOBU).
+- **Archivos tocados:** `PROYECTO.md` únicamente (decisiones de producto, no hay código involucrado).
 
 ### Sesión 14/09/2026 (continuación 4) — Tabla responsive aplicada a TODOS los listados de la app (no solo Toma técnica)
 Daniel reportó el mismo problema de mobile (columnas cortadas, sin forma cómoda de ver todo) pero en el Dashboard ("Últimos vehículos cargados"). Al revisar, era el mismo patrón sin arreglar en TODAS las tablas de listado de la app — el fix de la sesión anterior solo había cubierto la tabla de Paso 1 de Toma técnica.
@@ -163,3 +210,5 @@ Se implementaron los 5 pendientes 🟡 de la sesión anterior sobre Tasación (q
 - La Consulta de precios es la pantalla de inicio (home) de la app — decisión explícita del brief original, no una elección técnica nuestra.
 - Control económico (módulo 7) e Historial financiero (módulo 8) se resolvieron reusando los campos de `vehiculos` (valor_compra, gastos, valor_publicado, valor_vendido) en vez de una tabla de transacciones aparte — más simple para el MVP, se puede separar más adelante si hace falta trazabilidad más fina (pagos parciales, adelantos, etc.).
 - Paleta visual tomada del prototipo subido por Daniel: fondo navy oscuro, acentos dorados, tarjetas navy más claro, texto blanco.
+- **(14/09/2026) Fuente de precios:** carga manual de `precios_base` por ahora, sin integración por API con InfoAuto.
+- **(14/09/2026) Modelo de negocio:** va a ser con planes de suscripción (no definidos todavía en cantidad/contenido/precio — ver pendiente 🔴).

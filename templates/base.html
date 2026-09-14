@@ -16,6 +16,7 @@
       <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('pedidos.') else '' }}" href="{{ url_for('pedidos.index') }}">📋 Banco de pedidos</a>
       <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('tomas.') else '' }}" href="{{ url_for('tomas.index') }}">🚙 Toma y tasación</a>
       <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('finanzas.') else '' }}" href="{{ url_for('finanzas.index') }}">💰 Finanzas</a>
+      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('financiacion.') else '' }}" href="{{ url_for('financiacion.index') }}">🏦 Financiación</a>
       <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('red.') else '' }}" href="{{ url_for('red.index') }}">🤝 Red de Agencieros</a>
       <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('mensajes.') else '' }}" href="{{ url_for('mensajes.index') }}">💬 Mensajes <span style="font-size:10px; color:var(--gold-light); font-weight:400;">(preview)</span></a>
     </aside>

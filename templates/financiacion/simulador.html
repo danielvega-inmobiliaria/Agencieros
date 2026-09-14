@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Simulador de financiación — Agencieros{% endblock %}
+{% block header %}Simulador de financiación{% endblock %}
+{% block content %}
+<div class="tabs">
+  <a class="tab" href="{{ url_for('financiacion.index') }}">← Volver a Financiación</a>
+</div>
+
+<div class="panel">
+  <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
+    Calculá cuotas para cualquier consulta, aunque todavía no hayas cerrado la venta.
+    Sistema francés (cuota fija). Cuando la venta se confirma, guardá el plan para
+    empezar a controlar lo cobrado y lo adeudado.
+  </p>
+  <form method="post">
+    <div class="grid-2">
+      <div>
+        <label>Vehículo vendido (opcional, para atar el plan a un stock ya vendido)</label>
+        <select name="vehiculo_id">
+          <option value="">— Sin vehículo asociado —</option>
+          {% for v in vehiculos_vendidos %}
+          <option value="{{ v.id }}" {{ 'selected' if valores.vehiculo_id|string == v.id|string else '' }}
+                  data-precio="{{ v.valor_vendido or v.valor_publicado or 0 }}">
+            {{ v.marca }} {{ v.modelo }} {{ v.version }} {{ v.anio }} — ${{ "{:,.0f}".format(v.valor_vendido or v.valor_publicado or 0).replace(",", ".") }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Cliente</label>
+        <input type="text" name="cliente_nombre" value="{{ valores.cliente_nombre }}" placeholder="Nombre y apellido">
+      </div>
+    </div>
+    <div class="grid-2">
+      <div>
+        <label>Teléfono</label>
+        <input type="text" name="cliente_telefono" value="{{ valores.cliente_telefono }}">
+      </div>
+      <div>
+        <label>Precio de venta (informativo)</label>
+        <input type="number" step="1" name="precio_venta" id="precio_venta" value="{{ valores.precio_venta }}">
+      </div>
+    </div>
+    <div class="grid-2">
+      <div>
+        <label>Anticipo</label>
+        <input type="number" step="1" name="anticipo" value="{{ valores.anticipo }}">
+      </div>
+      <div>
+        <label>Monto a financiar</label>
+        <input type="number" step="1" name="monto_financiado" value="{{ valores.monto_financiado }}" required>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div>
+        <label>Tasa de interés mensual (%)</label>
+        <input type="number" step="0.01" name="tasa_interes_mensual" value="{{ valores.tasa_interes_mensual }}">
+      </div>
+      <div>
+        <label>Cantidad de cuotas</label>
+        <input type="number" step="1" name="cantidad_cuotas" value="{{ valores.cantidad_cuotas }}" required>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div>
+        <label>Fecha de la primera cuota</label>
+        <input type="date" name="fecha_inicio" value="{{ valores.fecha_inicio }}">
+      </div>
+    </div>
+    <div style="margin-top:16px;">
+      <button class="btn btn-primary" type="submit">Calcular cuotas</button>
+    </div>
+  </form>
+</div>
+
+{% if cuota %}
+<div class="cards">
+  <div class="card">
+    <div class="label">Valor de cada cuota</div>
+    <div class="value">${{ "{:,.0f}".format(cuota).replace(",", ".") }}</div>
+  </div>
+  <div class="card">
+    <div class="label">Total a pagar</div>
+    <div class="value">${{ "{:,.0f}".format(total_pagar).replace(",", ".") }}</div>
+  </div>
+  <div class="card">
+    <div class="label">Total de interés</div>
+    <div class="value">${{ "{:,.0f}".format(total_pagar - (valores.monto_financiado|float)).replace(",", ".") }}</div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Cronograma de cuotas</h2>
+  <table class="tabla-responsive">
+    <tr class="fila-header"><th>#</th><th>Vencimiento</th><th>Cuota</th><th>Interés</th><th>Amortización</th><th>Saldo</th></tr>
+    {% for c in cronograma %}
+    <tr>
+      <td data-label="#">{{ c.numero }}</td>
+      <td data-label="Vencimiento">{{ c.fecha.strftime("%d/%m/%Y") }}</td>
+      <td data-label="Cuota">${{ "{:,.0f}".format(c.monto).replace(",", ".") }}</td>
+      <td data-label="Interés">${{ "{:,.0f}".format(c.interes).replace(",", ".") }}</td>
+      <td data-label="Amortización">${{ "{:,.0f}".format(c.amortizacion).replace(",", ".") }}</td>
+      <td data-label="Saldo">${{ "{:,.0f}".format(c.saldo).replace(",", ".") }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <form method="post" action="{{ url_for('financiacion.nuevo') }}" style="margin-top:16px;">
+    <input type="hidden" name="vehiculo_id" value="{{ valores.vehiculo_id }}">
+    <input type="hidden" name="cliente_nombre" value="{{ valores.cliente_nombre }}">
+    <input type="hidden" name="cliente_telefono" value="{{ valores.cliente_telefono }}">
+    <input type="hidden" name="precio_venta" value="{{ valores.precio_venta }}">
+    <input type="hidden" name="anticipo" value="{{ valores.anticipo }}">
+    <input type="hidden" name="monto_financiado" value="{{ valores.monto_financiado }}">
+    <input type="hidden" name="tasa_interes_mensual" value="{{ valores.tasa_interes_mensual }}">
+    <input type="hidden" name="cantidad_cuotas" value="{{ valores.cantidad_cuotas }}">
+    <input type="hidden" name="fecha_inicio" value="{{ valores.fecha_inicio }}">
+    {% if not valores.cliente_nombre %}
+    <p style="color:var(--gold-light); font-size:12.5px;">Cargá el nombre del cliente arriba para poder guardar el plan.</p>
+    {% endif %}
+    <button class="btn btn-primary" type="submit" {{ 'disabled' if not valores.cliente_nombre else '' }}>💾 Guardar como plan real y empezar a cobrar</button>
+  </form>
+</div>
+{% endif %}
+
+<script>
+  // Autocompletar precio de venta al elegir un vehículo vendido de la lista.
+  document.querySelector('select[name="vehiculo_id"]').addEventListener('change', function () {
+    var opt = this.options[this.selectedIndex];
+    var precio = opt.getAttribute('data-precio');
+    var campoPrecio = document.getElementById('precio_venta');
+    if (precio && campoPrecio && !campoPrecio.value) {
+      campoPrecio.value = precio;
+    }
+  });
+</script>
+{% endblock %}

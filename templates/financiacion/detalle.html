@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Plan de financiación — Agencieros{% endblock %}
+{% block header %}Plan de financiación — {{ fin.cliente_nombre }}{% endblock %}
+{% block content %}
+<div class="tabs">
+  <a class="tab" href="{{ url_for('financiacion.index') }}">← Volver a Financiación</a>
+</div>
+
+<div class="cards">
+  <div class="card">
+    <div class="label">Monto financiado</div>
+    <div class="value">${{ "{:,.0f}".format(fin.monto_financiado).replace(",", ".") }}</div>
+    <div class="sub">{{ fin.cantidad_cuotas }} cuotas de ${{ "{:,.0f}".format(fin.valor_cuota).replace(",", ".") }} · {{ fin.tasa_interes_mensual }}% mensual</div>
+  </div>
+  <div class="card">
+    <div class="label">Cobrado</div>
+    <div class="value">${{ "{:,.0f}".format(fin.total_cobrado).replace(",", ".") }}</div>
+    <div class="sub">{{ fin.cuotas_pagadas }}/{{ fin.cuotas_totales }} cuotas pagas</div>
+  </div>
+  <div class="card">
+    <div class="label">Adeudado</div>
+    <div class="value" style="color: {{ 'var(--red)' if fin.total_adeudado > 0 else 'var(--green)' }};">${{ "{:,.0f}".format(fin.total_adeudado).replace(",", ".") }}</div>
+    {% if fin.cuotas_vencidas %}<div class="sub" style="color:var(--red);">{{ fin.cuotas_vencidas }} cuota(s) vencida(s)</div>{% endif %}
+  </div>
+  <div class="card">
+    <div class="label">Estado del plan</div>
+    <div class="value" style="font-size:20px;"><span class="badge {{ estado_badge.get(fin.estado, '') }}">{{ estado_label.get(fin.estado, fin.estado) }}</span></div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Datos del cliente y del plan</h2>
+  <p style="color:var(--text-dim); font-size:13px; margin:0 0 4px;">
+    <b style="color:var(--text);">Cliente:</b> {{ fin.cliente_nombre }}{% if fin.cliente_telefono %} · {{ fin.cliente_telefono }}{% endif %}
+  </p>
+  {% if vehiculo %}
+  <p style="color:var(--text-dim); font-size:13px; margin:0 0 4px;">
+    <b style="color:var(--text);">Vehículo:</b> <a href="{{ url_for('stock.detalle', vehiculo_id=vehiculo.id) }}">{{ vehiculo.marca }} {{ vehiculo.modelo }} {{ vehiculo.version }} {{ vehiculo.anio }}</a>
+  </p>
+  {% endif %}
+  {% if fin.precio_venta %}
+  <p style="color:var(--text-dim); font-size:13px; margin:0 0 4px;">
+    <b style="color:var(--text);">Precio de venta:</b> ${{ "{:,.0f}".format(fin.precio_venta).replace(",", ".") }}
+    {% if fin.anticipo %} · Anticipo: ${{ "{:,.0f}".format(fin.anticipo).replace(",", ".") }}{% endif %}
+  </p>
+  {% endif %}
+  {% if fin.observaciones %}
+  <p style="color:var(--text-dim); font-size:13px; margin:0;">{{ fin.observaciones }}</p>
+  {% endif %}
+  {% if fin.estado == 'activo' %}
+  <form method="post" action="{{ url_for('financiacion.cancelar', financiacion_id=fin.id) }}" style="margin-top:12px;">
+    <button class="btn btn-secondary btn-sm" type="submit">Cancelar plan</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h2>Cuotas</h2>
+  <table class="tabla-responsive">
+    <tr class="fila-header"><th>#</th><th>Vencimiento</th><th>Monto</th><th>Pagado</th><th>Estado</th><th></th></tr>
+    {% for c in cuotas %}
+    <tr>
+      <td data-label="#">{{ c.numero }}</td>
+      <td data-label="Vencimiento">{{ c.fecha_vencimiento }}</td>
+      <td data-label="Monto">${{ "{:,.0f}".format(c.monto).replace(",", ".") }}</td>
+      <td data-label="Pagado">${{ "{:,.0f}".format(c.monto_pagado or 0).replace(",", ".") }}</td>
+      <td data-label="Estado">
+        {% if c.estado == 'pagada' %}
+        <span class="badge disponible">Pagada</span>
+        {% elif c.fecha_vencimiento and c.fecha_vencimiento < hoy %}
+        <span class="badge en_reparacion">Vencida</span>
+        {% else %}
+        <span class="badge por_ingresar">Pendiente</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if c.estado != 'pagada' and fin.estado == 'activo' %}
+        <form method="post" action="{{ url_for('financiacion.pagar_cuota', financiacion_id=fin.id, cuota_id=c.id) }}" style="display:flex; gap:6px;">
+          <input type="number" step="1" name="monto_pagado" placeholder="${{ '{:,.0f}'.format(c.monto - (c.monto_pagado or 0)).replace(',', '.') }}" style="width:110px; padding:6px;">
+          <button class="btn btn-secondary btn-sm" type="submit">Registrar pago</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

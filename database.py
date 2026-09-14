@@ -138,6 +138,36 @@ CREATE TABLE IF NOT EXISTS tasaciones (
     created_at TEXT DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS financiaciones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vehiculo_id INTEGER,
+    cliente_nombre TEXT NOT NULL,
+    cliente_telefono TEXT,
+    precio_venta REAL,
+    anticipo REAL DEFAULT 0,
+    monto_financiado REAL NOT NULL,
+    tasa_interes_mensual REAL NOT NULL DEFAULT 0,
+    cantidad_cuotas INTEGER NOT NULL,
+    valor_cuota REAL NOT NULL,
+    fecha_inicio TEXT NOT NULL,
+    estado TEXT NOT NULL DEFAULT 'activo',
+    observaciones TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (vehiculo_id) REFERENCES vehiculos(id)
+);
+
+CREATE TABLE IF NOT EXISTS financiacion_cuotas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    financiacion_id INTEGER NOT NULL,
+    numero INTEGER NOT NULL,
+    fecha_vencimiento TEXT,
+    monto REAL NOT NULL,
+    monto_pagado REAL NOT NULL DEFAULT 0,
+    fecha_pago TEXT,
+    estado TEXT NOT NULL DEFAULT 'pendiente',
+    FOREIGN KEY (financiacion_id) REFERENCES financiaciones(id)
+);
+
 CREATE TABLE IF NOT EXISTS red_publicaciones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     agencia_nombre TEXT NOT NULL,

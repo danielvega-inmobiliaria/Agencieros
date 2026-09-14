@@ -25,6 +25,7 @@ def create_app():
     from routes.finanzas import bp as finanzas_bp
     from routes.red import bp as red_bp
     from routes.mensajes import bp as mensajes_bp
+    from routes.financiacion import bp as financiacion_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -37,6 +38,7 @@ def create_app():
     app.register_blueprint(finanzas_bp)
     app.register_blueprint(red_bp)
     app.register_blueprint(mensajes_bp)
+    app.register_blueprint(financiacion_bp)
 
     @app.context_processor
     def _inject_catalogo():
