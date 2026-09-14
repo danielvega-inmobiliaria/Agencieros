@@ -5,10 +5,10 @@
 <div class="panel">
   <form method="post">
     <div class="form-row">
+      <div><label>Año</label><input type="number" id="anio" name="anio" value="{{ vehiculo.anio if vehiculo else (prefill.anio if prefill else '') }}"></div>
       <div><label>Marca</label><select id="marca" name="marca" data-placeholder-libre="Marca nueva" required></select></div>
       <div><label>Modelo</label><select id="modelo" name="modelo" data-placeholder-libre="Modelo nuevo" required></select></div>
       <div><label>Versión</label><select id="version" name="version" data-placeholder-libre="Versión nueva"></select></div>
-      <div><label>Año</label><input type="number" name="anio" value="{{ vehiculo.anio if vehiculo else (prefill.anio if prefill else '') }}"></div>
     </div>
     <div class="form-row">
       <div><label>Kilómetros</label><input type="number" name="km" value="{{ vehiculo.km if vehiculo else '' }}"></div>
@@ -51,7 +51,8 @@
 <script src="{{ url_for('static', filename='js/catalogo.js') }}"></script>
 <script>
   const catalogo = {{ catalogo_json | safe }};
-  initCatalogoSelects(catalogo, 'marca', 'modelo', 'version', {
+  initCatalogoSelects(catalogo, 'anio', 'marca', 'modelo', 'version', {
+    anio: {{ (vehiculo.anio if vehiculo else (prefill.anio if prefill else '')) | tojson }},
     marca: {{ (vehiculo.marca if vehiculo else (prefill.marca if prefill else '')) | tojson }},
     modelo: {{ (vehiculo.modelo if vehiculo else (prefill.modelo if prefill else '')) | tojson }},
     version: {{ (vehiculo.version if vehiculo else (prefill.version if prefill else '')) | tojson }}

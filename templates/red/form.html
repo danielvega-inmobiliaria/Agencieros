@@ -15,10 +15,10 @@
       </div>
     </div>
     <div class="form-row">
+      <div><label>Año</label><input type="number" id="anio" name="anio"></div>
       <div><label>Marca</label><select id="marca" name="marca" data-placeholder-libre="Marca nueva"></select></div>
       <div><label>Modelo</label><select id="modelo" name="modelo" data-placeholder-libre="Modelo nuevo"></select></div>
       <div><label>Versión</label><select id="version" name="version" data-placeholder-libre="Versión nueva"></select></div>
-      <div><label>Año</label><input type="number" name="anio"></div>
     </div>
     <div class="form-row">
       <div><label>Precio</label><input type="number" step="0.01" name="precio"></div>
@@ -32,6 +32,6 @@
 <script src="{{ url_for('static', filename='js/catalogo.js') }}"></script>
 <script>
   const catalogo = {{ catalogo_json | safe }};
-  initCatalogoSelects(catalogo, 'marca', 'modelo', 'version');
+  initCatalogoSelects(catalogo, 'anio', 'marca', 'modelo', 'version');
 </script>
 {% endblock %}

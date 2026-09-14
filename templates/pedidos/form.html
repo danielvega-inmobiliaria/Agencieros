@@ -35,10 +35,10 @@
     <div id="campos-permuta" style="display:none;">
       <h2 style="font-size:14px; margin:16px 0 8px;">Vehículo que entrega en permuta</h2>
       <div class="form-row">
+        <div><label>Año</label><input type="number" id="permuta_anio" name="permuta_anio"></div>
         <div><label>Marca</label><select id="permuta_marca" name="permuta_marca" data-placeholder-libre="Marca nueva"></select></div>
         <div><label>Modelo</label><select id="permuta_modelo" name="permuta_modelo" data-placeholder-libre="Modelo nuevo"></select></div>
         <div><label>Versión</label><select id="permuta_version" name="permuta_version" data-placeholder-libre="Versión nueva"></select></div>
-        <div><label>Año</label><input type="number" name="permuta_anio"></div>
       </div>
       <div class="form-row">
         <div><label>Kilómetros</label><input type="number" name="permuta_km"></div>
@@ -63,8 +63,13 @@
 <script src="{{ url_for('static', filename='js/catalogo.js') }}"></script>
 <script>
   const catalogo = {{ catalogo_json | safe }};
-  initCatalogoSelects(catalogo, 'marca', 'modelo', 'version');
-  initCatalogoSelects(catalogo, 'permuta_marca', 'permuta_modelo', 'permuta_version');
+  // El bloque principal busca por un rango de años (Año desde/hasta), no
+  // por un año puntual: no tiene sentido acotarlo con el mismo mecanismo,
+  // así que va sin campo de Año (anioId = null, comportamiento de siempre).
+  initCatalogoSelects(catalogo, null, 'marca', 'modelo', 'version');
+  // El vehículo que entrega en permuta sí es un vehículo puntual: Año
+  // primero, como en Toma/Stock/Red.
+  initCatalogoSelects(catalogo, 'permuta_anio', 'permuta_marca', 'permuta_modelo', 'permuta_version');
 
   function actualizarFormaPago() {
     var v = document.getElementById('forma_pago').value;

@@ -343,35 +343,53 @@ def obtener_catalogo():
     formularios ofrezcan siempre las mismas opciones y no se generen
     duplicados por mayúsculas, tildes o espacios distintos.
 
-    Devuelve {marca: {modelo: [versiones]}}. Se recalcula en cada request
-    (context_processor en app.py) así una marca/modelo/versión nueva cargada
-    en cualquier módulo queda disponible para elegir en el resto al toque.
+    Devuelve {marca: {modelo: {version: [anios]}}} — el año de cada
+    versión se suma para poder buscar/cargar empezando por el Año y que
+    Marca/Modelo/Versión sugieran solo lo que corresponde a ese año (ver
+    charla 13-14/09/2026). `anios` puede venir vacío cuando esa versión
+    solo se vio en una fuente sin año propio (ej. un pedido de cliente sin
+    permuta) — en ese caso no se filtra por año, para no ocultar datos por
+    falta de ese dato puntual.
+
+    Se recalcula en cada request (context_processor en app.py) así una
+    marca/modelo/versión nueva cargada en cualquier módulo queda
+    disponible para elegir en el resto al toque.
     """
     filas = query(
         """
-        SELECT marca, modelo, version FROM precios_base
-        UNION SELECT marca, modelo, version FROM vehiculos
+        SELECT marca, modelo, version, anio FROM precios_base
+        UNION ALL SELECT marca, modelo, version, anio FROM vehiculos
             WHERE marca IS NOT NULL AND TRIM(marca) != ''
-        UNION SELECT marca, modelo, version FROM pedidos_clientes
+        UNION ALL SELECT marca, modelo, version, NULL FROM pedidos_clientes
             WHERE marca IS NOT NULL AND TRIM(marca) != ''
-        UNION SELECT permuta_marca, permuta_modelo, permuta_version FROM pedidos_clientes
+        UNION ALL SELECT permuta_marca, permuta_modelo, permuta_version, permuta_anio FROM pedidos_clientes
             WHERE permuta_marca IS NOT NULL AND TRIM(permuta_marca) != ''
-        UNION SELECT marca, modelo, version FROM red_publicaciones
+        UNION ALL SELECT marca, modelo, version, anio FROM red_publicaciones
             WHERE marca IS NOT NULL AND TRIM(marca) != ''
-        UNION SELECT marca, modelo, version FROM tomas_vehiculo
+        UNION ALL SELECT marca, modelo, version, anio FROM tomas_vehiculo
             WHERE marca IS NOT NULL AND TRIM(marca) != ''
-        UNION SELECT marca, modelo, version FROM tasaciones
+        UNION ALL SELECT marca, modelo, version, anio FROM tasaciones
             WHERE marca IS NOT NULL AND TRIM(marca) != ''
         """
     )
     catalogo = {}
     for fila in filas:
-        marca, modelo, version = fila["marca"], fila["modelo"], fila["version"]
+        marca, modelo, version, anio = fila["marca"], fila["modelo"], fila["version"], fila["anio"]
         if not marca:
             continue
         modelos = catalogo.setdefault(marca, {})
-        if modelo:
-            versiones = modelos.setdefault(modelo, [])
-            if version and version not in versiones:
-                versiones.append(version)
+        if not modelo:
+            continue
+        versiones = modelos.setdefault(modelo, {})
+        if not version:
+            continue
+        anios = versiones.setdefault(version, set())
+        if anio is not None:
+            anios.add(int(anio))
+
+    for modelos in catalogo.values():
+        for versiones in modelos.values():
+            for version, anios in versiones.items():
+                versiones[version] = sorted(anios)
+
     return catalogo
