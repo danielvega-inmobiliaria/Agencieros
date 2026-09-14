@@ -256,6 +256,23 @@ def _migrar_tomas_costos(conn):
             conn.execute(f"ALTER TABLE tomas_vehiculo ADD COLUMN {columna} REAL")
 
 
+def _migrar_tomas_comentarios(conn):
+    """Agrega a `tomas_vehiculo` un comentario de texto libre por cada uno
+    de los 12 puntos técnicos (en qué consiste la reparación, no solo
+    cuánto cuesta), pedido en la charla del 14/09/2026. Mismos 12 códigos
+    que _migrar_tomas_costos — si más adelante se amplía la lista de
+    puntos, hay que sumar sus columnas costo_/comentario_ acá también."""
+    columnas_actuales = {row[1] for row in conn.execute("PRAGMA table_info(tomas_vehiculo)")}
+    puntos = [
+        "motor", "caja", "embrague", "frenos", "suspension", "direccion", "interior",
+        "tapizados", "cubiertas", "electricidad", "aire_acondicionado", "documentacion",
+    ]
+    for codigo in puntos:
+        columna = f"comentario_{codigo}"
+        if columna not in columnas_actuales:
+            conn.execute(f"ALTER TABLE tomas_vehiculo ADD COLUMN {columna} TEXT")
+
+
 def _migrar_inspeccion_marcadores(conn):
     """Agrega el costo estimado de reparación de cada daño marcado en la
     Inspección visual, para poder sumarlos y sugerir los gastos de
@@ -280,6 +297,7 @@ def init_db():
     _migrar_vehiculos(conn)
     _migrar_pedidos(conn)
     _migrar_tomas_costos(conn)
+    _migrar_tomas_comentarios(conn)
     _migrar_inspeccion_marcadores(conn)
     _migrar_tasaciones(conn)
 

@@ -2,7 +2,7 @@ import os
 import time
 from urllib.parse import quote_plus
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify
 
 from database import query, execute
 from routes.tasacion import FACTOR_MECANICO, FACTOR_ESTETICO, MARGEN_OBJETIVO
@@ -40,6 +40,16 @@ def _toma_o_none(toma_id):
     return toma
 
 
+def _evaluadores():
+    """Nombres de evaluador ya usados en tomas anteriores, para sugerir en
+    el campo (mismo criterio que Marca/Modelo: se aprende de lo cargado,
+    no hace falta un alta aparte de 'evaluadores')."""
+    filas = query(
+        "SELECT DISTINCT evaluador FROM tomas_vehiculo WHERE evaluador IS NOT NULL AND TRIM(evaluador) != '' ORDER BY evaluador"
+    )
+    return [f["evaluador"] for f in filas]
+
+
 def _promedio_a_categoria(promedio):
     if promedio >= 3.5:
         return "Excelente"
@@ -74,7 +84,7 @@ def _calcular_estado_estetico(marcadores):
 
 def _marcadores_de_toma(toma_id):
     return query(
-        """SELECT im.* FROM inspeccion_marcadores im
+        """SELECT im.*, iv.vista AS vista FROM inspeccion_marcadores im
            JOIN inspeccion_visual iv ON iv.id = im.inspeccion_visual_id
            WHERE iv.toma_id = ?""",
         (toma_id,),
@@ -98,12 +108,23 @@ def _costo_puntos_tecnicos(toma):
 
 
 def _puntos_con_costo(toma):
-    """Arma, para cada uno de los 12 puntos técnicos, su calificación y el
-    costo de reparación cargado — lista lista para tabla en los templates."""
+    """Arma, para cada uno de los 12 puntos técnicos, su calificación, el
+    costo de reparación cargado y el comentario (en qué consiste la
+    reparación) — lista lista para tabla en los templates."""
     return [
-        {"codigo": codigo, "label": label, "calificacion": toma[codigo], "costo": toma[f"costo_{codigo}"]}
+        {
+            "codigo": codigo, "label": label, "calificacion": toma[codigo],
+            "costo": toma[f"costo_{codigo}"], "comentario": toma[f"comentario_{codigo}"],
+        }
         for codigo, label in PUNTOS
     ]
+
+
+def _puntos_a_reparar(toma):
+    """Solo los puntos del Paso 1 que tienen costo de reparación cargado —
+    para el resumen de 'qué hay que arreglar' que se muestra en el Paso 3
+    (Tasación) antes de calcular."""
+    return [p for p in _puntos_con_costo(toma) if p["costo"]]
 
 
 def _links_comparables(marca, modelo, version, anio):
@@ -176,12 +197,14 @@ def nueva():
 
         columnas_costo = ", ".join(f"costo_{codigo}" for codigo, _ in PUNTOS)
         placeholders_costo = ", ".join("?" for _ in PUNTOS)
+        columnas_comentario = ", ".join(f"comentario_{codigo}" for codigo, _ in PUNTOS)
+        placeholders_comentario = ", ".join("?" for _ in PUNTOS)
         toma_id = execute(
             f"""INSERT INTO tomas_vehiculo
                (vehiculo_id, marca, modelo, version, anio, evaluador, motor, caja, embrague, frenos, suspension,
                 direccion, interior, tapizados, cubiertas, electricidad, aire_acondicionado,
-                documentacion, observaciones, {columnas_costo})
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,{placeholders_costo})""",
+                documentacion, observaciones, {columnas_costo}, {columnas_comentario})
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,{placeholders_costo},{placeholders_comentario})""",
             (
                 f.get("vehiculo_id") or None,
                 f.get("marca"), f.get("modelo"), f.get("version"), f.get("anio") or None,
@@ -191,11 +214,53 @@ def nueva():
                 f.get("electricidad"), f.get("aire_acondicionado"), f.get("documentacion"),
                 f.get("observaciones"),
                 *[_costo(codigo) for codigo, _ in PUNTOS],
+                *[(f.get(f"comentario_{codigo}") or "").strip() or None for codigo, _ in PUNTOS],
             ),
         )
         flash("Toma registrada. Ahora sumá las fotos y marcá los daños de la carrocería.", "success")
         return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
-    return render_template("tomas/form.html", puntos=PUNTOS, calificaciones=CALIFICACIONES, prefill=prefill)
+    return render_template(
+        "tomas/form.html", puntos=PUNTOS, calificaciones=CALIFICACIONES, prefill=prefill,
+        evaluadores=_evaluadores(),
+    )
+
+
+@bp.route("/api/precio")
+def api_precio():
+    """Precio de guía (InfoAuto) para Marca+Modelo, tal como se muestra en
+    Paso 1 de la Toma apenas hay Modelo cargado — para que el evaluador vea
+    de entrada si el vehículo tiene precio de referencia cargado, sin
+    esperar a llegar al Paso 3 (Tasación), que ya hace esta misma consulta.
+    Con Año puntual, se busca ese año exacto y, si no hay, se cae al año
+    más reciente disponible (mejor mostrar algo aproximado que nada)."""
+    marca = request.args.get("marca", "")
+    modelo = request.args.get("modelo", "")
+    version = request.args.get("version", "")
+    anio = request.args.get("anio", "")
+    if not marca or not modelo:
+        return jsonify({"precio": None, "anio": None})
+
+    def _buscar(con_anio):
+        sql = "SELECT precio_referencia, anio FROM precios_base WHERE marca = ? AND modelo = ?"
+        params = [marca, modelo]
+        if version:
+            sql += " AND version = ?"
+            params.append(version)
+        if con_anio and anio:
+            sql += " AND anio = ?"
+            params.append(anio)
+        sql += " ORDER BY anio DESC LIMIT 1"
+        return query(sql, tuple(params), one=True)
+
+    row = _buscar(con_anio=True) if anio else _buscar(con_anio=False)
+    if not row and anio:
+        # No hay precio para ese año puntual: el más reciente disponible
+        # sirve como aproximación en vez de no mostrar nada.
+        row = _buscar(con_anio=False)
+    return jsonify({
+        "precio": row["precio_referencia"] if row else None,
+        "anio": row["anio"] if row else None,
+    })
 
 
 @bp.route("/<int:toma_id>")
@@ -378,6 +443,8 @@ def tasacion(toma_id):
     costo_danios_visuales = _costo_reparacion_sugerido(marcadores)
     gastos_estimados_sugerido = costo_puntos_tecnicos + costo_danios_visuales
     links_comparables = _links_comparables(toma["marca"], toma["modelo"], toma["version"], toma["anio"])
+    puntos_a_reparar = _puntos_a_reparar(toma)
+    danios_a_reparar = [m for m in marcadores if m["costo_reparacion"]]
 
     tasacion_previa = query(
         "SELECT * FROM tasaciones WHERE toma_id = ? ORDER BY id DESC LIMIT 1", (toma_id,), one=True
@@ -440,5 +507,10 @@ def tasacion(toma_id):
         costo_puntos_tecnicos=costo_puntos_tecnicos,
         costo_danios_visuales=costo_danios_visuales,
         links_comparables=links_comparables,
+        puntos_a_reparar=puntos_a_reparar,
+        danios_a_reparar=danios_a_reparar,
+        vistas_label=dict(VISTAS),
+        tipos_label=dict(TIPOS_DANIO),
+        gravedades_label=dict(GRAVEDADES),
         form=request.form,
     )

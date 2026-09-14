@@ -51,6 +51,35 @@
       </p>
       {% endif %}
 
+      {% if puntos_a_reparar or danios_a_reparar %}
+      <div style="background:var(--navy-bg); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-top:14px;">
+        <p style="color:var(--gold-light); font-size:13px; font-weight:600; margin:0 0 8px;">Qué hay que reparar</p>
+        {% if puntos_a_reparar %}
+        <p style="color:var(--text-dim); font-size:11.5px; margin:0 0 4px;">Del Paso 1 (datos técnicos):</p>
+        <ul style="margin:0 0 10px; padding-left:18px; font-size:13px;">
+          {% for p in puntos_a_reparar %}
+          <li>
+            <b>{{ p.label }}</b> ({{ p.calificacion }}){% if p.comentario %} — {{ p.comentario }}{% endif %}
+            · ${{ "{:,.0f}".format(p.costo).replace(",", ".") }}
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        {% if danios_a_reparar %}
+        <p style="color:var(--text-dim); font-size:11.5px; margin:0 0 4px;">Del Paso 2 (daños marcados en las fotos):</p>
+        <ul style="margin:0; padding-left:18px; font-size:13px;">
+          {% for d in danios_a_reparar %}
+          <li>
+            <b>{{ tipos_label.get(d.tipo, d.tipo) }}</b> en {{ vistas_label.get(d.vista, d.vista) }}
+            ({{ gravedades_label.get(d.gravedad, d.gravedad) }}){% if d.descripcion %} — {{ d.descripcion }}{% endif %}
+            · ${{ "{:,.0f}".format(d.costo_reparacion).replace(",", ".") }}
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+      {% endif %}
+
       <button type="submit" class="btn btn-primary" style="margin-top:18px;">Calcular tasación</button>
     </form>
   </div>
