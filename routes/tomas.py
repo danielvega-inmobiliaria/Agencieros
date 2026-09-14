@@ -167,7 +167,12 @@ def _agrupar_danios_por_vista(danios_a_reparar):
             grupos.append({
                 "vista_codigo": codigo,
                 "vista_label": label,
-                "items": items,
+                # OJO: la clave NO puede llamarse "items" — en Jinja, `g.items`
+                # sobre un dict resuelve al método dict.items() (built-in)
+                # antes que a esta clave, y romper con
+                # "'builtin_function_or_method' object is not iterable" al
+                # iterarlo sin llamarlo. Por eso "danios" en vez de "items".
+                "danios": items,
                 "subtotal": sum(d["costo_reparacion"] or 0 for d in items),
             })
     return grupos

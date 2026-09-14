@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 14/09/2026 — 15:25 ART_
+_Última actualización: 14/09/2026 — 16:25 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -87,6 +87,14 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 14/09/2026 (continuación 3) — Bug crítico: TypeError al calcular la Tasación (rompía toda la pantalla)
+Daniel reportó `TypeError: 'builtin_function_or_method' object is not iterable` al llegar al Paso 3 desde el Paso 2, tanto en la compu como en el celu — la pantalla de Tasación no cargaba directamente. Era una regresión introducida en el rediseño de este mismo día (sesión "continuación").
+- **Causa:** en `_agrupar_danios_por_vista` (routes/tomas.py), cada grupo se armaba con una clave `"items"`. En el template, `{% for d in g.items %}` — en Jinja, `g.items` sobre un diccionario resuelve primero al **método** `dict.items()` (built-in de Python) antes que a la clave `"items"` que yo había puesto. Al no llamarlo (sin paréntesis) e intentar iterarlo, explotaba con exactamente ese error. Pasaba siempre que la toma tenía algún daño con costo cargado en el Paso 2 (la toma #7 del ejemplo de Daniel los tenía).
+- **Fix:** renombrada la clave a `"danios"` en `_agrupar_danios_por_vista` y actualizados los dos lugares de `templates/tomas/tasacion.html` que la usaban (`g.items` → `g.danios`).
+- **Verificación:** esta vez, además de compilar el Python y parsear el Jinja (que no detectan este tipo de error — el chequeo de sintaxis pasa igual), armé una copia funcional de la app completa en un entorno de prueba con la base de datos real de Daniel y corrí el flujo real con el cliente de test de Flask: `GET /tomas/7/tasacion`, `POST` calculando la tasación (con los daños con costo reales de esa toma, el mismo caso que rompía), y de nuevo `GET` para ver la tasación ya guardada — los tres devolvieron 200 y el HTML generado incluye el panel agrupado por foto correctamente. También se probaron `/tomas/7` (ficha), `/tomas/nueva` (Paso 1) y `/tomas/` (listado) por las dudas, todas 200.
+- **Aprendizaje para mí:** de acá en más, cuando arme un diccionario para pasarlo a un template Jinja, evito nombres de clave que choquen con métodos de dict (`items`, `keys`, `values`, `get`, `update`, etc.) — y para cambios en la lógica de Tasación en particular, corro el flujo real (no solo compilar/parsear) antes de darlo por terminado.
+- **Archivos tocados:** `routes/tomas.py`, `templates/tomas/tasacion.html`.
 
 ### Sesión 14/09/2026 (continuación 2) — Bug mobile: tabla de Paso 1 se cortaba (Costo/Comentario invisibles)
 Daniel reportó que en el celu seguía sin verse Costo y Comentario en la tabla de puntos técnicos (la vista de una Toma ya guardada, `tomas/detalle.html`, que muestra el resumen del Paso 1 justo arriba del Paso 3 · Tasación — de ahí que lo describiera como "en la tasación"). Era el bug mobile que había quedado anotado en Pendientes.
