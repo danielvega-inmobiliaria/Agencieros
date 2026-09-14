@@ -1,5 +1,6 @@
 import os
 import time
+from datetime import datetime
 from urllib.parse import quote_plus
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify
@@ -125,6 +126,51 @@ def _puntos_a_reparar(toma):
     para el resumen de 'qué hay que arreglar' que se muestra en el Paso 3
     (Tasación) antes de calcular."""
     return [p for p in _puntos_con_costo(toma) if p["costo"]]
+
+
+def _formatear_fecha(iso_str):
+    """Convierte el `created_at` de SQLite ('YYYY-MM-DD HH:MM:SS') al formato
+    DD/MM/YYYY HH:MM que se muestra en la UI."""
+    if not iso_str:
+        return ""
+    try:
+        return datetime.strptime(iso_str, "%Y-%m-%d %H:%M:%S").strftime("%d/%m/%Y %H:%M")
+    except ValueError:
+        return iso_str
+
+
+def _tasacion_con_extra(tasacion_row):
+    """Agrega a una fila de `tasaciones` el % de beneficio (margen esperado
+    sobre el precio de toma) y la fecha ya formateada, para no repetir esta
+    cuenta en los templates. `riesgo` se sigue guardando en la tabla pero ya
+    no se calcula ni se muestra en ningún lado (se sacó del panel de
+    Resultado a pedido de Daniel)."""
+    if not tasacion_row:
+        return None
+    t = dict(tasacion_row)
+    precio = t.get("precio_max_recomendado") or 0
+    margen = t.get("margen_esperado") or 0
+    t["porcentaje_beneficio"] = round((margen / precio) * 100, 1) if precio else 0
+    t["fecha_fmt"] = _formatear_fecha(t.get("created_at"))
+    return t
+
+
+def _agrupar_danios_por_vista(danios_a_reparar):
+    """Agrupa los daños marcados (Paso 2) que tienen costo cargado por
+    foto/vista, en el orden de VISTAS — para el panel 'Qué hay que reparar',
+    que antes los listaba todos planos sin indicar de qué foto salía cada
+    uno."""
+    grupos = []
+    for codigo, label in VISTAS:
+        items = [d for d in danios_a_reparar if d["vista"] == codigo]
+        if items:
+            grupos.append({
+                "vista_codigo": codigo,
+                "vista_label": label,
+                "items": items,
+                "subtotal": sum(d["costo_reparacion"] or 0 for d in items),
+            })
+    return grupos
 
 
 def _links_comparables(marca, modelo, version, anio):
@@ -273,8 +319,8 @@ def detalle(toma_id):
         (toma_id,), one=True,
     )["c"]
     marcadores = _marcadores_de_toma(toma_id)
-    tasacion = query(
-        "SELECT * FROM tasaciones WHERE toma_id = ? ORDER BY id DESC LIMIT 1", (toma_id,), one=True
+    tasacion = _tasacion_con_extra(
+        query("SELECT * FROM tasaciones WHERE toma_id = ? ORDER BY id DESC LIMIT 1", (toma_id,), one=True)
     )
     return render_template(
         "tomas/detalle.html",
@@ -444,25 +490,29 @@ def tasacion(toma_id):
     gastos_estimados_sugerido = costo_puntos_tecnicos + costo_danios_visuales
     links_comparables = _links_comparables(toma["marca"], toma["modelo"], toma["version"], toma["anio"])
     puntos_a_reparar = _puntos_a_reparar(toma)
-    danios_a_reparar = [m for m in marcadores if m["costo_reparacion"]]
+    danios_por_vista = _agrupar_danios_por_vista([m for m in marcadores if m["costo_reparacion"]])
 
-    tasacion_previa = query(
-        "SELECT * FROM tasaciones WHERE toma_id = ? ORDER BY id DESC LIMIT 1", (toma_id,), one=True
-    )
-    resultado = None
+    es_nueva = False
 
     if request.method == "POST":
         f = request.form
         valor_referencia = float(f.get("valor_referencia") or 0)
         estado_mecanico = f.get("estado_mecanico") or estado_mecanico_sugerido
         estado_estetico = f.get("estado_estetico") or estado_estetico_sugerido
-        gastos_estimados = float(f.get("gastos_estimados") or 0)
+        # Los gastos estimados dejaron de ser editables a mano (Daniel pidió
+        # sacar ese input): siempre son la suma de los costos ya cargados en
+        # el Paso 1 (puntos técnicos) + Paso 2 (daños visuales), que se ve
+        # desglosada en el panel "Qué hay que reparar".
+        gastos_estimados = gastos_estimados_sugerido
 
         factor = FACTOR_MECANICO[estado_mecanico] * FACTOR_ESTETICO[estado_estetico]
         valor_ajustado = valor_referencia * factor
         precio_max_recomendado = valor_ajustado - gastos_estimados - (valor_referencia * MARGEN_OBJETIVO)
         margen_esperado = valor_ajustado - precio_max_recomendado - gastos_estimados
 
+        # `riesgo` se sigue calculando y guardando (por si sirve a futuro para
+        # el algoritmo de valuación), pero ya no se muestra en el panel de
+        # Resultado — Daniel pidió sacarlo de la vista.
         malos = [estado_mecanico, estado_estetico].count("Malo")
         regulares = [estado_mecanico, estado_estetico].count("Regular")
         if malos >= 1 or gastos_estimados > valor_referencia * 0.25:
@@ -472,12 +522,6 @@ def tasacion(toma_id):
         else:
             riesgo = "Bajo"
 
-        resultado = {
-            "precio_max_recomendado": round(precio_max_recomendado),
-            "riesgo": riesgo,
-            "margen_esperado": round(margen_esperado),
-        }
-
         execute(
             """INSERT INTO tasaciones
                (toma_id, marca, modelo, version, anio, valor_referencia, estado_mecanico, estado_estetico,
@@ -486,19 +530,21 @@ def tasacion(toma_id):
             (
                 toma_id, toma["marca"], toma["modelo"], toma["version"], toma["anio"],
                 valor_referencia, estado_mecanico, estado_estetico, gastos_estimados,
-                resultado["precio_max_recomendado"], riesgo, resultado["margen_esperado"],
+                round(precio_max_recomendado), riesgo, round(margen_esperado),
             ),
         )
         flash("Tasación registrada.", "success")
-        tasacion_previa = query(
-            "SELECT * FROM tasaciones WHERE toma_id = ? ORDER BY id DESC LIMIT 1", (toma_id,), one=True
-        )
+        es_nueva = True
+
+    tasacion_previa = _tasacion_con_extra(
+        query("SELECT * FROM tasaciones WHERE toma_id = ? ORDER BY id DESC LIMIT 1", (toma_id,), one=True)
+    )
 
     return render_template(
         "tomas/tasacion.html",
         toma=toma,
-        resultado=resultado,
         tasacion_previa=tasacion_previa,
+        es_nueva=es_nueva,
         opciones=CALIFICACIONES,
         estado_mecanico_sugerido=estado_mecanico_sugerido,
         estado_estetico_sugerido=estado_estetico_sugerido,
@@ -508,7 +554,7 @@ def tasacion(toma_id):
         costo_danios_visuales=costo_danios_visuales,
         links_comparables=links_comparables,
         puntos_a_reparar=puntos_a_reparar,
-        danios_a_reparar=danios_a_reparar,
+        danios_por_vista=danios_por_vista,
         vistas_label=dict(VISTAS),
         tipos_label=dict(TIPOS_DANIO),
         gravedades_label=dict(GRAVEDADES),

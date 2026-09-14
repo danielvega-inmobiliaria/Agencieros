@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 13/09/2026 — 20:24 ART_
+_Última actualización: 14/09/2026 — 15:05 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -71,6 +71,11 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - [ ] Red de Agencieros (módulo 9) hoy es de un solo tenant/DB — para que sea red real entre agencias distintas hace falta multi-tenant (cada agencia con su login) y notificaciones.
 - [ ] Algoritmo de valuación (módulo 11): la fórmula de Tasación es una primera versión simple (factores fijos), no aprende de operaciones reales todavía.
 - [ ] Auth real (hoy es login simple tipo PresupuestoPRO, sin registro de agencias ni roles).
+- [ ] **Bug mobile (Paso 1 · Toma técnica):** la tabla de puntos (Punto/Calificación/Costo/Comentario) se corta en pantallas chicas — las columnas Costo y Comentario quedan fuera de pantalla. Falta un diseño responsive (scroll horizontal contenido o layout apilado en mobile). Confirmado con capturas de Daniel 13/09/2026.
+- [ ] **Imprimir informe de tasación:** agregar botón/vista de impresión del resultado de la Tasación.
+- [ ] **Ampliar checklist de Toma técnica de 12 a 41 puntos:** Daniel compartió una foto de un checklist físico completo (ejemplo Peugeot 308) con 41 puntos de inspección — falta transcribir la lista completa y migrar `PUNTOS`/las columnas `comentario_<codigo>`/`costo_<codigo>` en `database.py` y `routes/tomas.py`.
+- [ ] **Vínculo Toma→Stock al tomar un vehículo:** definir y programar qué pasa cuando se toma un vehículo — ¿se carga automático a Stock?, ¿se marca "En reparación"?, ¿se asigna fecha de entrega estimada? Hoy no hay ningún vínculo automático entre una Toma tasada y el módulo Stock.
+- [ ] **Certificado HTTPS:** evaluar si conviene para evitar el cartel del navegador "Estás a punto de enviar información no segura" al cargar datos en la red local (hoy la app corre sin HTTPS).
 
 ### 🟢 IDEAS FUTURAS
 - [ ] Comparables de mercado (MercadoLibre/RosarioGarage/Facebook Marketplace) en Tasación: hoy son links de búsqueda que abre el agenciero manualmente (decisión deliberada, para no depender de scraping frágil ni pisar los ToS de esos sitios). A futuro se podría evaluar una integración real (API o scraping propio) si hace falta traer el precio automáticamente.
@@ -83,6 +88,29 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 14/09/2026 (continuación) — Rediseño del panel de Tasación (Paso 3)
+Se implementaron los 5 pendientes 🟡 de la sesión anterior sobre Tasación (quedaron fuera de este bloque el bug mobile del Paso 1, imprimir informe, ampliar checklist a 41 puntos y el vínculo Toma→Stock — siguen en Pendientes):
+- **Formulario simplificado:** sacados los textos "(sugerido: X)" de Estado mecánico/Estético. Eliminado el input de "Gastos estimados de reparación" — ahora ese valor se calcula siempre automático (suma de costos del Paso 1 + Paso 2, ya no es editable a mano) y se muestra como dato informativo arriba del panel "Qué hay que reparar".
+- **"Qué hay que reparar" reagrupado por foto:** los daños del Paso 2 ahora se listan agrupados por vista (Frente/Trasera/Lateral izq/Lateral der/Superior), con subtotal por foto, en vez de una lista plana. Los puntos del Paso 1 quedaron con el mismo formato que ya tenían (calificación + comentario + costo).
+- **Panel de Resultado rediseñado:** arriba, en chico, precio de tabla + fecha de tasación (el dato ya existía en `created_at`, solo faltaba mostrarlo). Después el monto grande de "Valor de toma". Después una fila de 3 datos: Gastos estimados totales, Margen esperado y **% de Beneficio** (nuevo cálculo: margen esperado / precio de toma). Se sacó "Riesgo" de la vista (se sigue calculando y guardando en la base por si sirve a futuro, pero no se muestra más).
+- **Detalle de puntos en el Resultado:** debajo de los stats, listado de los puntos/daños tasados con su costo, y el comentario en una segunda línea con sangría — antes esta vista (al recargar una tasación ya guardada) solo mostraba los números finales sin el detalle.
+- **Ficha de la Toma (`detalle.html`):** el resumen del Paso 3 también se actualizó — mismo criterio (sin Riesgo, con % de Beneficio y fecha de tasación).
+- **Backend:** `routes/tomas.py` — nuevas funciones `_formatear_fecha`, `_tasacion_con_extra` (agrega `porcentaje_beneficio` y `fecha_fmt` a cualquier fila de `tasaciones`) y `_agrupar_danios_por_vista`. La vista `tasacion()` se simplificó: ya no arma un dict `resultado` aparte, siempre trabaja sobre `tasacion_previa` recién leída de la base (con un flag `es_nueva` para el texto del panel).
+- **Archivos tocados:** `routes/tomas.py`, `templates/tomas/tasacion.html`, `templates/tomas/detalle.html`. Sin cambios de esquema en `database.py` (la columna `created_at` de `tasaciones` ya existía, solo faltaba mostrarla).
+- **Pendiente:** probar el flujo completo en el navegador (cargar una toma con puntos/daños con costo, tasar, y revisar que el panel de Resultado y el de "Qué hay que reparar" se vean bien) y hacer el commit/push (bloque de Git Bash abajo, todavía no corrido).
+
+### Sesión 14/09/2026 — Precios 0km/normalización InfoAuto, búsqueda por Año primero, autocompletar propio (adiós datalist), guía de precio + evaluador + comentarios en Toma, resumen de reparaciones en Tasación
+- **Precios "0km" corregidos:** regla aplicada = año_0km es el máximo año cargado en esa fila de InfoAuto + 1 (antes estaba mal calculado). Se normalizó también la carga vieja de datos de ejemplo a mayúsculas, siguiendo la convención de InfoAuto.
+- **Búsqueda por Año primero en toda la app:** se reordenaron los campos en Consulta de precios (`precios/index.html`) y en el selector compartido de Marca/Modelo/Versión (`static/js/catalogo.js`, usado en Toma, Stock, Pedidos y Red) para que el Año vaya primero y filtre Marca/Modelo/Versión a lo que corresponde a ese año — antes se podían elegir combinaciones que no existieron nunca. `obtener_catalogo()` en `database.py` ahora devuelve también los años por versión.
+- **Autocompletar propio reemplaza el `<datalist>` nativo:** en iOS Safari el datalist mostraba las sugerencias en la barra de teclado (QuickType), confundiéndose con el autocorrector, en vez de desplegar una lista debajo del campo. Se creó `static/js/autocomplete.js` (dropdown propio, con teclado y mouse) y se reemplazó en los 5 lugares que usaban datalist: Consulta de precios, Toma, Stock, Pedidos (permuta) y Red.
+- **Incidente técnico resuelto:** un paste largo en Git Bash se trabó a mitad de camino, y al recrear el archivo se generó un archivo duplicado (`catalogo-1.js`) por un conflicto de sincronización (OneDrive) sobre la carpeta del proyecto — se verificó el contenido byte a byte antes de restaurar `catalogo.js` en la ruta correcta.
+- **Toma técnica (Paso 1) mejorada:**
+  - Al elegir Marca+Modelo (y Año/Versión si están) aparece el precio de guía (InfoAuto) de ese vehículo, con aviso si se está usando el año más próximo cargado o si no hay precio cargado todavía.
+  - El campo Evaluador ahora autocompleta con los nombres ya usados en tomas anteriores.
+  - Cada uno de los 12 puntos de inspección tiene un campo de comentario para anotar en qué consiste la reparación necesaria (se ve también en el detalle de la toma).
+- **Tasación (Paso 3):** nuevo panel "Qué hay que reparar" antes del botón "Calcular tasación", con el listado de puntos del Paso 1 (con calificación, comentario y costo) y de los daños marcados en las fotos del Paso 2 (con gravedad, descripción y costo) — para tener todo el detalle a la vista antes de tasar.
+- **Pendiente para la próxima sesión (feedback de Daniel sobre este mismo panel y toda la Tasación):** ver el bloque nuevo en "Pendientes → 🟡 IMPORTANTE" — bug de tabla en mobile, simplificación del formulario de Tasación, reagrupar "Qué hay que reparar" por foto, formato de la vista de una tasación guardada, rediseño del panel de Resultado, fecha de tasación e impresión del informe.
 
 ### Sesión 13/09/2026 — Stock↔fotos/inspección, Toma+Inspección+Tasación unificadas, bandeja de mensajes (vista previa), acceso mobile, costos de reparación y comparables de mercado
 - Sincronización de Stock con las fichas de `03_AUTOMOTOR/STOCK` (`sync_stock.py`), sin pisar campos financieros ya cargados a mano.

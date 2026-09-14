@@ -37,10 +37,11 @@
 <div class="panel">
   <h2>Paso 3 · Tasación</h2>
   {% if tasacion %}
+  {% if tasacion.fecha_fmt %}<p style="color:var(--text-dim); font-size:11.5px; margin:0 0 8px;">Tasado el {{ tasacion.fecha_fmt }}</p>{% endif %}
   <div class="stat-row">
     <div class="stat"><div class="n">${{ "{:,.0f}".format(tasacion.precio_max_recomendado).replace(",", ".") }}</div><div class="l">Precio máx. recomendado</div></div>
-    <div class="stat"><div class="n">{{ tasacion.riesgo }}</div><div class="l">Riesgo</div></div>
     <div class="stat"><div class="n">${{ "{:,.0f}".format(tasacion.margen_esperado).replace(",", ".") }}</div><div class="l">Margen esperado</div></div>
+    <div class="stat"><div class="n">{{ tasacion.porcentaje_beneficio }}%</div><div class="l">Beneficio</div></div>
   </div>
   <a class="btn btn-secondary btn-sm" style="margin-top:14px;" href="{{ url_for('tomas.tasacion', toma_id=toma.id) }}">Volver a tasar</a>
   {% else %}
