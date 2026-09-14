@@ -69,7 +69,7 @@
           <span style="color:var(--text-dim); font-weight:400;">— subtotal ${{ "{:,.0f}".format(g.subtotal).replace(",", ".") }}</span>
         </p>
         <ul style="margin:0 0 4px; padding-left:18px; font-size:13px;">
-          {% for d in g.items %}
+          {% for d in g.danios %}
           <li>
             <b>{{ tipos_label.get(d.tipo, d.tipo) }}</b> ({{ gravedades_label.get(d.gravedad, d.gravedad) }}){% if d.descripcion %} — {{ d.descripcion }}{% endif %}
             · ${{ "{:,.0f}".format(d.costo_reparacion).replace(",", ".") }}
@@ -120,7 +120,7 @@
       {% if danios_por_vista %}
       <ul style="list-style:none; margin:0; padding:0; font-size:13px;">
         {% for g in danios_por_vista %}
-        {% for d in g.items %}
+        {% for d in g.danios %}
         <li style="padding:5px 0; border-bottom:1px solid var(--border);">
           <div>{{ tipos_label.get(d.tipo, d.tipo) }} en {{ g.vista_label }} ({{ gravedades_label.get(d.gravedad, d.gravedad) }}) · ${{ "{:,.0f}".format(d.costo_reparacion).replace(",", ".") }}</div>
           {% if d.descripcion %}<div style="padding-left:16px; color:var(--text-dim); font-size:11.5px; margin-top:2px;">{{ d.descripcion }}</div>{% endif %}

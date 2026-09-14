@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 14/09/2026 — 16:25 ART_
+_Última actualización: 14/09/2026 — 16:32 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -95,6 +95,7 @@ Daniel reportó `TypeError: 'builtin_function_or_method' object is not iterable`
 - **Verificación:** esta vez, además de compilar el Python y parsear el Jinja (que no detectan este tipo de error — el chequeo de sintaxis pasa igual), armé una copia funcional de la app completa en un entorno de prueba con la base de datos real de Daniel y corrí el flujo real con el cliente de test de Flask: `GET /tomas/7/tasacion`, `POST` calculando la tasación (con los daños con costo reales de esa toma, el mismo caso que rompía), y de nuevo `GET` para ver la tasación ya guardada — los tres devolvieron 200 y el HTML generado incluye el panel agrupado por foto correctamente. También se probaron `/tomas/7` (ficha), `/tomas/nueva` (Paso 1) y `/tomas/` (listado) por las dudas, todas 200.
 - **Aprendizaje para mí:** de acá en más, cuando arme un diccionario para pasarlo a un template Jinja, evito nombres de clave que choquen con métodos de dict (`items`, `keys`, `values`, `get`, `update`, etc.) — y para cambios en la lógica de Tasación en particular, corro el flujo real (no solo compilar/parsear) antes de darlo por terminado.
 - **Archivos tocados:** `routes/tomas.py`, `templates/tomas/tasacion.html`.
+- **⚠️ Nota importante descubierta después:** el primer intento de guardar el fix de `templates/tomas/tasacion.html` reportó éxito pero el archivo en la compu de Daniel **no quedó con el cambio** (Daniel siguió viendo el mismo error). Al revisar, la herramienta que lee archivos de la compu de Daniel devolvió un error puntual: *"file is hardlinked (nlink > 1)"* — es decir, ese archivo específico tiene más de un nombre apuntando a los mismos datos en el disco (un hard link), algo nada común para un archivo de proyecto suelto. Sospecha: podría estar relacionado con el mismo tipo de conflicto de sincronización de OneDrive que ya había dado problemas antes (ver incidente de `catalogo-1.js`, sesión 14/09 anterior), o con algún backup/versionado que Daniel tenga corriendo sobre esa carpeta. Se volvió a escribir el archivo y esta vez el tamaño en disco quedó igual al esperado (7487 bytes), pero **queda pendiente confirmar con Daniel** si el problema aparece de nuevo — si es así, correr `fsutil hardlink list "D:\ESCRITORIO\CLAUDE\03_AUTOMOTOR\APP_AGENCIEROS\templates\tomas\tasacion.html"` en Git Bash para ver qué otro archivo comparte los mismos datos.
 
 ### Sesión 14/09/2026 (continuación 2) — Bug mobile: tabla de Paso 1 se cortaba (Costo/Comentario invisibles)
 Daniel reportó que en el celu seguía sin verse Costo y Comentario en la tabla de puntos técnicos (la vista de una Toma ya guardada, `tomas/detalle.html`, que muestra el resumen del Paso 1 justo arriba del Paso 3 · Tasación — de ahí que lo describiera como "en la tasación"). Era el bug mobile que había quedado anotado en Pendientes.
