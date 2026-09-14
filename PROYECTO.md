@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 14/09/2026 — 15:05 ART_
+_Última actualización: 14/09/2026 — 15:25 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -71,7 +71,6 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - [ ] Red de Agencieros (módulo 9) hoy es de un solo tenant/DB — para que sea red real entre agencias distintas hace falta multi-tenant (cada agencia con su login) y notificaciones.
 - [ ] Algoritmo de valuación (módulo 11): la fórmula de Tasación es una primera versión simple (factores fijos), no aprende de operaciones reales todavía.
 - [ ] Auth real (hoy es login simple tipo PresupuestoPRO, sin registro de agencias ni roles).
-- [ ] **Bug mobile (Paso 1 · Toma técnica):** la tabla de puntos (Punto/Calificación/Costo/Comentario) se corta en pantallas chicas — las columnas Costo y Comentario quedan fuera de pantalla. Falta un diseño responsive (scroll horizontal contenido o layout apilado en mobile). Confirmado con capturas de Daniel 13/09/2026.
 - [ ] **Imprimir informe de tasación:** agregar botón/vista de impresión del resultado de la Tasación.
 - [ ] **Ampliar checklist de Toma técnica de 12 a 41 puntos:** Daniel compartió una foto de un checklist físico completo (ejemplo Peugeot 308) con 41 puntos de inspección — falta transcribir la lista completa y migrar `PUNTOS`/las columnas `comentario_<codigo>`/`costo_<codigo>` en `database.py` y `routes/tomas.py`.
 - [ ] **Vínculo Toma→Stock al tomar un vehículo:** definir y programar qué pasa cuando se toma un vehículo — ¿se carga automático a Stock?, ¿se marca "En reparación"?, ¿se asigna fecha de entrega estimada? Hoy no hay ningún vínculo automático entre una Toma tasada y el módulo Stock.
@@ -88,6 +87,14 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 14/09/2026 (continuación 2) — Bug mobile: tabla de Paso 1 se cortaba (Costo/Comentario invisibles)
+Daniel reportó que en el celu seguía sin verse Costo y Comentario en la tabla de puntos técnicos (la vista de una Toma ya guardada, `tomas/detalle.html`, que muestra el resumen del Paso 1 justo arriba del Paso 3 · Tasación — de ahí que lo describiera como "en la tasación"). Era el bug mobile que había quedado anotado en Pendientes.
+- **Causa:** la tabla de 4 columnas (Punto/Calificación/Costo/Comentario) no tenía ningún tratamiento responsive — en pantallas chicas el navegador la angostaba hasta hacer imposible leer Costo y Comentario, sin un scroll evidente para el usuario.
+- **Solución:** en vez de agregar solo scroll horizontal (poco notorio en el celu), se armó un layout de tarjetas apiladas para pantallas ≤700px: cada fila pasa a ser una tarjeta con el nombre de cada columna arriba de su valor (clase `.tabla-responsive` + `data-label` en cada `<td>`, con la regla en `static/css/style.css`). Se aplicó tanto en el formulario de carga (Paso 1, `tomas/form.html`) como en la vista de una toma ya guardada (`tomas/detalle.html`).
+- **De paso:** en `detalle.html` se sacó la fila "Total reparación/limpieza (Paso 1)" de adentro de la tabla (quedaba con celdas vacías raras en el layout apilado) y pasó a ser un párrafo aparte debajo.
+- **Archivos tocados:** `static/css/style.css`, `templates/tomas/form.html`, `templates/tomas/detalle.html`.
+- **Pendiente:** Daniel probar de nuevo desde el celu que ahora sí se vean Costo y Comentario, y confirmar que el layout de tarjetas se vea bien (no solo "arreglado").
 
 ### Sesión 14/09/2026 (continuación) — Rediseño del panel de Tasación (Paso 3)
 Se implementaron los 5 pendientes 🟡 de la sesión anterior sobre Tasación (quedaron fuera de este bloque el bug mobile del Paso 1, imprimir informe, ampliar checklist a 41 puntos y el vínculo Toma→Stock — siguen en Pendientes):

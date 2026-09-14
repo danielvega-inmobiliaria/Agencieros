@@ -7,20 +7,22 @@
   <div class="stat-row">
     <div class="stat"><div class="n">{{ estado_mecanico_sugerido }}</div><div class="l">Estado mecánico sugerido</div></div>
   </div>
-  <table style="margin-top:16px;">
-    <tr><th>Punto</th><th>Calificación</th><th>Costo estimado</th><th>Comentario</th></tr>
+  <table class="tabla-responsive" style="margin-top:16px;">
+    <tr class="fila-header"><th>Punto</th><th>Calificación</th><th>Costo estimado</th><th>Comentario</th></tr>
     {% for p in puntos_data %}
     <tr>
-      <td>{{ p.label }}</td>
-      <td>{{ p.calificacion or '-' }}</td>
-      <td>{% if p.costo %}${{ "{:,.0f}".format(p.costo).replace(",", ".") }}{% else %}-{% endif %}</td>
-      <td>{{ p.comentario or '-' }}</td>
+      <td data-label="Punto"><b>{{ p.label }}</b></td>
+      <td data-label="Calificación">{{ p.calificacion or '-' }}</td>
+      <td data-label="Costo estimado">{% if p.costo %}${{ "{:,.0f}".format(p.costo).replace(",", ".") }}{% else %}-{% endif %}</td>
+      <td data-label="Comentario">{{ p.comentario or '-' }}</td>
     </tr>
     {% endfor %}
-    {% if costo_puntos_tecnicos %}
-    <tr><td><b>Total reparación/limpieza (Paso 1)</b></td><td></td><td><b>${{ "{:,.0f}".format(costo_puntos_tecnicos).replace(",", ".") }}</b></td><td></td></tr>
-    {% endif %}
   </table>
+  {% if costo_puntos_tecnicos %}
+  <p style="color:var(--text-dim); font-size:13px; margin-top:10px;">
+    <b style="color:var(--text);">Total reparación/limpieza (Paso 1): ${{ "{:,.0f}".format(costo_puntos_tecnicos).replace(",", ".") }}</b>
+  </p>
+  {% endif %}
   {% if toma.observaciones %}<p style="color:var(--text-dim); margin-top:16px;"><b>Observaciones:</b> {{ toma.observaciones }}</p>{% endif %}
 </div>
 
