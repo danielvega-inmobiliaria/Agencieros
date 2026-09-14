@@ -13,11 +13,31 @@ def index():
 
 @bp.route("/api/modelos")
 def api_modelos():
+    """Modelos para el datalist de autocompletar. Con marca elegida, solo
+    los de esa marca (como antes). Sin marca —búsqueda directa por
+    modelo, sin pasar primero por el desplegable de marcas— devuelve el
+    universo completo para que el campo Modelo funcione solo."""
     marca = request.args.get("marca", "")
-    rows = query(
-        "SELECT DISTINCT modelo FROM precios_base WHERE marca = ? ORDER BY modelo", (marca,)
-    )
+    if marca:
+        rows = query(
+            "SELECT DISTINCT modelo FROM precios_base WHERE marca = ? ORDER BY modelo", (marca,)
+        )
+    else:
+        rows = query("SELECT DISTINCT modelo FROM precios_base ORDER BY modelo")
     return jsonify([r["modelo"] for r in rows])
+
+
+@bp.route("/api/marcas_por_modelo")
+def api_marcas_por_modelo():
+    """Cuando se busca directo por modelo sin elegir marca antes: dice qué
+    marca(s) tienen ese modelo, para autocompletarla sola si es una única
+    marca, o mostrar un selector chico con solo esas opciones (nunca el
+    desplegable completo) si el modelo existe en más de una marca."""
+    modelo = request.args.get("modelo", "")
+    rows = query(
+        "SELECT DISTINCT marca FROM precios_base WHERE modelo = ? ORDER BY marca", (modelo,)
+    )
+    return jsonify([r["marca"] for r in rows])
 
 
 @bp.route("/api/versiones")

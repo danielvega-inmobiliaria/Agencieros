@@ -141,7 +141,11 @@ form textarea { min-height: 80px; }
 .hero-search h1 { color: var(--gold-light); font-size: 26px; margin-bottom: 6px; }
 .hero-search p { color: var(--text-dim); margin-top: 0; }
 .select-row { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; justify-content: center; }
-.select-row select { min-width: 160px; }
+.select-row select, .select-row input[type="text"] {
+  min-width: 160px; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--navy-bg); color: var(--text); font-size: 14px;
+}
+.select-row input[type="text"]::placeholder { color: var(--text-dim); }
 
 .price-result { text-align: center; padding: 20px; }
 .price-result .amount { font-size: 42px; font-weight: 800; color: var(--gold-light); }
