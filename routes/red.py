@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 
 from database import query, execute
-from buscador import filtros_busqueda
+from buscador import parsear_filtros, condiciones_sql
 
 bp = Blueprint("red", __name__, url_prefix="/red")
 
@@ -9,7 +9,8 @@ bp = Blueprint("red", __name__, url_prefix="/red")
 @bp.route("/")
 def index():
     tipo_filtro = request.args.get("tipo", "todos")
-    filtros, condiciones, params = filtros_busqueda(request.args, campo_precio="precio", incluir_km=False)
+    filtros = parsear_filtros(request.args)
+    condiciones, params = condiciones_sql(filtros, campo_precio="precio", campo_km="km")
     condiciones.append("estado = 'activo'")
     if tipo_filtro in ("ofrezco", "busco"):
         condiciones.append("tipo = ?")
@@ -21,7 +22,7 @@ def index():
         publicaciones=publicaciones,
         tipo_filtro=tipo_filtro,
         filtros=filtros,
-        mostrar_km=False,
+        mostrar_km=True,
         filtro_tab_nombre="tipo",
         filtro_tab_valor=tipo_filtro,
         limpiar_url=url_for("red.index", tipo=tipo_filtro),
@@ -34,11 +35,12 @@ def nueva():
         f = request.form
         execute(
             """INSERT INTO red_publicaciones
-               (agencia_nombre, tipo, marca, modelo, version, anio, precio, descripcion, contacto)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
+               (agencia_nombre, tipo, marca, modelo, version, anio, km, precio, descripcion, contacto)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
             (
                 f.get("agencia_nombre"), f.get("tipo"), f.get("marca"), f.get("modelo"),
-                f.get("version"), f.get("anio") or None, float(f.get("precio") or 0) or None,
+                f.get("version"), f.get("anio") or None, f.get("km") or None,
+                float(f.get("precio") or 0) or None,
                 f.get("descripcion"), f.get("contacto"),
             ),
         )

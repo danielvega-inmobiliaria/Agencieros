@@ -1,9 +1,11 @@
-{# Buscador compartido por Marca/Modelo/Versión/Año/Km/Rango de precio —
-   se usa igual en Stock (Disponible, Por ingresar, En reparación) y en Red
-   de Agencieros (pedido de Daniel 15/09/2026, continuación 17). Espera en
-   el contexto: filtros (dict con los valores cargados), mostrar_km (bool),
-   filtro_tab_nombre/filtro_tab_valor (para no perder la pestaña actual al
-   buscar) y limpiar_url. Sin action: se envía por GET a la misma URL. #}
+{# Buscador compartido por Marca/Modelo/Versión/Año/Km/Rango de precio — en
+   Stock busca en simultáneo Disponible + Por ingresar + En reparación + Red
+   de Agencieros (ver buscar_combinado en buscador.py); en Red de Agencieros
+   filtra solo esa tabla (pedido de Daniel 15/09/2026, continuaciones 17 y
+   18). Espera en el contexto: filtros (dict con los valores cargados),
+   mostrar_km (bool), filtro_tab_nombre/filtro_tab_valor (para no perder la
+   pestaña actual al buscar) y limpiar_url. Sin action: se envía por GET a
+   la misma URL. #}
 <form method="get" class="buscador">
   {% if filtro_tab_nombre %}<input type="hidden" name="{{ filtro_tab_nombre }}" value="{{ filtro_tab_valor }}">{% endif %}
   <div class="buscador-grid">
@@ -20,7 +22,7 @@
       <input id="buscador-version" type="text" name="version" value="{{ filtros.get('version', '') }}" placeholder="ej. 4x4 SRV">
     </div>
     <div class="campo campo-chica">
-      <label for="buscador-anio">Año</label>
+      <label for="buscador-anio">Año desde</label>
       <input id="buscador-anio" type="number" name="anio" value="{{ filtros.get('anio', '') }}" placeholder="2020">
     </div>
     {% if mostrar_km %}

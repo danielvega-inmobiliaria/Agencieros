@@ -343,6 +343,16 @@ def _migrar_tasaciones(conn):
         conn.execute("ALTER TABLE tasaciones ADD COLUMN toma_id INTEGER REFERENCES tomas_vehiculo(id)")
 
 
+def _migrar_red_publicaciones(conn):
+    """Agrega el kilometraje a `red_publicaciones` — para que el buscador
+    combinado de Stock (ver buscador.py) pueda filtrar por Km también en
+    las publicaciones de la Red de Agencieros, no solo en el stock propio.
+    Pedido de Daniel 15/09/2026 (continuación 18)."""
+    columnas_actuales = {row[1] for row in conn.execute("PRAGMA table_info(red_publicaciones)")}
+    if "km" not in columnas_actuales:
+        conn.execute("ALTER TABLE red_publicaciones ADD COLUMN km INTEGER")
+
+
 def _migrar_tomas_checklist_ampliado(conn):
     """Amplía el checklist de la Toma técnica (Paso 1) de 12 a 44 puntos,
     15/09/2026, a partir de la planilla física de peritaje (SAKURA) que
@@ -390,6 +400,7 @@ def init_db():
     _migrar_inspeccion_marcadores(conn)
     _migrar_tasaciones(conn)
     _migrar_financiaciones(conn)
+    _migrar_red_publicaciones(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")
     if cur.fetchone()[0] == 0:

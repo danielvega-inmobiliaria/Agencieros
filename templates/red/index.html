@@ -19,18 +19,19 @@
     distintas falta multi-tenant (login por agencia) y notificaciones automáticas. Ver PROYECTO.md.
   </p>
   <table class="tabla-responsive">
-    <tr class="fila-header"><th>Tipo</th><th>Agencia</th><th>Vehículo</th><th>Precio</th><th>Contacto</th><th></th></tr>
+    <tr class="fila-header"><th>Tipo</th><th>Agencia</th><th>Vehículo</th><th>Km</th><th>Precio</th><th>Contacto</th><th></th></tr>
     {% for p in publicaciones %}
     <tr>
       <td data-label="Tipo"><span class="badge {{ 'disponible' if p.tipo == 'ofrezco' else 'por_ingresar' }}">{{ 'Ofrece' if p.tipo == 'ofrezco' else 'Busca' }}</span></td>
       <td data-label="Agencia">{{ p.agencia_nombre }}</td>
       <td data-label="Vehículo">{{ p.marca }} {{ p.modelo }} {{ p.version }} {{ p.anio or '' }}</td>
+      <td data-label="Km">{{ "{:,.0f}".format(p.km).replace(",", ".") if p.km else '-' }}</td>
       <td data-label="Precio">{{ "$" + "{:,.0f}".format(p.precio).replace(",", ".") if p.precio else '-' }}</td>
       <td data-label="Contacto">{{ p.contacto or '-' }}</td>
       <td><a class="btn btn-secondary btn-sm" href="{{ url_for('red.cerrar', pub_id=p.id) }}">Cerrar</a></td>
     </tr>
     {% else %}
-    <tr><td colspan="6">Todavía no hay publicaciones.</td></tr>
+    <tr><td colspan="7">Todavía no hay publicaciones.</td></tr>
     {% endfor %}
   </table>
 </div>

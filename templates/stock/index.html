@@ -19,6 +19,34 @@
   {% include "partials/buscador.html" %}
 </div>
 
+{% if resultados is not none %}
+<div class="panel">
+  <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
+    Buscando en Disponible, Por ingresar, En reparación y Red de Agencieros — {{ resultados|length }} resultado(s).
+  </p>
+  <table class="tabla-responsive">
+    <tr class="fila-header"><th>Origen</th><th>Vehículo</th><th>Año</th><th>Km</th><th>Precio</th><th>Detalle</th></tr>
+    {% for r in resultados %}
+    <tr>
+      <td data-label="Origen"><span class="badge {{ r.origen_badge }}">{{ r.origen_label }}</span></td>
+      <td data-label="Vehículo">{{ r.marca }} {{ r.modelo }} {{ r.version }}</td>
+      <td data-label="Año">{{ r.anio or '-' }}</td>
+      <td data-label="Km">{{ "{:,.0f}".format(r.km).replace(",", ".") if r.km else '-' }}</td>
+      <td data-label="Precio">{{ "$" + "{:,.0f}".format(r.precio).replace(",", ".") if r.precio else '-' }}</td>
+      <td data-label="Detalle">
+        {% if r.ver_endpoint %}
+        <a class="btn btn-secondary btn-sm" href="{{ url_for(r.ver_endpoint, vehiculo_id=r.ver_id) }}">Ver</a>
+        {% else %}
+        {{ r.agencia }}{% if r.contacto %} · {{ r.contacto }}{% endif %}
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6">No se encontró nada con esos filtros.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% else %}
 <div class="panel">
   <table class="tabla-responsive">
     <tr class="fila-header"><th>Vehículo</th><th>Año</th><th>Km</th><th>Estado</th><th>Publicado</th><th></th></tr>
@@ -36,4 +64,5 @@
     {% endfor %}
   </table>
 </div>
+{% endif %}
 {% endblock %}

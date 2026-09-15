@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 
 from database import query, execute
 from sync_stock import sync_stock
-from buscador import filtros_busqueda
+from buscador import parsear_filtros, buscar_combinado
 
 bp = Blueprint("stock", __name__, url_prefix="/stock")
 
@@ -65,16 +65,29 @@ def sincronizar():
 @bp.route("/")
 def index():
     estado_filtro = request.args.get("estado", "todos")
-    filtros, condiciones, params = filtros_busqueda(request.args, incluir_km=True)
-    if estado_filtro in ESTADOS:
-        condiciones.append("estado = ?")
-        params.append(estado_filtro)
-    where = (" WHERE " + " AND ".join(condiciones)) if condiciones else ""
-    vehiculos = query(f"SELECT * FROM vehiculos{where} ORDER BY created_at DESC", tuple(params))
+    filtros = parsear_filtros(request.args)
+
+    # Con algún filtro cargado, el buscador deja de depender de la pestaña:
+    # busca en simultáneo Disponible + Por ingresar + En reparación + Red de
+    # Agencieros y devuelve todo junto en una sola lista (pedido de Daniel
+    # 15/09/2026, continuación 18). Sin filtros, se mantiene el browse
+    # normal por pestaña de siempre (incluida Vendido, que el buscador
+    # combinado no cubre a propósito).
+    if filtros:
+        resultados = buscar_combinado(filtros)
+        vehiculos = None
+    else:
+        resultados = None
+        if estado_filtro in ESTADOS:
+            vehiculos = query("SELECT * FROM vehiculos WHERE estado = ? ORDER BY created_at DESC", (estado_filtro,))
+        else:
+            vehiculos = query("SELECT * FROM vehiculos ORDER BY created_at DESC")
+
     conteos = {r["estado"]: r["c"] for r in query("SELECT estado, COUNT(*) c FROM vehiculos GROUP BY estado")}
     return render_template(
         "stock/index.html",
         vehiculos=vehiculos,
+        resultados=resultados,
         estado_filtro=estado_filtro,
         estados=ESTADOS,
         estado_label=ESTADO_LABEL,

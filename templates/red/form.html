@@ -21,6 +21,7 @@
       <div><label>Versión</label><select id="version" name="version" data-placeholder-libre="Versión nueva"></select></div>
     </div>
     <div class="form-row">
+      <div><label>Km</label><input type="number" name="km" placeholder="ej. 45.000"></div>
       <div><label>Precio</label><input type="number" step="0.01" name="precio"></div>
       <div><label>Contacto</label><input name="contacto" placeholder="WhatsApp / teléfono"></div>
     </div>
@@ -29,6 +30,7 @@
     <button class="btn btn-primary" style="margin-top:20px;" type="submit">Publicar</button>
   </form>
 </div>
+<script src="{{ url_for('static', filename='js/autocomplete.js') }}"></script>
 <script src="{{ url_for('static', filename='js/catalogo.js') }}"></script>
 <script>
   const catalogo = {{ catalogo_json | safe }};
