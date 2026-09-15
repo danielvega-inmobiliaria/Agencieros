@@ -52,13 +52,38 @@ def index():
     pedidos_activos = query(
         "SELECT COUNT(*) c FROM pedidos_clientes WHERE estado = 'buscando'", one=True
     )["c"]
-    ventas_mes = query(
-        """SELECT COUNT(*) c, COALESCE(SUM(valor_vendido - valor_compra - gastos), 0) ganancia,
-                  COALESCE(SUM(valor_vendido), 0) ingresos
-           FROM vehiculos
-           WHERE estado = 'vendido' AND strftime('%Y-%m', fecha_venta) = strftime('%Y-%m', 'now')""",
-        one=True,
+    # "Ingresos del mes" tiene que reflejar el efectivo que realmente entró
+    # este mes, no el precio de venta completo: si el vehículo se vendió con
+    # un plan de financiación, lo que se cobró al contado en el momento de
+    # la venta es el anticipo (el resto llega después, cuota a cuota, y ya
+    # se sigue por separado en "Cuotas por cobrar"/Financiación) — pedido de
+    # Daniel 15/09/2026 (continuación 23). Si no hay plan de financiación
+    # ligado al vehículo, la venta fue de contado por el valor completo.
+    # "Ganancia" no cambia: sigue siendo la rentabilidad total de la venta
+    # (precio completo - costo), se cobre ya o en cuotas.
+    ventas_mes_detalle = query(
+        """SELECT v.valor_vendido, v.valor_compra, v.gastos, f.anticipo
+           FROM vehiculos v
+           LEFT JOIN financiaciones f ON f.vehiculo_id = v.id
+           WHERE v.estado = 'vendido' AND strftime('%Y-%m', v.fecha_venta) = strftime('%Y-%m', 'now')"""
     )
+    ventas_mes = {
+        "c": len(ventas_mes_detalle),
+        "ganancia": round(
+            sum(
+                (r["valor_vendido"] or 0) - (r["valor_compra"] or 0) - (r["gastos"] or 0)
+                for r in ventas_mes_detalle
+            ),
+            2,
+        ),
+        "ingresos": round(
+            sum(
+                (r["anticipo"] if r["anticipo"] is not None else (r["valor_vendido"] or 0))
+                for r in ventas_mes_detalle
+            ),
+            2,
+        ),
+    }
     gastos_en_reparacion = query(
         "SELECT COALESCE(SUM(gastos), 0) c FROM vehiculos WHERE estado = 'en_reparacion'", one=True
     )["c"]

@@ -19,30 +19,30 @@
     <div class="label">Pedidos activos</div>
     <div class="value">{{ pedidos_activos }}</div>
   </a>
-  <a class="card" href="{{ url_for('finanzas.index') }}">
-    <div class="label">Ingresos del mes</div>
-    <div class="value">${{ "{:,.0f}".format(ventas_mes.ingresos or 0).replace(",", ".") }}</div>
-    <div class="sub">{{ ventas_mes.c }} vehículo(s) vendido(s)</div>
-  </a>
-  <a class="card" href="{{ url_for('stock.index', estado='vendido') }}">
-    <div class="label">Vendidos este mes</div>
-    <div class="value">{{ ventas_mes.c }}</div>
-    <div class="sub">Ganancia: ${{ "{:,.0f}".format(ventas_mes.ganancia or 0).replace(",", ".") }}</div>
+  <a class="card" href="{{ url_for('mensajes.index') }}">
+    <div class="label">Mensajes sin leer</div>
+    <div class="value">{{ mensajes_no_leidos }}</div>
+    <div class="sub" style="color:var(--gold-light);">Vista previa · ver bandeja</div>
   </a>
   <a class="card" href="{{ url_for('financiacion.index') }}">
     <div class="label">Cuotas por cobrar</div>
     <div class="value">${{ "{:,.0f}".format(cuotas_por_cobrar or 0).replace(",", ".") }}</div>
     <div class="sub" style="color:var(--gold-light);">Financiación · planes activos</div>
   </a>
+  <a class="card" href="{{ url_for('stock.index', estado='vendido') }}">
+    <div class="label">Vendidos este mes</div>
+    <div class="value">{{ ventas_mes.c }}</div>
+    <div class="sub">Ganancia: ${{ "{:,.0f}".format(ventas_mes.ganancia or 0).replace(",", ".") }}</div>
+  </a>
   <a class="card" href="{{ url_for('stock.index', estado='en_reparacion') }}">
     <div class="label">Gastos en reparación</div>
     <div class="value">${{ "{:,.0f}".format(gastos_en_reparacion or 0).replace(",", ".") }}</div>
     <div class="sub">Stock en estado "En reparación"</div>
   </a>
-  <a class="card" href="{{ url_for('mensajes.index') }}">
-    <div class="label">Mensajes sin leer</div>
-    <div class="value">{{ mensajes_no_leidos }}</div>
-    <div class="sub" style="color:var(--gold-light);">Vista previa · ver bandeja</div>
+  <a class="card" href="{{ url_for('finanzas.index') }}">
+    <div class="label">Ingresos del mes</div>
+    <div class="value">${{ "{:,.0f}".format(ventas_mes.ingresos or 0).replace(",", ".") }}</div>
+    <div class="sub">{{ ventas_mes.c }} vehículo(s) vendido(s) · recibido al contado</div>
   </a>
 </div>
 
