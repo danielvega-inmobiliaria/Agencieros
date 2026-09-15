@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 15/09/2026 — 07:45 ART_
+_Última actualización: 15/09/2026 — 08:15 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -93,6 +93,13 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 15/09/2026 (continuación 11) — Financiación: confirmación explícita antes de registrar la operación
+Daniel pidió que guardar el plan no sea automático: primero preguntar si la operación se realiza, y solo si se confirma, ahí sí pasar el vehículo a Vendido (con el precio de venta cargado en la financiación) y sumar al cliente a la lista de financiaciones a cobrar. Se le consultó si convenía guardar "cotizaciones" sueltas mientras tanto (para retomarlas después) — Daniel prefirió no ocupar lugar con consultas que no se concretan: **solo se guarda todo junto cuando la operación se cierra**, igual que ya funcionaba.
+- El cálculo del simulador sigue sin guardarse en ningún lado mientras se está probando (esto ya era así). Lo nuevo es el botón final: antes se llamaba "Guardar como plan real" y ejecutaba todo de una sin preguntar nada — ahora se llama **"✅ Confirmar operación y empezar a cobrar"** y al tocarlo aparece un cartel de confirmación con el resumen exacto de lo que va a pasar (vehículo → Vendido por $X, cliente → lista de financiaciones a cobrar). Si se cancela el cartel, no se guarda nada — se puede seguir ajustando el cálculo tranquilo.
+- El precio con el que el vehículo pasa a "Vendido" ya se tomaba del campo "Precio de venta" cargado en la financiación (no del valor publicado en Stock) — eso ya estaba bien de la sesión anterior, no hubo que tocar el backend.
+- **Archivos tocados:** `templates/financiacion/simulador.html` únicamente (confirmación en el navegador antes de enviar el formulario final — no hizo falta agregar ningún estado nuevo en la base de datos).
+- **Pendiente:** que Daniel confirme que el cartel de confirmación se ve bien y que el texto le sirve tal cual quedó.
 
 ### Sesión 15/09/2026 (continuación 10) — Financiación: el desplegable de vehículo lista los autos Disponibles
 Daniel probó el simulador y notó que el desplegable de vehículo solo mostraba autos ya marcados "Vendido" en Stock — no servía para el caso más común, armar el plan de financiación como parte de la venta de un auto que todavía está "Disponible".

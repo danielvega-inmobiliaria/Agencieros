@@ -8,9 +8,10 @@
 
 <div class="panel">
   <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
-    Calculá cuotas para cualquier consulta, aunque todavía no hayas cerrado la venta.
-    Elegí método de interés y periodicidad de cobro. Cuando la venta se confirma,
-    guardá el plan para empezar a controlar lo cobrado y lo adeudado.
+    Calculá cuotas para cualquier consulta, aunque todavía no hayas cerrado la venta — este cálculo
+    no se guarda en ningún lado hasta que confirmes la operación. Elegí método de interés y
+    periodicidad de cobro; recién al confirmar que la venta se realiza queda registrado el plan
+    para empezar a controlar lo cobrado y lo adeudado.
   </p>
   <form method="post">
     <div class="grid-2">
@@ -139,7 +140,7 @@
     {% endfor %}
   </table>
 
-  <form method="post" action="{{ url_for('financiacion.nuevo') }}" style="margin-top:16px;">
+  <form method="post" action="{{ url_for('financiacion.nuevo') }}" id="form-confirmar-operacion" style="margin-top:16px;">
     <input type="hidden" name="vehiculo_id" value="{{ valores.vehiculo_id }}">
     <input type="hidden" name="cliente_nombre" value="{{ valores.cliente_nombre }}">
     <input type="hidden" name="cliente_telefono" value="{{ valores.cliente_telefono }}">
@@ -152,9 +153,14 @@
     <input type="hidden" name="periodicidad" value="{{ valores.periodicidad }}">
     <input type="hidden" name="fecha_inicio" value="{{ valores.fecha_inicio }}">
     {% if not valores.cliente_nombre %}
-    <p style="color:var(--gold-light); font-size:12.5px;">Cargá el nombre del cliente arriba para poder guardar el plan.</p>
+    <p style="color:var(--gold-light); font-size:12.5px;">Cargá el nombre del cliente arriba para poder confirmar la operación.</p>
     {% endif %}
-    <button class="btn btn-primary" type="submit" {{ 'disabled' if not valores.cliente_nombre else '' }}>💾 Guardar como plan real y empezar a cobrar</button>
+    <p style="color:var(--text-dim); font-size:12px;">
+      Este cálculo no se guarda solo — recién queda registrado cuando confirmás que la operación se realiza.
+      Al confirmar: el vehículo (si elegiste uno) pasa a "Vendido" con el precio de venta cargado arriba,
+      y {{ valores.cliente_nombre or 'el cliente' }} queda en la lista de financiaciones a cobrar.
+    </p>
+    <button class="btn btn-primary" type="submit" {{ 'disabled' if not valores.cliente_nombre else '' }}>✅ Confirmar operación y empezar a cobrar</button>
   </form>
 </div>
 {% endif %}
@@ -169,5 +175,28 @@
       campoPrecio.value = precio;
     }
   });
+
+  // Confirmación explícita antes de registrar la operación: nada se guarda
+  // hasta que el agenciero confirma que la venta realmente se realiza.
+  var formConfirmar = document.getElementById('form-confirmar-operacion');
+  if (formConfirmar) {
+    formConfirmar.addEventListener('submit', function (ev) {
+      var cliente = formConfirmar.cliente_nombre.value || 'el cliente';
+      var vehiculoSelect = document.querySelector('select[name="vehiculo_id"]');
+      var vehiculoTexto = (vehiculoSelect && vehiculoSelect.selectedIndex > 0)
+        ? vehiculoSelect.options[vehiculoSelect.selectedIndex].text.replace(/^\[[^\]]+\]\s*/, '')
+        : null;
+      var precio = formConfirmar.precio_venta.value;
+      var mensaje = '¿Confirmás que la operación con ' + cliente + ' se realiza?\n\n';
+      if (vehiculoTexto) {
+        mensaje += '• El vehículo "' + vehiculoTexto + '" va a pasar a Vendido' +
+          (precio ? ' por $' + Number(precio).toLocaleString('es-AR') : '') + '.\n';
+      }
+      mensaje += '• El plan de financiación va a quedar activo, empezando a cobrar las cuotas.';
+      if (!window.confirm(mensaje)) {
+        ev.preventDefault();
+      }
+    });
+  }
 </script>
 {% endblock %}
