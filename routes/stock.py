@@ -4,7 +4,7 @@ from datetime import date
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 
-from database import query, execute
+from database import query, execute, foto_principal
 from sync_stock import sync_stock
 from buscador import parsear_filtros, buscar_combinado
 
@@ -100,6 +100,7 @@ def index():
         filtro_tab_nombre="estado",
         filtro_tab_valor=estado_filtro,
         limpiar_url=url_for("stock.index", estado=estado_filtro),
+        foto_principal=foto_principal,
     )
 
 

@@ -406,6 +406,24 @@ form textarea { min-height: 80px; }
   .tabla-red-compacta .fila-accion { display: block; padding-top: 2px; }
 }
 
+/* --- Foto principal en los listados --- miniatura del vehículo al lado de
+   sus datos (columna aparte en compu, dentro del renglón resumido en el
+   celu). Mientras no hay foto real cargada se usa una de las 2 fotos de
+   muestra, alternando (ver foto_principal en database.py) — pedido de
+   Daniel 15/09/2026 (continuación 21), para poder habilitar la imagen ya
+   mismo y no esperar a cargar fotos de a una. */
+.foto-mini {
+  width: 56px; height: 40px; object-fit: cover; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--navy-bg); display: block;
+}
+.tabla-vehiculos .foto-cell { width: 66px; }
+.fila-compacta-inner { display: flex; align-items: center; gap: 10px; }
+.fila-compacta-inner .foto-mini { width: 64px; height: 46px; flex-shrink: 0; }
+.fila-compacta-texto { flex: 1; min-width: 0; }
+@media (max-width: 700px) {
+  .tabla-vehiculos .foto-cell { display: none; }
+}
+
 /* --- Menú desplegable en celu --- en compu el sidebar queda fijo y visible
    como siempre (hay lugar de sobra); en celu ocupaba media pantalla, así
    que pasa a ser un menú que se despliega con el botón ☰ de arriba y se

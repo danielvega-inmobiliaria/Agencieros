@@ -95,7 +95,7 @@ def buscar_combinado(filtros):
     # Import acá adentro (no al tope del módulo) para evitar un import
     # circular: database.py no depende de este módulo, pero varias rutas
     # importan buscador antes que database en el arranque de la app.
-    from database import query
+    from database import query, foto_principal
 
     cond_stock, params_stock = condiciones_sql(filtros, campo_precio="valor_publicado", campo_km="km")
     cond_stock.append("estado IN ('disponible','por_ingresar','en_reparacion')")
@@ -119,6 +119,7 @@ def buscar_combinado(filtros):
             "anio": v["anio"], "km": v["km"], "precio": v["valor_publicado"],
             "ver_endpoint": "stock.detalle", "ver_id": v["id"],
             "agencia": None, "contacto": None,
+            "foto": foto_principal(v["id"]),
         })
     for p in publicaciones:
         origen = "red_ofrece" if p["tipo"] == "ofrezco" else "red_busca"
@@ -128,6 +129,9 @@ def buscar_combinado(filtros):
             "anio": p["anio"], "km": p["km"], "precio": p["precio"],
             "ver_endpoint": None, "ver_id": None,
             "agencia": p["agencia_nombre"], "contacto": p["contacto"],
+            # La Red todavía no tiene fotos propias — sin foto de muestra
+            # acá para no insinuar que es una foto real de otra agencia.
+            "foto": None,
         })
 
     resultados = []

@@ -456,6 +456,30 @@ def execute(sql, args=()):
     return cur.lastrowid
 
 
+# Fotos de muestra para habilitar la imagen principal en los listados de
+# vehículos antes de tener fotos reales cargadas — se van alternando entre
+# los vehículos que todavía no tienen ninguna foto propia (pedido de Daniel
+# 15/09/2026). En cuanto un vehículo tiene su primera foto real (subida
+# desde la ficha), esa pasa a ser la principal automáticamente y la de
+# muestra deja de mostrarse para ese vehículo — no se guarda nada en
+# `vehiculo_fotos`, es solo un reemplazo visual mientras no hay foto propia.
+FOTOS_MUESTRA = ["img/muestra/auto1.jpg", "img/muestra/auto2.jpg"]
+
+
+def foto_principal(vehiculo_id):
+    """URL de la foto principal de un vehículo para mostrar en los listados:
+    la primera foto real cargada (menor orden), o si todavía no tiene
+    ninguna, una de las 2 fotos de muestra (alternando por id)."""
+    from flask import url_for
+    foto = query(
+        "SELECT url FROM vehiculo_fotos WHERE vehiculo_id = ? ORDER BY orden, id LIMIT 1",
+        (vehiculo_id,), one=True,
+    )
+    if foto:
+        return foto["url"]
+    return url_for("static", filename=FOTOS_MUESTRA[vehiculo_id % 2])
+
+
 def obtener_catalogo():
     """Universo de Marca/Modelo/Versión ya usados en toda la app (precios_base
     + vehículos + pedidos + red + tomas + tasaciones), para que todos los
