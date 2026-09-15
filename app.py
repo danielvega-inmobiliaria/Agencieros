@@ -26,6 +26,7 @@ def create_app():
     from routes.red import bp as red_bp
     from routes.mensajes import bp as mensajes_bp
     from routes.financiacion import bp as financiacion_bp
+    from routes.matches import bp as matches_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -39,6 +40,7 @@ def create_app():
     app.register_blueprint(red_bp)
     app.register_blueprint(mensajes_bp)
     app.register_blueprint(financiacion_bp)
+    app.register_blueprint(matches_bp)
 
     @app.context_processor
     def _inject_catalogo():
@@ -48,6 +50,19 @@ def create_app():
             return {"catalogo_json": json.dumps(obtener_catalogo(), ensure_ascii=False)}
         except Exception:
             return {"catalogo_json": "{}"}
+
+    @app.context_processor
+    def _inject_matches_pendientes():
+        # Contador de matches pendientes de revisar, disponible en todos los
+        # templates para el badge del menú (ver templates/base.html) — así
+        # se ve desde cualquier pantalla que hay algo nuevo, sin depender de
+        # entrar pedido por pedido (pedido de Daniel 15/09/2026, continuación
+        # 27: "se me pasó por alto").
+        from routes.matches import contar_matches
+        try:
+            return {"matches_pendientes": contar_matches()}
+        except Exception:
+            return {"matches_pendientes": 0}
 
     @app.before_request
     def _require_login():

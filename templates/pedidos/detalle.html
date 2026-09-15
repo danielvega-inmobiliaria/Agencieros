@@ -32,16 +32,19 @@
       Busca en Disponible, Por ingresar, En reparación, Red · Ofrece y Posible entrega (el vehículo que otro cliente ya ofreció en permuta), recalculado cada vez que se abre esta ficha.
     </p>
     {% if ofertas %}
-    <ul style="margin-top:0;">
-      {% for o in ofertas %}
-      <li>
-        <span class="badge {{ o.origen_badge }}">{{ o.origen_label }}</span>
-        {% if o.ver_url %}<a href="{{ o.ver_url }}">{{ o.marca }} {{ o.modelo }} {{ o.version or '' }}</a>{% else %}{{ o.marca }} {{ o.modelo }} {{ o.version or '' }}{% endif %}
-        {{ o.anio or '' }}{% if o.precio %} · ${{ "{:,.0f}".format(o.precio).replace(",", ".") }}{% endif %}
-        {% if o.agencia %} · {{ o.agencia }}{% if o.contacto %} ({{ o.contacto }}){% endif %}{% endif %}
-      </li>
-      {% endfor %}
-    </ul>
+    <div class="alerta-match">
+      <div class="alerta-match-header">⚡ Hay {{ ofertas|length }} coincidencia(s)</div>
+      <ul>
+        {% for o in ofertas %}
+        <li>
+          <span class="badge {{ o.origen_badge }}">{{ o.origen_label }}</span>
+          {% if o.ver_url %}<a href="{{ o.ver_url }}">{{ o.marca }} {{ o.modelo }} {{ o.version or '' }}</a>{% else %}{{ o.marca }} {{ o.modelo }} {{ o.version or '' }}{% endif %}
+          {{ o.anio or '' }}{% if o.precio %} · ${{ "{:,.0f}".format(o.precio).replace(",", ".") }}{% endif %}
+          {% if o.agencia %} · {{ o.agencia }}{% if o.contacto %} ({{ o.contacto }}){% endif %}{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
     {% else %}
     <p style="color:var(--text-dim); font-size:13px;">Por ahora no hay nada que matchee con lo que busca este cliente.</p>
     {% endif %}
@@ -63,23 +66,27 @@
     <p style="color:var(--text-dim); font-size:12px; margin-top:-8px;">
       Cotejo por Marca y Modelo solamente (todavía no por versión/año, para no perder coincidencias).
     </p>
-    {% if matches_propios %}
-    <p style="margin-bottom:4px;"><b>Pedidos propios:</b></p>
-    <ul style="margin-top:0;">
-      {% for m in matches_propios %}
-      <li><a href="{{ url_for('pedidos.detalle', pedido_id=m.id) }}">{{ m.cliente_nombre }}</a> busca {{ m.marca }} {{ m.modelo }} {{ m.version or '' }}</li>
-      {% endfor %}
-    </ul>
-    {% endif %}
-    {% if matches_red %}
-    <p style="margin-bottom:4px;"><b>Red de Agencieros:</b></p>
-    <ul style="margin-top:0;">
-      {% for m in matches_red %}
-      <li>{{ m.agencia_nombre }} busca {{ m.marca }} {{ m.modelo }} {{ m.version or '' }}{% if m.contacto %} · {{ m.contacto }}{% endif %}</li>
-      {% endfor %}
-    </ul>
-    {% endif %}
-    {% if not matches_propios and not matches_red %}
+    {% if matches_propios or matches_red %}
+    <div class="alerta-match">
+      <div class="alerta-match-header">⚡ Alguien busca este vehículo</div>
+      {% if matches_propios %}
+      <p><b>Pedidos propios:</b></p>
+      <ul>
+        {% for m in matches_propios %}
+        <li><a href="{{ url_for('pedidos.detalle', pedido_id=m.id) }}">{{ m.cliente_nombre }}</a> busca {{ m.marca }} {{ m.modelo }} {{ m.version or '' }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% if matches_red %}
+      <p><b>Red de Agencieros:</b></p>
+      <ul>
+        {% for m in matches_red %}
+        <li>{{ m.agencia_nombre }} busca {{ m.marca }} {{ m.modelo }} {{ m.version or '' }}{% if m.contacto %} · {{ m.contacto }}{% endif %}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% else %}
     <p style="color:var(--text-dim); font-size:13px;">Por ahora no matchea con ningún pedido propio ni con la Red.</p>
     {% endif %}
   </div>

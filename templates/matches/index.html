@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Matches — Agencieros{% endblock %}
+{% block header %}Matches{% endblock %}
+{% block content %}
+<div class="panel">
+  <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
+    Cruza todos los pedidos activos ("buscando") contra Stock, Red de Agencieros y los vehículos de permuta de otros pedidos, de una sola vez — no hace falta entrar pedido por pedido. Se recalcula cada vez que entrás a esta pantalla.
+    {% if filas %}<b>{{ filas|length }} pedido(s) con match pendiente de revisar.</b>{% endif %}
+  </p>
+
+  {% if filas %}
+  {% for fila in filas %}
+  <div class="alerta-match">
+    <div class="alerta-match-header">
+      ⚡ {{ fila.pedido.cliente_nombre }} — busca {{ fila.pedido.marca }} {{ fila.pedido.modelo }} {{ fila.pedido.version or '' }}
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('pedidos.detalle', pedido_id=fila.pedido.id) }}">Ver ficha</a>
+    </div>
+
+    {% if fila.ofertas %}
+    <p><b>Ya tenemos algo para ofrecerle:</b></p>
+    <ul>
+      {% for o in fila.ofertas %}
+      <li>
+        <span class="badge {{ o.origen_badge }}">{{ o.origen_label }}</span>
+        {{ o.marca }} {{ o.modelo }} {{ o.version or '' }} {{ o.anio or '' }}
+        {% if o.precio %} · ${{ "{:,.0f}".format(o.precio).replace(",", ".") }}{% endif %}
+        {% if o.agencia %} · {{ o.agencia }}{% if o.contacto %} ({{ o.contacto }}){% endif %}{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if fila.matches_propios %}
+    <p><b>Su vehículo de permuta lo busca — pedidos propios:</b></p>
+    <ul>
+      {% for m in fila.matches_propios %}
+      <li><a href="{{ url_for('pedidos.detalle', pedido_id=m.id) }}">{{ m.cliente_nombre }}</a> busca {{ m.marca }} {{ m.modelo }} {{ m.version or '' }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if fila.matches_red %}
+    <p><b>Su vehículo de permuta lo busca — Red de Agencieros:</b></p>
+    <ul>
+      {% for m in fila.matches_red %}
+      <li>{{ m.agencia_nombre }} busca {{ m.marca }} {{ m.modelo }} {{ m.version or '' }}{% if m.contacto %} · {{ m.contacto }}{% endif %}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% else %}
+  <p style="color:var(--text-dim);">No hay matches pendientes por ahora.</p>
+  {% endif %}
+</div>
+{% endblock %}
