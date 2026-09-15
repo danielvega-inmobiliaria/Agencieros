@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 15/09/2026 — 08:15 ART_
+_Última actualización: 15/09/2026 — 08:35 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -93,6 +93,15 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 15/09/2026 (continuación 12) — Financiación: cálculo en vivo (sin recargar la página)
+Daniel pidió que completar la ficha de financiación se sienta más ágil: que al cargar el anticipo se calcule solo cuánto hay que financiar, que se vea el valor de la cuota a medida que se cargan los datos (antes de la línea de la fecha), y que la fecha de la primera cuota se autocomplete a 30 días (mensual) o 7 días (semanal) desde hoy según la periodicidad elegida.
+- **Monto a financiar en vivo:** al tipear Precio de venta o Anticipo, "Monto a financiar" se recalcula solo (precio − anticipo) sin tocar el botón "Calcular cuotas". Esto ya existía en el servidor al enviar el formulario; ahora también pasa en el navegador mientras se completa.
+- **Cuota estimada en vivo:** nuevo recuadro justo antes de "Fecha de la primera cuota" que muestra la cuota calculada al instante, actualizándose con cada cambio en monto, tasa, plazo, método de interés o periodicidad — en JavaScript, con las mismas fórmulas que usa el servidor (`_cuota_frances` / `_cuota_simple` de `routes/financiacion.py`). Se verificaron los números en Node.js contra los mismos casos de prueba del backend: coinciden exacto ($496.432 francés, $586.667 simple, $124.108 semanal).
+- **Fecha sugerida:** "Fecha de la primera cuota" se completa sola con hoy + 30 días si la periodicidad es Mensual, o + 7 días si es Semanal, y se recalcula si se cambia la periodicidad. Se puede pisar a mano si hace falta otra fecha.
+- El botón "Calcular cuotas" (que sí pega al servidor) sigue funcionando igual que antes, mostrando el cronograma completo con desglose de interés/amortización cuando corresponde — el cálculo en vivo es solo una vista previa rápida mientras se completan los datos.
+- **Verificación:** se extrajo el bloque `<script>` del template y se validó la sintaxis con `node --check`, y se corrieron las mismas fórmulas en Node comparando contra los valores ya confirmados del backend (coinciden exacto). También se re-renderizó la página con el cliente de test de Flask para confirmar que no rompió el HTML (200 OK, todos los ids nuevos presentes).
+- **Archivos tocados:** `templates/financiacion/simulador.html` únicamente — no hizo falta tocar el backend, las fórmulas ya estaban bien ahí.
 
 ### Sesión 15/09/2026 (continuación 11) — Financiación: confirmación explícita antes de registrar la operación
 Daniel pidió que guardar el plan no sea automático: primero preguntar si la operación se realiza, y solo si se confirma, ahí sí pasar el vehículo a Vendido (con el precio de venta cargado en la financiación) y sumar al cliente a la lista de financiaciones a cobrar. Se le consultó si convenía guardar "cotizaciones" sueltas mientras tanto (para retomarlas después) — Daniel prefirió no ocupar lugar con consultas que no se concretan: **solo se guarda todo junto cuando la operación se cierra**, igual que ya funcionaba.

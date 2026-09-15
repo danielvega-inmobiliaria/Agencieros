@@ -48,27 +48,27 @@
     <div class="grid-2">
       <div>
         <label>Anticipo</label>
-        <input type="number" step="1" name="anticipo" value="{{ valores.anticipo }}">
+        <input type="number" step="1" name="anticipo" id="anticipo" value="{{ valores.anticipo }}">
       </div>
       <div>
         <label>Monto a financiar</label>
-        <input type="number" step="1" name="monto_financiado" value="{{ valores.monto_financiado }}" required>
+        <input type="number" step="1" name="monto_financiado" id="monto_financiado" value="{{ valores.monto_financiado }}" required>
       </div>
     </div>
     <div class="grid-2">
       <div>
         <label>Tasa de interés mensual (%)</label>
-        <input type="number" step="0.01" name="tasa_interes_mensual" value="{{ valores.tasa_interes_mensual }}">
+        <input type="number" step="0.01" name="tasa_interes_mensual" id="tasa_interes_mensual" value="{{ valores.tasa_interes_mensual }}">
       </div>
       <div>
         <label>Plazo (cantidad de cuotas mensuales)</label>
-        <input type="number" step="1" name="cantidad_cuotas" value="{{ valores.cantidad_cuotas }}" required>
+        <input type="number" step="1" name="cantidad_cuotas" id="cantidad_cuotas" value="{{ valores.cantidad_cuotas }}" required>
       </div>
     </div>
     <div class="grid-2">
       <div>
         <label>Método de interés</label>
-        <select name="metodo_interes">
+        <select name="metodo_interes" id="metodo_interes">
           {% for k, label in metodo_label.items() %}
           <option value="{{ k }}" {{ 'selected' if valores.metodo_interes == k else '' }}>{{ label }}</option>
           {% endfor %}
@@ -76,17 +76,24 @@
       </div>
       <div>
         <label>Periodicidad de cobro</label>
-        <select name="periodicidad">
+        <select name="periodicidad" id="periodicidad">
           {% for k, label in periodicidad_label.items() %}
           <option value="{{ k }}" {{ 'selected' if valores.periodicidad == k else '' }}>{{ label }}</option>
           {% endfor %}
         </select>
       </div>
     </div>
+    <div id="cuota-estimada-preview" style="display:none; background:var(--navy-card-2); border:1px solid var(--gold); border-radius:10px; padding:10px 14px; margin-bottom:16px;">
+      <span style="color:var(--text-dim); font-size:12px; text-transform:uppercase; letter-spacing:.03em;">Cuota estimada</span>
+      <div style="color:var(--gold-light); font-size:22px; font-weight:700;" id="cuota-estimada-valor">$0</div>
+    </div>
     <div class="grid-2">
       <div>
         <label>Fecha de la primera cuota</label>
-        <input type="date" name="fecha_inicio" value="{{ valores.fecha_inicio }}">
+        <input type="date" name="fecha_inicio" id="fecha_inicio" value="{{ valores.fecha_inicio }}">
+        <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
+          Se completa sola con 30 días (mensual) o 7 días (semanal) desde hoy — la podés cambiar a mano si hace falta.
+        </p>
       </div>
     </div>
     {% if valores.periodicidad == 'semanal' %}
@@ -174,7 +181,99 @@
     if (precio && campoPrecio && !campoPrecio.value) {
       campoPrecio.value = precio;
     }
+    actualizarMontoFinanciado();
   });
+
+  // --- Cálculo en vivo (sin recargar la página) ---------------------------
+  var campoPrecioVenta = document.getElementById('precio_venta');
+  var campoAnticipo = document.getElementById('anticipo');
+  var campoMontoFinanciado = document.getElementById('monto_financiado');
+  var campoTasa = document.getElementById('tasa_interes_mensual');
+  var campoCuotas = document.getElementById('cantidad_cuotas');
+  var campoMetodo = document.getElementById('metodo_interes');
+  var campoPeriodicidad = document.getElementById('periodicidad');
+  var campoFecha = document.getElementById('fecha_inicio');
+  var previewBox = document.getElementById('cuota-estimada-preview');
+  var previewValor = document.getElementById('cuota-estimada-valor');
+
+  function formatearPesos(monto) {
+    return '$' + Math.round(monto).toLocaleString('es-AR');
+  }
+
+  // 1) Precio de venta - anticipo => monto a financiar, en vivo.
+  function actualizarMontoFinanciado() {
+    var precio = parseFloat(campoPrecioVenta.value);
+    var anticipo = parseFloat(campoAnticipo.value) || 0;
+    if (!isNaN(precio) && precio > 0) {
+      campoMontoFinanciado.value = Math.max(precio - anticipo, 0);
+    }
+    actualizarCuotaEstimada();
+  }
+  campoPrecioVenta.addEventListener('input', actualizarMontoFinanciado);
+  campoAnticipo.addEventListener('input', actualizarMontoFinanciado);
+
+  // 2) Cuota estimada en vivo, con las mismas fórmulas que usa el servidor
+  // (routes/financiacion.py: _cuota_frances / _cuota_simple), para mostrar
+  // el número antes de tocar "Calcular cuotas".
+  function cuotaFrances(monto, tasaPct, n) {
+    var i = (tasaPct || 0) / 100;
+    if (!n) return 0;
+    if (i === 0) return monto / n;
+    var factor = (i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1);
+    return monto * factor;
+  }
+  function cuotaSimple(monto, tasaPct, n) {
+    if (!n) return 0;
+    var i = (tasaPct || 0) / 100;
+    return (monto / n) * (1 + i * n);
+  }
+  function actualizarCuotaEstimada() {
+    var monto = parseFloat(campoMontoFinanciado.value) || 0;
+    var tasa = parseFloat(campoTasa.value) || 0;
+    var n = parseInt(campoCuotas.value, 10) || 0;
+    if (monto <= 0 || n <= 0) {
+      previewBox.style.display = 'none';
+      return;
+    }
+    var cuotaMensual = campoMetodo.value === 'simple' ? cuotaSimple(monto, tasa, n) : cuotaFrances(monto, tasa, n);
+    var esSemanal = campoPeriodicidad.value === 'semanal';
+    var cuota = esSemanal ? cuotaMensual / 4 : cuotaMensual;
+    previewValor.textContent = formatearPesos(cuota) + (esSemanal ? ' por semana' : ' por mes');
+    previewBox.style.display = 'block';
+  }
+  [campoMontoFinanciado, campoTasa, campoCuotas, campoMetodo, campoPeriodicidad].forEach(function (el) {
+    el.addEventListener('input', actualizarCuotaEstimada);
+    el.addEventListener('change', actualizarCuotaEstimada);
+  });
+
+  // 3) Fecha de la primera cuota sugerida: 30 días (mensual) o 7 días
+  // (semanal) desde hoy, según la periodicidad elegida.
+  function fechaSugerida() {
+    var dias = campoPeriodicidad.value === 'semanal' ? 7 : 30;
+    var f = new Date();
+    f.setDate(f.getDate() + dias);
+    var mm = String(f.getMonth() + 1).padStart(2, '0');
+    var dd = String(f.getDate()).padStart(2, '0');
+    return f.getFullYear() + '-' + mm + '-' + dd;
+  }
+  function actualizarFechaSugerida() {
+    campoFecha.value = fechaSugerida();
+  }
+  campoPeriodicidad.addEventListener('change', actualizarFechaSugerida);
+
+  // Estado inicial de la página: si la fecha todavía tiene el valor por
+  // defecto de hoy (o está vacía), la reemplazamos por la sugerida. El
+  // script está al final del body, así que el DOM ya está listo acá —
+  // no hace falta esperar a DOMContentLoaded (y esperarlo sería tarde,
+  // ese evento ya disparó para cuando se ejecuta este script).
+  (function inicializar() {
+    var hoy = new Date();
+    var hoyStr = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+    if (!campoFecha.value || campoFecha.value === hoyStr) {
+      actualizarFechaSugerida();
+    }
+    actualizarCuotaEstimada();
+  })();
 
   // Confirmación explícita antes de registrar la operación: nada se guarda
   // hasta que el agenciero confirma que la venta realmente se realiza.
