@@ -84,9 +84,6 @@ def index():
         if c["estado"] != "pagada" and not (c["fecha_vencimiento"] and c["fecha_vencimiento"] < hoy)
     )
     cuotas_por_cobrar = round(adeudado + por_cobrar_no_vencido, 2)
-    ultimos_vehiculos = query(
-        "SELECT * FROM vehiculos ORDER BY created_at DESC LIMIT 5"
-    )
     # Indicador de mensajes sin leer (bandeja unificada — vista previa con datos de ejemplo).
     mensajes_no_leidos = contar_no_leidos()
 
@@ -108,7 +105,6 @@ def index():
         ventas_mes=ventas_mes,
         gastos_en_reparacion=gastos_en_reparacion,
         cuotas_por_cobrar=cuotas_por_cobrar,
-        ultimos_vehiculos=ultimos_vehiculos,
         mensajes_no_leidos=mensajes_no_leidos,
         grafico_stock=grafico_stock,
         grafico_cobros=grafico_cobros,

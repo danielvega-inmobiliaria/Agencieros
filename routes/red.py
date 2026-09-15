@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 
 from database import query, execute
+from buscador import filtros_busqueda
 
 bp = Blueprint("red", __name__, url_prefix="/red")
 
@@ -8,16 +9,23 @@ bp = Blueprint("red", __name__, url_prefix="/red")
 @bp.route("/")
 def index():
     tipo_filtro = request.args.get("tipo", "todos")
+    filtros, condiciones, params = filtros_busqueda(request.args, campo_precio="precio", incluir_km=False)
+    condiciones.append("estado = 'activo'")
     if tipo_filtro in ("ofrezco", "busco"):
-        publicaciones = query(
-            "SELECT * FROM red_publicaciones WHERE tipo = ? AND estado = 'activo' ORDER BY created_at DESC",
-            (tipo_filtro,),
-        )
-    else:
-        publicaciones = query(
-            "SELECT * FROM red_publicaciones WHERE estado = 'activo' ORDER BY created_at DESC"
-        )
-    return render_template("red/index.html", publicaciones=publicaciones, tipo_filtro=tipo_filtro)
+        condiciones.append("tipo = ?")
+        params.append(tipo_filtro)
+    where = " WHERE " + " AND ".join(condiciones)
+    publicaciones = query(f"SELECT * FROM red_publicaciones{where} ORDER BY created_at DESC", tuple(params))
+    return render_template(
+        "red/index.html",
+        publicaciones=publicaciones,
+        tipo_filtro=tipo_filtro,
+        filtros=filtros,
+        mostrar_km=False,
+        filtro_tab_nombre="tipo",
+        filtro_tab_valor=tipo_filtro,
+        limpiar_url=url_for("red.index", tipo=tipo_filtro),
+    )
 
 
 @bp.route("/nueva", methods=["GET", "POST"])

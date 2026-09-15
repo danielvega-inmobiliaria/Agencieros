@@ -3,11 +3,16 @@
 {% block header %}Red de Agencieros{% endblock %}
 {% block content %}
 <div class="tabs">
-  <a class="tab {{ 'active' if tipo_filtro == 'todos' else '' }}" href="{{ url_for('red.index', tipo='todos') }}">Todos</a>
-  <a class="tab {{ 'active' if tipo_filtro == 'ofrezco' else '' }}" href="{{ url_for('red.index', tipo='ofrezco') }}">Ofrecen</a>
-  <a class="tab {{ 'active' if tipo_filtro == 'busco' else '' }}" href="{{ url_for('red.index', tipo='busco') }}">Buscan</a>
+  <a class="tab {{ 'active' if tipo_filtro == 'todos' else '' }}" href="{{ url_for('red.index', tipo='todos', **filtros) }}">Todos</a>
+  <a class="tab {{ 'active' if tipo_filtro == 'ofrezco' else '' }}" href="{{ url_for('red.index', tipo='ofrezco', **filtros) }}">Ofrecen</a>
+  <a class="tab {{ 'active' if tipo_filtro == 'busco' else '' }}" href="{{ url_for('red.index', tipo='busco', **filtros) }}">Buscan</a>
   <a class="btn btn-primary btn-sm" style="margin-left:auto;" href="{{ url_for('red.nueva') }}">+ Publicar</a>
 </div>
+
+<div class="panel">
+  {% include "partials/buscador.html" %}
+</div>
+
 <div class="panel">
   <p style="color:var(--text-dim); font-size:13px;">
     Hoy es un tablero compartido de una sola base — para que sea una red real entre agencias

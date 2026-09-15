@@ -6,6 +6,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 
 from database import query, execute
 from sync_stock import sync_stock
+from buscador import filtros_busqueda
 
 bp = Blueprint("stock", __name__, url_prefix="/stock")
 
@@ -64,10 +65,12 @@ def sincronizar():
 @bp.route("/")
 def index():
     estado_filtro = request.args.get("estado", "todos")
+    filtros, condiciones, params = filtros_busqueda(request.args, incluir_km=True)
     if estado_filtro in ESTADOS:
-        vehiculos = query("SELECT * FROM vehiculos WHERE estado = ? ORDER BY created_at DESC", (estado_filtro,))
-    else:
-        vehiculos = query("SELECT * FROM vehiculos ORDER BY created_at DESC")
+        condiciones.append("estado = ?")
+        params.append(estado_filtro)
+    where = (" WHERE " + " AND ".join(condiciones)) if condiciones else ""
+    vehiculos = query(f"SELECT * FROM vehiculos{where} ORDER BY created_at DESC", tuple(params))
     conteos = {r["estado"]: r["c"] for r in query("SELECT estado, COUNT(*) c FROM vehiculos GROUP BY estado")}
     return render_template(
         "stock/index.html",
@@ -76,6 +79,11 @@ def index():
         estados=ESTADOS,
         estado_label=ESTADO_LABEL,
         conteos=conteos,
+        filtros=filtros,
+        mostrar_km=True,
+        filtro_tab_nombre="estado",
+        filtro_tab_valor=estado_filtro,
+        limpiar_url=url_for("stock.index", estado=estado_filtro),
     )
 
 

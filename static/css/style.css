@@ -107,20 +107,33 @@ a.card:hover { border-color: var(--gold); background: var(--navy-card-2); }
 .donut-legend li { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: var(--text); }
 .donut-legend .swatch { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
 .donut-legend .pct { color: var(--text-dim); }
-@media (max-width: 900px) {
-  .dashboard-charts-row { grid-template-columns: 1fr; }
-}
 @media (max-width: 700px) {
   .dashboard-cards { gap: 10px; }
   .dashboard-cards .card { padding: 12px; }
   .dashboard-cards .value { font-size: 17px; }
   .dashboard-cards .label { font-size: 10px; }
   .dashboard-cards .sub { font-size: 10px; }
+
+  /* Las 2 tortas se achican pero se mantienen una al lado de la otra
+     (antes se apilaban debajo de los 900px) para que el dashboard entero
+     entre de una en la pantalla del celu — pedido de Daniel 15/09/2026
+     (continuación 17). */
+  .dashboard-charts-row { gap: 10px; }
+  .dashboard-charts-row .chart-panel { padding: 12px; }
+  .dashboard-charts-row .chart-panel h2 { font-size: 12.5px; margin-bottom: 6px; line-height: 1.25; }
+  .dashboard-charts-row .donut-wrap { margin-bottom: 10px; }
+  .dashboard-charts-row .donut { width: 84px; height: 84px; min-width: 84px; }
+  .dashboard-charts-row .donut::after { inset: 15px; }
+  .dashboard-charts-row .donut-legend { font-size: 10.5px; }
+  .dashboard-charts-row .donut-legend li { gap: 5px; margin-bottom: 5px; flex-wrap: wrap; }
+  .dashboard-charts-row .donut-legend .swatch { width: 8px; height: 8px; }
 }
 @media (max-width: 380px) {
   .dashboard-cards { gap: 8px; }
   .dashboard-cards .card { padding: 10px; }
   .dashboard-cards .value { font-size: 15px; }
+  .dashboard-charts-row .donut { width: 72px; height: 72px; min-width: 72px; }
+  .dashboard-charts-row .donut::after { inset: 13px; }
 }
 
 .panel {
@@ -170,6 +183,18 @@ form input, form select, form textarea {
 }
 form textarea { min-height: 80px; }
 .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0 16px; }
+
+/* Buscador compartido (Stock: Disponible/Por ingresar/En reparación, y Red
+   de Agencieros) por Marca/Modelo/Versión/Año/Km/Rango de precio — pedido
+   de Daniel 15/09/2026 (continuación 17), ver templates/partials/buscador.html. */
+.buscador-grid { display: flex; flex-wrap: wrap; gap: 0 14px; }
+.buscador-grid .campo { flex: 1 1 150px; min-width: 120px; }
+.buscador-grid .campo-chica { flex: 0 1 130px; min-width: 100px; }
+.buscador-grid label { margin-top: 0; }
+.buscador-acciones { display: flex; gap: 8px; margin-top: 14px; }
+@media (max-width: 700px) {
+  .buscador-grid .campo, .buscador-grid .campo-chica { flex: 1 1 45%; }
+}
 
 .flash { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
 .flash.success { background: rgba(62,207,142,.15); color: var(--green); border: 1px solid var(--green); }

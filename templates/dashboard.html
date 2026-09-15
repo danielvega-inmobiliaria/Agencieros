@@ -72,22 +72,4 @@
     {% if grafico_cobros.total == 0 %}<p style="color:var(--text-dim); font-size:12px; margin-top:8px;">No hay planes de financiación activos todavía.</p>{% endif %}
   </div>
 </div>
-
-<div class="panel">
-  <h2>Últimos vehículos cargados</h2>
-  <table class="tabla-responsive">
-    <tr class="fila-header"><th>Vehículo</th><th>Año</th><th>Estado</th><th>Publicado</th><th></th></tr>
-    {% for v in ultimos_vehiculos %}
-    <tr>
-      <td data-label="Vehículo">{{ v.marca }} {{ v.modelo }} {{ v.version }}</td>
-      <td data-label="Año">{{ v.anio }}</td>
-      <td data-label="Estado"><span class="badge {{ v.estado }}">{{ v.estado.replace('_',' ') }}</span></td>
-      <td data-label="Publicado">${{ "{:,.0f}".format(v.valor_publicado or 0).replace(",", ".") }}</td>
-      <td><a class="btn btn-secondary btn-sm" href="{{ url_for('stock.detalle', vehiculo_id=v.id) }}">Ver</a></td>
-    </tr>
-    {% else %}
-    <tr><td colspan="5">Todavía no hay vehículos cargados.</td></tr>
-    {% endfor %}
-  </table>
-</div>
 {% endblock %}

@@ -3,9 +3,9 @@
 {% block header %}Stock de vehículos{% endblock %}
 {% block content %}
 <div class="tabs">
-  <a class="tab {{ 'active' if estado_filtro == 'todos' else '' }}" href="{{ url_for('stock.index', estado='todos') }}">Todos ({{ conteos.values()|sum }})</a>
+  <a class="tab {{ 'active' if estado_filtro == 'todos' else '' }}" href="{{ url_for('stock.index', estado='todos', **filtros) }}">Todos ({{ conteos.values()|sum }})</a>
   {% for e in estados %}
-  <a class="tab {{ 'active' if estado_filtro == e else '' }}" href="{{ url_for('stock.index', estado=e) }}">{{ estado_label[e] }} ({{ conteos.get(e, 0) }})</a>
+  <a class="tab {{ 'active' if estado_filtro == e else '' }}" href="{{ url_for('stock.index', estado=e, **filtros) }}">{{ estado_label[e] }} ({{ conteos.get(e, 0) }})</a>
   {% endfor %}
   <div style="margin-left:auto; display:flex; gap:8px;">
     <form method="post" action="{{ url_for('stock.sincronizar') }}">
@@ -13,6 +13,10 @@
     </form>
     <a class="btn btn-primary btn-sm" href="{{ url_for('stock.nuevo') }}">+ Cargar vehículo</a>
   </div>
+</div>
+
+<div class="panel">
+  {% include "partials/buscador.html" %}
 </div>
 
 <div class="panel">

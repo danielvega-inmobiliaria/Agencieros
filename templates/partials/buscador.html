@@ -1,0 +1,45 @@
+{# Buscador compartido por Marca/Modelo/Versión/Año/Km/Rango de precio —
+   se usa igual en Stock (Disponible, Por ingresar, En reparación) y en Red
+   de Agencieros (pedido de Daniel 15/09/2026, continuación 17). Espera en
+   el contexto: filtros (dict con los valores cargados), mostrar_km (bool),
+   filtro_tab_nombre/filtro_tab_valor (para no perder la pestaña actual al
+   buscar) y limpiar_url. Sin action: se envía por GET a la misma URL. #}
+<form method="get" class="buscador">
+  {% if filtro_tab_nombre %}<input type="hidden" name="{{ filtro_tab_nombre }}" value="{{ filtro_tab_valor }}">{% endif %}
+  <div class="buscador-grid">
+    <div class="campo">
+      <label for="buscador-marca">Marca</label>
+      <input id="buscador-marca" type="text" name="marca" value="{{ filtros.get('marca', '') }}" placeholder="ej. Toyota">
+    </div>
+    <div class="campo">
+      <label for="buscador-modelo">Modelo</label>
+      <input id="buscador-modelo" type="text" name="modelo" value="{{ filtros.get('modelo', '') }}" placeholder="ej. Hilux">
+    </div>
+    <div class="campo">
+      <label for="buscador-version">Versión</label>
+      <input id="buscador-version" type="text" name="version" value="{{ filtros.get('version', '') }}" placeholder="ej. 4x4 SRV">
+    </div>
+    <div class="campo campo-chica">
+      <label for="buscador-anio">Año</label>
+      <input id="buscador-anio" type="number" name="anio" value="{{ filtros.get('anio', '') }}" placeholder="2020">
+    </div>
+    {% if mostrar_km %}
+    <div class="campo campo-chica">
+      <label for="buscador-km">Km (hasta)</label>
+      <input id="buscador-km" type="number" name="km_max" value="{{ filtros.get('km_max', '') }}" placeholder="80.000">
+    </div>
+    {% endif %}
+    <div class="campo campo-chica">
+      <label for="buscador-precio-min">Precio desde</label>
+      <input id="buscador-precio-min" type="number" name="precio_min" value="{{ filtros.get('precio_min', '') }}" placeholder="$">
+    </div>
+    <div class="campo campo-chica">
+      <label for="buscador-precio-max">Precio hasta</label>
+      <input id="buscador-precio-max" type="number" name="precio_max" value="{{ filtros.get('precio_max', '') }}" placeholder="$">
+    </div>
+  </div>
+  <div class="buscador-acciones">
+    <button class="btn btn-primary btn-sm" type="submit">Buscar</button>
+    {% if filtros %}<a class="btn btn-secondary btn-sm" href="{{ limpiar_url }}">Limpiar</a>{% endif %}
+  </div>
+</form>
