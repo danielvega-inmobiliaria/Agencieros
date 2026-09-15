@@ -23,29 +23,27 @@
 {% if resultados is not none %}
 <div class="panel">
   <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
-    Buscando en Disponible, Por ingresar, En reparación y Red de Agencieros — {{ resultados|length }} resultado(s).
+    Buscando en Disponible, Por ingresar, En reparación, Red de Agencieros y Posible entrega — {{ resultados|length }} resultado(s).
   </p>
   <table class="tabla-responsive tabla-vehiculos">
     <tr class="fila-header"><th></th><th>Origen</th><th>Vehículo</th><th>Año</th><th>Km</th><th>Precio</th><th>Detalle</th></tr>
     {% for r in resultados %}
-    <tr class="{{ 'fila-vehiculo-propio' if r.ver_endpoint else '' }}" {% if r.ver_endpoint %}data-href="{{ url_for(r.ver_endpoint, vehiculo_id=r.ver_id) }}"{% endif %}>
+    <tr class="{{ 'fila-vehiculo-propio' if r.ver_url else '' }}" {% if r.ver_url %}data-href="{{ r.ver_url }}"{% endif %}>
       <td class="foto-cell">{% if r.foto %}<img class="foto-mini" src="{{ r.foto }}" alt="">{% endif %}</td>
       <td data-label="Origen"><span class="badge {{ r.origen_badge }}">{{ r.origen_label }}</span></td>
-      <td data-label="Vehículo">{{ r.marca }} {{ r.modelo }} {{ r.version }}</td>
+      <td data-label="Vehículo">{{ r.marca }} {{ r.modelo }} {{ r.version or '' }}</td>
       <td data-label="Año">{{ r.anio or '-' }}</td>
       <td data-label="Km">{{ "{:,.0f}".format(r.km).replace(",", ".") if r.km else '-' }}</td>
       <td data-label="Precio">{{ "$" + "{:,.0f}".format(r.precio).replace(",", ".") if r.precio else '-' }}</td>
       <td data-label="Detalle">
-        {% if not r.ver_endpoint %}
-        {{ r.agencia }}{% if r.contacto %} · {{ r.contacto }}{% endif %}
-        {% endif %}
+        {% if r.agencia %}{{ r.agencia }}{% if r.contacto %} · {{ r.contacto }}{% endif %}{% endif %}
       </td>
-      {% if r.ver_endpoint %}
+      {% if r.ver_url %}
       <td class="fila-compacta">
         <div class="fila-compacta-inner">
           {% if r.foto %}<img class="foto-mini" src="{{ r.foto }}" alt="">{% endif %}
           <div class="fila-compacta-texto">
-            <span class="badge {{ r.origen_badge }}">{{ r.origen_label }}</span>{{ r.marca }} {{ r.modelo }} {{ r.version }} - {{ r.anio or '-' }} - {{ "$" + "{:,.0f}".format(r.precio).replace(",", ".") if r.precio else '-' }}
+            <span class="badge {{ r.origen_badge }}">{{ r.origen_label }}</span>{{ r.marca }} {{ r.modelo }} {{ r.version or '' }} - {{ r.anio or '-' }}{% if r.precio %} - ${{ "{:,.0f}".format(r.precio).replace(",", ".") }}{% endif %}
           </div>
         </div>
       </td>

@@ -3,6 +3,7 @@ from datetime import date
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 
 from database import query, execute
+from buscador import buscar_combinado
 
 bp = Blueprint("pedidos", __name__, url_prefix="/pedidos")
 
@@ -48,6 +49,26 @@ def _buscar_matches_permuta(marca, modelo, excluir_pedido_id=None):
     return propios, red
 
 
+def _buscar_oferta_para_pedido(marca, modelo, anio_desde=None, precio_maximo=None):
+    """Qué se le podría ofrecer ya a un cliente que busca marca/modelo:
+    Disponible + Por ingresar + En reparación (Stock) + Red · Ofrece +
+    Posible entrega (el vehículo de permuta de otro pedido activo) — usa el
+    mismo buscador combinado que Stock, para tener en cuenta la máxima
+    cantidad de fuentes posibles (pedido de Daniel 15/09/2026, continuación
+    26). "Red · Busca" queda afuera a propósito: es demanda de otra
+    agencia, no algo que se le pueda ofrecer a este cliente."""
+    if not marca:
+        return []
+    filtros = {"marca": marca}
+    if modelo:
+        filtros["modelo"] = modelo
+    if anio_desde:
+        filtros["anio"] = anio_desde
+    if precio_maximo:
+        filtros["precio_max"] = precio_maximo
+    return [r for r in buscar_combinado(filtros) if r["origen"] != "red_busca"]
+
+
 def _con_fecha_y_dias(pedido):
     """Convierte un Row de pedidos_clientes en dict, agregando fecha en
     formato DD/MM/YYYY y los días transcurridos desde que se cargó —
@@ -90,6 +111,14 @@ def nuevo():
         forma_pago = f.get("forma_pago", "contado")
         con_financiacion = forma_pago in ("cuotas", "permuta")
         es_permuta = forma_pago == "permuta"
+        try:
+            anio_desde_int = int(f.get("anio_desde")) if f.get("anio_desde") else None
+        except ValueError:
+            anio_desde_int = None
+        try:
+            precio_maximo_val = float(f.get("precio_maximo")) if f.get("precio_maximo") else None
+        except ValueError:
+            precio_maximo_val = None
 
         pedido_id = execute(
             """INSERT INTO pedidos_clientes
@@ -117,7 +146,23 @@ def nuevo():
             ),
         )
 
-        mensaje = "Pedido guardado. Te avisamos automáticamente si ingresa un vehículo que matchea."
+        # 1) ¿Ya hay algo para ofrecerle a este cliente por lo que busca
+        # comprar? — busca en Disponible, Por ingresar, En reparación, Red
+        # Ofrece y Posible entrega (pedido de Daniel 15/09/2026, continuación
+        # 26): así se avisa de una si ya hay una coincidencia, sin esperar a
+        # que entre stock nuevo.
+        ofertas = _buscar_oferta_para_pedido(
+            f.get("marca"), f.get("modelo"), anio_desde_int, precio_maximo_val
+        )
+        if ofertas:
+            resumen = ", ".join(f"{o['origen_label']}: {o['marca']} {o['modelo']}" for o in ofertas[:5])
+            if len(ofertas) > 5:
+                resumen += f" (+{len(ofertas) - 5} más)"
+            flash(f"⚡ Ya hay {len(ofertas)} posible(s) coincidencia(s) para lo que busca este cliente: {resumen}.", "success")
+        else:
+            flash("Pedido guardado. Te avisamos automáticamente si ingresa un vehículo que matchea.", "success")
+
+        # 2) Si además ofrece un vehículo en permuta, ¿alguien ya lo busca?
         if es_permuta and f.get("permuta_marca"):
             propios, red = _buscar_matches_permuta(
                 f.get("permuta_marca"), f.get("permuta_modelo"), excluir_pedido_id=pedido_id
@@ -130,11 +175,8 @@ def nuevo():
                 if red:
                     agencias = ", ".join(r["agencia_nombre"] for r in red)
                     partes.append(f"{len(red)} publicación(es) de la Red buscando ese vehículo ({agencias})")
-                mensaje = "⚡ El vehículo de permuta matchea con " + " y ".join(partes) + "."
-            else:
-                mensaje = "Pedido guardado. El vehículo de permuta no matchea con nadie por ahora."
+                flash("⚡ El vehículo de permuta matchea con " + " y ".join(partes) + ".", "success")
 
-        flash(mensaje, "success")
         return redirect(url_for("pedidos.index"))
     return render_template("pedidos/form.html", formas_pago=FORMAS_PAGO, forma_pago_label=FORMA_PAGO_LABEL)
 
@@ -158,11 +200,20 @@ def detalle(pedido_id):
             pedido["permuta_marca"], pedido.get("permuta_modelo"), excluir_pedido_id=pedido_id
         )
 
+    # Mismo criterio: qué se le podría ofrecer a este cliente por lo que
+    # busca comprar, recalculado cada vez que se abre la ficha (Disponible,
+    # Por ingresar, En reparación, Red Ofrece y Posible entrega — pedido de
+    # Daniel 15/09/2026, continuación 26).
+    ofertas = _buscar_oferta_para_pedido(
+        pedido.get("marca"), pedido.get("modelo"), pedido.get("anio_desde"), pedido.get("precio_maximo")
+    )
+
     return render_template(
         "pedidos/detalle.html",
         pedido=pedido,
         matches_propios=matches_propios,
         matches_red=matches_red,
+        ofertas=ofertas,
         forma_pago_label=FORMA_PAGO_LABEL,
     )
 
