@@ -1,3 +1,5 @@
+from datetime import date
+
 from flask import Blueprint, render_template
 
 from database import query
@@ -11,7 +13,12 @@ bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 COLOR_DISPONIBLE = "var(--green)"
 COLOR_POR_INGRESAR = "var(--gold-light)"
 COLOR_EN_REPARACION = "var(--red)"
+# Cobrado = verde, Por cobrar (cuota pendiente pero todavía no vencida) =
+# amarillo, Adeudado (cuota pendiente y ya vencida) = rojo — pedido explícito
+# de Daniel 15/09/2026 (continuación 16), mismo criterio de colores que ya
+# usa el resto de la app para "ok / atención / problema".
 COLOR_COBRADO = "var(--green)"
+COLOR_POR_COBRAR = "var(--gold-light)"
 COLOR_ADEUDADO = "var(--red)"
 
 
@@ -55,15 +62,28 @@ def index():
     gastos_en_reparacion = query(
         "SELECT COALESCE(SUM(gastos), 0) c FROM vehiculos WHERE estado = 'en_reparacion'", one=True
     )["c"]
-    # Mismo criterio que el resumen de Financiación (solo planes activos):
-    # cobrado = ya percibido, adeudado = cuotas pendientes = "cuotas por cobrar".
-    fin_totales = query(
-        """SELECT COALESCE(SUM(fc.monto), 0) total, COALESCE(SUM(fc.monto_pagado), 0) cobrado
+    # Mismo universo que el resumen de Financiación (solo planes activos),
+    # pero acá se separa lo pendiente en 2: "Por cobrar" (cuota que todavía
+    # no venció) y "Adeudado" (cuota vencida y no pagada) — antes se
+    # mezclaban las dos bajo un solo "Adeudado (por cobrar)".
+    cuotas_activas = query(
+        """SELECT fc.monto, fc.monto_pagado, fc.fecha_vencimiento, fc.estado
            FROM financiacion_cuotas fc JOIN financiaciones f ON f.id = fc.financiacion_id
-           WHERE f.estado = 'activo'""",
-        one=True,
+           WHERE f.estado = 'activo'"""
     )
-    cuotas_por_cobrar = round(fin_totales["total"] - fin_totales["cobrado"], 2)
+    hoy = str(date.today())
+    cobrado = sum(c["monto_pagado"] or 0 for c in cuotas_activas)
+    adeudado = sum(
+        c["monto"] - (c["monto_pagado"] or 0)
+        for c in cuotas_activas
+        if c["estado"] != "pagada" and c["fecha_vencimiento"] and c["fecha_vencimiento"] < hoy
+    )
+    por_cobrar_no_vencido = sum(
+        c["monto"] - (c["monto_pagado"] or 0)
+        for c in cuotas_activas
+        if c["estado"] != "pagada" and not (c["fecha_vencimiento"] and c["fecha_vencimiento"] < hoy)
+    )
+    cuotas_por_cobrar = round(adeudado + por_cobrar_no_vencido, 2)
     ultimos_vehiculos = query(
         "SELECT * FROM vehiculos ORDER BY created_at DESC LIMIT 5"
     )
@@ -76,8 +96,9 @@ def index():
         {"label": "En reparación", "value": stock_counts.get("en_reparacion", 0), "color": COLOR_EN_REPARACION},
     ])
     grafico_cobros = _grafico_torta([
-        {"label": "Cobrado", "value": fin_totales["cobrado"], "color": COLOR_COBRADO},
-        {"label": "Adeudado (por cobrar)", "value": cuotas_por_cobrar, "color": COLOR_ADEUDADO},
+        {"label": "Cobrado", "value": round(cobrado, 2), "color": COLOR_COBRADO},
+        {"label": "Por cobrar", "value": round(por_cobrar_no_vencido, 2), "color": COLOR_POR_COBRAR},
+        {"label": "Adeudado (vencido)", "value": round(adeudado, 2), "color": COLOR_ADEUDADO},
     ])
 
     return render_template(

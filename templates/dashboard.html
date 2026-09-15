@@ -2,76 +2,74 @@
 {% block title %}Dashboard — Agencieros{% endblock %}
 {% block header %}Dashboard{% endblock %}
 {% block content %}
-<div class="dashboard-layout">
-  <div class="cards dashboard-cards">
-    <div class="card">
-      <div class="label">Disponibles</div>
-      <div class="value">{{ stock_counts.get('disponible', 0) }}</div>
-    </div>
-    <div class="card">
-      <div class="label">Por ingresar</div>
-      <div class="value">{{ stock_counts.get('por_ingresar', 0) }}</div>
-    </div>
-    <div class="card">
-      <div class="label">En reparación</div>
-      <div class="value">{{ stock_counts.get('en_reparacion', 0) }}</div>
-    </div>
-    <div class="card">
-      <div class="label">Pedidos activos</div>
-      <div class="value">{{ pedidos_activos }}</div>
-    </div>
-    <div class="card">
-      <div class="label">Ingresos del mes</div>
-      <div class="value">${{ "{:,.0f}".format(ventas_mes.ingresos or 0).replace(",", ".") }}</div>
-      <div class="sub">{{ ventas_mes.c }} vehículo(s) vendido(s)</div>
-    </div>
-    <div class="card">
-      <div class="label">Vendidos este mes</div>
-      <div class="value">{{ ventas_mes.c }}</div>
-      <div class="sub">Ganancia: ${{ "{:,.0f}".format(ventas_mes.ganancia or 0).replace(",", ".") }}</div>
-    </div>
-    <a class="card" href="{{ url_for('financiacion.index') }}" style="display:block;">
-      <div class="label">Cuotas por cobrar</div>
-      <div class="value">${{ "{:,.0f}".format(cuotas_por_cobrar or 0).replace(",", ".") }}</div>
-      <div class="sub" style="color:var(--gold-light);">Financiación · planes activos</div>
-    </a>
-    <div class="card">
-      <div class="label">Gastos en reparación</div>
-      <div class="value">${{ "{:,.0f}".format(gastos_en_reparacion or 0).replace(",", ".") }}</div>
-      <div class="sub">Stock en estado "En reparación"</div>
-    </div>
-    <a class="card" href="{{ url_for('mensajes.index') }}" style="display:block;">
-      <div class="label">Mensajes sin leer</div>
-      <div class="value">{{ mensajes_no_leidos }}</div>
-      <div class="sub" style="color:var(--gold-light);">Vista previa · ver bandeja</div>
-    </a>
-  </div>
+<div class="cards dashboard-cards">
+  <a class="card" href="{{ url_for('stock.index', estado='disponible') }}">
+    <div class="label">Disponibles</div>
+    <div class="value">{{ stock_counts.get('disponible', 0) }}</div>
+  </a>
+  <a class="card" href="{{ url_for('stock.index', estado='por_ingresar') }}">
+    <div class="label">Por ingresar</div>
+    <div class="value">{{ stock_counts.get('por_ingresar', 0) }}</div>
+  </a>
+  <a class="card" href="{{ url_for('stock.index', estado='en_reparacion') }}">
+    <div class="label">En reparación</div>
+    <div class="value">{{ stock_counts.get('en_reparacion', 0) }}</div>
+  </a>
+  <a class="card" href="{{ url_for('pedidos.index') }}">
+    <div class="label">Pedidos activos</div>
+    <div class="value">{{ pedidos_activos }}</div>
+  </a>
+  <a class="card" href="{{ url_for('finanzas.index') }}">
+    <div class="label">Ingresos del mes</div>
+    <div class="value">${{ "{:,.0f}".format(ventas_mes.ingresos or 0).replace(",", ".") }}</div>
+    <div class="sub">{{ ventas_mes.c }} vehículo(s) vendido(s)</div>
+  </a>
+  <a class="card" href="{{ url_for('stock.index', estado='vendido') }}">
+    <div class="label">Vendidos este mes</div>
+    <div class="value">{{ ventas_mes.c }}</div>
+    <div class="sub">Ganancia: ${{ "{:,.0f}".format(ventas_mes.ganancia or 0).replace(",", ".") }}</div>
+  </a>
+  <a class="card" href="{{ url_for('financiacion.index') }}">
+    <div class="label">Cuotas por cobrar</div>
+    <div class="value">${{ "{:,.0f}".format(cuotas_por_cobrar or 0).replace(",", ".") }}</div>
+    <div class="sub" style="color:var(--gold-light);">Financiación · planes activos</div>
+  </a>
+  <a class="card" href="{{ url_for('stock.index', estado='en_reparacion') }}">
+    <div class="label">Gastos en reparación</div>
+    <div class="value">${{ "{:,.0f}".format(gastos_en_reparacion or 0).replace(",", ".") }}</div>
+    <div class="sub">Stock en estado "En reparación"</div>
+  </a>
+  <a class="card" href="{{ url_for('mensajes.index') }}">
+    <div class="label">Mensajes sin leer</div>
+    <div class="value">{{ mensajes_no_leidos }}</div>
+    <div class="sub" style="color:var(--gold-light);">Vista previa · ver bandeja</div>
+  </a>
+</div>
 
-  <div class="dashboard-charts">
-    <div class="panel chart-panel">
-      <h2>Stock activo por estado</h2>
-      <div class="donut-row">
-        <div class="donut" style="background: conic-gradient({{ grafico_stock.gradient | safe }});"></div>
-        <ul class="donut-legend">
-          {% for s in grafico_stock.segmentos %}
-          <li><span class="swatch" style="background:{{ s.color }};"></span>{{ s.label }} <b>{{ s.value }}</b> <span class="pct">({{ s.pct }}%)</span></li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% if grafico_stock.total == 0 %}<p style="color:var(--text-dim); font-size:12px; margin-top:8px;">Sin vehículos en stock todavía.</p>{% endif %}
+<div class="dashboard-charts-row">
+  <div class="panel chart-panel">
+    <h2>Stock activo por estado</h2>
+    <div class="donut-wrap">
+      <div class="donut" style="background: conic-gradient({{ grafico_stock.gradient | safe }});"></div>
     </div>
-    <div class="panel chart-panel">
-      <h2>Cuotas de financiación (planes activos)</h2>
-      <div class="donut-row">
-        <div class="donut" style="background: conic-gradient({{ grafico_cobros.gradient | safe }});"></div>
-        <ul class="donut-legend">
-          {% for s in grafico_cobros.segmentos %}
-          <li><span class="swatch" style="background:{{ s.color }};"></span>{{ s.label }} <b>${{ "{:,.0f}".format(s.value).replace(",", ".") }}</b> <span class="pct">({{ s.pct }}%)</span></li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% if grafico_cobros.total == 0 %}<p style="color:var(--text-dim); font-size:12px; margin-top:8px;">No hay planes de financiación activos todavía.</p>{% endif %}
+    <ul class="donut-legend">
+      {% for s in grafico_stock.segmentos %}
+      <li><span class="swatch" style="background:{{ s.color }};"></span>{{ s.label }} <b>{{ s.value }}</b> <span class="pct">({{ s.pct }}%)</span></li>
+      {% endfor %}
+    </ul>
+    {% if grafico_stock.total == 0 %}<p style="color:var(--text-dim); font-size:12px; margin-top:8px;">Sin vehículos en stock todavía.</p>{% endif %}
+  </div>
+  <div class="panel chart-panel">
+    <h2>Cuotas de financiación (planes activos)</h2>
+    <div class="donut-wrap">
+      <div class="donut" style="background: conic-gradient({{ grafico_cobros.gradient | safe }});"></div>
     </div>
+    <ul class="donut-legend">
+      {% for s in grafico_cobros.segmentos %}
+      <li><span class="swatch" style="background:{{ s.color }};"></span>{{ s.label }} <b>${{ "{:,.0f}".format(s.value).replace(",", ".") }}</b> <span class="pct">({{ s.pct }}%)</span></li>
+      {% endfor %}
+    </ul>
+    {% if grafico_cobros.total == 0 %}<p style="color:var(--text-dim); font-size:12px; margin-top:8px;">No hay planes de financiación activos todavía.</p>{% endif %}
   </div>
 </div>
 
