@@ -20,12 +20,17 @@
       <div><label>Dominio</label><input name="dominio" value="{{ vehiculo.dominio if vehiculo else '' }}"></div>
       <div>
         <label>Estado</label>
-        <select name="estado">
+        <select name="estado" id="estado" onchange="actualizarPorIngresar()">
           {% for e in estados %}
           <option value="{{ e }}" {{ 'selected' if vehiculo and vehiculo.estado == e else '' }}>{{ estado_label[e] }}</option>
           {% endfor %}
         </select>
       </div>
+    </div>
+
+    <div id="campos-por-ingresar" class="form-row" style="display:none;">
+      <div><label>Quién entrega</label><input name="entrega_quien" value="{{ vehiculo.entrega_quien if vehiculo else '' }}" placeholder="Proveedor, cliente, otra agencia..."></div>
+      <div><label>Fecha de ingreso estimada</label><input type="date" name="fecha_ingreso_estimada" value="{{ vehiculo.fecha_ingreso_estimada if vehiculo else '' }}"></div>
     </div>
 
     <label>Equipamiento</label>
@@ -48,6 +53,7 @@
     {% if vehiculo %}<a class="btn btn-secondary" href="{{ url_for('stock.detalle', vehiculo_id=vehiculo.id) }}">Cancelar</a>{% endif %}
   </form>
 </div>
+<script src="{{ url_for('static', filename='js/autocomplete.js') }}"></script>
 <script src="{{ url_for('static', filename='js/catalogo.js') }}"></script>
 <script>
   const catalogo = {{ catalogo_json | safe }};
@@ -57,5 +63,14 @@
     modelo: {{ (vehiculo.modelo if vehiculo else (prefill.modelo if prefill else '')) | tojson }},
     version: {{ (vehiculo.version if vehiculo else (prefill.version if prefill else '')) | tojson }}
   });
+
+  // "Quién entrega" / "Fecha de ingreso estimada" solo tienen sentido
+  // mientras el vehículo está "Por ingresar" — se muestran nada más en ese
+  // estado (pedido de Daniel 15/09/2026, continuación 24).
+  function actualizarPorIngresar() {
+    var esPorIngresar = document.getElementById('estado').value === 'por_ingresar';
+    document.getElementById('campos-por-ingresar').style.display = esPorIngresar ? 'grid' : 'none';
+  }
+  actualizarPorIngresar();
 </script>
 {% endblock %}

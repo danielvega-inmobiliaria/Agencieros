@@ -42,8 +42,25 @@
       </div>
       <div class="form-row">
         <div><label>Kilómetros</label><input type="number" name="permuta_km"></div>
-        <div><label>Combustible</label><input name="permuta_combustible"></div>
-        <div><label>Caja</label><input name="permuta_caja"></div>
+        <div>
+          <label>Combustible</label>
+          <select name="permuta_combustible">
+            <option value="">-</option>
+            <option value="Nafta">Nafta</option>
+            <option value="Nafta/GNC">Nafta/GNC</option>
+            <option value="Hibrido">Híbrido</option>
+            <option value="Diesel">Diesel</option>
+            <option value="Electrico">Eléctrico</option>
+          </select>
+        </div>
+        <div>
+          <label>Caja</label>
+          <select name="permuta_caja">
+            <option value="">-</option>
+            <option value="Manual">Manual</option>
+            <option value="Automatica">Automática</option>
+          </select>
+        </div>
         <div><label>Color</label><input name="permuta_color"></div>
       </div>
       <label>Observaciones del vehículo que entrega</label>
@@ -60,6 +77,7 @@
   </form>
 </div>
 
+<script src="{{ url_for('static', filename='js/autocomplete.js') }}"></script>
 <script src="{{ url_for('static', filename='js/catalogo.js') }}"></script>
 <script>
   const catalogo = {{ catalogo_json | safe }};

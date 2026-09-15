@@ -13,6 +13,8 @@
       <tr><td>Dominio</td><td>{{ vehiculo.dominio or '-' }}</td></tr>
       {% if vehiculo.ubicacion %}<tr><td>Ubicación</td><td>{{ vehiculo.ubicacion }}</td></tr>{% endif %}
       {% if vehiculo.estado_general %}<tr><td>Estado general</td><td>{{ vehiculo.estado_general }}</td></tr>{% endif %}
+      {% if vehiculo.entrega_quien %}<tr><td>Quién entrega</td><td>{{ vehiculo.entrega_quien }}</td></tr>{% endif %}
+      {% if vehiculo.fecha_ingreso_estimada %}<tr><td>Fecha de ingreso estimada</td><td>{{ vehiculo.fecha_ingreso_estimada }}</td></tr>{% endif %}
       <tr><td>Fecha de ingreso</td><td>{{ vehiculo.fecha_ingreso }}</td></tr>
       {% if vehiculo.fecha_venta %}<tr><td>Fecha de venta</td><td>{{ vehiculo.fecha_venta }}</td></tr>{% endif %}
     </table>

@@ -238,6 +238,13 @@ def _migrar_vehiculos(conn):
         "ubicacion": "TEXT",
         "condiciones_pago": "TEXT",
         "estado_general": "TEXT",
+        # Para un vehículo "Por ingresar": quién lo entrega (proveedor,
+        # cliente, otra agencia, etc.) y la fecha en la que se estima que
+        # va a ingresar físicamente — distinta de `fecha_ingreso`, que es la
+        # fecha real en la que se cargó el vehículo (pedido de Daniel
+        # 15/09/2026, continuación 24).
+        "entrega_quien": "TEXT",
+        "fecha_ingreso_estimada": "TEXT",
     }
     for columna, tipo in nuevas_columnas.items():
         if columna not in columnas_actuales:
