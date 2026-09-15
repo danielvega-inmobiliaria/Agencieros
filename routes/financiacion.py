@@ -1,5 +1,5 @@
 import calendar
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 
@@ -14,6 +14,9 @@ ESTADO_PLAN_LABEL = {
 }
 # Reutiliza los colores de badge ya definidos en style.css para no agregar CSS nuevo.
 ESTADO_PLAN_BADGE = {"activo": "disponible", "finalizado": "vendido", "cancelado": "cancelado"}
+
+METODO_LABEL = {"frances": "Francés (interés compuesto)", "simple": "Interés simple/directo"}
+PERIODICIDAD_LABEL = {"mensual": "Mensual", "semanal": "Semanal"}
 
 
 def _sumar_meses(fecha, meses):
@@ -34,10 +37,9 @@ def _parsear_fecha(s, default=None):
         return default or date.today()
 
 
-def _calcular_cuota_frances(monto, tasa_mensual_pct, n):
-    """Cuota fija por sistema francés. `tasa_mensual_pct` es la tasa de interés
-    mensual en % (ej. 5.5 = 5.5%/mes). Con tasa 0 devuelve cuotas simples
-    (monto / n) sin interés."""
+def _cuota_frances(monto, tasa_mensual_pct, n):
+    """Cuota fija por sistema francés (interés compuesto sobre saldo). Con
+    tasa 0 devuelve cuotas simples (monto / n)."""
     i = (tasa_mensual_pct or 0) / 100
     if not n:
         return 0
@@ -47,34 +49,101 @@ def _calcular_cuota_frances(monto, tasa_mensual_pct, n):
     return round(monto * factor, 2)
 
 
-def _generar_cronograma(monto, tasa_mensual_pct, n, fecha_inicio):
-    """Devuelve (valor_cuota, [filas]) con el detalle mes a mes: interés,
-    amortización de capital y saldo restante (sistema francés — cuota fija,
-    la proporción interés/amortización va cambiando). La última cuota
-    absorbe el centavo de diferencia por redondeo para que el saldo cierre
-    exactamente en $0."""
-    cuota = _calcular_cuota_frances(monto, tasa_mensual_pct, n)
+def _cuota_simple(monto, tasa_mensual_pct, n):
+    """Interés simple/directo sobre el monto original (el método que Daniel
+    ya usa en su Excel): cuota = (monto / n) x (1 + tasa%/100 x n). El
+    interés total crece en línea recta según la cantidad de cuotas, no se
+    recalcula sobre saldo como en el sistema francés."""
+    if not n:
+        return 0
     i = (tasa_mensual_pct or 0) / 100
-    saldo = monto
-    filas = []
-    for numero in range(1, n + 1):
-        interes = round(saldo * i, 2)
-        amortizacion = round(cuota - interes, 2)
-        saldo = round(saldo - amortizacion, 2)
-        filas.append({
-            "numero": numero,
-            "fecha": _sumar_meses(fecha_inicio, numero - 1),
-            "monto": cuota,
-            "interes": interes,
-            "amortizacion": amortizacion,
-            "saldo": saldo,
-        })
+    return round((monto / n) * (1 + i * n), 2)
+
+
+def _cronograma_mensual(monto, tasa_mensual_pct, n, fecha_inicio, metodo):
+    """Cronograma mes a mes. En 'frances' desglosa interés/amortización/saldo
+    (interés compuesto sobre saldo decreciente). En 'simple' la cuota es
+    fija por interés directo y el desglose de interés/amortización es a
+    partes iguales (informativo) — Daniel no lo usa así en la práctica, pero
+    sirve para mostrar de dónde sale el total. La última cuota absorbe el
+    centavo de diferencia por redondeo."""
+    if metodo == "simple":
+        cuota = _cuota_simple(monto, tasa_mensual_pct, n)
+        interes_total = round(cuota * n - monto, 2)
+        amortizacion_fija = round(monto / n, 2)
+        interes_fijo = round(interes_total / n, 2) if n else 0
+        saldo = monto
+        filas = []
+        for numero in range(1, n + 1):
+            saldo = round(saldo - amortizacion_fija, 2)
+            filas.append({
+                "numero": numero,
+                "fecha": _sumar_meses(fecha_inicio, numero - 1),
+                "monto": cuota,
+                "interes": interes_fijo,
+                "amortizacion": amortizacion_fija,
+                "saldo": saldo,
+            })
+    else:
+        cuota = _cuota_frances(monto, tasa_mensual_pct, n)
+        i = (tasa_mensual_pct or 0) / 100
+        saldo = monto
+        filas = []
+        for numero in range(1, n + 1):
+            interes = round(saldo * i, 2)
+            amortizacion = round(cuota - interes, 2)
+            saldo = round(saldo - amortizacion, 2)
+            filas.append({
+                "numero": numero,
+                "fecha": _sumar_meses(fecha_inicio, numero - 1),
+                "monto": cuota,
+                "interes": interes,
+                "amortizacion": amortizacion,
+                "saldo": saldo,
+            })
+
     if filas and abs(filas[-1]["saldo"]) > 0.005:
         ajuste = filas[-1]["saldo"]
         filas[-1]["monto"] = round(filas[-1]["monto"] + ajuste, 2)
         filas[-1]["amortizacion"] = round(filas[-1]["amortizacion"] + ajuste, 2)
         filas[-1]["saldo"] = 0
     return cuota, filas
+
+
+def _cronograma_semanal(cuota_mensual, plazo_meses, fecha_inicio):
+    """Convierte la cuota mensual en semanal dividiendo por 4 (criterio de
+    Daniel, 14/09/2026): la cantidad de cuotas semanales sale de contar
+    semanas de 7 días entre la primera cuota y esa misma fecha del plazo en
+    meses elegido (ej. 12 meses = mismo día del año siguiente) — por eso el
+    total pagado en semanal siempre da un poco más que en mensual, no es un
+    error, es el mismo criterio que ya usaba en su planilla."""
+    fecha_fin = _sumar_meses(fecha_inicio, plazo_meses)
+    total_dias = (fecha_fin - fecha_inicio).days
+    cantidad_semanas = total_dias // 7 + 1
+    cuota_semanal = round(cuota_mensual / 4, 2)
+    filas = []
+    for numero in range(1, cantidad_semanas + 1):
+        filas.append({
+            "numero": numero,
+            "fecha": fecha_inicio + timedelta(days=7 * (numero - 1)),
+            "monto": cuota_semanal,
+            "interes": None,
+            "amortizacion": None,
+            "saldo": None,
+        })
+    return cuota_semanal, filas
+
+
+def _generar_cronograma(monto, tasa_mensual_pct, plazo_meses, fecha_inicio, metodo="frances", periodicidad="mensual"):
+    """`plazo_meses` es siempre el plazo del crédito en meses (lo que el
+    formulario llama "Cantidad de cuotas mensuales"), tanto si el cliente
+    termina pagando mes a mes como semana a semana durante ese mismo plazo.
+    Devuelve (valor_primera_cuota, [filas]). Cada fila trae `interes` /
+    `amortizacion` / `saldo` en None cuando no aplica (periodicidad semanal)."""
+    cuota_mensual, filas_mensuales = _cronograma_mensual(monto, tasa_mensual_pct, plazo_meses, fecha_inicio, metodo)
+    if periodicidad == "semanal":
+        return _cronograma_semanal(cuota_mensual, plazo_meses, fecha_inicio)
+    return cuota_mensual, filas_mensuales
 
 
 def _con_resumen(fin):
@@ -115,15 +184,21 @@ def index():
         resumen=resumen,
         estado_label=ESTADO_PLAN_LABEL,
         estado_badge=ESTADO_PLAN_BADGE,
+        metodo_label=METODO_LABEL,
+        periodicidad_label=PERIODICIDAD_LABEL,
     )
 
 
 @bp.route("/simulador", methods=["GET", "POST"])
 def simulador():
-    vehiculos_vendidos = query(
-        """SELECT * FROM vehiculos WHERE estado = 'vendido'
+    # Lista para el desplegable: autos Disponibles (lo más común — se arma el
+    # plan de financiación como parte de la venta) y también los ya Vendidos
+    # (por si la venta se cerró en Stock antes de armar el plan). No se
+    # ofrecen los que ya tienen un plan de financiación activo/cargado.
+    vehiculos_stock = query(
+        """SELECT * FROM vehiculos WHERE estado IN ('disponible', 'vendido')
            AND id NOT IN (SELECT vehiculo_id FROM financiaciones WHERE vehiculo_id IS NOT NULL)
-           ORDER BY fecha_venta DESC"""
+           ORDER BY (estado = 'disponible') DESC, COALESCE(fecha_venta, fecha_ingreso) DESC"""
     )
     valores = {
         "vehiculo_id": request.values.get("vehiculo_id", ""),
@@ -135,6 +210,8 @@ def simulador():
         "tasa_interes_mensual": request.values.get("tasa_interes_mensual", "0"),
         "cantidad_cuotas": request.values.get("cantidad_cuotas", "12"),
         "fecha_inicio": request.values.get("fecha_inicio", str(date.today())),
+        "metodo_interes": request.values.get("metodo_interes", "frances"),
+        "periodicidad": request.values.get("periodicidad", "mensual"),
     }
 
     # Autocompletar monto a financiar a partir de precio de venta - anticipo,
@@ -149,6 +226,7 @@ def simulador():
 
     cuota = None
     cronograma = None
+    desglose = valores["metodo_interes"] == "frances" and valores["periodicidad"] == "mensual"
     if request.method == "POST":
         try:
             monto = float(valores["monto_financiado"] or 0)
@@ -158,17 +236,23 @@ def simulador():
             if monto <= 0 or n <= 0:
                 flash("Cargá un monto a financiar y una cantidad de cuotas válidos.", "error")
             else:
-                cuota, cronograma = _generar_cronograma(monto, tasa, n, fecha_inicio)
+                cuota, cronograma = _generar_cronograma(
+                    monto, tasa, n, fecha_inicio, valores["metodo_interes"], valores["periodicidad"]
+                )
         except ValueError:
             flash("Revisá los valores cargados (monto, tasa y cuotas deben ser números).", "error")
 
     return render_template(
         "financiacion/simulador.html",
         valores=valores,
-        vehiculos_vendidos=vehiculos_vendidos,
+        vehiculos_stock=vehiculos_stock,
+        estado_label={"disponible": "Disponible", "vendido": "Vendido"},
         cuota=cuota,
         cronograma=cronograma,
-        total_pagar=(cuota * len(cronograma)) if cuota and cronograma else None,
+        desglose=desglose,
+        total_pagar=(sum(f["monto"] for f in cronograma)) if cronograma else None,
+        metodo_label=METODO_LABEL,
+        periodicidad_label=PERIODICIDAD_LABEL,
     )
 
 
@@ -188,20 +272,22 @@ def nuevo():
         flash("Faltan datos: cliente, monto a financiar y cantidad de cuotas son obligatorios.", "error")
         return redirect(url_for("financiacion.simulador"))
 
-    cuota, cronograma = _generar_cronograma(monto, tasa, n, fecha_inicio)
+    metodo = f.get("metodo_interes") or "frances"
+    periodicidad = f.get("periodicidad") or "mensual"
+    cuota, cronograma = _generar_cronograma(monto, tasa, n, fecha_inicio, metodo, periodicidad)
     vehiculo_id = f.get("vehiculo_id") or None
 
     financiacion_id = execute(
         """INSERT INTO financiaciones
            (vehiculo_id, cliente_nombre, cliente_telefono, precio_venta, anticipo,
-            monto_financiado, tasa_interes_mensual, cantidad_cuotas, valor_cuota,
-            fecha_inicio, observaciones)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            monto_financiado, tasa_interes_mensual, metodo_interes, periodicidad,
+            plazo_meses, cantidad_cuotas, valor_cuota, fecha_inicio, observaciones)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
             vehiculo_id, f.get("cliente_nombre"), f.get("cliente_telefono") or None,
             float(f.get("precio_venta")) if f.get("precio_venta") else None,
-            float(f.get("anticipo") or 0), monto, tasa, n, cuota,
-            str(fecha_inicio), f.get("observaciones") or None,
+            float(f.get("anticipo") or 0), monto, tasa, metodo, periodicidad,
+            n, len(cronograma), cuota, str(fecha_inicio), f.get("observaciones") or None,
         ),
     )
     for fila in cronograma:
@@ -211,7 +297,23 @@ def nuevo():
             (financiacion_id, fila["numero"], str(fila["fecha"]), fila["monto"]),
         )
 
-    flash(f"Plan de financiación creado — {n} cuotas de ${cuota:,.0f}.".replace(",", "."), "success")
+    # Si el auto elegido todavía estaba "Disponible" en Stock, el plan de
+    # financiación ES la venta — pasa a "Vendido" para que no se siga
+    # ofreciendo a otro comprador.
+    if vehiculo_id:
+        vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (vehiculo_id,), one=True)
+        if vehiculo and vehiculo["estado"] != "vendido":
+            precio_venta = float(f.get("precio_venta")) if f.get("precio_venta") else vehiculo["valor_publicado"]
+            execute(
+                """UPDATE vehiculos SET estado = 'vendido', valor_vendido = ?,
+                   fecha_venta = ?, updated_at = datetime('now') WHERE id = ?""",
+                (precio_venta, str(date.today()), vehiculo_id),
+            )
+
+    flash(
+        f"Plan de financiación creado — {len(cronograma)} cuotas de ${cuota:,.0f}.".replace(",", "."),
+        "success",
+    )
     return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
 
 
@@ -236,6 +338,8 @@ def detalle(financiacion_id):
         hoy=hoy,
         estado_label=ESTADO_PLAN_LABEL,
         estado_badge=ESTADO_PLAN_BADGE,
+        metodo_label=METODO_LABEL,
+        periodicidad_label=PERIODICIDAD_LABEL,
     )
 
 
