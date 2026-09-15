@@ -245,6 +245,14 @@ def _migrar_vehiculos(conn):
         # 15/09/2026, continuación 24).
         "entrega_quien": "TEXT",
         "fecha_ingreso_estimada": "TEXT",
+        # Si el vehículo es propio de la agencia o está en consignación (lo
+        # entregó un tercero para vender, sin ser todavía de la agencia) —
+        # cuando es consignación, se guarda además quién lo dejó (nombre y
+        # teléfono) para poder ubicarlo (pedido de Daniel 15/09/2026,
+        # continuación 25).
+        "propiedad": "TEXT DEFAULT 'propio'",
+        "consignante_nombre": "TEXT",
+        "consignante_telefono": "TEXT",
     }
     for columna, tipo in nuevas_columnas.items():
         if columna not in columnas_actuales:

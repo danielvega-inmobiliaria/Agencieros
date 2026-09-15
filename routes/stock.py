@@ -115,12 +115,15 @@ def nuevo():
     }
     if request.method == "POST":
         f = request.form
+        propiedad = f.get("propiedad", "propio")
+        es_consignacion = propiedad == "consignacion"
         vehiculo_id = execute(
             """INSERT INTO vehiculos
                (marca, modelo, version, anio, km, combustible, caja, color, dominio, estado,
                 equipamiento, observaciones, documentacion, valor_compra, gastos, valor_publicado,
-                fecha_ingreso, entrega_quien, fecha_ingreso_estimada)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                fecha_ingreso, entrega_quien, fecha_ingreso_estimada,
+                propiedad, consignante_nombre, consignante_telefono)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 f.get("marca"), f.get("modelo"), f.get("version"), f.get("anio") or None,
                 f.get("km") or None, f.get("combustible"), f.get("caja"), f.get("color"),
@@ -129,6 +132,9 @@ def nuevo():
                 float(f.get("valor_compra") or 0), float(f.get("gastos") or 0),
                 float(f.get("valor_publicado") or 0), str(date.today()),
                 f.get("entrega_quien") or None, f.get("fecha_ingreso_estimada") or None,
+                propiedad,
+                f.get("consignante_nombre") if es_consignacion else None,
+                f.get("consignante_telefono") if es_consignacion else None,
             ),
         )
 
@@ -233,11 +239,14 @@ def editar(vehiculo_id):
     if request.method == "POST":
         f = request.form
         fecha_venta = str(date.today()) if f.get("estado") == "vendido" and vehiculo["estado"] != "vendido" else vehiculo["fecha_venta"]
+        propiedad = f.get("propiedad", "propio")
+        es_consignacion = propiedad == "consignacion"
         execute(
             """UPDATE vehiculos SET marca=?, modelo=?, version=?, anio=?, km=?, combustible=?, caja=?,
                color=?, dominio=?, estado=?, equipamiento=?, observaciones=?, documentacion=?,
                valor_compra=?, gastos=?, valor_publicado=?, valor_vendido=?, fecha_venta=?,
                entrega_quien=?, fecha_ingreso_estimada=?,
+               propiedad=?, consignante_nombre=?, consignante_telefono=?,
                updated_at=datetime('now')
                WHERE id=?""",
             (
@@ -249,6 +258,9 @@ def editar(vehiculo_id):
                 float(f.get("valor_vendido")) if f.get("valor_vendido") else None,
                 fecha_venta,
                 f.get("entrega_quien") or None, f.get("fecha_ingreso_estimada") or None,
+                propiedad,
+                f.get("consignante_nombre") if es_consignacion else None,
+                f.get("consignante_telefono") if es_consignacion else None,
                 vehiculo_id,
             ),
         )

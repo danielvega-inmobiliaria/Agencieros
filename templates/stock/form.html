@@ -33,6 +33,20 @@
       <div><label>Fecha de ingreso estimada</label><input type="date" name="fecha_ingreso_estimada" value="{{ vehiculo.fecha_ingreso_estimada if vehiculo else '' }}"></div>
     </div>
 
+    <div class="form-row">
+      <div>
+        <label>Propiedad</label>
+        <select name="propiedad" id="propiedad" onchange="actualizarConsignacion()">
+          <option value="propio" {{ 'selected' if not vehiculo or vehiculo.propiedad != 'consignacion' else '' }}>Propio</option>
+          <option value="consignacion" {{ 'selected' if vehiculo and vehiculo.propiedad == 'consignacion' else '' }}>Consignación</option>
+        </select>
+      </div>
+    </div>
+    <div id="campos-consignacion" class="form-row" style="display:none;">
+      <div><label>Nombre de quien consigna</label><input name="consignante_nombre" value="{{ vehiculo.consignante_nombre if vehiculo else '' }}"></div>
+      <div><label>Teléfono de quien consigna</label><input name="consignante_telefono" value="{{ vehiculo.consignante_telefono if vehiculo else '' }}"></div>
+    </div>
+
     <label>Equipamiento</label>
     <textarea name="equipamiento">{{ vehiculo.equipamiento if vehiculo else '' }}</textarea>
     <label>Observaciones</label>
@@ -72,5 +86,14 @@
     document.getElementById('campos-por-ingresar').style.display = esPorIngresar ? 'grid' : 'none';
   }
   actualizarPorIngresar();
+
+  // Nombre y teléfono de quien consigna solo se piden si el vehículo está
+  // en consignación, no si es propio de la agencia (pedido de Daniel
+  // 15/09/2026, continuación 25).
+  function actualizarConsignacion() {
+    var esConsignacion = document.getElementById('propiedad').value === 'consignacion';
+    document.getElementById('campos-consignacion').style.display = esConsignacion ? 'grid' : 'none';
+  }
+  actualizarConsignacion();
 </script>
 {% endblock %}

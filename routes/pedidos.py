@@ -139,6 +139,34 @@ def nuevo():
     return render_template("pedidos/form.html", formas_pago=FORMAS_PAGO, forma_pago_label=FORMA_PAGO_LABEL)
 
 
+@bp.route("/<int:pedido_id>")
+def detalle(pedido_id):
+    pedido_raw = query("SELECT * FROM pedidos_clientes WHERE id = ?", (pedido_id,), one=True)
+    if not pedido_raw:
+        flash("Pedido no encontrado.", "error")
+        return redirect(url_for("pedidos.index"))
+    pedido = _con_fecha_y_dias(pedido_raw)
+
+    # El cotejo del vehículo de permuta se recalcula cada vez que se abre la
+    # ficha (no solo al cargar el pedido), así se ve también si matchea con
+    # algo que apareció después — sigue comparando solo por Marca y Modelo
+    # (nunca versión/año), a propósito, para no perder coincidencias
+    # (pedido de Daniel 15/09/2026, continuación 25).
+    matches_propios, matches_red = [], []
+    if pedido["forma_pago"] == "permuta" and pedido.get("permuta_marca"):
+        matches_propios, matches_red = _buscar_matches_permuta(
+            pedido["permuta_marca"], pedido.get("permuta_modelo"), excluir_pedido_id=pedido_id
+        )
+
+    return render_template(
+        "pedidos/detalle.html",
+        pedido=pedido,
+        matches_propios=matches_propios,
+        matches_red=matches_red,
+        forma_pago_label=FORMA_PAGO_LABEL,
+    )
+
+
 @bp.route("/<int:pedido_id>/resolver")
 def resolver(pedido_id):
     execute("UPDATE pedidos_clientes SET estado = 'resuelto' WHERE id = ?", (pedido_id,))

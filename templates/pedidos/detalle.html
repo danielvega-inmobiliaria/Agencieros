@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{{ pedido.cliente_nombre }} — Agencieros{% endblock %}
+{% block header %}Pedido de {{ pedido.cliente_nombre }}{% endblock %}
+{% block content %}
+<div class="grid-2">
+  <div class="panel">
+    <h2>Ficha del pedido <span class="badge {{ pedido.estado }}">{{ pedido.estado }}</span></h2>
+    <table>
+      <tr><td>Cliente</td><td>{{ pedido.cliente_nombre }}</td></tr>
+      <tr><td>Teléfono</td><td>{{ pedido.telefono or '-' }}</td></tr>
+      <tr><td>Busca</td><td>{{ pedido.marca }} {{ pedido.modelo }} {{ pedido.version or '' }} {% if pedido.anio_desde or pedido.anio_hasta %}({{ pedido.anio_desde or '' }}{% if pedido.anio_hasta %}–{{ pedido.anio_hasta }}{% endif %}){% endif %}</td></tr>
+      <tr><td>Precio máximo</td><td>{{ "$" + "{:,.0f}".format(pedido.precio_maximo).replace(",", ".") if pedido.precio_maximo else '-' }}</td></tr>
+      <tr><td>Forma de pago</td><td>{{ forma_pago_label.get(pedido.forma_pago, pedido.forma_pago) if pedido.forma_pago else '-' }}</td></tr>
+      {% if pedido.forma_pago in ('cuotas', 'permuta') and (pedido.efectivo_disponible or pedido.cuota_maxima) %}
+      {% if pedido.efectivo_disponible %}<tr><td>Efectivo disponible</td><td>${{ "{:,.0f}".format(pedido.efectivo_disponible).replace(",", ".") }}</td></tr>{% endif %}
+      {% if pedido.cuota_maxima %}<tr><td>Cuota máxima</td><td>${{ "{:,.0f}".format(pedido.cuota_maxima).replace(",", ".") }}</td></tr>{% endif %}
+      {% endif %}
+      <tr><td>Fecha</td><td>{{ pedido.fecha_str }}</td></tr>
+      <tr><td>Días transcurridos</td><td>{{ pedido.dias_transcurridos if pedido.dias_transcurridos is not none else '-' }}</td></tr>
+    </table>
+    {% if pedido.observaciones %}<p><b>Observaciones:</b> {{ pedido.observaciones }}</p>{% endif %}
+
+    {% if pedido.estado == 'buscando' %}
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('pedidos.resolver', pedido_id=pedido.id) }}">Marcar resuelto</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('pedidos.cancelar', pedido_id=pedido.id) }}">Cancelar pedido</a>
+    {% endif %}
+  </div>
+
+  {% if pedido.forma_pago == 'permuta' and pedido.permuta_marca %}
+  <div class="panel">
+    <h2>Vehículo que entrega en permuta</h2>
+    <table>
+      <tr><td>Vehículo</td><td>{{ pedido.permuta_marca }} {{ pedido.permuta_modelo }} {{ pedido.permuta_version or '' }} {{ pedido.permuta_anio or '' }}</td></tr>
+      <tr><td>Kilómetros</td><td>{{ "{:,.0f}".format(pedido.permuta_km).replace(",", ".") if pedido.permuta_km else '-' }}</td></tr>
+      <tr><td>Combustible</td><td>{{ pedido.permuta_combustible or '-' }}</td></tr>
+      <tr><td>Caja</td><td>{{ pedido.permuta_caja or '-' }}</td></tr>
+      <tr><td>Color</td><td>{{ pedido.permuta_color or '-' }}</td></tr>
+    </table>
+    {% if pedido.permuta_observaciones %}<p><b>Observaciones:</b> {{ pedido.permuta_observaciones }}</p>{% endif %}
+
+    <h2 style="margin-top:18px;">¿Alguien busca este vehículo?</h2>
+    <p style="color:var(--text-dim); font-size:12px; margin-top:-8px;">
+      Cotejo por Marca y Modelo solamente (todavía no por versión/año, para no perder coincidencias).
+    </p>
+    {% if matches_propios %}
+    <p style="margin-bottom:4px;"><b>Pedidos propios:</b></p>
+    <ul style="margin-top:0;">
+      {% for m in matches_propios %}
+      <li><a href="{{ url_for('pedidos.detalle', pedido_id=m.id) }}">{{ m.cliente_nombre }}</a> busca {{ m.marca }} {{ m.modelo }} {{ m.version or '' }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if matches_red %}
+    <p style="margin-bottom:4px;"><b>Red de Agencieros:</b></p>
+    <ul style="margin-top:0;">
+      {% for m in matches_red %}
+      <li>{{ m.agencia_nombre }} busca {{ m.marca }} {{ m.modelo }} {{ m.version or '' }}{% if m.contacto %} · {{ m.contacto }}{% endif %}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if not matches_propios and not matches_red %}
+    <p style="color:var(--text-dim); font-size:13px;">Por ahora no matchea con ningún pedido propio ni con la Red.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

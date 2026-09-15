@@ -4,7 +4,10 @@
 {% block content %}
 <div class="grid-2">
   <div class="panel">
-    <h2>Ficha del vehículo <span class="badge {{ vehiculo.estado }}">{{ vehiculo.estado.replace('_',' ') }}</span></h2>
+    <h2>
+      Ficha del vehículo <span class="badge {{ vehiculo.estado }}">{{ vehiculo.estado.replace('_',' ') }}</span>
+      {% if vehiculo.propiedad == 'consignacion' %}<span class="badge por_ingresar">Consignación</span>{% endif %}
+    </h2>
     <table>
       <tr><td>Kilómetros</td><td>{{ "{:,.0f}".format(vehiculo.km).replace(",", ".") if vehiculo.km else '-' }}</td></tr>
       <tr><td>Combustible</td><td>{{ vehiculo.combustible or '-' }}</td></tr>
@@ -17,6 +20,9 @@
       {% if vehiculo.fecha_ingreso_estimada %}<tr><td>Fecha de ingreso estimada</td><td>{{ vehiculo.fecha_ingreso_estimada }}</td></tr>{% endif %}
       <tr><td>Fecha de ingreso</td><td>{{ vehiculo.fecha_ingreso }}</td></tr>
       {% if vehiculo.fecha_venta %}<tr><td>Fecha de venta</td><td>{{ vehiculo.fecha_venta }}</td></tr>{% endif %}
+      {% if vehiculo.propiedad == 'consignacion' %}
+      <tr><td>Consignado por</td><td>{{ vehiculo.consignante_nombre or '-' }}{% if vehiculo.consignante_telefono %} · {{ vehiculo.consignante_telefono }}{% endif %}</td></tr>
+      {% endif %}
     </table>
     {% if vehiculo.equipamiento %}<p><b>Equipamiento:</b> {{ vehiculo.equipamiento }}</p>{% endif %}
     {% if vehiculo.observaciones %}<p><b>Observaciones:</b> {{ vehiculo.observaciones }}</p>{% endif %}

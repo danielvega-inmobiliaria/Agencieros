@@ -404,6 +404,35 @@ form textarea { min-height: 80px; }
   .tabla-vehiculos .fila-compacta .badge,
   .tabla-red-compacta .fila-compacta .badge { margin-right: 6px; }
   .tabla-red-compacta .fila-accion { display: block; padding-top: 2px; }
+
+  /* Se saca el marco de tarjeta (borde + fondo propio) de las filas de
+     vehículo para ganar lugar y que la foto y el texto se vean más
+     grandes — queda solo una línea divisoria fina entre uno y el
+     siguiente, como una lista — pedido de Daniel 15/09/2026 (continuación
+     22). Las demás tablas (Tomas, Financiación, Pedidos, etc.) no cambian,
+     siguen con la tarjeta con borde de siempre. */
+  .tabla-vehiculos .fila-vehiculo-propio {
+    border: none; border-radius: 0; background: none;
+    padding: 12px 0; margin-bottom: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .tabla-vehiculos .fila-vehiculo-propio:last-child { border-bottom: none; }
+}
+
+/* Banco de pedidos: mismo criterio de tarjeta simplificada en el celu que
+   Stock/Red — una sola línea con Cliente - Teléfono · Vehículo buscado, y
+   la fila entera clickeable a la ficha completa del pedido (ahí quedaron
+   el resto de los datos y los botones Resuelto/Cancelar) — pedido de
+   Daniel 15/09/2026 (continuación 25). En compu no cambia nada, sigue la
+   tabla completa de siempre con sus columnas y botones.*/
+.tabla-pedidos-compacta tr[data-href] { cursor: pointer; }
+.tabla-pedidos-compacta tr[data-href]:hover td { background: var(--navy-card-2); }
+@media (max-width: 700px) {
+  .tabla-pedidos-compacta td:not(.fila-compacta) { display: none; }
+  .tabla-pedidos-compacta .fila-compacta {
+    display: block; font-size: 14px; line-height: 1.5; padding: 2px 0 6px;
+  }
+  .tabla-pedidos-compacta .fila-compacta .badge { margin-right: 6px; }
 }
 
 /* --- Foto principal en los listados --- miniatura del vehículo al lado de
@@ -422,6 +451,11 @@ form textarea { min-height: 80px; }
 .fila-compacta-texto { flex: 1; min-width: 0; }
 @media (max-width: 700px) {
   .tabla-vehiculos .foto-cell { display: none; }
+  /* Con la tarjeta sin borde hay más lugar: la foto y el texto crecen
+     (pedido de Daniel 15/09/2026, continuación 22). */
+  .fila-compacta-inner { gap: 12px; }
+  .fila-compacta-inner .foto-mini { width: 92px; height: 66px; border-radius: 8px; }
+  .tabla-vehiculos .fila-compacta { font-size: 16px; }
 }
 
 /* --- Menú desplegable en celu --- en compu el sidebar queda fijo y visible
