@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 15/09/2026 — 08:35 ART_
+_Última actualización: 15/09/2026 — 08:57 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -93,6 +93,14 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 15/09/2026 (continuación 13) — Menú desplegable en celu + íconos profesionales (sacados los emojis)
+Daniel pidió reemplazar los emojis del menú lateral por íconos profesionales y agregar comportamiento de menú desplegable — aclarado por pregunta: **solo en celu**, en compu el sidebar sigue fijo y siempre visible como estaba.
+- **Íconos:** los 9 emojis del sidebar (🔎🏠🚗📋🚙💰🏦🤝💬) se reemplazaron por íconos SVG en línea, estilo trazo fino (Feather/Lucide), sin depender de ninguna librería externa ni CDN — cada ícono usa `stroke="currentColor"` para heredar automáticamente el color del texto del ítem (incluido el estado activo, dorado). Se verificó por script que no quedó ningún emoji (barrido con rangos Unicode).
+- **Menú desplegable solo en celu:** se agregó una barra superior nueva (`.mobile-topbar`, oculta en compu) con el nombre de la app y un botón hamburguesa (ícono de 3 líneas). Al tocarlo, el sidebar —que en celu pasa a estar fijo arriba y colapsado (`max-height: 0`)— se despliega con una animación corta. Al tocar cualquier opción del menú, se cierra solo para no tapar la pantalla. En compu (>700px) no cambia nada: el botón queda oculto y el sidebar se ve fijo como siempre.
+- **Archivos tocados:** `templates/base.html` (reescrito: barra mobile + botón + íconos SVG en los 9 links + script de apertura/cierre), `static/css/style.css` (`.nav-item` a flex con ícono, `.nav-icon`, `.mobile-topbar`, `.menu-toggle` y el bloque `@media (max-width: 700px)` con el comportamiento del sidebar colapsable — mismo breakpoint de 700px que ya se usaba para las tablas responsive).
+- **Verificación:** parseo de Jinja, barrido de emojis (cero encontrados), `node --check` sobre el script, chequeo de sintaxis CSS, smoke test con el cliente de test de Flask sobre las 9 rutas del menú (200 OK), y 3 capturas con Playwright (sidebar en compu, menú cerrado en celu, menú abierto en celu) — las 3 ya enviadas a Daniel en el chat.
+- **Pendiente:** que Daniel confirme desde su celu real que el botón y el desplegable se ven y andan bien (las capturas fueron con navegador simulado a ancho mobile, no en un dispositivo real).
 
 ### Sesión 15/09/2026 (continuación 12) — Financiación: cálculo en vivo (sin recargar la página)
 Daniel pidió que completar la ficha de financiación se sienta más ágil: que al cargar el anticipo se calcule solo cuánto hay que financiar, que se vea el valor de la cuota a medida que se cargan los datos (antes de la línea de la fecha), y que la fecha de la primera cuota se autocomplete a 30 días (mensual) o 7 días (semanal) desde hoy según la periodicidad elegida.
