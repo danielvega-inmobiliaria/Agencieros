@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 15/09/2026 — 08:57 ART_
+_Última actualización: 15/09/2026 — 09:29 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -93,6 +93,15 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 15/09/2026 (continuación 14) — Financiación: "Cancelar" ahora liquida el saldo (con quita de intereses), y reordenamiento del menú
+Daniel probó "Cancelar plan" en la financiación de Petrini y notó que solo cambiaba el estado a Cancelado pero dejaba todas las cuotas pendientes colgadas (seguían apareciendo como deuda) — esperaba que "cancelar" propusiera cómo cerrar la cuenta, no que la anulara sin más. Aclaró que el auto ya estaba vendido y transferido (no hay que tocarlo): la idea de "cancelar" es que el cliente salda toda la deuda pendiente de una sola vez, recalculando cuánto tiene que pagar y reconociéndole una quita de intereses si corresponde.
+- **`routes/financiacion.py` — `cancelar()` reescrita:** ahora pide un `monto_final` (lo que el cliente va a pagar para saldar todo). Ese monto se reparte a prorrata entre las cuotas pendientes, que quedan todas marcadas "pagada" con su `monto` ajustado hacia abajo si hubo quita (para que no quede "adeudado" fantasma en los totales). El plan pasa a estado `cancelado` y en `observaciones` queda una nota con la fecha, el saldo original, lo efectivamente cobrado y la quita si la hubo (ej. *"[Cancelado 15/09/2026] Saldo pendiente $650.000 liquidado por $520.000 (quita de intereses $130.000)"*). No toca el vehículo — sigue "Vendido" como ya estaba. Un plan que ya no está "activo" no se puede volver a cancelar.
+- **`templates/financiacion/detalle.html`:** el botón "Cancelar plan" pasó a ser un mini-formulario con un campo "Monto final a cobrar" prellenado con el saldo pendiente actual (editable, para cargar el monto con quita si aplica), un texto aclarando que el vehículo no se toca, y una confirmación en el navegador con el monto exacto antes de enviar.
+- **Reordenamiento del menú lateral:** a pedido de Daniel, después de "Toma y tasación" el orden pasó a ser Mensajes → Financiación → Red de Agencieros → Finanzas (antes era Finanzas → Financiación → Red → Mensajes). Solo se reordenaron los bloques en `templates/base.html`, sin tocar íconos ni estilos.
+- **Verificación:** test nuevo (`test_cancelar.py` en el harness de pruebas) que crea un plan de prueba, paga una cuota, cancela con una quita del 20% sobre el saldo, y confirma: todas las cuotas quedan "pagada" (ninguna colgada), el monto se distribuyó bien, el adeudado final da $0, la nota de observaciones queda registrada, y no se puede cancelar dos veces. También se verificó el nuevo orden del menú en el HTML renderizado.
+- **Archivos tocados:** `routes/financiacion.py`, `templates/financiacion/detalle.html`, `templates/base.html`.
+- **Pendiente:** que Daniel pruebe cancelar un plan real (como el de Petrini, que había quedado en el estado viejo con cuotas colgadas) y confirme que el monto final y la nota de quita le sirven tal cual quedaron. El plan de Petrini que ya quedó "cancelado" con el bug viejo capaz haya que revisarlo a mano (sus cuotas van a seguir marcadas como pendientes aunque el plan diga Cancelado, porque esa cancelación ya se hizo con el código anterior).
 
 ### Sesión 15/09/2026 (continuación 13) — Menú desplegable en celu + íconos profesionales (sacados los emojis)
 Daniel pidió reemplazar los emojis del menú lateral por íconos profesionales y agregar comportamiento de menú desplegable — aclarado por pregunta: **solo en celu**, en compu el sidebar sigue fijo y siempre visible como estaba.

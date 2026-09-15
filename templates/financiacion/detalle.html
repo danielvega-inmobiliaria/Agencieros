@@ -10,7 +10,10 @@
   <div class="card">
     <div class="label">Monto financiado</div>
     <div class="value">${{ "{:,.0f}".format(fin.monto_financiado).replace(",", ".") }}</div>
-    <div class="sub">{{ fin.cantidad_cuotas }} cuotas de ${{ "{:,.0f}".format(fin.valor_cuota).replace(",", ".") }} · {{ fin.tasa_interes_mensual }}% mensual</div>
+    <div class="sub">
+      {{ fin.cantidad_cuotas }} cuotas ({{ periodicidad_label.get(fin.periodicidad, fin.periodicidad) }}) de ${{ "{:,.0f}".format(fin.valor_cuota).replace(",", ".") }}
+      · {{ fin.tasa_interes_mensual }}% mensual · {{ metodo_label.get(fin.metodo_interes, fin.metodo_interes) }}
+    </div>
   </div>
   <div class="card">
     <div class="label">Cobrado</div>
@@ -48,9 +51,26 @@
   <p style="color:var(--text-dim); font-size:13px; margin:0;">{{ fin.observaciones }}</p>
   {% endif %}
   {% if fin.estado == 'activo' %}
-  <form method="post" action="{{ url_for('financiacion.cancelar', financiacion_id=fin.id) }}" style="margin-top:12px;">
-    <button class="btn btn-secondary btn-sm" type="submit">Cancelar plan</button>
-  </form>
+  <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+    <p style="color:var(--text-dim); font-size:13px; margin:0 0 8px;">
+      <b style="color:var(--text);">Cancelar y liquidar el saldo:</b> el vehículo ya está vendido, esto no lo toca —
+      es para cuando el cliente quiere saldar todas las cuotas pendientes juntas (por ejemplo con una quita de
+      intereses) en vez de seguir pagando cuota a cuota.
+    </p>
+    <form method="post" action="{{ url_for('financiacion.cancelar', financiacion_id=fin.id) }}"
+          id="form-cancelar-plan" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+      <label style="font-size:13px; color:var(--text-dim);">
+        Monto final a cobrar
+        <input type="number" step="1" name="monto_final" id="monto_final_cancelacion"
+               value="{{ '%.0f' % fin.total_adeudado }}" style="width:140px; padding:6px; display:block; margin-top:4px;">
+      </label>
+      <button class="btn btn-secondary btn-sm" type="submit">Confirmar cancelación</button>
+    </form>
+    <p style="color:var(--text-dim); font-size:12px; margin:6px 0 0;">
+      Saldo pendiente sin descuento: ${{ "{:,.0f}".format(fin.total_adeudado).replace(",", ".") }}. Si cobrás menos,
+      la diferencia queda registrada como quita de intereses.
+    </p>
+  </div>
   {% endif %}
 </div>
 
@@ -85,4 +105,20 @@
     {% endfor %}
   </table>
 </div>
+
+<script>
+  (function () {
+    var formCancelar = document.getElementById('form-cancelar-plan');
+    if (!formCancelar) return;
+    formCancelar.addEventListener('submit', function (e) {
+      var input = document.getElementById('monto_final_cancelacion');
+      var monto = parseFloat(input.value || '0') || 0;
+      var texto = 'Vas a cancelar este plan: todas las cuotas pendientes quedan marcadas como saldadas por $' +
+        monto.toLocaleString('es-AR') + ' en total. Esta acción no se puede deshacer. ¿Confirmás?';
+      if (!window.confirm(texto)) {
+        e.preventDefault();
+      }
+    });
+  })();
+</script>
 {% endblock %}

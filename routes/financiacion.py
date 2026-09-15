@@ -381,6 +381,60 @@ def pagar_cuota(financiacion_id, cuota_id):
 
 @bp.route("/<int:financiacion_id>/cancelar", methods=["POST"])
 def cancelar(financiacion_id):
-    execute("UPDATE financiaciones SET estado = 'cancelado' WHERE id = ?", (financiacion_id,))
-    flash("Plan de financiación cancelado.", "success")
+    """Cancelar = liquidar el saldo pendiente todo junto (el vehículo ya se
+    vendió y transfirió, esto no lo toca). Se recalcula cuánto hay que cobrar
+    al momento de la cancelación, reconociendo una eventual quita de
+    intereses: el monto final se reparte a prorrata entre las cuotas
+    pendientes, que quedan todas marcadas como pagadas por ese monto (su
+    `monto` se ajusta hacia abajo si hubo quita, para que no quede
+    "adeudado" fantasma)."""
+    fin = query("SELECT * FROM financiaciones WHERE id = ?", (financiacion_id,), one=True)
+    if not fin:
+        flash("Plan de financiación no encontrado.", "error")
+        return redirect(url_for("financiacion.index"))
+    if fin["estado"] != "activo":
+        flash("Este plan ya no está activo.", "error")
+        return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+
+    pendientes = query(
+        "SELECT * FROM financiacion_cuotas WHERE financiacion_id = ? AND estado != 'pagada' ORDER BY numero",
+        (financiacion_id,),
+    )
+    saldo_original = round(sum(c["monto"] - (c["monto_pagado"] or 0) for c in pendientes), 2)
+
+    try:
+        monto_final = float(request.form.get("monto_final"))
+    except (TypeError, ValueError):
+        monto_final = saldo_original
+    monto_final = max(round(monto_final, 2), 0)
+
+    hoy = str(date.today())
+    if pendientes and saldo_original > 0:
+        acumulado = 0
+        for idx, c in enumerate(pendientes):
+            saldo_cuota = c["monto"] - (c["monto_pagado"] or 0)
+            if idx == len(pendientes) - 1:
+                # La última cuota se lleva la diferencia de redondeo.
+                aporte = round(monto_final - acumulado, 2)
+            else:
+                aporte = round(saldo_cuota / saldo_original * monto_final, 2)
+                acumulado += aporte
+            aporte = max(aporte, 0)
+            nuevo_pagado = round((c["monto_pagado"] or 0) + aporte, 2)
+            execute(
+                """UPDATE financiacion_cuotas SET monto = ?, monto_pagado = ?,
+                   estado = 'pagada', fecha_pago = ? WHERE id = ?""",
+                (nuevo_pagado, nuevo_pagado, hoy, c["id"]),
+            )
+
+    quita = round(saldo_original - monto_final, 2)
+    nota = f"[Cancelado {hoy}] Saldo pendiente ${saldo_original:,.0f} liquidado por ${monto_final:,.0f}".replace(",", ".")
+    if quita > 0.5:
+        nota += f" (quita de intereses ${quita:,.0f})".replace(",", ".")
+    observaciones = f"{fin['observaciones']}\n{nota}" if fin["observaciones"] else nota
+    execute(
+        "UPDATE financiaciones SET estado = 'cancelado', observaciones = ? WHERE id = ?",
+        (observaciones, financiacion_id),
+    )
+    flash(f"Plan cancelado — saldo liquidado por ${monto_final:,.0f}.".replace(",", "."), "success")
     return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
