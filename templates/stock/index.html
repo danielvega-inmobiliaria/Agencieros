@@ -3,7 +3,7 @@
 {% block header %}Stock de vehículos{% endblock %}
 {% block content %}
 <div class="tabs">
-  <a class="tab {{ 'active' if estado_filtro == 'todos' else '' }}" href="{{ url_for('stock.index', estado='todos', **filtros) }}">Todos ({{ conteos.values()|sum }})</a>
+  <a class="tab {{ 'active' if estado_filtro == 'todos' else '' }}" href="{{ url_for('stock.index', estado='todos', **filtros) }}">Todos ({{ conteos.values()|sum - conteos.get('vendido', 0) }})</a>
   {% for e in estados %}
   <a class="tab {{ 'active' if estado_filtro == e else '' }}" href="{{ url_for('stock.index', estado=e, **filtros) }}">{{ estado_label[e] }} ({{ conteos.get(e, 0) }})</a>
   {% endfor %}

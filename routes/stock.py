@@ -81,7 +81,10 @@ def index():
         if estado_filtro in ESTADOS:
             vehiculos = query("SELECT * FROM vehiculos WHERE estado = ? ORDER BY created_at DESC", (estado_filtro,))
         else:
-            vehiculos = query("SELECT * FROM vehiculos ORDER BY created_at DESC")
+            # "Todos" no incluye Vendido — solo se ve entrando puntualmente a
+            # esa pestaña (pedido de Daniel 15/09/2026, continuación 19). El
+            # buscador combinado (buscar_combinado, arriba) ya lo excluía.
+            vehiculos = query("SELECT * FROM vehiculos WHERE estado != 'vendido' ORDER BY created_at DESC")
 
     conteos = {r["estado"]: r["c"] for r in query("SELECT estado, COUNT(*) c FROM vehiculos GROUP BY estado")}
     return render_template(

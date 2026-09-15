@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 15/09/2026 — 12:21 ART_
+_Última actualización: 15/09/2026 — 12:36 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -93,6 +93,14 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 15/09/2026 (continuación 20) — "Todos" en Stock ya no muestra Vendidos
+Con captura del celu, Daniel notó que la pestaña "Todos" de Stock traía también los vehículos Vendidos (antes solo la pestaña Vendido los excluía a propósito de la búsqueda combinada, no del browse normal). Pidió que ni en "Todos" ni en ninguna búsqueda aparezcan los Vendidos — que solo se vean entrando puntualmente a esa pestaña.
+
+- **`routes/stock.py`:** la consulta de "Todos" (sin ningún filtro cargado) pasó de `SELECT * FROM vehiculos` a excluir `estado != 'vendido'`. La pestaña Vendido (`estado=vendido` explícito) sigue mostrándolos sin cambios. El buscador combinado (`buscar_combinado` en `buscador.py`, de la continuación 18) ya los excluía desde que se creó — no hizo falta tocarlo.
+- **`templates/stock/index.html`:** el contador "Todos (N)" restaba el conteo de Vendido para que el número siga coincidiendo con lo que se ve en la tabla.
+- **Verificación:** smoke test con el cliente de Flask (Todos no trae el vehículo vendido de prueba, la pestaña Vendido sí, la búsqueda combinada tampoco lo trae, el contador de "Todos" da el número correcto) y capturas con Playwright en compu mostrando "Todos (5)" sin el Vendido y la pestaña Vendido con los 3 vendidos de prueba.
+- **Archivos tocados:** `routes/stock.py`, `templates/stock/index.html`.
 
 ### Sesión 15/09/2026 (continuación 19) — Buscador de Stock colapsable, menú con Agencia/Usuario/Salir, y tarjetas de vehículo en una sola línea
 Con capturas del celu real, Daniel pidió 3 cosas: que el buscador de Stock no esté siempre abierto (agregar un botón "Buscar" que lo despliegue), sacar "Agencieros · Admin · Salir" de arriba de cada pantalla y llevarlo al Menú, y simplificar las tarjetas de vehículo en el celu: en vez de una etiqueta (VEHÍCULO/AÑO/ESTADO/PUBLICADO) arriba de cada dato, todo en un renglón ("Lifan X50 1.5 VVT - 2018 - $16.000.000 - Disponible"), con la tarjeta entera clickeable para ir al detalle.
