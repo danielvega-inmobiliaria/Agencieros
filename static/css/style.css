@@ -30,7 +30,23 @@ a { color: inherit; text-decoration: none; }
   border-right: 1px solid var(--border);
   padding: 20px 12px;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
 }
+
+/* Agencia / usuario / Salir — antes estaban fijos arriba de cada pantalla
+   (.topbar .user); pasan a vivir al fondo del Menú (sidebar en compu, menú
+   desplegable en celu) para no ocupar lugar en cada pantalla — pedido de
+   Daniel 15/09/2026 (continuación 19). */
+.sidebar-user {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.sidebar-user-agencia { color: var(--text); font-weight: 600; }
+.sidebar-user-nombre { color: var(--text-dim); margin-top: 2px; }
+.sidebar-user-logout { display: inline-block; color: var(--gold-light); margin-top: 8px; }
 
 .brand {
   font-size: 20px;
@@ -75,8 +91,6 @@ a { color: inherit; text-decoration: none; }
   display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px;
 }
 .topbar h1 { font-size: 22px; margin: 0; }
-.topbar .user { color: var(--text-dim); font-size: 13px; }
-.topbar .user a { color: var(--gold-light); }
 
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
 .card {
@@ -364,6 +378,32 @@ form textarea { min-height: 80px; }
     display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .03em;
     color: var(--text-dim); margin-bottom: 3px;
   }
+}
+
+/* --- Tarjetas de vehículo simplificadas --- en vez de la tarjeta genérica
+   de arriba (una línea por columna, con su etiqueta VEHÍCULO/AÑO/ESTADO/...
+   arriba de cada valor), estas tablas muestran en el celu todo junto en un
+   renglón ("Lifan X50 1.5 VVT - 2018 - $16.000.000 - Disponible") y la
+   tarjeta entera es clickeable (ver tr[data-href] en base.html) — pedido de
+   Daniel 15/09/2026 (continuación 19). En compu no cambia nada: la tabla
+   normal ya muestra todo en una sola línea por fila. .fila-compacta es el
+   td con el resumen (oculto en compu); .fila-vehiculo-propio son las filas
+   con ficha propia (clickeables); .fila-accion es una acción que tiene que
+   seguir viéndose en el celu aunque el resto de la fila se resuma (ej.
+   "Cerrar" en Red de Agencieros). */
+.fila-compacta { display: none; }
+.tabla-vehiculos tr[data-href] { cursor: pointer; }
+.tabla-vehiculos tr[data-href]:hover td { background: var(--navy-card-2); }
+@media (max-width: 700px) {
+  .tabla-vehiculos .fila-vehiculo-propio td:not(.fila-compacta) { display: none; }
+  .tabla-red-compacta td:not(.fila-compacta):not(.fila-accion) { display: none; }
+  .tabla-vehiculos .fila-compacta,
+  .tabla-red-compacta .fila-compacta {
+    display: block; font-size: 14px; line-height: 1.5; padding: 2px 0 6px;
+  }
+  .tabla-vehiculos .fila-compacta .badge,
+  .tabla-red-compacta .fila-compacta .badge { margin-right: 6px; }
+  .tabla-red-compacta .fila-accion { display: block; padding-top: 2px; }
 }
 
 /* --- Menú desplegable en celu --- en compu el sidebar queda fijo y visible

@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 15/09/2026 — 10:03 ART_
+_Última actualización: 15/09/2026 — 12:21 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -93,6 +93,17 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 15/09/2026 (continuación 19) — Buscador de Stock colapsable, menú con Agencia/Usuario/Salir, y tarjetas de vehículo en una sola línea
+Con capturas del celu real, Daniel pidió 3 cosas: que el buscador de Stock no esté siempre abierto (agregar un botón "Buscar" que lo despliegue), sacar "Agencieros · Admin · Salir" de arriba de cada pantalla y llevarlo al Menú, y simplificar las tarjetas de vehículo en el celu: en vez de una etiqueta (VEHÍCULO/AÑO/ESTADO/PUBLICADO) arriba de cada dato, todo en un renglón ("Lifan X50 1.5 VVT - 2018 - $16.000.000 - Disponible"), con la tarjeta entera clickeable para ir al detalle.
+
+- **Buscador colapsable en Stock:** el panel de búsqueda (Marca/Modelo/Versión/Año/Km/Precio) arranca oculto; un botón "Buscar" al lado de "Sincronizar" / "Cargar vehículo" lo despliega, y si ya hay un filtro cargado (se volvió a esa URL, por ejemplo) arranca abierto para que Daniel vea qué filtró. Solo en Stock — el buscador de Red de Agencieros sigue visible como antes, no lo pidió.
+- **Agencia / usuario / Salir al Menú:** se sacó del `topbar` (arriba de cada pantalla) y pasó al fondo del sidebar/Menú, debajo de las opciones de navegación y separado con una línea. En compu se ve siempre (el sidebar es fijo); en celu solo al abrir el ☰.
+- **Tarjetas de vehículo en una sola línea (celu):** en Stock (las 2 tablas: navegación normal por pestaña y la búsqueda combinada) y en Red de Agencieros, cada fila pasa a mostrarse en el celu como un único renglón sin etiquetas — vehículo, año, precio y estado/tipo juntos — y toda la tarjeta es clickeable (se sacó el botón "Ver" chico, ahora clickear en cualquier parte de la fila lleva al detalle; esto también se aplicó en compu, clickear la fila de la tabla normal ahora también lleva al detalle, no solo el botón). Excepciones a propósito: en la búsqueda combinada de Stock, los resultados que vienen de la Red siguen mostrando la tarjeta con etiquetas (agencia + contacto no entran en el renglón corto, y no tienen ficha propia para ir al hacer click); en Red de Agencieros el botón "Cerrar" se mantiene visible y funcional aparte del renglón resumen, porque tampoco hay ficha de detalle ahí.
+- **No tocado todavía:** el listado de Toma y tasación también muestra vehículos en una tabla, pero tiene columnas bien distintas (Evaluador/Fotos/Tasación en vez de Precio/Estado) — no se tocó porque no es el mismo tipo de tarjeta que pidió Daniel; si la quiere simplificada también, es para otra vuelta.
+- **Verificación:** smoke tests con el cliente de test de Flask (buscador oculto sin filtros / visible con filtros, filas con `data-href`, clases nuevas en Red) y capturas con Playwright en celu (390px, buscador cerrado/abierto, búsqueda combinada con resultado propio y de Red, menú abierto mostrando Agencia/Usuario/Salir) y en compu (tabla de Stock sin el botón Ver, clic en la fila navega al detalle — confirmado con Playwright que `page.url` cambia a la ficha del vehículo).
+- **Archivos tocados:** `templates/base.html`, `static/css/style.css`, `templates/stock/index.html`, `templates/red/index.html`.
+- **Pendiente:** confirmar si quiere el mismo tratamiento (una línea + clickeable) en Toma y tasación.
 
 ### Sesión 15/09/2026 (continuación 18) — Buscador de Stock ahora es combinado (Disponible + Por ingresar + En reparación + Red, todo junto), Km en Red, y Año pasa a ser "desde"
 Después de probar el buscador de la continuación 17, Daniel aclaró que la idea no era filtrar pestaña por pestaña, sino que una sola búsqueda revise Disponible, Por ingresar, En reparación y Red de Agencieros a la vez, y liste los resultados en ese orden aclarando de dónde sale cada uno. También pidió revisar la carga de una publicación nueva en Red para que tenga todas las opciones de búsqueda (le faltaba Km), y que el filtro de Año busque "desde" en vez de exacto.

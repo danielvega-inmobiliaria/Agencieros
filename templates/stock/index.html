@@ -8,6 +8,7 @@
   <a class="tab {{ 'active' if estado_filtro == e else '' }}" href="{{ url_for('stock.index', estado=e, **filtros) }}">{{ estado_label[e] }} ({{ conteos.get(e, 0) }})</a>
   {% endfor %}
   <div style="margin-left:auto; display:flex; gap:8px;">
+    <button type="button" id="buscador-toggle" class="btn btn-secondary btn-sm">{{ 'Ocultar buscador' if filtros else 'Buscar' }}</button>
     <form method="post" action="{{ url_for('stock.sincronizar') }}">
       <button class="btn btn-secondary btn-sm" type="submit">↻ Sincronizar desde STOCK</button>
     </form>
@@ -15,7 +16,7 @@
   </div>
 </div>
 
-<div class="panel">
+<div class="panel" id="buscador-panel" {% if not filtros %}hidden{% endif %}>
   {% include "partials/buscador.html" %}
 </div>
 
@@ -24,22 +25,25 @@
   <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
     Buscando en Disponible, Por ingresar, En reparación y Red de Agencieros — {{ resultados|length }} resultado(s).
   </p>
-  <table class="tabla-responsive">
+  <table class="tabla-responsive tabla-vehiculos">
     <tr class="fila-header"><th>Origen</th><th>Vehículo</th><th>Año</th><th>Km</th><th>Precio</th><th>Detalle</th></tr>
     {% for r in resultados %}
-    <tr>
+    <tr class="{{ 'fila-vehiculo-propio' if r.ver_endpoint else '' }}" {% if r.ver_endpoint %}data-href="{{ url_for(r.ver_endpoint, vehiculo_id=r.ver_id) }}"{% endif %}>
       <td data-label="Origen"><span class="badge {{ r.origen_badge }}">{{ r.origen_label }}</span></td>
       <td data-label="Vehículo">{{ r.marca }} {{ r.modelo }} {{ r.version }}</td>
       <td data-label="Año">{{ r.anio or '-' }}</td>
       <td data-label="Km">{{ "{:,.0f}".format(r.km).replace(",", ".") if r.km else '-' }}</td>
       <td data-label="Precio">{{ "$" + "{:,.0f}".format(r.precio).replace(",", ".") if r.precio else '-' }}</td>
       <td data-label="Detalle">
-        {% if r.ver_endpoint %}
-        <a class="btn btn-secondary btn-sm" href="{{ url_for(r.ver_endpoint, vehiculo_id=r.ver_id) }}">Ver</a>
-        {% else %}
+        {% if not r.ver_endpoint %}
         {{ r.agencia }}{% if r.contacto %} · {{ r.contacto }}{% endif %}
         {% endif %}
       </td>
+      {% if r.ver_endpoint %}
+      <td class="fila-compacta">
+        <span class="badge {{ r.origen_badge }}">{{ r.origen_label }}</span>{{ r.marca }} {{ r.modelo }} {{ r.version }} - {{ r.anio or '-' }} - {{ "$" + "{:,.0f}".format(r.precio).replace(",", ".") if r.precio else '-' }}
+      </td>
+      {% endif %}
     </tr>
     {% else %}
     <tr><td colspan="6">No se encontró nada con esos filtros.</td></tr>
@@ -48,16 +52,19 @@
 </div>
 {% else %}
 <div class="panel">
-  <table class="tabla-responsive">
+  <table class="tabla-responsive tabla-vehiculos">
     <tr class="fila-header"><th>Vehículo</th><th>Año</th><th>Km</th><th>Estado</th><th>Publicado</th><th></th></tr>
     {% for v in vehiculos %}
-    <tr>
+    <tr class="fila-vehiculo-propio" data-href="{{ url_for('stock.detalle', vehiculo_id=v.id) }}">
       <td data-label="Vehículo">{{ v.marca }} {{ v.modelo }} {{ v.version }}</td>
       <td data-label="Año">{{ v.anio }}</td>
       <td data-label="Km">{{ "{:,.0f}".format(v.km).replace(",", ".") if v.km else '-' }}</td>
       <td data-label="Estado"><span class="badge {{ v.estado }}">{{ estado_label[v.estado] }}</span></td>
       <td data-label="Publicado">${{ "{:,.0f}".format(v.valor_publicado or 0).replace(",", ".") }}</td>
-      <td><a class="btn btn-secondary btn-sm" href="{{ url_for('stock.detalle', vehiculo_id=v.id) }}">Ver</a></td>
+      <td class="fila-compacta">
+        {{ v.marca }} {{ v.modelo }} {{ v.version }} - {{ v.anio }} - ${{ "{:,.0f}".format(v.valor_publicado or 0).replace(",", ".") }}
+        <span class="badge {{ v.estado }}">{{ estado_label[v.estado] }}</span>
+      </td>
     </tr>
     {% else %}
     <tr><td colspan="6">No hay vehículos en este estado.</td></tr>
@@ -65,4 +72,15 @@
   </table>
 </div>
 {% endif %}
+<script>
+  (function () {
+    var boton = document.getElementById('buscador-toggle');
+    var panel = document.getElementById('buscador-panel');
+    if (!boton || !panel) return;
+    boton.addEventListener('click', function () {
+      panel.hidden = !panel.hidden;
+      boton.textContent = panel.hidden ? 'Buscar' : 'Ocultar buscador';
+    });
+  })();
+</script>
 {% endblock %}

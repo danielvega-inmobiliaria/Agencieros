@@ -52,15 +52,17 @@
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
         Finanzas
       </a>
+      {% if session.get('user_nombre') %}
+      <div class="sidebar-user">
+        <div class="sidebar-user-agencia">{{ session.get('agencia_nombre') }}</div>
+        <div class="sidebar-user-nombre">{{ session.get('user_nombre') }}</div>
+        <a class="sidebar-user-logout" href="{{ url_for('auth.logout') }}">Salir</a>
+      </div>
+      {% endif %}
     </aside>
     <main class="main">
       <div class="topbar">
         <h1>{% block header %}{% endblock %}</h1>
-        <div class="user">
-          {% if session.get('user_nombre') %}
-            {{ session.get('agencia_nombre') }} · {{ session.get('user_nombre') }} · <a href="{{ url_for('auth.logout') }}">Salir</a>
-          {% endif %}
-        </div>
       </div>
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% for category, message in messages %}
@@ -86,6 +88,19 @@
         link.addEventListener('click', function () {
           sidebar.classList.remove('open');
           boton.setAttribute('aria-expanded', 'false');
+        });
+      });
+    })();
+    // Filas de tabla clickeables (ver templates/*/index.html, tr[data-href]):
+    // clickear en cualquier parte de la fila lleva al detalle, salvo que se
+    // haya clickeado un link/botón propio dentro de la fila (ej. "Cerrar")
+    // — pedido de Daniel 15/09/2026 (continuación 19, tarjetas de vehículo
+    // simplificadas y clickeables).
+    (function () {
+      document.querySelectorAll('tr[data-href]').forEach(function (fila) {
+        fila.addEventListener('click', function (e) {
+          if (e.target.closest('a, button, form, input')) return;
+          window.location = fila.dataset.href;
         });
       });
     })();
