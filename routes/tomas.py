@@ -11,12 +11,50 @@ from routes.tasacion import FACTOR_MECANICO, FACTOR_ESTETICO, MARGEN_OBJETIVO
 bp = Blueprint("tomas", __name__, url_prefix="/tomas")
 
 # --- Paso 1: datos técnicos ---
-PUNTOS = [
-    ("motor", "Motor"), ("caja", "Caja"), ("embrague", "Embrague"), ("frenos", "Frenos"),
-    ("suspension", "Suspensión"), ("direccion", "Dirección"), ("interior", "Interior"),
-    ("tapizados", "Tapizados"), ("cubiertas", "Cubiertas"), ("electricidad", "Electricidad"),
-    ("aire_acondicionado", "Aire acondicionado"), ("documentacion", "Documentación"),
+# Checklist ampliado 15/09/2026 a partir de la planilla física de peritaje
+# que compartió Daniel (SAKURA, 44 puntos totales) — se mantuvo la misma
+# escala Excelente/Bueno/Regular/Malo + costo + comentario para todos los
+# puntos nuevos (decisión de Daniel, para no romper el cálculo automático
+# de estado mecánico en Tasación ni tener que armar un segundo formato de
+# tabla). "Cubiertas" pasó de ser un solo punto a 5 (una por posición +
+# auxilio), también a pedido de Daniel. Los códigos de los 11 puntos que ya
+# existían (todos menos "cubiertas") NO se tocan, para no perder el
+# historial de tomas ya cargadas.
+GRUPO_MECANICA = [
+    ("motor", "Motor"), ("caja", "Caja"), ("distribucion", "Distribución"),
+    ("embrague", "Embrague"), ("tren_delantero", "Tren delantero"), ("direccion", "Dirección"),
+    ("suspension", "Suspensión"), ("frenos", "Frenos"), ("linea_escape", "Línea de escape"),
+    ("chapa", "Chapa"), ("pintura", "Pintura"), ("tapizados", "Tapicería"),
+    ("habitaculo", "Habitáculo"), ("bateria", "Batería"), ("interior", "Interior"),
+    ("documentacion", "Documentación"), ("electricidad", "Electricidad (general)"),
+    ("aire_acondicionado", "Aire acondicionado"),
 ]
+GRUPO_CUBIERTAS = [
+    ("cubierta_del_der", "Cubierta delantera derecha"), ("cubierta_del_izq", "Cubierta delantera izquierda"),
+    ("cubierta_tras_der", "Cubierta trasera derecha"), ("cubierta_tras_izq", "Cubierta trasera izquierda"),
+    ("cubierta_auxilio", "Auxilio"),
+]
+GRUPO_ACCESORIOS = [
+    ("luces", "Luces"), ("levantavidrios", "Levantavidrios"), ("espejos_electricos", "Espejos eléctricos"),
+    ("techo_corredizo", "Techo corredizo"), ("limpia_parabrisas", "Limpiaparabrisas"), ("parabrisas", "Parabrisas"),
+    ("luneta_termica", "Luneta térmica"), ("cierre_electrico", "Cierre eléctrico"),
+    ("reg_altura_faros", "Regulación de altura de faros"), ("calefactor", "Calefactor"),
+    ("computadora_reloj", "Computadora / reloj"), ("control_satelital", "Control satelital"),
+    ("parlantes", "Parlantes"), ("cinturones_seguridad", "Cinturones de seguridad"),
+    ("criket", "Criket (gato)"), ("llave_ruedas", "Llave de ruedas"), ("manuales", "Manuales"),
+    ("duplicado_llave", "Duplicado de llave"), ("radio_cd_usb", "Radio / CD / USB"),
+    ("camara_retrovisora", "Cámara retrovisora"), ("sensores_estacionamiento", "Sensores de estacionamiento"),
+]
+PUNTOS = GRUPO_MECANICA + GRUPO_CUBIERTAS + GRUPO_ACCESORIOS
+GRUPOS_PUNTOS = [
+    ("Mecánica y carrocería", GRUPO_MECANICA),
+    ("Cubiertas", GRUPO_CUBIERTAS),
+    ("Accesorios y equipamiento", GRUPO_ACCESORIOS),
+]
+# "" = sin evaluar todavía (no cuenta para el promedio de Tasación) — antes
+# el select no tenía opción en blanco y todo punto no tocado quedaba
+# guardado como "Excelente" por defecto (el primer valor de la lista), algo
+# que con 12 puntos pasaba casi desapercibido pero con 44 sería engañoso.
 CALIFICACIONES = ["Excelente", "Bueno", "Regular", "Malo"]
 PUNTAJE_CALIFICACION = {"Excelente": 4, "Bueno": 3, "Regular": 2, "Malo": 1}
 
@@ -246,24 +284,26 @@ def nueva():
             except ValueError:
                 return None
 
+        # Columnas dinámicas para los 44 puntos (calificación + costo +
+        # comentario de cada uno) — ya no se puede hardcodear una por una en
+        # el INSERT como cuando eran 12.
+        columnas_base = ", ".join(codigo for codigo, _ in PUNTOS)
+        placeholders_base = ", ".join("?" for _ in PUNTOS)
         columnas_costo = ", ".join(f"costo_{codigo}" for codigo, _ in PUNTOS)
         placeholders_costo = ", ".join("?" for _ in PUNTOS)
         columnas_comentario = ", ".join(f"comentario_{codigo}" for codigo, _ in PUNTOS)
         placeholders_comentario = ", ".join("?" for _ in PUNTOS)
         toma_id = execute(
             f"""INSERT INTO tomas_vehiculo
-               (vehiculo_id, marca, modelo, version, anio, evaluador, motor, caja, embrague, frenos, suspension,
-                direccion, interior, tapizados, cubiertas, electricidad, aire_acondicionado,
-                documentacion, observaciones, {columnas_costo}, {columnas_comentario})
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,{placeholders_costo},{placeholders_comentario})""",
+               (vehiculo_id, marca, modelo, version, anio, evaluador, codigo_falla, ultimo_service,
+                observaciones, {columnas_base}, {columnas_costo}, {columnas_comentario})
+               VALUES (?,?,?,?,?,?,?,?,?,{placeholders_base},{placeholders_costo},{placeholders_comentario})""",
             (
                 f.get("vehiculo_id") or None,
                 f.get("marca"), f.get("modelo"), f.get("version"), f.get("anio") or None,
-                f.get("evaluador"),
-                f.get("motor"), f.get("caja"), f.get("embrague"), f.get("frenos"), f.get("suspension"),
-                f.get("direccion"), f.get("interior"), f.get("tapizados"), f.get("cubiertas"),
-                f.get("electricidad"), f.get("aire_acondicionado"), f.get("documentacion"),
+                f.get("evaluador"), f.get("codigo_falla") or None, f.get("ultimo_service") or None,
                 f.get("observaciones"),
+                *[f.get(codigo) or None for codigo, _ in PUNTOS],
                 *[_costo(codigo) for codigo, _ in PUNTOS],
                 *[(f.get(f"comentario_{codigo}") or "").strip() or None for codigo, _ in PUNTOS],
             ),
@@ -271,7 +311,7 @@ def nueva():
         flash("Toma registrada. Ahora sumá las fotos y marcá los daños de la carrocería.", "success")
         return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
     return render_template(
-        "tomas/form.html", puntos=PUNTOS, calificaciones=CALIFICACIONES, prefill=prefill,
+        "tomas/form.html", grupos_puntos=GRUPOS_PUNTOS, calificaciones=CALIFICACIONES, prefill=prefill,
         evaluadores=_evaluadores(),
     )
 

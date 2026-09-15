@@ -147,6 +147,9 @@ CREATE TABLE IF NOT EXISTS financiaciones (
     anticipo REAL DEFAULT 0,
     monto_financiado REAL NOT NULL,
     tasa_interes_mensual REAL NOT NULL DEFAULT 0,
+    metodo_interes TEXT NOT NULL DEFAULT 'frances',
+    periodicidad TEXT NOT NULL DEFAULT 'mensual',
+    plazo_meses INTEGER NOT NULL DEFAULT 0,
     cantidad_cuotas INTEGER NOT NULL,
     valor_cuota REAL NOT NULL,
     fecha_inicio TEXT NOT NULL,
@@ -312,12 +315,67 @@ def _migrar_inspeccion_marcadores(conn):
         conn.execute("ALTER TABLE inspeccion_marcadores ADD COLUMN costo_reparacion REAL")
 
 
+def _migrar_financiaciones(conn):
+    """Agrega a `financiaciones` el método de interés (francés / interés
+    simple), la periodicidad de cobro (mensual / semanal) y el plazo en
+    meses usado para calcular la cuota, pedidos por Daniel el 14/09/2026
+    para poder elegir por plan — sin tocar bases ya creadas con la versión
+    anterior de la tabla (solo monto financiado mensual, francés)."""
+    columnas_actuales = {row[1] for row in conn.execute("PRAGMA table_info(financiaciones)")}
+    nuevas_columnas = {
+        "metodo_interes": "TEXT NOT NULL DEFAULT 'frances'",
+        "periodicidad": "TEXT NOT NULL DEFAULT 'mensual'",
+        "plazo_meses": "INTEGER NOT NULL DEFAULT 0",
+    }
+    for columna, tipo in nuevas_columnas.items():
+        if columna not in columnas_actuales:
+            conn.execute(f"ALTER TABLE financiaciones ADD COLUMN {columna} {tipo}")
+    # Planes creados antes de este cambio no tenían plazo_meses guardado —
+    # lo completamos con cantidad_cuotas (mismo valor cuando eran mensuales).
+    conn.execute("UPDATE financiaciones SET plazo_meses = cantidad_cuotas WHERE plazo_meses = 0")
+
+
 def _migrar_tasaciones(conn):
     """Vincula `tasaciones` con la Toma de la que surgió (flujo unificado
     Toma → Fotos/Inspección visual → Tasación), sin tocar bases existentes."""
     columnas_actuales = {row[1] for row in conn.execute("PRAGMA table_info(tasaciones)")}
     if "toma_id" not in columnas_actuales:
         conn.execute("ALTER TABLE tasaciones ADD COLUMN toma_id INTEGER REFERENCES tomas_vehiculo(id)")
+
+
+def _migrar_tomas_checklist_ampliado(conn):
+    """Amplía el checklist de la Toma técnica (Paso 1) de 12 a 44 puntos,
+    15/09/2026, a partir de la planilla física de peritaje (SAKURA) que
+    compartió Daniel: se agregan las columnas base (calificación),
+    costo_<codigo> y comentario_<codigo> de cada punto nuevo, y se separa
+    "cubiertas" en 5 puntos (uno por posición + auxilio). No se toca ni se
+    borra ninguna columna existente — los 11 puntos que ya estaban (todos
+    menos "cubiertas", que queda huérfana pero sin borrar por las tomas ya
+    cargadas) siguen igual. También se agregan dos campos de texto libre
+    nuevos: código de falla/testigo en tablero y último service realizado."""
+    columnas_actuales = {row[1] for row in conn.execute("PRAGMA table_info(tomas_vehiculo)")}
+    puntos_nuevos = [
+        # Mecánica y carrocería (7 nuevos — el resto de este grupo ya existía)
+        "distribucion", "tren_delantero", "linea_escape", "chapa", "pintura", "habitaculo", "bateria",
+        # Cubiertas (reemplaza al punto único "cubiertas", que queda sin usar)
+        "cubierta_del_der", "cubierta_del_izq", "cubierta_tras_der", "cubierta_tras_izq", "cubierta_auxilio",
+        # Accesorios y equipamiento (todos nuevos)
+        "luces", "levantavidrios", "espejos_electricos", "techo_corredizo", "limpia_parabrisas", "parabrisas",
+        "luneta_termica", "cierre_electrico", "reg_altura_faros", "calefactor", "computadora_reloj",
+        "control_satelital", "parlantes", "cinturones_seguridad", "criket", "llave_ruedas", "manuales",
+        "duplicado_llave", "radio_cd_usb", "camara_retrovisora", "sensores_estacionamiento",
+    ]
+    for codigo in puntos_nuevos:
+        if codigo not in columnas_actuales:
+            conn.execute(f"ALTER TABLE tomas_vehiculo ADD COLUMN {codigo} TEXT")
+        if f"costo_{codigo}" not in columnas_actuales:
+            conn.execute(f"ALTER TABLE tomas_vehiculo ADD COLUMN costo_{codigo} REAL")
+        if f"comentario_{codigo}" not in columnas_actuales:
+            conn.execute(f"ALTER TABLE tomas_vehiculo ADD COLUMN comentario_{codigo} TEXT")
+    if "codigo_falla" not in columnas_actuales:
+        conn.execute("ALTER TABLE tomas_vehiculo ADD COLUMN codigo_falla TEXT")
+    if "ultimo_service" not in columnas_actuales:
+        conn.execute("ALTER TABLE tomas_vehiculo ADD COLUMN ultimo_service TEXT")
 
 
 def init_db():
@@ -328,8 +386,10 @@ def init_db():
     _migrar_pedidos(conn)
     _migrar_tomas_costos(conn)
     _migrar_tomas_comentarios(conn)
+    _migrar_tomas_checklist_ampliado(conn)
     _migrar_inspeccion_marcadores(conn)
     _migrar_tasaciones(conn)
+    _migrar_financiaciones(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")
     if cur.fetchone()[0] == 0:

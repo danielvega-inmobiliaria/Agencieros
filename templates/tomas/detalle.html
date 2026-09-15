@@ -7,22 +7,32 @@
   <div class="stat-row">
     <div class="stat"><div class="n">{{ estado_mecanico_sugerido }}</div><div class="l">Estado mecánico sugerido</div></div>
   </div>
+  {% set puntos_cargados = puntos_data | selectattr('calificacion') | list %}
+  {% if puntos_cargados %}
   <table class="tabla-responsive" style="margin-top:16px;">
     <tr class="fila-header"><th>Punto</th><th>Calificación</th><th>Costo estimado</th><th>Comentario</th></tr>
-    {% for p in puntos_data %}
+    {% for p in puntos_cargados %}
     <tr>
       <td data-label="Punto"><b>{{ p.label }}</b></td>
-      <td data-label="Calificación">{{ p.calificacion or '-' }}</td>
+      <td data-label="Calificación">{{ p.calificacion }}</td>
       <td data-label="Costo estimado">{% if p.costo %}${{ "{:,.0f}".format(p.costo).replace(",", ".") }}{% else %}-{% endif %}</td>
       <td data-label="Comentario">{{ p.comentario or '-' }}</td>
     </tr>
     {% endfor %}
   </table>
+  <p style="color:var(--text-dim); font-size:12px; margin-top:6px;">
+    {{ puntos_cargados | length }}/{{ puntos_data | length }} puntos evaluados.
+  </p>
+  {% else %}
+  <p style="color:var(--text-dim); font-size:13px; margin-top:16px;">Todavía no se evaluó ningún punto del checklist.</p>
+  {% endif %}
   {% if costo_puntos_tecnicos %}
   <p style="color:var(--text-dim); font-size:13px; margin-top:10px;">
     <b style="color:var(--text);">Total reparación/limpieza (Paso 1): ${{ "{:,.0f}".format(costo_puntos_tecnicos).replace(",", ".") }}</b>
   </p>
   {% endif %}
+  {% if toma.codigo_falla %}<p style="color:var(--text-dim); margin-top:10px;"><b>Código de falla / testigo:</b> {{ toma.codigo_falla }}</p>{% endif %}
+  {% if toma.ultimo_service %}<p style="color:var(--text-dim); margin-top:4px;"><b>Último service:</b> {{ toma.ultimo_service }}</p>{% endif %}
   {% if toma.observaciones %}<p style="color:var(--text-dim); margin-top:16px;"><b>Observaciones:</b> {{ toma.observaciones }}</p>{% endif %}
 </div>
 
