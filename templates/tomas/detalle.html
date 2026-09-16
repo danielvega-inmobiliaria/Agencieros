@@ -63,7 +63,17 @@
     <div class="stat"><div class="n">${{ "{:,.0f}".format(tasacion.margen_esperado).replace(",", ".") }}</div><div class="l">Margen esperado</div></div>
     <div class="stat"><div class="n">{{ tasacion.porcentaje_beneficio }}%</div><div class="l">Beneficio</div></div>
   </div>
-  <a class="btn btn-secondary btn-sm" style="margin-top:14px;" href="{{ url_for('tomas.tasacion', toma_id=toma.id) }}">Volver a tasar</a>
+  <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('tomas.tasacion', toma_id=toma.id) }}">Volver a tasar</a>
+    {% if url_agregar_a_stock %}
+    <a class="btn btn-primary btn-sm" href="{{ url_agregar_a_stock }}">{{ label_agregar_a_stock }}</a>
+    {% endif %}
+  </div>
+  {% if label_agregar_a_stock == 'Agregar a Stock' %}
+  <p style="color:var(--text-dim); font-size:11.5px; margin-top:6px;">
+    "Agregar a Stock" abre el alta con Marca/Modelo/Versión/Año, Valor de compra, Gastos y Observaciones ya cargados con lo tasado — faltan Km, Combustible, Caja, Color y Dominio, y elegir el estado (Disponible / Por ingresar).
+  </p>
+  {% endif %}
   {% else %}
   <a class="btn btn-primary btn-sm" href="{{ url_for('tomas.tasacion', toma_id=toma.id) }}">Tasar este vehículo</a>
   {% endif %}

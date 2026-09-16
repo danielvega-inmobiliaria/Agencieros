@@ -435,6 +435,23 @@ def detalle(toma_id):
     tasacion = _tasacion_con_extra(
         query("SELECT * FROM tasaciones WHERE toma_id = ? ORDER BY id DESC LIMIT 1", (toma_id,), one=True)
     )
+    # Mismo botón "Agregar a Stock" / "Ver en Stock" que ya existía en el
+    # Paso 3 dentro de /tomas/<id>/tasacion — replicado acá para que también
+    # se vea desde la ficha de la toma (Daniel no lo encontraba ahí, pedido
+    # 16/09/2026: antes solo aparecía si se entraba a "Volver a tasar").
+    url_agregar_a_stock = None
+    label_agregar_a_stock = None
+    if tasacion and toma["vehiculo_id"]:
+        url_agregar_a_stock = url_for("stock.detalle", vehiculo_id=toma["vehiculo_id"])
+        label_agregar_a_stock = "Ver en Stock"
+    elif tasacion:
+        puntos_a_reparar = _puntos_a_reparar(toma)
+        danios_por_vista = _agrupar_danios_por_vista([m for m in marcadores if m["costo_reparacion"]])
+        url_agregar_a_stock = _url_agregar_a_stock(
+            toma, tasacion, puntos_a_reparar, danios_por_vista,
+            dict(TIPOS_DANIO), dict(GRAVEDADES),
+        )
+        label_agregar_a_stock = "Agregar a Stock"
     return render_template(
         "tomas/detalle.html",
         toma=toma,
@@ -445,6 +462,8 @@ def detalle(toma_id):
         estado_estetico_sugerido=_calcular_estado_estetico(marcadores),
         costo_puntos_tecnicos=_costo_puntos_tecnicos(toma),
         tasacion=tasacion,
+        url_agregar_a_stock=url_agregar_a_stock,
+        label_agregar_a_stock=label_agregar_a_stock,
     )
 
 
