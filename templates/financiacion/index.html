@@ -29,7 +29,7 @@
 
 <div class="panel">
   <table class="tabla-responsive">
-    <tr class="fila-header"><th>Cliente</th><th>Vehículo</th><th>Monto financiado</th><th>Cuotas</th><th>Adeudado</th><th>Estado</th><th></th></tr>
+    <tr class="fila-header"><th>Cliente</th><th>Vehículo</th><th>Plan</th><th>Monto financiado</th><th>Cuotas</th><th>Adeudado</th><th>Estado</th><th></th></tr>
     {% for p in planes %}
     <tr>
       <td data-label="Cliente">{{ p.cliente_nombre }}{% if p.cliente_telefono %}<br><span style="color:var(--text-dim); font-size:11.5px;">{{ p.cliente_telefono }}</span>{% endif %}</td>
@@ -40,6 +40,7 @@
           <span style="color:var(--text-dim);">-</span>
         {% endif %}
       </td>
+      <td data-label="Plan">{{ periodicidad_label.get(p.periodicidad, p.periodicidad) }}<br><span style="color:var(--text-dim); font-size:11.5px;">{{ metodo_label.get(p.metodo_interes, p.metodo_interes) }}</span></td>
       <td data-label="Monto financiado">${{ "{:,.0f}".format(p.monto_financiado).replace(",", ".") }}</td>
       <td data-label="Cuotas">{{ p.cuotas_pagadas }}/{{ p.cuotas_totales }}
         {% if p.cuotas_vencidas %}<br><span style="color:var(--red); font-size:11.5px;">{{ p.cuotas_vencidas }} vencida(s)</span>{% endif %}
@@ -49,7 +50,7 @@
       <td><a class="btn btn-secondary btn-sm" href="{{ url_for('financiacion.detalle', financiacion_id=p.id) }}">Ver</a></td>
     </tr>
     {% else %}
-    <tr><td colspan="7">Todavía no hay planes de financiación cargados.</td></tr>
+    <tr><td colspan="8">Todavía no hay planes de financiación cargados.</td></tr>
     {% endfor %}
   </table>
 </div>

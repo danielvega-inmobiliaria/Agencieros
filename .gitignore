@@ -3,3 +3,6 @@ __pycache__/
 data/*.db
 .env
 venv/
+desktop.ini
+*.db-journal
+static/uploads/

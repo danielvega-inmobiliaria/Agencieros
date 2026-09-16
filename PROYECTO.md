@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 15/09/2026 — 12:36 ART_
+_Última actualización: 15/09/2026 — 21:27 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -76,7 +76,7 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - [ ] **Auth real** (hoy es login simple tipo PresupuestoPRO, sin registro de agencias ni roles). **Alcance confirmado 14/09/2026:** registro de agencia + validación por mail, y cobro por Mercado Pago (mismo patrón ya resuelto en PresupuestoPRO) — esto conecta directo con el pendiente 🔴 de modelo de negocio/planes de suscripción: la suscripción paga por Mercado Pago va a depender de que Auth real ya esté armado.
 - [x] ~~Imprimir informe de tasación~~ → **Confirmado 14/09/2026: sí, hay que hacerlo.** Falta diseñar el formato de salida (queda como tarea de diseño antes de programarlo).
 - [x] ~~Ampliar checklist de Toma técnica de 12 a 41 puntos~~ → **Hecho 15/09/2026: quedó en 44 puntos.** Daniel pasó la foto de la planilla física de peritaje de SAKURA (más completa que la de 41) — ver el detalle en "Cambios recientes".
-- [ ] **Vínculo Toma→Stock al tomar un vehículo:** **Confirmado 14/09/2026: sí** — se carga automático a Stock (a definir si queda "En reparación" u otro estado) **y/o fecha de entrega programada** si la carga automática completa a Stock no se puede resolver de una. Hoy no hay ningún vínculo automático entre una Toma tasada y el módulo Stock.
+- [x] ~~Vínculo Toma→Stock al tomar un vehículo~~ → **Hecho 15/09/2026 (continuación 28-30, commit `4fbb090`):** botón "Agregar a Stock" en la Tasación que precarga Marca/Modelo/Versión/Año, precio de referencia, valor de compra, gastos estimados y un resumen de reparaciones en Observaciones. **Ojo:** quedó como acción manual (el agenciero aprieta el botón), no automático al cerrar la Tasación ni con fecha de entrega programada como se había planteado originalmente — falta confirmar con Daniel si esto le alcanza así o si todavía quiere el disparo automático.
 - [x] ~~Certificado HTTPS~~ → **Descartado 14/09/2026: no hace falta por ahora** — el cartel de "sitio no seguro" es un problema de correr en red local sin HTTPS; una vez que se despliegue en web (ej. Railway) va a andar con HTTPS de forma nativa y este problema deja de existir solo.
 
 ### 🟢 IDEAS FUTURAS
@@ -93,6 +93,59 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+> **Nota (15/09/2026, 21:27 ART):** las entradas de continuación 21 a 30 de abajo se reconstruyeron retroactivamente a partir del historial de git y los comentarios dejados en el código — quedaron 9 rondas de trabajo (y 3 commits ya pusheados) sin documentar en tiempo real en este archivo. No incluyen el detalle de verificación manual que sí tienen las entradas más viejas, porque no quedó registro de qué se probó en su momento.
+
+### Sesión 15/09/2026 (continuación 28 a 30) — Botón "Agregar a Stock" desde la Tasación + checklist de Toma técnica reordenado y recalificado
+Daniel pidió reducir las tarjetas del checklist de 44 puntos (ocupaban demasiado lugar) y agregar el vínculo real entre una Tasación terminada y el alta en Stock, que hasta ese momento no dejaba ningún rastro.
+- **Checklist colapsado en una sola línea:** cada uno de los 44 puntos pasa a mostrarse colapsado ("Motor - [desplegable]"), y los campos de Comentario/Costo solo se despliegan si la calificación es Regular o Malo — antes se veían siempre los 4 campos por punto, incluso en Excelente/Bueno. Mismo criterio para "¿Código de falla?" y "¿Último service realizado?": el comentario libre solo aparece si la respuesta es "Sí".
+- **Botón "Agregar a Stock" en la Tasación:** al terminar de tasar un vehículo, un botón nuevo lleva directo al alta de Stock con Marca/Modelo/Versión/Año, precio de referencia, valor de compra, gastos estimados (los mismos ya calculados en la Toma/Tasación) y un resumen de "qué hay que reparar" precargado en Observaciones — ya no hace falta volver a tipear a mano lo que se cargó en la Toma técnica. Sigue siendo manual (el agenciero aprieta el botón), no automático al cerrar la Tasación.
+- **Archivos tocados:** `database.py`, `routes/stock.py`, `routes/tomas.py`, `templates/stock/form.html`, `templates/tomas/detalle.html`, `templates/tomas/form.html`, `templates/tomas/tasacion.html`.
+- **Commit:** `4fbb090`.
+- **Pendiente:** confirmar con Daniel si el vínculo manual (botón) le alcanza o si todavía quiere que sea automático / con fecha de entrega programada, como se había planteado originalmente en Pendientes.
+
+### Sesión 15/09/2026 (continuación 27) — Pantalla de Matches (cruce completo) y alertas visuales
+Daniel pidió un botón de "Match" que cruce toda la base (pedidos activos entre sí + Stock + Red) y tire un listado único, para no depender de entrar pedido por pedido y arriesgarse a que un match se pase por alto.
+- **Pantalla nueva `/matches/`:** reutiliza exactamente la misma lógica que ya corría al abrir un pedido (`_buscar_oferta_para_pedido` y `_buscar_matches_permuta` en `routes/pedidos.py`), pero la corre para todos los pedidos activos de una sola vez.
+- **Alerta visual más contundente:** badge rojo en el menú con la cantidad de matches pendientes, y cartel de alerta en la ficha de pedido — antes el aviso de match era fácil de pasar por alto.
+- **Archivos tocados:** `app.py`, `routes/matches.py` (nuevo), `static/css/style.css`, `templates/base.html`, `templates/matches/index.html` (nuevo), `templates/pedidos/detalle.html`.
+- **Commit:** `ea4a3c7`.
+
+### Sesión 15/09/2026 (continuación 26) — Posible entrega (permuta de otro pedido) como 5ta fuente del buscador combinado
+Se sumó una fuente más al cruce de oportunidades: el vehículo que un cliente ofrece en permuta en OTRO pedido, aunque todavía no haya ingresado físicamente al stock.
+- **`buscador.py` reorganizado:** se separó `condiciones_sql` (reutilizable con distinto nombre de columna) para poder aplicarla también contra `pedidos_clientes` filtrando por su vehículo de permuta. `buscar_combinado` ahora recorre 5 fuentes en este orden: Disponible → Por ingresar → En reparación → Red · Ofrece → Posible entrega → Red · Busca.
+- **Match automático al cargar un pedido nuevo:** mismo criterio aplicado también al abrir la ficha de un pedido ya cargado, no solo al crearlo.
+- **Archivos tocados:** `buscador.py`, `routes/pedidos.py`, `templates/pedidos/detalle.html`, `templates/stock/index.html`.
+- **Commit:** `e8a5f03`.
+
+### Sesión 15/09/2026 (continuación 25) — Stock propio/consignación + Pedidos con tarjetas reducidas y cotejo de permuta persistente
+- **Stock — propio o consignación:** nuevo campo `propiedad` (propio/consignación) en el alta de un vehículo; si es consignación, se piden además nombre y teléfono de quien lo dejó, para poder ubicarlo.
+- **Pedidos — tarjetas reducidas:** en el listado, cada pedido pasa a mostrarse en una sola línea (Cliente - Teléfono · Vehículo buscado) con la fila entera clickeable a la ficha completa, donde quedan el resto de los datos y los botones Resuelto/Cancelar — mismo criterio ya aplicado antes a Stock y Red.
+- **Cotejo de permuta persistente:** el cruce contra lo que el cliente ofrece en permuta se recalcula cada vez que se abre la ficha del pedido (no solo al cargarlo), comparando siempre por Marca y Modelo (nunca versión/año, a propósito, para no perder coincidencias).
+- **Archivos tocados:** `database.py`, `routes/pedidos.py`, `routes/stock.py`, `static/css/style.css`, `templates/pedidos/detalle.html`, `templates/pedidos/index.html`, `templates/stock/detalle.html`, `templates/stock/form.html`.
+- **Commit:** `e5261b7`.
+
+### Sesión 15/09/2026 (continuación 24) — Stock: Quién entrega y Fecha de ingreso estimada; Pedidos: desplegables de Combustible y Caja en permuta
+- **Stock "Por ingresar":** dos campos nuevos, solo visibles mientras el vehículo está en ese estado — "Quién entrega" (cliente, otra agencia, etc.) y "Fecha de ingreso estimada" (distinta de `fecha_ingreso`, que es la fecha real en la que se cargó el vehículo al sistema).
+- **Pedidos — permuta:** Combustible y Caja pasan de campo libre a desplegable, mismo catálogo que se usa en el resto de la app.
+- **Archivos tocados:** `database.py`, `routes/stock.py`, `templates/pedidos/form.html`, `templates/stock/detalle.html`, `templates/stock/form.html`.
+- **Commit:** `da803b2`.
+
+### Sesión 15/09/2026 (continuación 23) — Dashboard: reordenar tarjetas y corregir "Ingresos del mes"
+Daniel notó que "Ingresos del mes" contaba el precio de venta completo incluso en ventas financiadas, cuando en realidad solo entra el anticipo al momento de la venta (el resto llega cuota a cuota, y ya se sigue aparte en Financiación).
+- **Fix:** si el vehículo vendido ese mes tiene un plan de financiación ligado, "Ingresos del mes" usa el anticipo cobrado, no el precio total. Si no hay financiación, sigue siendo el valor completo (venta de contado). La "Ganancia" no cambia — sigue siendo la rentabilidad total de la venta (precio completo − costo), se cobre ya o en cuotas.
+- **Archivos tocados:** `routes/dashboard.py`, `templates/dashboard.html`.
+- **Commit:** `ee4f91a`.
+
+### Sesión 15/09/2026 (continuación 22) — Foto principal más grande en celu
+Ajuste de detalle sobre la foto miniatura agregada en la continuación 21: en celu (≤700px) la columna de foto separada se oculta y la miniatura crece dentro de la tarjeta compacta (92×66px en vez de 56×40px), con más espacio entre foto y texto.
+- **Archivos tocados:** `static/css/style.css`.
+- **Commit:** `ac8e90d`.
+
+### Sesión 15/09/2026 (continuación 21) — Foto principal en el listado de Stock
+- **Miniatura por vehículo:** cada fila del listado de Stock ahora muestra una foto chica (56×40px) junto al resto de los datos. Mientras no hay foto real cargada, usa una de 2 fotos de muestra genéricas, alternando entre ambas (`foto_principal` en `database.py`) — para poder habilitar la columna ya mismo sin esperar a que se carguen fotos reales de a una.
+- **Archivos tocados:** `buscador.py`, `database.py`, `routes/stock.py`, `static/css/style.css`, `static/img/muestra/auto1.jpg` (nuevo), `static/img/muestra/auto2.jpg` (nuevo), `templates/stock/index.html`.
+- **Commit:** `53455a8`.
 
 ### Sesión 15/09/2026 (continuación 20) — "Todos" en Stock ya no muestra Vendidos
 Con captura del celu, Daniel notó que la pestaña "Todos" de Stock traía también los vehículos Vendidos (antes solo la pestaña Vendido los excluía a propósito de la búsqueda combinada, no del browse normal). Pidió que ni en "Todos" ni en ninguna búsqueda aparezcan los Vendidos — que solo se vean entrando puntualmente a esa pestaña.

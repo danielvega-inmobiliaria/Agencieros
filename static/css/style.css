@@ -184,6 +184,43 @@ a.card:hover { border-color: var(--gold); background: var(--navy-card-2); }
 .alerta-match p { margin: 6px 0 2px; font-size: 13px; }
 .alerta-match ul { margin: 0 0 4px; padding-left: 20px; font-size: 14px; }
 
+/* Checklist de la Toma técnica (44 puntos): cada punto colapsado a una
+   sola línea ("Motor - desplegable"), sin las columnas/títulos de tabla
+   de antes. Comentario y Costo quedan ocultos por default y solo se
+   despliegan si la calificación es Regular o Malo (ver actualizarPuntoCheck
+   en templates/tomas/form.html) — pedido de Daniel 15/09/2026 (continuación
+   28): "reducir las tarjetas de los puntos, sacar títulos". */
+.puntos-check-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 4px 20px;
+}
+.punto-check {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.punto-check-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.punto-check-label { font-size: 14px; }
+.punto-check-fila select {
+  max-width: 150px;
+  padding: 6px 8px;
+}
+.punto-check-detalle {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.punto-check-detalle input { font-size: 13px; padding: 8px 10px; }
+@media (max-width: 700px) {
+  .puntos-check-grid { grid-template-columns: 1fr; gap: 2px; }
+}
+
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); }
 th { color: var(--text-dim); font-weight: 600; font-size: 12px; text-transform: uppercase; }

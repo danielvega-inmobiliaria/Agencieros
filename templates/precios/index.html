@@ -6,16 +6,9 @@
   <h1>¿Qué vehículo querés consultar?</h1>
   <p>Arrancá por el Año: así Marca, Modelo y Versión te sugieren solo lo que corresponde a ese año.</p>
   <div class="select-row">
-    <input type="text" id="anio" list="anios-list" placeholder="Año" autocomplete="off">
-    <datalist id="anios-list">
-      {% for a in anios %}<option value="{{ a }}">{% endfor %}
-    </datalist>
-
-    <input type="text" id="marca" list="marcas-list" placeholder="Marca (opcional)" autocomplete="off">
-    <datalist id="marcas-list"></datalist>
-
-    <input type="text" id="modelo" list="modelos-list" placeholder="Modelo" autocomplete="off">
-    <datalist id="modelos-list"></datalist>
+    <input type="text" id="anio" placeholder="Año" autocomplete="off">
+    <input type="text" id="marca" placeholder="Marca (opcional)" autocomplete="off">
+    <input type="text" id="modelo" placeholder="Modelo" autocomplete="off">
 
     <select id="marcaDisambiguar" style="display:none;"><option value="">¿Cuál marca?</option></select>
 
@@ -34,16 +27,27 @@
   </p>
 </div>
 
+<script src="{{ url_for('static', filename='js/autocomplete.js') }}"></script>
 <script>
 const anioInput = document.getElementById('anio');
 const marcaInput = document.getElementById('marca');
 const modeloInput = document.getElementById('modelo');
 const marcaDisambiguar = document.getElementById('marcaDisambiguar');
 const anioDisambiguar = document.getElementById('anioDisambiguar');
-const marcasList = document.getElementById('marcas-list');
-const modelosList = document.getElementById('modelos-list');
 const versionSel = document.getElementById('version');
 const btn = document.getElementById('btnBuscar');
+
+// Los desplegables de Año/Marca/Modelo se arman a mano (ver autocomplete.js)
+// en vez de <input list>+<datalist>: en el celular (iOS Safari sobre todo)
+// el datalist nativo aparece arriba del teclado, mezclado con las
+// sugerencias de palabras, y confunde (charla 13-14/09/2026).
+let aniosCache = {{ anios | tojson }};
+let marcasCache = [];
+let modelosCache = [];
+
+attachAutocomplete(anioInput, () => aniosCache);
+attachAutocomplete(marcaInput, () => marcasCache);
+attachAutocomplete(modeloInput, () => modelosCache);
 
 function resetSelect(sel, placeholder) {
   sel.innerHTML = `<option value="">${placeholder}</option>`;
@@ -62,8 +66,7 @@ function resetDesdeCambio() {
 async function cargarMarcas(anio) {
   const url = anio ? `/precios/api/marcas?anio=${encodeURIComponent(anio)}` : '/precios/api/marcas';
   const res = await fetch(url);
-  const data = await res.json();
-  marcasList.innerHTML = data.map(m => `<option value="${m}">`).join('');
+  marcasCache = await res.json();
 }
 
 async function cargarModelos(marca, anio) {
@@ -71,8 +74,7 @@ async function cargarModelos(marca, anio) {
   if (marca) params.set('marca', marca);
   if (anio) params.set('anio', anio);
   const res = await fetch(`/precios/api/modelos?${params.toString()}`);
-  const data = await res.json();
-  modelosList.innerHTML = data.map(m => `<option value="${m}">`).join('');
+  modelosCache = await res.json();
 }
 
 async function cargarVersiones(marca, modelo, anio) {
@@ -85,26 +87,7 @@ async function cargarVersiones(marca, modelo, anio) {
   versionSel.disabled = false;
 }
 
-// Al arrancar, sin Año todavía elegido: universo completo de marcas y
-// modelos (se van acotando apenas se completa algún campo).
-cargarMarcas('');
-cargarModelos('', '');
-
-anioInput.addEventListener('change', () => {
-  resetDesdeCambio();
-  const anio = anioInput.value.trim();
-  cargarMarcas(anio);
-  cargarModelos(marcaInput.value.trim(), anio);
-  if (modeloInput.value.trim()) modeloInput.dispatchEvent(new Event('change'));
-});
-
-marcaInput.addEventListener('change', () => {
-  resetDesdeCambio();
-  cargarModelos(marcaInput.value.trim(), anioInput.value.trim());
-  if (modeloInput.value.trim()) modeloInput.dispatchEvent(new Event('change'));
-});
-
-modeloInput.addEventListener('change', async () => {
+async function revalidarModelo() {
   resetDesdeCambio();
   const modelo = modeloInput.value.trim();
   if (!modelo) return;
@@ -131,7 +114,28 @@ modeloInput.addEventListener('change', async () => {
     }
   }
   await cargarVersiones(marca, modelo, anio);
+}
+
+// Al arrancar, sin Año todavía elegido: universo completo de marcas y
+// modelos (se van acotando apenas se completa algún campo).
+cargarMarcas('');
+cargarModelos('', '');
+
+anioInput.addEventListener('input', () => {
+  resetDesdeCambio();
+  const anio = anioInput.value.trim();
+  cargarMarcas(anio);
+  cargarModelos(marcaInput.value.trim(), anio);
+  if (modeloInput.value.trim()) revalidarModelo();
 });
+
+marcaInput.addEventListener('input', () => {
+  resetDesdeCambio();
+  cargarModelos(marcaInput.value.trim(), anioInput.value.trim());
+  if (modeloInput.value.trim()) revalidarModelo();
+});
+
+modeloInput.addEventListener('input', revalidarModelo);
 
 marcaDisambiguar.addEventListener('change', async () => {
   if (!marcaDisambiguar.value) return;
