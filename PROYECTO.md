@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 15/09/2026 — 21:27 ART_
+_Última actualización: 15/09/2026 — 21:44 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -95,6 +95,20 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ## Cambios recientes
 
 > **Nota (15/09/2026, 21:27 ART):** las entradas de continuación 21 a 30 de abajo se reconstruyeron retroactivamente a partir del historial de git y los comentarios dejados en el código — quedaron 9 rondas de trabajo (y 3 commits ya pusheados) sin documentar en tiempo real en este archivo. No incluyen el detalle de verificación manual que sí tienen las entradas más viejas, porque no quedó registro de qué se probó en su momento.
+
+### Sesión 15/09/2026 (continuación 32) — Stock: Combustible y Caja pasan a desplegable
+Daniel pidió que la carga de Stock tenga Combustible y Caja como desplegable, igual que ya estaba en Pedidos (permuta) desde la continuación 24 — en Stock habían quedado como campo de texto libre.
+- **`templates/stock/form.html`:** mismo catálogo que ya usa Pedidos — Combustible: Nafta / Nafta-GNC / Híbrido / Diésel / Eléctrico; Caja: Manual / Automática (mismos `value` sin tilde que Pedidos: "Diesel", "Automatica", etc., para que ambos módulos guarden el mismo texto).
+- **Sin perder datos ya cargados:** los 2 vehículos que ya tenían "Diésel"/"Automática" (con tilde, cargados antes de este cambio) no matchean ningún `value` de la lista nueva — se agrega automáticamente una opción extra con el valor tal cual estaba, ya seleccionada, así no se pisa ni se vacía el dato al abrir el formulario. Si Daniel vuelve a guardar esa ficha eligiendo la opción del desplegable en vez de la de "valor cargado antes", ahí sí queda normalizado al nuevo catálogo.
+- **Sin cambios en el backend:** `routes/stock.py` solo lee `request.form.get("combustible"/"caja")`, no valida contra ninguna lista — no hizo falta tocarlo.
+- **Verificación:** `python3 -m py_compile` no aplica (solo template); se parseó `stock/form.html` con Jinja sin errores. No se probó el flujo real contra el servidor de Daniel desde acá — **pendiente que confirme que el desplegable se ve y guarda bien, sobre todo al editar los 2 vehículos con el valor viejo con tilde.**
+- **Archivos tocados:** `templates/stock/form.html`.
+
+### Sesión 15/09/2026 (continuación 31) — Bug: el botón "Agregar a Stock" no aparecía en la ficha de la Toma
+Daniel probó el flujo real (mandó captura de `/tomas/8`) y no encontraba el botón "Agregar a Stock" agregado en la continuación 28-30. Causa: ese botón solo se había agregado a la pantalla `/tomas/<id>/tasacion` (el formulario de Tasación), pero **no** a `/tomas/<id>` (la ficha de la toma, que es donde Daniel entra normalmente después de tasar) — ahí el Paso 3 solo mostraba los números y "Volver a tasar", sin ningún link a Stock.
+- **Fix:** `routes/tomas.py` — `detalle()` ahora calcula el mismo `url_agregar_a_stock`/`label_agregar_a_stock` que ya calculaba `tasacion()` (reutilizando `_url_agregar_a_stock`, `_puntos_a_reparar`, `_agrupar_danios_por_vista`, sin duplicar lógica). `templates/tomas/detalle.html` — el botón "Agregar a Stock" (o "Ver en Stock" si la toma ya estaba linkeada a un vehículo) se muestra ahora también en el Paso 3 de la ficha, al lado de "Volver a tasar".
+- **Verificación:** `python3 -m py_compile routes/tomas.py` OK, y se parseó `tomas/detalle.html` con el motor Jinja de la app sin errores. No se pudo correr el flujo real end-to-end contra el servidor de Daniel desde acá (el server Flask corre directo en su Windows, no accesible desde este entorno) — **pendiente que Daniel confirme desde `/tomas/8` que ahora sí ve el botón.**
+- **Archivos tocados:** `routes/tomas.py`, `templates/tomas/detalle.html`.
 
 ### Sesión 15/09/2026 (continuación 28 a 30) — Botón "Agregar a Stock" desde la Tasación + checklist de Toma técnica reordenado y recalificado
 Daniel pidió reducir las tarjetas del checklist de 44 puntos (ocupaban demasiado lugar) y agregar el vínculo real entre una Tasación terminada y el alta en Stock, que hasta ese momento no dejaba ningún rastro.
