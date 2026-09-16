@@ -97,6 +97,15 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 > **Nota (15/09/2026, 21:27 ART):** las entradas de continuación 21 a 30 de abajo se reconstruyeron retroactivamente a partir del historial de git y los comentarios dejados en el código — quedaron 9 rondas de trabajo (y 3 commits ya pusheados) sin documentar en tiempo real en este archivo. No incluyen el detalle de verificación manual que sí tienen las entradas más viejas, porque no quedó registro de qué se probó en su momento.
 
+### Sesión 16/09/2026 (continuación) — Fixes post-prueba: Tesseract no encontrado en Windows, botón de la ficha poco visible, carrusel sin flechas en compu
+Daniel probó lo de la sesión anterior en su compu real y aparecieron 3 problemas:
+
+- **La app no arrancaba** (`ModuleNotFoundError: No module named 'pytesseract'`): faltaba correr `pip install -r requirements.txt` después de bajar los cambios -- ya solucionado por Daniel, pero además se blindó el código: si el motor de Tesseract-OCR no está instalado (es un programa aparte, no se instala con pip), ahora `ocr_titulo.py` lo detecta y `stock.nuevo_por_foto` muestra un flash claro pidiendo instalarlo en vez de tirar un error 500. También se agregó, en `ocr_titulo.py`, una búsqueda automática de `tesseract.exe` en las 2 rutas típicas de instalación en Windows (`Program Files\Tesseract-OCR` y su versión x86) para el caso de que el instalador no haya quedado en el PATH (pasa seguido instalando con `winget`).
+- **El botón "Ver ficha comercial" pasaba desapercibido** ("está muy discreta entre medio de toda la información interna" -- Daniel): estaba como botón secundario al final del panel, junto a Editar/Hacer toma. Se movió arriba de todo, pegado al título y el badge de estado, como botón primario (dorado) -- y se sacó el duplicado que había quedado abajo.
+- **El carrusel de fotos no se podía navegar con mouse en la compu** (con el dedo en el celu sí andaba, por el swipe táctil nativo): se agregaron flechas ‹ › clickeables a los costados de la foto y los puntos de abajo ahora también son clickeables para saltar directo a una foto -- antes los puntos eran solo indicadores visuales, sin función.
+
+**Verificado:** las 7 fichas y los 7 detalles de Stock reales de Daniel (copiando su base, sin tocar la real) siguen respondiendo 200 después de estos 3 cambios.
+
 ### Sesión 16/09/2026 — Carga por foto del título (OCR), Toma vinculada automática y Ficha comercial compartible
 Daniel pidió tres cosas relacionadas, tras la charla sobre integrar AGENCIA INGRESOS (otro proyecto de Cowork, un asistente de marketing conversacional para su venta propia -- no es una carpeta ni código, ver más abajo) con esta app:
 

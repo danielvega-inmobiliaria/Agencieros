@@ -26,6 +26,7 @@ mano en el mismo formulario, igual que siempre).
 """
 import os
 import re
+import shutil
 import unicodedata
 
 from PIL import Image, ImageOps
@@ -34,6 +35,27 @@ import pytesseract
 TESSDATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tessdata")
 _TESSERACT_CONFIG = f'--tessdata-dir "{TESSDATA_DIR}"' if os.path.isdir(TESSDATA_DIR) else ""
 _IDIOMA = "spa+eng" if os.path.isfile(os.path.join(TESSDATA_DIR, "spa.traineddata")) else "eng"
+
+# En Windows, pytesseract busca "tesseract" en el PATH -- si el instalador de
+# Tesseract-OCR se corrió sin tildar "Add to PATH" (o con winget, que no
+# siempre lo agrega), pytesseract no lo encuentra aunque esté instalado. Se
+# prueban acá las 2 rutas de instalación por defecto en Windows antes de
+# darlo por no encontrado (pedido real de Daniel 16/09/2026: instaló con
+# winget y no le agarraba el ejecutable).
+if shutil.which(pytesseract.pytesseract.tesseract_cmd) is None:
+    for ruta_probable in (
+        r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+        r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+    ):
+        if os.path.isfile(ruta_probable):
+            pytesseract.pytesseract.tesseract_cmd = ruta_probable
+            break
+
+
+class TesseractNoDisponible(Exception):
+    """El motor de Tesseract-OCR no está instalado o no se pudo encontrar --
+    se distingue de un error de lectura normal para poder mostrarle a Daniel
+    un mensaje claro ("instalá Tesseract-OCR") en vez de un error 500 crudo."""
 
 _ANIO_MIN = 1960
 
@@ -86,7 +108,14 @@ def _preprocesar(imagen_bytes):
 
 def _texto_ocr(imagen_bytes):
     img = _preprocesar(imagen_bytes)
-    return pytesseract.image_to_string(img, lang=_IDIOMA, config=_TESSERACT_CONFIG)
+    try:
+        return pytesseract.image_to_string(img, lang=_IDIOMA, config=_TESSERACT_CONFIG)
+    except pytesseract.TesseractNotFoundError as e:
+        raise TesseractNoDisponible(
+            "No se encontró el programa Tesseract-OCR instalado en esta compu "
+            "(pytesseract es solo la conexión desde Python, el motor de lectura "
+            "en sí se instala aparte). Instalalo y volvé a intentar."
+        ) from e
 
 
 def _buscar_dominio(texto_mayus):

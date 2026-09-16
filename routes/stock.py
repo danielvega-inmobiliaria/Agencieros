@@ -8,7 +8,7 @@ from urllib.parse import quote_plus
 from database import query, execute, foto_principal, obtener_catalogo
 from sync_stock import sync_stock
 from buscador import parsear_filtros, buscar_combinado
-from ocr_titulo import extraer_datos_titulo
+from ocr_titulo import extraer_datos_titulo, TesseractNoDisponible
 
 bp = Blueprint("stock", __name__, url_prefix="/stock")
 
@@ -125,7 +125,11 @@ def nuevo_por_foto():
             flash("Formato no soportado -- usá JPG, PNG, WEBP o GIF.", "error")
             return redirect(url_for("stock.nuevo_por_foto"))
 
-        datos = extraer_datos_titulo(archivo.read(), catalogo=obtener_catalogo())
+        try:
+            datos = extraer_datos_titulo(archivo.read(), catalogo=obtener_catalogo())
+        except TesseractNoDisponible as e:
+            flash(str(e), "error")
+            return redirect(url_for("stock.nuevo_por_foto"))
 
         campos_clave = ["marca", "modelo", "anio", "dominio"]
         faltantes = [c for c in campos_clave if not datos.get(c)]

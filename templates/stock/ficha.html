@@ -29,9 +29,18 @@
   .carrusel { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .carrusel::-webkit-scrollbar { display: none; }
   .carrusel img { flex: 0 0 100%; scroll-snap-align: start; width: 100%; height: 260px; object-fit: cover; display: block; }
-  .dots { position: absolute; bottom: 10px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; }
-  .dots span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.4); transition: background .2s; }
+  .dots { position: absolute; bottom: 10px; left: 0; right: 0; display: flex; justify-content: center; gap: 8px; }
+  .dots span { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.4); transition: background .2s; cursor: pointer; }
   .dots span.activo { background: var(--gold); }
+  .carrusel-flecha {
+    position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+    width: 34px; height: 34px; border-radius: 50%; border: none; cursor: pointer;
+    background: rgba(11,20,32,.55); color: #fff; font-size: 20px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .carrusel-flecha:hover { background: rgba(11,20,32,.8); }
+  .carrusel-flecha.izq { left: 8px; }
+  .carrusel-flecha.der { right: 8px; }
   .badge-pill {
     display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 700;
     margin: 16px 0 6px;
@@ -70,8 +79,10 @@
       {% endif %}
     </div>
     {% if fotos and fotos|length > 1 %}
+    <button type="button" class="carrusel-flecha izq" id="flechaIzq" aria-label="Foto anterior">‹</button>
+    <button type="button" class="carrusel-flecha der" id="flechaDer" aria-label="Foto siguiente">›</button>
     <div class="dots" id="dots">
-      {% for foto in fotos %}<span class="{{ 'activo' if loop.first else '' }}"></span>{% endfor %}
+      {% for foto in fotos %}<span class="{{ 'activo' if loop.first else '' }}" data-idx="{{ loop.index0 }}"></span>{% endfor %}
     </div>
     {% endif %}
   </div>
@@ -121,12 +132,36 @@
 <script>
   var carrusel = document.getElementById('carrusel');
   var dots = document.getElementById('dots');
+  var flechaIzq = document.getElementById('flechaIzq');
+  var flechaDer = document.getElementById('flechaDer');
+
+  function irAFoto(idx) {
+    carrusel.scrollTo({ left: idx * carrusel.clientWidth, behavior: 'smooth' });
+  }
+
   if (carrusel && dots) {
     carrusel.addEventListener('scroll', function () {
       var idx = Math.round(carrusel.scrollLeft / carrusel.clientWidth);
       Array.prototype.forEach.call(dots.children, function (dot, i) {
         dot.classList.toggle('activo', i === idx);
       });
+    });
+    Array.prototype.forEach.call(dots.children, function (dot) {
+      dot.addEventListener('click', function () { irAFoto(parseInt(dot.dataset.idx, 10)); });
+    });
+  }
+  if (flechaIzq && carrusel) {
+    flechaIzq.addEventListener('click', function () {
+      var total = carrusel.children.length;
+      var actual = Math.round(carrusel.scrollLeft / carrusel.clientWidth);
+      irAFoto((actual - 1 + total) % total);
+    });
+  }
+  if (flechaDer && carrusel) {
+    flechaDer.addEventListener('click', function () {
+      var total = carrusel.children.length;
+      var actual = Math.round(carrusel.scrollLeft / carrusel.clientWidth);
+      irAFoto((actual + 1) % total);
     });
   }
 </script>
