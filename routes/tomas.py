@@ -213,6 +213,31 @@ def _texto_reparaciones_pendientes(puntos_a_reparar, danios_por_vista, tipos_lab
     return "Pendiente de reparar (según Toma técnica / Tasación):\n- " + "\n- ".join(lineas)
 
 
+def _texto_equipamiento(toma):
+    """Arma, a partir de los puntos evaluados del grupo 'Accesorios y
+    equipamiento' del Paso 1 (los 25 puntos de GRUPO_ACCESORIOS: luces,
+    espejos eléctricos, aire acondicionado, radio, etc.), un resumen listo
+    para precargar el campo Equipamiento del alta en Stock -- para no tener
+    que volver a tipear a mano lo que ya se cargó en la Toma técnica
+    (pedido de Daniel 16/09/2026: "en equipamiento tiene que precargar todo
+    lo cargado en Toma"). Incluye TODOS los puntos evaluados del grupo, no
+    solo los que tienen costo cargado (a diferencia de
+    _texto_reparaciones_pendientes, que sí filtra por costo) -- acá el
+    objetivo es describir qué equipamiento tiene el auto, no qué hay que
+    reparar."""
+    lineas = []
+    for codigo, label in GRUPO_ACCESORIOS:
+        calificacion = toma[codigo]
+        if not calificacion:
+            continue
+        linea = f"{label} ({calificacion})"
+        comentario = toma[f"comentario_{codigo}"]
+        if comentario:
+            linea += f": {comentario}"
+        lineas.append(linea)
+    return "\n".join(lineas)
+
+
 def _url_agregar_a_stock(toma, tasacion_previa, puntos_a_reparar, danios_por_vista, tipos_label, gravedades_label):
     """Arma el link del botón "Agregar a Stock" del Paso 3 (Tasación), con
     Marca/Modelo/Versión/Año, el precio de tabla, el precio máximo
@@ -232,6 +257,7 @@ def _url_agregar_a_stock(toma, tasacion_previa, puntos_a_reparar, danios_por_vis
         valor_compra=tasacion_previa.get("precio_max_recomendado") or "",
         gastos=tasacion_previa.get("gastos_estimados") or "",
         observaciones=_texto_reparaciones_pendientes(puntos_a_reparar, danios_por_vista, tipos_label, gravedades_label),
+        equipamiento=_texto_equipamiento(toma),
     )
 
 

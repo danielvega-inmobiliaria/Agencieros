@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 15/09/2026 — 21:44 ART_
+_Última actualización: 15/09/2026 — 22:15 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -95,6 +95,14 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ## Cambios recientes
 
 > **Nota (15/09/2026, 21:27 ART):** las entradas de continuación 21 a 30 de abajo se reconstruyeron retroactivamente a partir del historial de git y los comentarios dejados en el código — quedaron 9 rondas de trabajo (y 3 commits ya pusheados) sin documentar en tiempo real en este archivo. No incluyen el detalle de verificación manual que sí tienen las entradas más viejas, porque no quedó registro de qué se probó en su momento.
+
+### Sesión 15/09/2026 (continuación 33) — Botón "Agregar a Stock" también precarga Equipamiento
+Daniel pidió que el campo Equipamiento del alta en Stock se precargue con todo lo cargado en el grupo "Accesorios y equipamiento" de la Toma técnica (los 25 puntos: luces, espejos eléctricos, aire acondicionado, radio, etc.) — hasta ahora el botón "Agregar a Stock" solo precargaba Marca/Modelo/Versión/Año/precio/Observaciones, pero Equipamiento quedaba vacío.
+- **`routes/tomas.py`:** nueva función `_texto_equipamiento(toma)` — arma un resumen con todos los puntos evaluados del grupo Accesorios (label + calificación, y el comentario si tiene), uno por línea. A diferencia de `_texto_reparaciones_pendientes` (que solo lista lo que tiene costo cargado, para Observaciones), acá se incluyen TODOS los puntos evaluados, tengan costo o no — el objetivo es describir el equipamiento, no lo que hay que arreglar. Sumado a `_url_agregar_a_stock` como parámetro `equipamiento`.
+- **`routes/stock.py`:** el prefill del alta (`nuevo()`) ahora también lee `equipamiento` de la URL.
+- **`templates/stock/form.html`:** el textarea de Equipamiento pasa a usar `prefill.equipamiento` igual que ya hacían Observaciones/Valor de compra/Gastos — antes quedaba afuera del mismo patrón y siempre arrancaba vacío.
+- **Verificación:** se probó la lógica de `_texto_equipamiento` a mano contra la toma real #8 (la de la captura de Daniel) usando sqlite3 directo (no se pudo importar `routes.tomas` desde acá porque este entorno no tiene Flask instalado) — devuelve 18 líneas, ej. `"Radio / CD / USB (Regular): No enciende"`, coincidiendo con lo que se ve en la ficha de esa toma. `py_compile` OK sobre `routes/tomas.py` y `routes/stock.py`, y `stock/form.html` parseado con Jinja sin errores. **Pendiente que Daniel confirme desde el navegador** apretando "Agregar a Stock" en una toma con puntos de Accesorios cargados.
+- **Archivos tocados:** `routes/tomas.py`, `routes/stock.py`, `templates/stock/form.html`.
 
 ### Sesión 15/09/2026 (continuación 32) — Stock: Combustible y Caja pasan a desplegable
 Daniel pidió que la carga de Stock tenga Combustible y Caja como desplegable, igual que ya estaba en Pedidos (permuta) desde la continuación 24 — en Stock habían quedado como campo de texto libre.

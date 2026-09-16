@@ -122,6 +122,10 @@ def nuevo():
         "valor_compra": request.args.get("valor_compra", ""),
         "gastos": request.args.get("gastos", ""),
         "observaciones": request.args.get("observaciones", ""),
+        # Resumen de Accesorios y equipamiento ya evaluados en la Toma
+        # técnica (pedido de Daniel 16/09/2026) -- ver _texto_equipamiento
+        # en routes/tomas.py.
+        "equipamiento": request.args.get("equipamiento", ""),
     }
     if request.method == "POST":
         f = request.form

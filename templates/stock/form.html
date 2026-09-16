@@ -69,7 +69,7 @@
     </div>
 
     <label>Equipamiento</label>
-    <textarea name="equipamiento">{{ vehiculo.equipamiento if vehiculo else '' }}</textarea>
+    <textarea name="equipamiento">{{ vehiculo.equipamiento if vehiculo else (prefill.equipamiento if prefill else '') }}</textarea>
     <label>Observaciones</label>
     <textarea name="observaciones">{{ vehiculo.observaciones if vehiculo else (prefill.observaciones if prefill else '') }}</textarea>
     <label>Documentación</label>
