@@ -12,8 +12,29 @@
     </div>
     <div class="form-row">
       <div><label>Kilómetros</label><input type="number" name="km" value="{{ vehiculo.km if vehiculo else '' }}"></div>
-      <div><label>Combustible</label><input name="combustible" value="{{ vehiculo.combustible if vehiculo else '' }}"></div>
-      <div><label>Caja</label><input name="caja" value="{{ vehiculo.caja if vehiculo else '' }}"></div>
+      <div><label>Combustible</label>
+        <select name="combustible">
+          <option value="">-</option>
+          <option value="Nafta" {{ 'selected' if vehiculo and vehiculo.combustible == 'Nafta' else '' }}>Nafta</option>
+          <option value="Nafta/GNC" {{ 'selected' if vehiculo and vehiculo.combustible == 'Nafta/GNC' else '' }}>Nafta/GNC</option>
+          <option value="Hibrido" {{ 'selected' if vehiculo and vehiculo.combustible == 'Hibrido' else '' }}>Híbrido</option>
+          <option value="Diesel" {{ 'selected' if vehiculo and vehiculo.combustible == 'Diesel' else '' }}>Diésel</option>
+          <option value="Electrico" {{ 'selected' if vehiculo and vehiculo.combustible == 'Electrico' else '' }}>Eléctrico</option>
+          {% if vehiculo and vehiculo.combustible and vehiculo.combustible not in ['Nafta', 'Nafta/GNC', 'Hibrido', 'Diesel', 'Electrico'] %}
+          <option value="{{ vehiculo.combustible }}" selected>{{ vehiculo.combustible }} (valor cargado antes del desplegable)</option>
+          {% endif %}
+        </select>
+      </div>
+      <div><label>Caja</label>
+        <select name="caja">
+          <option value="">-</option>
+          <option value="Manual" {{ 'selected' if vehiculo and vehiculo.caja == 'Manual' else '' }}>Manual</option>
+          <option value="Automatica" {{ 'selected' if vehiculo and vehiculo.caja == 'Automatica' else '' }}>Automática</option>
+          {% if vehiculo and vehiculo.caja and vehiculo.caja not in ['Manual', 'Automatica'] %}
+          <option value="{{ vehiculo.caja }}" selected>{{ vehiculo.caja }} (valor cargado antes del desplegable)</option>
+          {% endif %}
+        </select>
+      </div>
       <div><label>Color</label><input name="color" value="{{ vehiculo.color if vehiculo else '' }}"></div>
     </div>
     <div class="form-row">
