@@ -104,6 +104,17 @@
       <div class="stat"><div class="n">{{ tasacion_previa.porcentaje_beneficio }}%</div><div class="l">Beneficio</div></div>
     </div>
 
+    {% if url_agregar_a_stock %}
+    <div style="text-align:center; margin-top:16px;">
+      <a class="btn btn-primary" href="{{ url_agregar_a_stock }}">{{ label_agregar_a_stock }}</a>
+      {% if label_agregar_a_stock == 'Agregar a Stock' %}
+      <p style="color:var(--text-dim); font-size:11.5px; margin-top:6px;">
+        Abre el alta de Stock con Marca/Modelo/Versión/Año, Valor de compra, Gastos y Observaciones ya cargados con lo tasado — faltan Km, Combustible, Caja, Color y Dominio, y elegir el estado (Disponible / Por ingresar).
+      </p>
+      {% endif %}
+    </div>
+    {% endif %}
+
     {% if puntos_a_reparar or danios_por_vista %}
     <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--border);">
       <p style="color:var(--text-dim); font-size:11.5px; margin:0 0 8px;">Detalle de lo tasado:</p>

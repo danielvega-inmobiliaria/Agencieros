@@ -403,6 +403,22 @@ def _migrar_tomas_checklist_ampliado(conn):
         conn.execute("ALTER TABLE tomas_vehiculo ADD COLUMN ultimo_service TEXT")
 
 
+def _migrar_tomas_falla_service_si_no(conn):
+    """"Código de falla / testigo en tablero" y "Último service realizado"
+    pasaron de texto libre a Sí/No + comentario condicional (mismo criterio
+    que los puntos del checklist: el comentario solo se abre si la
+    respuesta es "Sí") — se agregan las 2 columnas de bandera; las columnas
+    de texto (codigo_falla, ultimo_service) ya existían y se siguen
+    usando para el comentario. Tomas cargadas antes de este cambio quedan
+    con la bandera en NULL, sin perder el texto libre que ya tenían
+    cargado (pedido de Daniel 15/09/2026, continuación 30)."""
+    columnas_actuales = {row[1] for row in conn.execute("PRAGMA table_info(tomas_vehiculo)")}
+    if "tiene_codigo_falla" not in columnas_actuales:
+        conn.execute("ALTER TABLE tomas_vehiculo ADD COLUMN tiene_codigo_falla TEXT")
+    if "tuvo_ultimo_service" not in columnas_actuales:
+        conn.execute("ALTER TABLE tomas_vehiculo ADD COLUMN tuvo_ultimo_service TEXT")
+
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
@@ -412,6 +428,7 @@ def init_db():
     _migrar_tomas_costos(conn)
     _migrar_tomas_comentarios(conn)
     _migrar_tomas_checklist_ampliado(conn)
+    _migrar_tomas_falla_service_si_no(conn)
     _migrar_inspeccion_marcadores(conn)
     _migrar_tasaciones(conn)
     _migrar_financiaciones(conn)

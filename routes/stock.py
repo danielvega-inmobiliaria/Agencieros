@@ -112,6 +112,16 @@ def nuevo():
         "version": request.args.get("version", ""),
         "anio": request.args.get("anio", ""),
         "valor_publicado": request.args.get("precio_referencia", ""),
+        # Los 3 de acá abajo solo llegan cargados desde el botón "Agregar a
+        # Stock" de la Tasación (ver routes/tomas.py _url_agregar_a_stock):
+        # el precio máximo recomendado como punto de partida de Valor de
+        # compra, los gastos estimados ya calculados en la Toma/Tasación, y
+        # un resumen de qué hay que reparar en Observaciones — para no
+        # tener que volver a tipear a mano lo que ya se cargó en la Toma
+        # técnica (pedido de Daniel 15/09/2026, continuación 29).
+        "valor_compra": request.args.get("valor_compra", ""),
+        "gastos": request.args.get("gastos", ""),
+        "observaciones": request.args.get("observaciones", ""),
     }
     if request.method == "POST":
         f = request.form

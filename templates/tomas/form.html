@@ -12,9 +12,31 @@
       <div><label>Versión</label><select id="version" name="version" data-placeholder-libre="Versión nueva"></select></div>
       <div><label>Evaluador</label><input id="evaluador" name="evaluador" autocomplete="off"></div>
     </div>
-    <div class="form-row" style="margin-top:10px;">
-      <div><label>Código de falla / testigo en tablero</label><input type="text" name="codigo_falla" placeholder="Ej: testigo de motor encendido"></div>
-      <div><label>Último service realizado</label><input type="text" name="ultimo_service" placeholder="Ej: 40.000km, service oficial"></div>
+    <div class="form-row punto-check-row" style="margin-top:10px;">
+      <div class="punto-check">
+        <div class="punto-check-fila">
+          <span class="punto-check-label">¿Código de falla / testigo en tablero?</span>
+          <select name="tiene_codigo_falla" onchange="actualizarPuntoCheck(this)">
+            <option value="No" selected>No</option>
+            <option value="Si">Sí</option>
+          </select>
+        </div>
+        <div class="punto-check-detalle">
+          <input type="text" name="codigo_falla" placeholder="Ej: testigo de motor encendido">
+        </div>
+      </div>
+      <div class="punto-check">
+        <div class="punto-check-fila">
+          <span class="punto-check-label">¿Último service realizado?</span>
+          <select name="tuvo_ultimo_service" onchange="actualizarPuntoCheck(this)">
+            <option value="No" selected>No</option>
+            <option value="Si">Sí</option>
+          </select>
+        </div>
+        <div class="punto-check-detalle">
+          <input type="text" name="ultimo_service" placeholder="Ej: 40.000km, service oficial">
+        </div>
+      </div>
     </div>
     <p id="precioGuia" style="color:var(--text-dim); font-size:12.5px; margin:8px 0 0;"></p>
   </div>
@@ -24,25 +46,26 @@
     <h2>{{ grupo_nombre }}</h2>
     {% if loop.first %}
     <p style="color:var(--text-dim); font-size:12.5px; margin-top:-6px;">
-      Si un punto no está en buen estado, podés cargar ahí mismo el costo estimado de arreglo o limpieza — se suma solo al llegar a la Tasación. Dejalo en "Sin evaluar" si todavía no lo revisaste.
+      Todos los puntos arrancan en "Bueno" — solo tocá el desplegable si algo no está bien. Si marcás un punto como Regular o Malo, se abren el comentario y el costo estimado de arreglo o limpieza para ese punto (se suma solo al llegar a la Tasación). Usá "No posee" si el auto no tiene ese accesorio, y "Sin evaluar" si todavía no lo revisaste.
     </p>
     {% endif %}
-    <table class="tabla-responsive">
-      <tr class="fila-header"><th>Punto</th><th>Calificación</th><th>Costo estimado de reparación</th><th>Comentario / detalle de la reparación</th></tr>
+    <div class="puntos-check-grid">
       {% for key, label in grupo_puntos %}
-      <tr>
-        <td data-label="Punto"><b>{{ label }}</b></td>
-        <td data-label="Calificación">
-          <select name="{{ key }}">
+      <div class="punto-check">
+        <div class="punto-check-fila">
+          <span class="punto-check-label">{{ label }}</span>
+          <select name="{{ key }}" onchange="actualizarPuntoCheck(this)">
+            {% for c in calificaciones_punto %}<option value="{{ c }}" {{ 'selected' if c == 'Bueno' }}>{{ c }}</option>{% endfor %}
             <option value="">Sin evaluar</option>
-            {% for c in calificaciones %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
           </select>
-        </td>
-        <td data-label="Costo estimado"><input type="number" step="0.01" name="costo_{{ key }}" placeholder="$"></td>
-        <td data-label="Comentario"><input type="text" name="comentario_{{ key }}" placeholder="Ej: cambiar pastillas de freno delanteras"></td>
-      </tr>
+        </div>
+        <div class="punto-check-detalle">
+          <input type="text" name="comentario_{{ key }}" placeholder="Comentario / detalle de la reparación">
+          <input type="number" step="0.01" name="costo_{{ key }}" placeholder="Costo estimado $">
+        </div>
+      </div>
       {% endfor %}
-    </table>
+    </div>
   </div>
   {% endfor %}
 
@@ -99,5 +122,18 @@
 
   [anioEl, marcaEl, modeloEl, versionEl].forEach(el => el.addEventListener('input', actualizarPrecioGuia));
   actualizarPrecioGuia();
+
+  // Cada punto del checklist arranca colapsado en una sola línea ("Motor -
+  // desplegable"); Comentario y Costo solo se muestran si la calificación
+  // es Regular o Malo, para no mostrar 44 puntos con 4 campos cada uno de
+  // entrada (pedido de Daniel 15/09/2026, continuación 28). Mismo criterio
+  // se reutiliza para "¿Código de falla?" / "¿Último service realizado?"
+  // (Sí/No): el comentario se abre solo si la respuesta es "Sí" (pedido de
+  // Daniel 15/09/2026, continuación 30).
+  function actualizarPuntoCheck(select) {
+    var detalle = select.closest('.punto-check').querySelector('.punto-check-detalle');
+    var mostrar = ['Regular', 'Malo', 'Si'].indexOf(select.value) !== -1;
+    detalle.style.display = mostrar ? 'flex' : 'none';
+  }
 </script>
 {% endblock %}

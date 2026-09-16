@@ -31,8 +31,16 @@
     <b style="color:var(--text);">Total reparación/limpieza (Paso 1): ${{ "{:,.0f}".format(costo_puntos_tecnicos).replace(",", ".") }}</b>
   </p>
   {% endif %}
-  {% if toma.codigo_falla %}<p style="color:var(--text-dim); margin-top:10px;"><b>Código de falla / testigo:</b> {{ toma.codigo_falla }}</p>{% endif %}
-  {% if toma.ultimo_service %}<p style="color:var(--text-dim); margin-top:4px;"><b>Último service:</b> {{ toma.ultimo_service }}</p>{% endif %}
+  {# Tomas cargadas antes del cambio a Sí/No (continuación 30) no tienen
+     tiene_codigo_falla/tuvo_ultimo_service cargado (NULL) pero sí pueden
+     tener el texto libre de antes — se sigue mostrando en ese caso, para
+     no perder ese historial. #}
+  {% if toma.tiene_codigo_falla == 'Si' or (not toma.tiene_codigo_falla and toma.codigo_falla) %}
+  <p style="color:var(--text-dim); margin-top:10px;"><b>Código de falla / testigo:</b> Sí{% if toma.codigo_falla %} — {{ toma.codigo_falla }}{% endif %}</p>
+  {% endif %}
+  {% if toma.tuvo_ultimo_service == 'Si' or (not toma.tuvo_ultimo_service and toma.ultimo_service) %}
+  <p style="color:var(--text-dim); margin-top:4px;"><b>Último service realizado:</b> Sí{% if toma.ultimo_service %} — {{ toma.ultimo_service }}{% endif %}</p>
+  {% endif %}
   {% if toma.observaciones %}<p style="color:var(--text-dim); margin-top:16px;"><b>Observaciones:</b> {{ toma.observaciones }}</p>{% endif %}
 </div>
 

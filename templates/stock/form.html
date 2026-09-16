@@ -50,13 +50,13 @@
     <label>Equipamiento</label>
     <textarea name="equipamiento">{{ vehiculo.equipamiento if vehiculo else '' }}</textarea>
     <label>Observaciones</label>
-    <textarea name="observaciones">{{ vehiculo.observaciones if vehiculo else '' }}</textarea>
+    <textarea name="observaciones">{{ vehiculo.observaciones if vehiculo else (prefill.observaciones if prefill else '') }}</textarea>
     <label>Documentación</label>
     <textarea name="documentacion">{{ vehiculo.documentacion if vehiculo else '' }}</textarea>
 
     <div class="form-row">
-      <div><label>Valor de compra</label><input type="number" step="0.01" name="valor_compra" value="{{ vehiculo.valor_compra if vehiculo else '' }}"></div>
-      <div><label>Gastos / reparaciones</label><input type="number" step="0.01" name="gastos" value="{{ vehiculo.gastos if vehiculo else '' }}"></div>
+      <div><label>Valor de compra</label><input type="number" step="0.01" name="valor_compra" value="{{ vehiculo.valor_compra if vehiculo else (prefill.valor_compra if prefill else '') }}"></div>
+      <div><label>Gastos / reparaciones</label><input type="number" step="0.01" name="gastos" value="{{ vehiculo.gastos if vehiculo else (prefill.gastos if prefill else '') }}"></div>
       <div><label>Valor publicado</label><input type="number" step="0.01" name="valor_publicado" value="{{ vehiculo.valor_publicado if vehiculo else (prefill.valor_publicado if prefill else '') }}"></div>
       {% if vehiculo %}
       <div><label>Valor vendido</label><input type="number" step="0.01" name="valor_vendido" value="{{ vehiculo.valor_vendido or '' }}"></div>

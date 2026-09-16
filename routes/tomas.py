@@ -12,22 +12,20 @@ bp = Blueprint("tomas", __name__, url_prefix="/tomas")
 
 # --- Paso 1: datos técnicos ---
 # Checklist ampliado 15/09/2026 a partir de la planilla física de peritaje
-# que compartió Daniel (SAKURA, 44 puntos totales) — se mantuvo la misma
-# escala Excelente/Bueno/Regular/Malo + costo + comentario para todos los
-# puntos nuevos (decisión de Daniel, para no romper el cálculo automático
-# de estado mecánico en Tasación ni tener que armar un segundo formato de
-# tabla). "Cubiertas" pasó de ser un solo punto a 5 (una por posición +
-# auxilio), también a pedido de Daniel. Los códigos de los 11 puntos que ya
-# existían (todos menos "cubiertas") NO se tocan, para no perder el
-# historial de tomas ya cargadas.
+# que compartió Daniel (SAKURA, 44 puntos totales), y reordenado/reagrupado
+# el mismo día (continuación 30) según la planilla Excel que Daniel devolvió
+# marcada: "Interior" se retira del checklist por redundante con
+# Habitáculo/Tapicería (columna se deja en la tabla sin usar, para no perder
+# el historial de tomas ya cargadas); Batería, Documentación, Electricidad y
+# Aire acondicionado pasan del grupo Mecánica a Accesorios y equipamiento;
+# "Cubiertas" pasó de ser un solo punto a 5 (una por posición + auxilio).
+# Los códigos de los puntos que ya existían no se tocan.
 GRUPO_MECANICA = [
     ("motor", "Motor"), ("caja", "Caja"), ("distribucion", "Distribución"),
     ("embrague", "Embrague"), ("tren_delantero", "Tren delantero"), ("direccion", "Dirección"),
     ("suspension", "Suspensión"), ("frenos", "Frenos"), ("linea_escape", "Línea de escape"),
     ("chapa", "Chapa"), ("pintura", "Pintura"), ("tapizados", "Tapicería"),
-    ("habitaculo", "Habitáculo"), ("bateria", "Batería"), ("interior", "Interior"),
-    ("documentacion", "Documentación"), ("electricidad", "Electricidad (general)"),
-    ("aire_acondicionado", "Aire acondicionado"),
+    ("habitaculo", "Habitáculo"),
 ]
 GRUPO_CUBIERTAS = [
     ("cubierta_del_der", "Cubierta delantera derecha"), ("cubierta_del_izq", "Cubierta delantera izquierda"),
@@ -35,6 +33,8 @@ GRUPO_CUBIERTAS = [
     ("cubierta_auxilio", "Auxilio"),
 ]
 GRUPO_ACCESORIOS = [
+    ("bateria", "Batería"), ("documentacion", "Documentación"), ("electricidad", "Electricidad (general)"),
+    ("aire_acondicionado", "Aire acondicionado"),
     ("luces", "Luces"), ("levantavidrios", "Levantavidrios"), ("espejos_electricos", "Espejos eléctricos"),
     ("techo_corredizo", "Techo corredizo"), ("limpia_parabrisas", "Limpiaparabrisas"), ("parabrisas", "Parabrisas"),
     ("luneta_termica", "Luneta térmica"), ("cierre_electrico", "Cierre eléctrico"),
@@ -51,12 +51,21 @@ GRUPOS_PUNTOS = [
     ("Cubiertas", GRUPO_CUBIERTAS),
     ("Accesorios y equipamiento", GRUPO_ACCESORIOS),
 ]
-# "" = sin evaluar todavía (no cuenta para el promedio de Tasación) — antes
-# el select no tenía opción en blanco y todo punto no tocado quedaba
-# guardado como "Excelente" por defecto (el primer valor de la lista), algo
-# que con 12 puntos pasaba casi desapercibido pero con 44 sería engañoso.
+# Escala de cada punto del checklist — cambiada 15/09/2026 (continuación 30)
+# de Excelente/Bueno/Regular/Malo a Bueno/Regular/Malo/No posee (para
+# accesorios que el auto directamente no tiene, ej. Control satelital,
+# Techo corredizo). "" sigue existiendo como "Sin evaluar" pero ya no es el
+# valor por default: todos los puntos arrancan preseleccionados en "Bueno"
+# (antes arrancaban en blanco y había que tocar los 44 a mano) — pedido de
+# Daniel: "Al empezar a cargar todos los puntos aparecen en Bueno".
+CALIFICACIONES_PUNTO = ["Bueno", "Regular", "Malo", "No posee"]
+PUNTAJE_CALIFICACION = {"Bueno": 3, "Regular": 2, "Malo": 1}
+
+# Escala del estado mecánico/estético GENERAL del vehículo en el Paso 3
+# (Tasación) — a diferencia de CALIFICACIONES_PUNTO, esta es una apreciación
+# de conjunto (no punto por punto) y sigue admitiendo "Excelente", que ya no
+# está disponible por punto pero sí tiene sentido como promedio general.
 CALIFICACIONES = ["Excelente", "Bueno", "Regular", "Malo"]
-PUNTAJE_CALIFICACION = {"Excelente": 4, "Bueno": 3, "Regular": 2, "Malo": 1}
 
 # --- Paso 2: fotos + inspección visual de chapa ---
 VISTAS = [
@@ -177,6 +186,55 @@ def _formatear_fecha(iso_str):
         return iso_str
 
 
+def _texto_reparaciones_pendientes(puntos_a_reparar, danios_por_vista, tipos_label, gravedades_label):
+    """Arma un resumen en texto plano de todo lo que hay que reparar (Paso 1
+    + Paso 2), para precargar el campo Observaciones del alta en Stock —
+    así no hay que volver a tipear a mano lo que ya se cargó en la Toma
+    técnica al usar el botón "Agregar a Stock" de la Tasación (pedido de
+    Daniel 15/09/2026, continuación 29)."""
+    lineas = []
+    for p in puntos_a_reparar:
+        linea = f"{p['label']} ({p['calificacion']})"
+        if p["comentario"]:
+            linea += f": {p['comentario']}"
+        linea += f" · ${p['costo']:,.0f}".replace(",", ".")
+        lineas.append(linea)
+    for g in danios_por_vista:
+        for d in g["danios"]:
+            tipo = tipos_label.get(d["tipo"], d["tipo"])
+            gravedad = gravedades_label.get(d["gravedad"], d["gravedad"])
+            linea = f"{g['vista_label']} — {tipo} ({gravedad})"
+            if d["descripcion"]:
+                linea += f": {d['descripcion']}"
+            linea += f" · ${d['costo_reparacion']:,.0f}".replace(",", ".")
+            lineas.append(linea)
+    if not lineas:
+        return ""
+    return "Pendiente de reparar (según Toma técnica / Tasación):\n- " + "\n- ".join(lineas)
+
+
+def _url_agregar_a_stock(toma, tasacion_previa, puntos_a_reparar, danios_por_vista, tipos_label, gravedades_label):
+    """Arma el link del botón "Agregar a Stock" del Paso 3 (Tasación), con
+    Marca/Modelo/Versión/Año, el precio de tabla, el precio máximo
+    recomendado (como punto de partida de "Valor de compra"), los gastos
+    estimados y un resumen de reparaciones pendientes ya precargados en el
+    alta de Stock — Km/Combustible/Caja/Color/Dominio no se piden en la
+    Toma, así que quedan para completar ahí (pedido de Daniel 15/09/2026,
+    continuación 29: antes terminar la Tasación no dejaba rastro ninguno en
+    Stock)."""
+    return url_for(
+        "stock.nuevo",
+        marca=toma["marca"] or "",
+        modelo=toma["modelo"] or "",
+        version=toma["version"] or "",
+        anio=toma["anio"] or "",
+        precio_referencia=tasacion_previa.get("valor_referencia") or "",
+        valor_compra=tasacion_previa.get("precio_max_recomendado") or "",
+        gastos=tasacion_previa.get("gastos_estimados") or "",
+        observaciones=_texto_reparaciones_pendientes(puntos_a_reparar, danios_por_vista, tipos_label, gravedades_label),
+    )
+
+
 def _tasacion_con_extra(tasacion_row):
     """Agrega a una fila de `tasaciones` el % de beneficio (margen esperado
     sobre el precio de toma) y la fecha ya formateada, para no repetir esta
@@ -293,15 +351,25 @@ def nueva():
         placeholders_costo = ", ".join("?" for _ in PUNTOS)
         columnas_comentario = ", ".join(f"comentario_{codigo}" for codigo, _ in PUNTOS)
         placeholders_comentario = ", ".join("?" for _ in PUNTOS)
+        # "¿Código de falla?" / "¿Último service realizado?" pasaron de texto
+        # libre a Sí/No + comentario condicional (mismo criterio que los
+        # puntos del checklist) — el comentario solo se guarda si la
+        # respuesta es "Sí" (pedido de Daniel 15/09/2026, continuación 30).
+        tiene_codigo_falla = f.get("tiene_codigo_falla", "No")
+        tuvo_ultimo_service = f.get("tuvo_ultimo_service", "No")
+
         toma_id = execute(
             f"""INSERT INTO tomas_vehiculo
-               (vehiculo_id, marca, modelo, version, anio, evaluador, codigo_falla, ultimo_service,
+               (vehiculo_id, marca, modelo, version, anio, evaluador,
+                tiene_codigo_falla, codigo_falla, tuvo_ultimo_service, ultimo_service,
                 observaciones, {columnas_base}, {columnas_costo}, {columnas_comentario})
-               VALUES (?,?,?,?,?,?,?,?,?,{placeholders_base},{placeholders_costo},{placeholders_comentario})""",
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,{placeholders_base},{placeholders_costo},{placeholders_comentario})""",
             (
                 f.get("vehiculo_id") or None,
                 f.get("marca"), f.get("modelo"), f.get("version"), f.get("anio") or None,
-                f.get("evaluador"), f.get("codigo_falla") or None, f.get("ultimo_service") or None,
+                f.get("evaluador"),
+                tiene_codigo_falla, (f.get("codigo_falla") or None) if tiene_codigo_falla == "Si" else None,
+                tuvo_ultimo_service, (f.get("ultimo_service") or None) if tuvo_ultimo_service == "Si" else None,
                 f.get("observaciones"),
                 *[f.get(codigo) or None for codigo, _ in PUNTOS],
                 *[_costo(codigo) for codigo, _ in PUNTOS],
@@ -311,7 +379,7 @@ def nueva():
         flash("Toma registrada. Ahora sumá las fotos y marcá los daños de la carrocería.", "success")
         return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
     return render_template(
-        "tomas/form.html", grupos_puntos=GRUPOS_PUNTOS, calificaciones=CALIFICACIONES, prefill=prefill,
+        "tomas/form.html", grupos_puntos=GRUPOS_PUNTOS, calificaciones_punto=CALIFICACIONES_PUNTO, prefill=prefill,
         evaluadores=_evaluadores(),
     )
 
@@ -584,11 +652,27 @@ def tasacion(toma_id):
     tasacion_previa = _tasacion_con_extra(
         query("SELECT * FROM tasaciones WHERE toma_id = ? ORDER BY id DESC LIMIT 1", (toma_id,), one=True)
     )
+    # Si la Toma partió de un vehículo que ya estaba en Stock (re-tasación),
+    # no hay que crear uno nuevo — se linkea al que ya existe. Si es un
+    # vehículo todavía sin cargar, el botón arma el alta prellenada.
+    url_agregar_a_stock = None
+    label_agregar_a_stock = None
+    if tasacion_previa and toma["vehiculo_id"]:
+        url_agregar_a_stock = url_for("stock.detalle", vehiculo_id=toma["vehiculo_id"])
+        label_agregar_a_stock = "Ver en Stock"
+    elif tasacion_previa:
+        url_agregar_a_stock = _url_agregar_a_stock(
+            toma, tasacion_previa, puntos_a_reparar, danios_por_vista,
+            dict(TIPOS_DANIO), dict(GRAVEDADES),
+        )
+        label_agregar_a_stock = "Agregar a Stock"
 
     return render_template(
         "tomas/tasacion.html",
         toma=toma,
         tasacion_previa=tasacion_previa,
+        url_agregar_a_stock=url_agregar_a_stock,
+        label_agregar_a_stock=label_agregar_a_stock,
         es_nueva=es_nueva,
         opciones=CALIFICACIONES,
         estado_mecanico_sugerido=estado_mecanico_sugerido,
