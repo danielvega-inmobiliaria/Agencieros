@@ -67,7 +67,13 @@ def create_app():
     @app.before_request
     def _require_login():
         from flask import request
-        publicas = {"auth.login", "static"}
+        # "stock.ficha" queda pública a propósito: es la ficha comercial
+        # para compartir por WhatsApp/historias con un comprador que no
+        # tiene (ni necesita) usuario en la app (pedido de Daniel
+        # 16/09/2026). Ojo si en algún momento la app pasa a ser
+        # multi-agencia: en ese caso esta ficha tendría que filtrar/validar
+        # que el vehículo pertenece a la agencia dueña del link.
+        publicas = {"auth.login", "static", "stock.ficha"}
         if request.endpoint and request.endpoint not in publicas and "user_id" not in session:
             return redirect(url_for("auth.login"))
 

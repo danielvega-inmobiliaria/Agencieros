@@ -12,6 +12,7 @@
     <form method="post" action="{{ url_for('stock.sincronizar') }}">
       <button class="btn btn-secondary btn-sm" type="submit">↻ Sincronizar desde STOCK</button>
     </form>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('stock.nuevo_por_foto') }}">📷 Cargar por foto del título</a>
     <a class="btn btn-primary btn-sm" href="{{ url_for('stock.nuevo') }}">+ Cargar vehículo</a>
   </div>
 </div>

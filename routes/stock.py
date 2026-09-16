@@ -2,11 +2,13 @@ import os
 import uuid
 from datetime import date
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort
+from urllib.parse import quote_plus
 
-from database import query, execute, foto_principal
+from database import query, execute, foto_principal, obtener_catalogo
 from sync_stock import sync_stock
 from buscador import parsear_filtros, buscar_combinado
+from ocr_titulo import extraer_datos_titulo
 
 bp = Blueprint("stock", __name__, url_prefix="/stock")
 
@@ -104,6 +106,61 @@ def index():
     )
 
 
+@bp.route("/nuevo-por-foto", methods=["GET", "POST"])
+def nuevo_por_foto():
+    """Carga rápida: se saca una foto del título del vehículo y se leen de
+    ahí los datos que trae (dominio, marca, modelo, año, motor, chasis) por
+    OCR local (ver ocr_titulo.py) para precargar el alta de Stock, en vez de
+    tipearlos a mano -- pedido de Daniel 16/09/2026. Kilómetros y color no
+    están en el título y se completan a mano en el mismo formulario, igual
+    que siempre. Ningún dato que no se pudo leer con confianza se completa
+    solo -- queda en blanco para que se cargue a mano."""
+    if request.method == "POST":
+        archivo = request.files.get("foto_titulo")
+        if not archivo or not archivo.filename:
+            flash("Subí una foto del título para continuar.", "error")
+            return redirect(url_for("stock.nuevo_por_foto"))
+        ext = archivo.filename.rsplit(".", 1)[-1].lower() if "." in archivo.filename else ""
+        if ext not in EXTENSIONES_PERMITIDAS:
+            flash("Formato no soportado -- usá JPG, PNG, WEBP o GIF.", "error")
+            return redirect(url_for("stock.nuevo_por_foto"))
+
+        datos = extraer_datos_titulo(archivo.read(), catalogo=obtener_catalogo())
+
+        campos_clave = ["marca", "modelo", "anio", "dominio"]
+        faltantes = [c for c in campos_clave if not datos.get(c)]
+        if not datos["reconocidos"]:
+            flash(
+                "No se pudo leer ningún dato con confianza de esa foto (probá con más luz, "
+                "más cerca y sin reflejos) -- se abrió el formulario en blanco para cargar a mano.",
+                "error",
+            )
+        elif faltantes:
+            flash(
+                "Se completaron del título los datos que se pudieron leer con confianza. "
+                f"Revisalos y completá a mano: {', '.join(faltantes)}, Kilómetros y Color.",
+                "success",
+            )
+        else:
+            flash(
+                "Se completaron del título Marca, Modelo, Año y Dominio -- revisalos antes de "
+                "guardar, y completá Kilómetros y Color a mano (no están en el título).",
+                "success",
+            )
+
+        return redirect(url_for(
+            "stock.nuevo",
+            marca=datos.get("marca") or "",
+            modelo=datos.get("modelo") or "",
+            anio=datos.get("anio") or "",
+            dominio=datos.get("dominio") or "",
+            motor_detectado=datos.get("motor") or "",
+            origen_carga="foto_titulo",
+        ))
+
+    return render_template("stock/nuevo_por_foto.html")
+
+
 @bp.route("/nuevo", methods=["GET", "POST"])
 def nuevo():
     prefill = {
@@ -126,6 +183,15 @@ def nuevo():
         # técnica (pedido de Daniel 16/09/2026) -- ver _texto_equipamiento
         # en routes/tomas.py.
         "equipamiento": request.args.get("equipamiento", ""),
+        # Estos 5 solo llegan cargados desde "Cargar por foto del título"
+        # (ver nuevo_por_foto abajo) -- Km y Color nunca vienen de ahí (no
+        # están en el título) y quedan para completar a mano, igual que
+        # siempre (pedido de Daniel 16/09/2026).
+        "dominio": request.args.get("dominio", ""),
+        "color": request.args.get("color", ""),
+        "km": request.args.get("km", ""),
+        "origen_carga": request.args.get("origen_carga", ""),
+        "motor_detectado": request.args.get("motor_detectado", ""),
     }
     if request.method == "POST":
         f = request.form
@@ -165,6 +231,26 @@ def nuevo():
             flash(f"⚡ Este vehículo matchea con {len(matches)} pedido(s) del Banco de pedidos: {nombres}", "success")
         else:
             flash("Vehículo cargado en stock.", "success")
+
+        # Si el alta vino de "Cargar por foto del título", se crea de una
+        # vez una Toma vinculada a este vehículo con el checklist de 44
+        # puntos ya armado (mismo checklist de Toma y Tasación de siempre,
+        # sin duplicar nada) -- pedido de Daniel 16/09/2026.
+        if f.get("origen_carga") == "foto_titulo":
+            toma_id = execute(
+                """INSERT INTO tomas_vehiculo (vehiculo_id, marca, modelo, version, anio, motor)
+                   VALUES (?,?,?,?,?,?)""",
+                (
+                    vehiculo_id, f.get("marca"), f.get("modelo"), f.get("version"),
+                    f.get("anio") or None, f.get("motor_detectado") or None,
+                ),
+            )
+            flash(
+                f"Se creó la Toma técnica #{toma_id} vinculada a este vehículo -- "
+                "entrá a Toma y Tasación para completar el checklist de 44 puntos.",
+                "success",
+            )
+
         return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
     return render_template("stock/form.html", vehiculo=None, prefill=prefill, estados=ESTADOS, estado_label=ESTADO_LABEL)
@@ -282,3 +368,34 @@ def editar(vehiculo_id):
         return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
     return render_template("stock/form.html", vehiculo=vehiculo, prefill=None, estados=ESTADOS, estado_label=ESTADO_LABEL)
+
+
+@bp.route("/<int:vehiculo_id>/ficha")
+def ficha(vehiculo_id):
+    """Ficha comercial para compartir por WhatsApp o subir a una historia --
+    solo datos de cara al comprador (precio, financiación, equipamiento,
+    fotos), nunca costo/ganancia/consignante. Ruta pública (ver `_require_login`
+    en app.py): quien la recibe no tiene login en la app (pedido de Daniel
+    16/09/2026: "que se pueda compartir en historias o por WhatsApp")."""
+    vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (vehiculo_id,), one=True)
+    if not vehiculo:
+        abort(404)
+    fotos = query("SELECT * FROM vehiculo_fotos WHERE vehiculo_id = ? ORDER BY orden, id", (vehiculo_id,))
+
+    whatsapp_numero = os.environ.get("WHATSAPP_COMERCIAL", "").strip()
+    whatsapp_link = None
+    if whatsapp_numero:
+        titulo_vehiculo = " ".join(
+            str(p) for p in [vehiculo["marca"], vehiculo["modelo"], vehiculo["version"]] if p
+        )
+        mensaje = f"Hola! Te escribo por el {titulo_vehiculo} ({vehiculo['anio'] or 's/d'}) que vi publicado."
+        whatsapp_link = f"https://wa.me/{whatsapp_numero}?text={quote_plus(mensaje)}"
+
+    return render_template(
+        "stock/ficha.html",
+        vehiculo=vehiculo,
+        fotos=fotos,
+        foto_principal_url=foto_principal(vehiculo_id),
+        whatsapp_link=whatsapp_link,
+        estado_label=ESTADO_LABEL,
+    )
