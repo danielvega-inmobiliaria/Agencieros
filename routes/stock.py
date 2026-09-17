@@ -9,6 +9,7 @@ from database import query, execute, foto_principal, obtener_catalogo
 from sync_stock import sync_stock
 from buscador import parsear_filtros, buscar_combinado
 from ocr_titulo import extraer_datos_titulo, TesseractNoDisponible
+from equipamiento_destacado import equipamiento_destacado
 
 bp = Blueprint("stock", __name__, url_prefix="/stock")
 
@@ -386,7 +387,10 @@ def ficha(vehiculo_id):
         abort(404)
     fotos = query("SELECT * FROM vehiculo_fotos WHERE vehiculo_id = ? ORDER BY orden, id", (vehiculo_id,))
 
-    whatsapp_numero = os.environ.get("WHATSAPP_COMERCIAL", "").strip()
+    # Default confirmado por Daniel el 16/09/2026 (341 301-7371). Se puede
+    # sobreescribir con la variable de entorno WHATSAPP_COMERCIAL si en el
+    # futuro cambia el número o hay más de una agencia.
+    whatsapp_numero = os.environ.get("WHATSAPP_COMERCIAL", "5493413017371").strip()
     whatsapp_link = None
     if whatsapp_numero:
         titulo_vehiculo = " ".join(
@@ -402,4 +406,5 @@ def ficha(vehiculo_id):
         foto_principal_url=foto_principal(vehiculo_id),
         whatsapp_link=whatsapp_link,
         estado_label=ESTADO_LABEL,
+        equipamiento=equipamiento_destacado(vehiculo["equipamiento"]),
     )

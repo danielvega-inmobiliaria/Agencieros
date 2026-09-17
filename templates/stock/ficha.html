@@ -29,6 +29,10 @@
   .carrusel { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .carrusel::-webkit-scrollbar { display: none; }
   .carrusel img { flex: 0 0 100%; scroll-snap-align: start; width: 100%; height: 260px; object-fit: cover; display: block; }
+  .foto-contador {
+    position: absolute; top: 10px; right: 10px; background: rgba(11,20,32,.65);
+    color: #fff; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+  }
   .dots { position: absolute; bottom: 10px; left: 0; right: 0; display: flex; justify-content: center; gap: 8px; }
   .dots span { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.4); transition: background .2s; cursor: pointer; }
   .dots span.activo { background: var(--gold); }
@@ -49,17 +53,16 @@
   .badge-pill.por_ingresar { background: rgba(217,164,65,.18); color: var(--gold-light); }
   .badge-pill.en_reparacion { background: rgba(229,97,90,.15); color: var(--red); }
   .badge-pill.vendido { background: rgba(154,167,187,.18); color: var(--text-dim); }
-  h1 { font-size: 22px; margin: 4px 0 2px; color: var(--text); }
+  h1 { font-size: 20px; line-height: 1.25; margin: 4px 0 2px; color: var(--text); }
   .subtitulo { color: var(--text-dim); font-size: 13px; margin-bottom: 14px; }
   .precio { font-size: 32px; font-weight: 800; color: var(--text); margin: 6px 0 2px; }
   .condiciones { color: var(--text-dim); font-size: 13px; margin-bottom: 18px; }
   .panel { background: var(--navy-card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
-  .panel h2 { margin: 0 0 10px; font-size: 14px; color: var(--gold-light); text-transform: uppercase; letter-spacing: .04em; }
-  .info-tabla { width: 100%; border-collapse: collapse; }
-  .info-tabla td { padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
-  .info-tabla td:first-child { color: var(--text-dim); }
-  .info-tabla td:last-child { text-align: right; color: var(--text); font-weight: 600; }
-  .info-tabla tr:last-child td { border-bottom: none; }
+  .panel h2 { margin: 0 0 12px; font-size: 12px; color: var(--gold-light); text-transform: uppercase; letter-spacing: .05em; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 10px; }
+  .info-grid .dato-full { grid-column: 1 / -1; }
+  .info-grid .etiqueta { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 3px; }
+  .info-grid .valor { color: var(--text); font-size: 14px; font-weight: 600; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip { background: var(--navy-card-2); border: 1px solid var(--border); border-radius: 999px; padding: 5px 10px; font-size: 12px; color: var(--text); }
   .btn-whatsapp {
@@ -79,6 +82,7 @@
       {% endif %}
     </div>
     {% if fotos and fotos|length > 1 %}
+    <div class="foto-contador" id="fotoContador">1/{{ fotos|length }}</div>
     <button type="button" class="carrusel-flecha izq" id="flechaIzq" aria-label="Foto anterior">‹</button>
     <button type="button" class="carrusel-flecha der" id="flechaDer" aria-label="Foto siguiente">›</button>
     <div class="dots" id="dots">
@@ -91,9 +95,9 @@
   <h1>{{ vehiculo.marca }} {{ vehiculo.modelo }} {{ vehiculo.version or '' }}</h1>
   <div class="subtitulo">
     {{ vehiculo.anio or 's/d' }}
-    {% if vehiculo.km %} · {{ "{:,.0f}".format(vehiculo.km).replace(",", ".") }} km{% endif %}
-    {% if vehiculo.combustible %} · {{ vehiculo.combustible }}{% endif %}
-    {% if vehiculo.caja %} · {{ 'Automática' if vehiculo.caja == 'Automatica' else vehiculo.caja }}{% endif %}
+    {% if vehiculo.km %} | {{ "{:,.0f}".format(vehiculo.km).replace(",", ".") }} km{% endif %}
+    {% if vehiculo.combustible %} | {{ vehiculo.combustible }}{% endif %}
+    {% if vehiculo.caja %} | {{ 'Automática' if vehiculo.caja == 'Automatica' else vehiculo.caja }}{% endif %}
   </div>
 
   {% if vehiculo.valor_publicado %}
@@ -103,24 +107,24 @@
 
   <div class="panel">
     <h2>Información</h2>
-    <table class="info-tabla">
-      {% if vehiculo.dominio %}<tr><td>Dominio</td><td>{{ vehiculo.dominio }}</td></tr>{% endif %}
-      <tr><td>Marca / Modelo</td><td>{{ vehiculo.marca }} {{ vehiculo.modelo }}</td></tr>
-      <tr><td>Año</td><td>{{ vehiculo.anio or '-' }}</td></tr>
-      <tr><td>Kilometraje</td><td>{{ "{:,.0f}".format(vehiculo.km).replace(",", ".") + " km" if vehiculo.km else '-' }}</td></tr>
-      <tr><td>Combustible</td><td>{{ vehiculo.combustible or '-' }}</td></tr>
-      <tr><td>Transmisión</td><td>{{ ('Automática' if vehiculo.caja == 'Automatica' else vehiculo.caja) or '-' }}</td></tr>
-      {% if vehiculo.color %}<tr><td>Color</td><td>{{ vehiculo.color }}</td></tr>{% endif %}
-    </table>
+    <div class="info-grid">
+      <div><div class="etiqueta">Marca / Modelo</div><div class="valor">{{ vehiculo.marca }} {{ vehiculo.modelo }}</div></div>
+      <div><div class="etiqueta">Año</div><div class="valor">{{ vehiculo.anio or '-' }}</div></div>
+      <div><div class="etiqueta">Kilometraje</div><div class="valor">{{ "{:,.0f}".format(vehiculo.km).replace(",", ".") + " km" if vehiculo.km else '-' }}</div></div>
+      <div><div class="etiqueta">Combustible</div><div class="valor">{{ vehiculo.combustible or '-' }}</div></div>
+      <div><div class="etiqueta">Transmisión</div><div class="valor">{{ ('Automática' if vehiculo.caja == 'Automatica' else vehiculo.caja) or '-' }}</div></div>
+      {% if vehiculo.estado_general %}<div><div class="etiqueta">Estado general</div><div class="valor">{{ vehiculo.estado_general }}</div></div>{% endif %}
+      {% if vehiculo.color %}<div><div class="etiqueta">Color</div><div class="valor">{{ vehiculo.color }}</div></div>{% endif %}
+      {% if vehiculo.dominio %}<div><div class="etiqueta">Dominio</div><div class="valor">{{ vehiculo.dominio }}</div></div>{% endif %}
+      {% if vehiculo.ubicacion %}<div class="dato-full"><div class="etiqueta">Ubicación</div><div class="valor">{{ vehiculo.ubicacion }}</div></div>{% endif %}
+    </div>
   </div>
 
-  {% if vehiculo.equipamiento %}
+  {% if equipamiento %}
   <div class="panel">
-    <h2>Equipamiento</h2>
+    <h2>Equipamiento destacado</h2>
     <div class="chips">
-      {% for item in vehiculo.equipamiento.replace('\n', ',').split(',') %}
-        {% if item.strip() %}<span class="chip">{{ item.strip() }}</span>{% endif %}
-      {% endfor %}
+      {% for item in equipamiento %}<span class="chip">{{ item }}</span>{% endfor %}
     </div>
   </div>
   {% endif %}
@@ -134,6 +138,7 @@
   var dots = document.getElementById('dots');
   var flechaIzq = document.getElementById('flechaIzq');
   var flechaDer = document.getElementById('flechaDer');
+  var contador = document.getElementById('fotoContador');
 
   function irAFoto(idx) {
     carrusel.scrollTo({ left: idx * carrusel.clientWidth, behavior: 'smooth' });
@@ -145,6 +150,7 @@
       Array.prototype.forEach.call(dots.children, function (dot, i) {
         dot.classList.toggle('activo', i === idx);
       });
+      if (contador) { contador.textContent = (idx + 1) + '/' + dots.children.length; }
     });
     Array.prototype.forEach.call(dots.children, function (dot) {
       dot.addEventListener('click', function () { irAFoto(parseInt(dot.dataset.idx, 10)); });

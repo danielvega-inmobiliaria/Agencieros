@@ -57,6 +57,10 @@
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
         Finanzas
       </a>
+      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('marketing.') else '' }}" href="{{ url_for('marketing.index') }}">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path></svg>
+        Marketing
+      </a>
       {% if session.get('user_nombre') %}
       <div class="sidebar-user">
         <div class="sidebar-user-agencia">{{ session.get('agencia_nombre') }}</div>

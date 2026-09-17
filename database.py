@@ -185,6 +185,23 @@ CREATE TABLE IF NOT EXISTS red_publicaciones (
     estado TEXT DEFAULT 'activo',
     created_at TEXT DEFAULT (datetime('now'))
 );
+
+-- Módulo Marketing (17/09/2026): organizador del informe de estrategia +
+-- contenido para redes que hoy arma AGENCIA INGRESOS (otro proyecto de
+-- Cowork, conversacional) por cada vehículo. Por ahora es solo
+-- almacenamiento/organización -- Daniel pega acá el markdown que ya le
+-- entrega ese chat y la app lo parsea en secciones con botón de copiar por
+-- cada una. Sin generación por IA todavía (decisión de Daniel 17/09/2026:
+-- arrancar por el organizador, IA más adelante) -- `contenido_markdown` es
+-- el único campo de contenido a propósito, para no tener que migrar nada
+-- cuando se sume la generación automática (va a llenar esta misma columna).
+CREATE TABLE IF NOT EXISTS marketing_vehiculo (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vehiculo_id INTEGER NOT NULL UNIQUE,
+    contenido_markdown TEXT,
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (vehiculo_id) REFERENCES vehiculos(id)
+);
 """
 
 # Datos de ejemplo para que la app se pueda probar de entrada.
