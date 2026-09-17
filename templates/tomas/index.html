@@ -3,7 +3,9 @@
 {% block header %}Toma y tasación{% endblock %}
 {% block content %}
 <div class="tabs">
-  <span style="color:var(--text-dim); font-size:13px; align-self:center;">Datos técnicos → Fotos y chapa → Tasación, en un mismo flujo.</span>
+  <a class="tab {{ 'active' if vista == 'pendientes' else '' }}" href="{{ url_for('tomas.index', vista='pendientes') }}">Pendientes ({{ pendientes_count }})</a>
+  <a class="tab {{ 'active' if vista == 'en_stock' else '' }}" href="{{ url_for('tomas.index', vista='en_stock') }}">En Stock ({{ en_stock_count }})</a>
+  <span style="color:var(--text-dim); font-size:13px; align-self:center; margin-left:8px;">Datos técnicos → Fotos y chapa → Tasación, en un mismo flujo.</span>
   <a class="btn btn-primary btn-sm" style="margin-left:auto;" href="{{ url_for('tomas.nueva') }}">+ Nueva toma</a>
 </div>
 
@@ -26,7 +28,7 @@
       <td><a class="btn btn-secondary btn-sm" href="{{ url_for('tomas.detalle', toma_id=d.toma.id) }}">Ver</a></td>
     </tr>
     {% else %}
-    <tr><td colspan="6">Todavía no hay tomas registradas.</td></tr>
+    <tr><td colspan="6">{{ 'No hay tomas pendientes.' if vista == 'pendientes' else 'Ninguna toma terminó en un vehículo de Stock todavía.' }}</td></tr>
     {% endfor %}
   </table>
 </div>

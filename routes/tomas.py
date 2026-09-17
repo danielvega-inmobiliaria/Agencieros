@@ -258,6 +258,10 @@ def _url_agregar_a_stock(toma, tasacion_previa, puntos_a_reparar, danios_por_vis
         gastos=tasacion_previa.get("gastos_estimados") or "",
         observaciones=_texto_reparaciones_pendientes(puntos_a_reparar, danios_por_vista, tipos_label, gravedades_label),
         equipamiento=_texto_equipamiento(toma),
+        # Para que stock.nuevo pueda linkear de vuelta esta Toma al vehículo
+        # que se cree -- si no, la Toma queda huérfana (sin vehiculo_id) aun
+        # cuando el auto ya está en Stock (pedido de Daniel 17/09/2026).
+        toma_id_origen=toma["id"],
     )
 
 
@@ -335,6 +339,12 @@ def _links_comparables(marca, modelo, version, anio):
 
 @bp.route("/")
 def index():
+    # Una vez que el auto de una Toma ya está en Stock, seguir viéndola acá
+    # no aporta -- para cambiar precio o financiación se edita directo en
+    # Stock (pedido de Daniel 17/09/2026). Por default se esconden esas y
+    # queda una pestaña aparte ("En Stock") para consultarlas igual, mismo
+    # criterio que ya se usa en Stock con la pestaña Vendido.
+    vista = request.args.get("vista", "pendientes")
     tomas = query("SELECT * FROM tomas_vehiculo ORDER BY created_at DESC")
     tomas_data = []
     for t in tomas:
@@ -345,8 +355,28 @@ def index():
         tasacion = query(
             "SELECT * FROM tasaciones WHERE toma_id = ? ORDER BY id DESC LIMIT 1", (t["id"],), one=True
         )
-        tomas_data.append({"toma": t, "fotos_cargadas": fotos_cargadas, "tasacion": tasacion})
-    return render_template("tomas/index.html", tomas_data=tomas_data)
+        ya_en_stock = False
+        if t["vehiculo_id"]:
+            ya_en_stock = query("SELECT 1 FROM vehiculos WHERE id = ?", (t["vehiculo_id"],), one=True) is not None
+        tomas_data.append({
+            "toma": t, "fotos_cargadas": fotos_cargadas, "tasacion": tasacion, "ya_en_stock": ya_en_stock,
+        })
+
+    en_stock_count = sum(1 for d in tomas_data if d["ya_en_stock"])
+    pendientes_count = len(tomas_data) - en_stock_count
+    if vista == "en_stock":
+        tomas_mostradas = [d for d in tomas_data if d["ya_en_stock"]]
+    else:
+        vista = "pendientes"
+        tomas_mostradas = [d for d in tomas_data if not d["ya_en_stock"]]
+
+    return render_template(
+        "tomas/index.html",
+        tomas_data=tomas_mostradas,
+        vista=vista,
+        pendientes_count=pendientes_count,
+        en_stock_count=en_stock_count,
+    )
 
 
 @bp.route("/nueva", methods=["GET", "POST"])

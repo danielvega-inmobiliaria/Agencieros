@@ -197,6 +197,10 @@ def nuevo():
         "km": request.args.get("km", ""),
         "origen_carga": request.args.get("origen_carga", ""),
         "motor_detectado": request.args.get("motor_detectado", ""),
+        # Solo llega si el alta vino del botón "Agregar a Stock" de la
+        # Tasación (ver _url_agregar_a_stock en routes/tomas.py) -- permite
+        # linkear de vuelta esa Toma a este vehículo una vez creado.
+        "toma_id_origen": request.args.get("toma_id_origen", ""),
     }
     if request.method == "POST":
         f = request.form
@@ -256,6 +260,17 @@ def nuevo():
                 "success",
             )
 
+        # Si el alta vino del botón "Agregar a Stock" de una Tasación (Toma
+        # "suelta", sin vehículo todavía), se linkea esa Toma al vehículo
+        # recién creado -- si no, quedaba huérfana para siempre y "Toma y
+        # tasación" no tenía forma de saber que ya está en Stock (pedido de
+        # Daniel 17/09/2026).
+        if f.get("toma_id_origen"):
+            execute(
+                "UPDATE tomas_vehiculo SET vehiculo_id = ? WHERE id = ? AND vehiculo_id IS NULL",
+                (vehiculo_id, f.get("toma_id_origen")),
+            )
+
         return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
     return render_template("stock/form.html", vehiculo=None, prefill=prefill, estados=ESTADOS, estado_label=ESTADO_LABEL)
@@ -268,8 +283,16 @@ def detalle(vehiculo_id):
         flash("Vehículo no encontrado.", "error")
         return redirect(url_for("stock.index"))
     fotos = query("SELECT * FROM vehiculo_fotos WHERE vehiculo_id = ? ORDER BY orden, id", (vehiculo_id,))
+    # Si este vehículo ya tiene una Toma vinculada (por OCR, o porque nació
+    # de "Agregar a Stock" desde una Tasación), se muestra "Ver toma /
+    # inspección" como referencia -- ya no se ofrece arrancar una Toma
+    # nueva para un auto que ya está en Stock (pedido de Daniel 17/09/2026).
+    toma_vinculada = query(
+        "SELECT id FROM tomas_vehiculo WHERE vehiculo_id = ? ORDER BY id DESC LIMIT 1", (vehiculo_id,), one=True
+    )
     return render_template(
-        "stock/detalle.html", vehiculo=vehiculo, rent=_rentabilidad(vehiculo), estado_label=ESTADO_LABEL, fotos=fotos
+        "stock/detalle.html", vehiculo=vehiculo, rent=_rentabilidad(vehiculo), estado_label=ESTADO_LABEL, fotos=fotos,
+        toma_vinculada=toma_vinculada,
     )
 
 
