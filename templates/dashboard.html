@@ -19,11 +19,6 @@
     <div class="label">Pedidos activos</div>
     <div class="value">{{ pedidos_activos }}</div>
   </a>
-  <a class="card" href="{{ url_for('mensajes.index') }}">
-    <div class="label">Mensajes sin leer</div>
-    <div class="value">{{ mensajes_no_leidos }}</div>
-    <div class="sub" style="color:var(--gold-light);">Vista previa · ver bandeja</div>
-  </a>
   <a class="card" href="{{ url_for('financiacion.index') }}">
     <div class="label">Cuotas por cobrar</div>
     <div class="value">${{ "{:,.0f}".format(cuotas_por_cobrar or 0).replace(",", ".") }}</div>

@@ -5,7 +5,7 @@ from datetime import date
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort
 from urllib.parse import quote_plus
 
-from database import query, execute, foto_principal, obtener_catalogo
+from database import query, execute, foto_principal, obtener_catalogo, obtener_config_agencia
 from sync_stock import sync_stock
 from buscador import parsear_filtros, buscar_combinado
 from ocr_titulo import extraer_datos_titulo, TesseractNoDisponible
@@ -387,10 +387,15 @@ def ficha(vehiculo_id):
         abort(404)
     fotos = query("SELECT * FROM vehiculo_fotos WHERE vehiculo_id = ? ORDER BY orden, id", (vehiculo_id,))
 
-    # Default confirmado por Daniel el 16/09/2026 (341 301-7371). Se puede
-    # sobreescribir con la variable de entorno WHATSAPP_COMERCIAL si en el
-    # futuro cambia el número o hay más de una agencia.
-    whatsapp_numero = os.environ.get("WHATSAPP_COMERCIAL", "5493413017371").strip()
+    # El teléfono sale primero de lo que Daniel cargó en Admin (Datos de la
+    # agencia) -- si todavía no cargó nada ahí, se usa el default confirmado
+    # el 16/09/2026 (341 301-7371), pisable con la variable de entorno
+    # WHATSAPP_COMERCIAL si hiciera falta.
+    agencia = obtener_config_agencia()
+    whatsapp_numero = (
+        agencia.get("telefono")
+        or os.environ.get("WHATSAPP_COMERCIAL", "5493413017371").strip()
+    )
     whatsapp_link = None
     if whatsapp_numero:
         titulo_vehiculo = " ".join(
@@ -407,4 +412,5 @@ def ficha(vehiculo_id):
         whatsapp_link=whatsapp_link,
         estado_label=ESTADO_LABEL,
         equipamiento=equipamiento_destacado(vehiculo["equipamiento"]),
+        agencia=agencia,
     )

@@ -3,7 +3,6 @@ from datetime import date
 from flask import Blueprint, render_template
 
 from database import query
-from routes.mensajes import contar_no_leidos
 
 bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 
@@ -109,9 +108,6 @@ def index():
         if c["estado"] != "pagada" and not (c["fecha_vencimiento"] and c["fecha_vencimiento"] < hoy)
     )
     cuotas_por_cobrar = round(adeudado + por_cobrar_no_vencido, 2)
-    # Indicador de mensajes sin leer (bandeja unificada — vista previa con datos de ejemplo).
-    mensajes_no_leidos = contar_no_leidos()
-
     grafico_stock = _grafico_torta([
         {"label": "Disponible", "value": stock_counts.get("disponible", 0), "color": COLOR_DISPONIBLE},
         {"label": "Por ingresar", "value": stock_counts.get("por_ingresar", 0), "color": COLOR_POR_INGRESAR},
@@ -130,7 +126,6 @@ def index():
         ventas_mes=ventas_mes,
         gastos_en_reparacion=gastos_en_reparacion,
         cuotas_por_cobrar=cuotas_por_cobrar,
-        mensajes_no_leidos=mensajes_no_leidos,
         grafico_stock=grafico_stock,
         grafico_cobros=grafico_cobros,
     )

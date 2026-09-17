@@ -30,7 +30,6 @@
     {% if vehiculo.documentacion %}<p><b>Documentación:</b> {{ vehiculo.documentacion }}</p>{% endif %}
     <a class="btn btn-secondary btn-sm" href="{{ url_for('stock.editar', vehiculo_id=vehiculo.id) }}">Editar</a>
     <a class="btn btn-secondary btn-sm" href="{{ url_for('tomas.nueva', vehiculo_id=vehiculo.id, marca=vehiculo.marca, modelo=vehiculo.modelo, version=vehiculo.version, anio=vehiculo.anio) }}">Hacer toma / tasación</a>
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('marketing.detalle', vehiculo_id=vehiculo.id) }}">📣 Marketing</a>
   </div>
 
   <div class="panel">

@@ -186,21 +186,22 @@ CREATE TABLE IF NOT EXISTS red_publicaciones (
     created_at TEXT DEFAULT (datetime('now'))
 );
 
--- Módulo Marketing (17/09/2026): organizador del informe de estrategia +
--- contenido para redes que hoy arma AGENCIA INGRESOS (otro proyecto de
--- Cowork, conversacional) por cada vehículo. Por ahora es solo
--- almacenamiento/organización -- Daniel pega acá el markdown que ya le
--- entrega ese chat y la app lo parsea en secciones con botón de copiar por
--- cada una. Sin generación por IA todavía (decisión de Daniel 17/09/2026:
--- arrancar por el organizador, IA más adelante) -- `contenido_markdown` es
--- el único campo de contenido a propósito, para no tener que migrar nada
--- cuando se sume la generación automática (va a llenar esta misma columna).
-CREATE TABLE IF NOT EXISTS marketing_vehiculo (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    vehiculo_id INTEGER NOT NULL UNIQUE,
-    contenido_markdown TEXT,
-    updated_at TEXT DEFAULT (datetime('now')),
-    FOREIGN KEY (vehiculo_id) REFERENCES vehiculos(id)
+-- Admin (17/09/2026): datos de perfil de la agencia -- logo, nombre
+-- comercial, dirección, teléfono y redes -- para usar en lo que mira el
+-- cliente final (ficha comercial) y más adelante en cualquier otro lugar
+-- de cara al público. Fila única (id fijo = 1), no hay multi-agencia
+-- todavía. `telefono` va en formato listo para wa.me (solo dígitos, con
+-- 549 adelante) -- se explica en el propio formulario de Admin.
+CREATE TABLE IF NOT EXISTS agencia_config (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    nombre_agencia TEXT,
+    logo_url TEXT,
+    direccion TEXT,
+    telefono TEXT,
+    instagram TEXT,
+    facebook TEXT,
+    sitio_web TEXT,
+    updated_at TEXT DEFAULT (datetime('now'))
 );
 """
 
@@ -436,6 +437,15 @@ def _migrar_tomas_falla_service_si_no(conn):
         conn.execute("ALTER TABLE tomas_vehiculo ADD COLUMN tuvo_ultimo_service TEXT")
 
 
+def _limpiar_marketing_vehiculo(conn):
+    """Elimina la tabla `marketing_vehiculo` (módulo Marketing, agregado y
+    sacado el mismo 17/09/2026 por decisión de Daniel: primero probó el
+    organizador de contenido, pero decidió dejar Marketing entero afuera de
+    esta v1). Solo hace falta en bases que ya lo habían creado -- no está más
+    en el SCHEMA, así que una base nueva nunca la tiene."""
+    conn.execute("DROP TABLE IF EXISTS marketing_vehiculo")
+
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
@@ -450,6 +460,7 @@ def init_db():
     _migrar_tasaciones(conn)
     _migrar_financiaciones(conn)
     _migrar_red_publicaciones(conn)
+    _limpiar_marketing_vehiculo(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")
     if cur.fetchone()[0] == 0:
@@ -503,6 +514,31 @@ def execute(sql, args=()):
     cur = db.execute(sql, args)
     db.commit()
     return cur.lastrowid
+
+
+# Valores por default cuando todavía nadie completó el Admin -- "nunca
+# inventes": todos en blanco/None, la ficha comercial y donde se use esto
+# tienen que arreglárselas para no mostrar nada en vez de un dato trucho.
+_CONFIG_AGENCIA_DEFAULT = {
+    "nombre_agencia": None,
+    "logo_url": None,
+    "direccion": None,
+    "telefono": None,
+    "instagram": None,
+    "facebook": None,
+    "sitio_web": None,
+}
+
+
+def obtener_config_agencia():
+    """Datos de perfil de la agencia cargados en Admin (logo, nombre,
+    dirección, teléfono, redes) -- fila única. Si todavía no se cargó nada,
+    devuelve el default en blanco en vez de None, para no tener que estar
+    chequeando en cada template si `config` existe."""
+    fila = query("SELECT * FROM agencia_config WHERE id = 1", one=True)
+    if fila is None:
+        return dict(_CONFIG_AGENCIA_DEFAULT)
+    return dict(fila)
 
 
 # Fotos de muestra para habilitar la imagen principal en los listados de
