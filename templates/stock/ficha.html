@@ -121,7 +121,6 @@
       <div><div class="etiqueta">Transmisión</div><div class="valor">{{ ('Automática' if vehiculo.caja == 'Automatica' else vehiculo.caja) or '-' }}</div></div>
       {% if vehiculo.estado_general %}<div><div class="etiqueta">Estado general</div><div class="valor">{{ vehiculo.estado_general }}</div></div>{% endif %}
       {% if vehiculo.color %}<div><div class="etiqueta">Color</div><div class="valor">{{ vehiculo.color }}</div></div>{% endif %}
-      {% if vehiculo.dominio %}<div><div class="etiqueta">Dominio</div><div class="valor">{{ vehiculo.dominio }}</div></div>{% endif %}
       {% if vehiculo.ubicacion %}<div class="dato-full"><div class="etiqueta">Ubicación</div><div class="valor">{{ vehiculo.ubicacion }}</div></div>{% endif %}
     </div>
   </div>
