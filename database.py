@@ -554,6 +554,64 @@ def _fusionar_duplicados_stock_manual(conn):
         )
 
 
+def _cargar_financiacion_gol_historica(conn):
+    """Carga el plan de financiación real del Volkswagen Gol Power 2004
+    (id 12, sincronizado desde STOCK/) que Daniel ya había vendido y
+    empezado a cobrar fuera de la app, con las cuotas que ya había cobrado
+    (pedido 17/09/2026): vendido el 24/06/2026, cuota de $290.000/mes desde
+    el 10/07/2026 (interés simple, 6% mensual sobre $2.000.000 a 12 cuotas,
+    con anticipo de $3.500.000 sobre un precio de $5.500.000), con las
+    cuotas de julio, agosto y septiembre ya cobradas al día 10 de cada mes.
+
+    Corre una sola vez: si ya existe cualquier plan de financiación para
+    este vehículo (cargado por esta migración o a mano desde la app), no
+    hace nada -- así no se duplica si Daniel llega a cargarlo él mismo
+    antes de que el servidor se reinicie."""
+    conn.row_factory = sqlite3.Row
+    vehiculo = conn.execute(
+        "SELECT * FROM vehiculos WHERE id = 12 AND UPPER(marca) = 'VOLKSWAGEN' AND UPPER(modelo) = 'GOL'"
+    ).fetchone()
+    if not vehiculo:
+        return
+    ya_existe = conn.execute("SELECT 1 FROM financiaciones WHERE vehiculo_id = 12").fetchone()
+    if ya_existe:
+        return
+
+    if vehiculo["estado"] != "vendido":
+        conn.execute(
+            """UPDATE vehiculos SET estado = 'vendido', valor_vendido = 5500000,
+               fecha_venta = '2026-06-24', updated_at = datetime('now') WHERE id = 12"""
+        )
+
+    cur = conn.execute(
+        """INSERT INTO financiaciones
+           (vehiculo_id, cliente_nombre, cliente_telefono, precio_venta, anticipo,
+            monto_financiado, tasa_interes_mensual, metodo_interes, periodicidad,
+            plazo_meses, cantidad_cuotas, valor_cuota, fecha_inicio, observaciones)
+           VALUES (12, 'Micaela Martinez', '3417077208', 5500000, 3500000,
+                   2000000, 6, 'simple', 'mensual', 12, 12, 290000, '2026-07-10',
+                   'Cargado retroactivamente el 17/09/2026: la venta y las primeras 3 cuotas ya se habían cobrado antes de usar este módulo.')"""
+    )
+    financiacion_id = cur.lastrowid
+
+    fechas = [
+        "2026-07-10", "2026-08-10", "2026-09-10", "2026-10-10", "2026-11-10", "2026-12-10",
+        "2027-01-10", "2027-02-10", "2027-03-10", "2027-04-10", "2027-05-10", "2027-06-10",
+    ]
+    for numero, fecha in enumerate(fechas, start=1):
+        pagada = numero <= 3
+        conn.execute(
+            """INSERT INTO financiacion_cuotas
+               (financiacion_id, numero, fecha_vencimiento, monto, monto_pagado, fecha_pago, estado)
+               VALUES (?,?,?,?,?,?,?)""",
+            (
+                financiacion_id, numero, fecha, 290000,
+                290000 if pagada else 0, fecha if pagada else None,
+                "pagada" if pagada else "pendiente",
+            ),
+        )
+
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
@@ -571,6 +629,7 @@ def init_db():
     _limpiar_marketing_vehiculo(conn)
     _limpiar_tomas_demo(conn)
     _fusionar_duplicados_stock_manual(conn)
+    _cargar_financiacion_gol_historica(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")
     if cur.fetchone()[0] == 0:

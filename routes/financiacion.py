@@ -212,6 +212,8 @@ def simulador():
         "fecha_inicio": request.values.get("fecha_inicio", str(date.today())),
         "metodo_interes": request.values.get("metodo_interes", "frances"),
         "periodicidad": request.values.get("periodicidad", "mensual"),
+        "fecha_venta": request.values.get("fecha_venta", str(date.today())),
+        "cuota_aplicada": request.values.get("cuota_aplicada", ""),
     }
 
     # Autocompletar monto a financiar a partir de precio de venta - anticipo,
@@ -277,6 +279,21 @@ def nuevo():
     cuota, cronograma = _generar_cronograma(monto, tasa, n, fecha_inicio, metodo, periodicidad)
     vehiculo_id = f.get("vehiculo_id") or None
 
+    # Cuota aplicada (17/09/2026): la cuota calculada por la fórmula casi
+    # nunca es un número redondo (ej. $286.667) -- Daniel la redondea a mano
+    # (ej. $290.000) y ese es el monto que realmente cobra todos los meses.
+    # Si cargó un valor acá, reemplaza uniformemente el monto de cada cuota
+    # (incluida la última -- ya no hace falta el ajuste fino por redondeo
+    # que se hace sobre la cuota calculada, porque esta ya es la real).
+    try:
+        cuota_aplicada = float(f.get("cuota_aplicada") or 0)
+    except ValueError:
+        cuota_aplicada = 0
+    valor_cuota_final = cuota_aplicada if cuota_aplicada > 0 else cuota
+    if cuota_aplicada > 0:
+        for fila in cronograma:
+            fila["monto"] = cuota_aplicada
+
     financiacion_id = execute(
         """INSERT INTO financiaciones
            (vehiculo_id, cliente_nombre, cliente_telefono, precio_venta, anticipo,
@@ -287,7 +304,7 @@ def nuevo():
             vehiculo_id, f.get("cliente_nombre"), f.get("cliente_telefono") or None,
             float(f.get("precio_venta")) if f.get("precio_venta") else None,
             float(f.get("anticipo") or 0), monto, tasa, metodo, periodicidad,
-            n, len(cronograma), cuota, str(fecha_inicio), f.get("observaciones") or None,
+            n, len(cronograma), valor_cuota_final, str(fecha_inicio), f.get("observaciones") or None,
         ),
     )
     for fila in cronograma:
@@ -304,14 +321,15 @@ def nuevo():
         vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (vehiculo_id,), one=True)
         if vehiculo and vehiculo["estado"] != "vendido":
             precio_venta = float(f.get("precio_venta")) if f.get("precio_venta") else vehiculo["valor_publicado"]
+            fecha_venta = _parsear_fecha(f.get("fecha_venta"), default=date.today())
             execute(
                 """UPDATE vehiculos SET estado = 'vendido', valor_vendido = ?,
                    fecha_venta = ?, updated_at = datetime('now') WHERE id = ?""",
-                (precio_venta, str(date.today()), vehiculo_id),
+                (precio_venta, str(fecha_venta), vehiculo_id),
             )
 
     flash(
-        f"Plan de financiación creado — {len(cronograma)} cuotas de ${cuota:,.0f}.".replace(",", "."),
+        f"Plan de financiación creado — {len(cronograma)} cuotas de ${valor_cuota_final:,.0f}.".replace(",", "."),
         "success",
     )
     return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
@@ -358,12 +376,18 @@ def pagar_cuota(financiacion_id, cuota_id):
     except ValueError:
         monto_pagado = cuota["monto"]
 
+    # Fecha de pago (17/09/2026): por default es hoy, pero se puede cargar
+    # una fecha real distinta -- para asentar cobros que ya se hicieron
+    # antes (ej. al cargar un plan viejo con cuotas ya cobradas).
+    fecha_pago_form = request.form.get("fecha_pago")
+    fecha_pago = _parsear_fecha(fecha_pago_form, default=date.today()) if fecha_pago_form else date.today()
+
     nuevo_pagado = round((cuota["monto_pagado"] or 0) + monto_pagado, 2)
     nuevo_estado = "pagada" if nuevo_pagado >= cuota["monto"] - 0.01 else "pendiente"
     execute(
         """UPDATE financiacion_cuotas SET monto_pagado = ?, estado = ?,
            fecha_pago = ? WHERE id = ?""",
-        (nuevo_pagado, nuevo_estado, str(date.today()) if nuevo_estado == "pagada" else cuota["fecha_pago"], cuota_id),
+        (nuevo_pagado, nuevo_estado, str(fecha_pago) if nuevo_estado == "pagada" else cuota["fecha_pago"], cuota_id),
     )
 
     # Si ya están todas pagadas, el plan pasa a finalizado automáticamente.

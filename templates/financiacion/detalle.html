@@ -95,8 +95,9 @@
       </td>
       <td>
         {% if c.estado != 'pagada' and fin.estado == 'activo' %}
-        <form method="post" action="{{ url_for('financiacion.pagar_cuota', financiacion_id=fin.id, cuota_id=c.id) }}" style="display:flex; gap:6px;">
+        <form method="post" action="{{ url_for('financiacion.pagar_cuota', financiacion_id=fin.id, cuota_id=c.id) }}" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
           <input type="number" step="1" name="monto_pagado" placeholder="${{ '{:,.0f}'.format(c.monto - (c.monto_pagado or 0)).replace(',', '.') }}" style="width:110px; padding:6px;">
+          <input type="date" name="fecha_pago" title="Fecha de pago (por defecto hoy -- cambiala para cargar un cobro de otra fecha)" style="padding:6px;">
           <button class="btn btn-secondary btn-sm" type="submit">Registrar pago</button>
         </form>
         {% endif %}

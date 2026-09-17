@@ -112,11 +112,18 @@
 {% if cuota %}
 <div class="cards">
   <div class="card">
-    <div class="label">Valor de cada cuota ({{ periodicidad_label.get(valores.periodicidad, '') }})</div>
+    <div class="label">Cuota calculada ({{ periodicidad_label.get(valores.periodicidad, '') }})</div>
     <div class="value">${{ "{:,.0f}".format(cuota).replace(",", ".") }}</div>
   </div>
   <div class="card">
-    <div class="label">Total a pagar</div>
+    <div class="label">Cuota aplicada (redondeada, la que se cobra)</div>
+    <input type="number" step="1" name="cuota_aplicada" form="form-confirmar-operacion"
+           value="{{ valores.cuota_aplicada or '%.0f' % cuota }}"
+           style="width:100%; font-size:22px; font-weight:700; color:var(--gold-light); background:transparent; border:1px solid var(--border); border-radius:8px; padding:4px 8px;">
+    <div class="sub">Este es el monto que va a figurar en todas las cuotas del plan.</div>
+  </div>
+  <div class="card">
+    <div class="label">Total a pagar (sobre la cuota calculada)</div>
     <div class="value">${{ "{:,.0f}".format(total_pagar).replace(",", ".") }}</div>
   </div>
   <div class="card">
@@ -159,6 +166,12 @@
     <input type="hidden" name="metodo_interes" value="{{ valores.metodo_interes }}">
     <input type="hidden" name="periodicidad" value="{{ valores.periodicidad }}">
     <input type="hidden" name="fecha_inicio" value="{{ valores.fecha_inicio }}">
+    {% if valores.vehiculo_id %}
+    <div style="max-width:260px; margin-bottom:12px;">
+      <label>Fecha de venta real (si la operación ya se hizo antes de hoy)</label>
+      <input type="date" name="fecha_venta" value="{{ valores.fecha_venta }}">
+    </div>
+    {% endif %}
     {% if not valores.cliente_nombre %}
     <p style="color:var(--gold-light); font-size:12.5px;">Cargá el nombre del cliente arriba para poder confirmar la operación.</p>
     {% endif %}
