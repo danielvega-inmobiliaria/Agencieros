@@ -370,13 +370,35 @@ def index():
         vista = "pendientes"
         tomas_mostradas = [d for d in tomas_data if not d["ya_en_stock"]]
 
+    # TEMPORAL (17/09/2026): Daniel va a usar esto para vincular a mano sus
+    # Tomas viejas (ninguna quedó linkeada a su auto de Stock porque entraron
+    # por otro camino, antes de que existiera este vínculo automático) a
+    # medida que ordena el Stock. Sacar el botón "Vincular a Stock" de
+    # tomas/index.html y esta ruta (`vincular`) una vez que ya no haga falta.
+    vehiculos_stock = query("SELECT id, marca, modelo, version, anio FROM vehiculos ORDER BY marca, modelo, anio")
+
     return render_template(
         "tomas/index.html",
         tomas_data=tomas_mostradas,
         vista=vista,
         pendientes_count=pendientes_count,
         en_stock_count=en_stock_count,
+        vehiculos_stock=vehiculos_stock,
     )
+
+
+@bp.route("/<int:toma_id>/vincular", methods=["POST"])
+def vincular(toma_id):
+    """TEMPORAL (17/09/2026): vínculo manual Toma -> vehículo de Stock, para
+    que Daniel pueda ordenar sus Tomas viejas (ver comentario en index()).
+    Sacar esta ruta junto con el botón cuando ya no haga falta."""
+    vehiculo_id = request.form.get("vehiculo_id")
+    if not vehiculo_id:
+        flash("Elegí un vehículo de Stock para vincular.", "error")
+        return redirect(url_for("tomas.index"))
+    execute("UPDATE tomas_vehiculo SET vehiculo_id = ? WHERE id = ?", (vehiculo_id, toma_id))
+    flash("Toma vinculada al vehículo de Stock.", "success")
+    return redirect(url_for("tomas.index"))
 
 
 @bp.route("/nueva", methods=["GET", "POST"])
