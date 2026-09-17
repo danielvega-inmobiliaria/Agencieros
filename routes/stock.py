@@ -54,6 +54,8 @@ def sincronizar():
         partes = []
         if resultado["nuevos"]:
             partes.append(f"{len(resultado['nuevos'])} vehículo(s) nuevo(s)")
+        if resultado.get("vinculados"):
+            partes.append(f"{len(resultado['vinculados'])} vinculado(s) a uno ya cargado a mano")
         if resultado["actualizados"]:
             partes.append(f"{len(resultado['actualizados'])} actualizado(s)")
         if not partes:

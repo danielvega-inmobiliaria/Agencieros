@@ -446,6 +446,114 @@ def _limpiar_marketing_vehiculo(conn):
     conn.execute("DROP TABLE IF EXISTS marketing_vehiculo")
 
 
+def _limpiar_tomas_demo(conn):
+    """Elimina las Tomas de ejemplo que quedaron de las pruebas iniciales de
+    la app -- Chevrolet Onix, Ford Focus, Renault Duster, 2x Chevrolet
+    CAPTIVA, Chevrolet AGILE y Chevrolet CAMARO (ids 1 a 7) -- identificadas
+    por Daniel como datos de prueba después de terminar de ordenar su Stock
+    real (pedido 17/09/2026). Solo toca esos ids puntuales, y solo si
+    siguen sin vehiculo_id (por si alguno se llegó a vincular a mano a un
+    auto real con el botón temporal de "Vincular a Stock") -- no borra
+    ninguna Toma real ni vehículos de Stock, solo estos registros de Toma y
+    tasación."""
+    ids_demo = (1, 2, 3, 4, 5, 6, 7)
+    placeholders = ",".join("?" for _ in ids_demo)
+    filas = conn.execute(
+        f"SELECT id FROM tomas_vehiculo WHERE id IN ({placeholders}) AND vehiculo_id IS NULL",
+        ids_demo,
+    ).fetchall()
+    ids_a_borrar = [f[0] for f in filas]
+    if not ids_a_borrar:
+        return
+    ph2 = ",".join("?" for _ in ids_a_borrar)
+    conn.execute(
+        f"""DELETE FROM inspeccion_marcadores WHERE inspeccion_visual_id IN (
+                SELECT id FROM inspeccion_visual WHERE toma_id IN ({ph2})
+            )""",
+        ids_a_borrar,
+    )
+    conn.execute(f"DELETE FROM inspeccion_visual WHERE toma_id IN ({ph2})", ids_a_borrar)
+    conn.execute(f"DELETE FROM tasaciones WHERE toma_id IN ({ph2})", ids_a_borrar)
+    conn.execute(f"DELETE FROM tomas_vehiculo WHERE id IN ({ph2})", ids_a_borrar)
+
+
+def _fusionar_duplicados_stock_manual(conn):
+    """Corrige la primera corrida real de "Sincronizar desde STOCK"
+    (17/09/2026): esa sincronización matchea carpetas de STOCK/ contra
+    vehículos ya vinculados por `carpeta_stock`, pero el Fiat ARGO (id 7) y
+    el Peugeot 408 (id 8) habían sido cargados a mano antes (por foto del
+    título, con dominio real) y todavía no tenían `carpeta_stock` -- la
+    sincronización no los reconoció y creó dos vehículos duplicados (ids 10
+    y 11) en vez de vincularlos. `sync_stock.py` ya se corrigió para que
+    esto no vuelva a pasar; esta función es solo la corrección puntual y
+    única de esos dos duplicados ya creados en la base real de Daniel.
+
+    Por cada par (manual, duplicado): pasa cualquier referencia que pudiera
+    haber quedado apuntando al duplicado (fotos, tomas, financiaciones) al
+    vehículo manual, completa en el manual los datos de STOCK/ que todavía
+    tenga vacíos (sin pisar marca/modelo/versión/dominio ya cargados a
+    mano), lo vincula a la carpeta de STOCK/, y borra el duplicado. Solo
+    actúa si esos ids puntuales siguen existiendo tal cual -- no es un
+    dedupe general, así que no toca nada más."""
+    conn.row_factory = sqlite3.Row
+    pares = (
+        {"manual_id": 7, "duplicado_id": 10, "marca": "fiat", "modelo": "argo", "anio": 2018},
+        {"manual_id": 8, "duplicado_id": 11, "marca": "peugeot", "modelo": "408", "anio": 2012},
+    )
+    for par in pares:
+        manual = conn.execute(
+            "SELECT * FROM vehiculos WHERE id = ? AND LOWER(marca) = ? AND LOWER(modelo) = ? AND anio = ?",
+            (par["manual_id"], par["marca"], par["modelo"], par["anio"]),
+        ).fetchone()
+        duplicado = conn.execute(
+            "SELECT * FROM vehiculos WHERE id = ? AND LOWER(marca) = ? AND LOWER(modelo) = ? AND anio = ?",
+            (par["duplicado_id"], par["marca"], par["modelo"], par["anio"]),
+        ).fetchone()
+        if not manual or not duplicado or not duplicado["carpeta_stock"]:
+            continue
+
+        conn.execute("UPDATE vehiculo_fotos SET vehiculo_id = ? WHERE vehiculo_id = ?",
+                     (manual["id"], duplicado["id"]))
+        conn.execute("UPDATE tomas_vehiculo SET vehiculo_id = ? WHERE vehiculo_id = ?",
+                     (manual["id"], duplicado["id"]))
+        conn.execute("UPDATE financiaciones SET vehiculo_id = ? WHERE vehiculo_id = ?",
+                     (manual["id"], duplicado["id"]))
+
+        carpeta_stock = duplicado["carpeta_stock"]
+        km = duplicado["km"]
+        combustible = duplicado["combustible"]
+        caja = duplicado["caja"]
+        ubicacion = duplicado["ubicacion"]
+        condiciones_pago = duplicado["condiciones_pago"]
+        estado_general = duplicado["estado_general"]
+        equipamiento = duplicado["equipamiento"]
+        valor_publicado = duplicado["valor_publicado"]
+
+        # Borrar el duplicado primero: `carpeta_stock` es UNIQUE, así que no
+        # se puede asignar al manual mientras el duplicado todavía la tenga.
+        conn.execute("DELETE FROM vehiculos WHERE id = ?", (duplicado["id"],))
+
+        conn.execute(
+            """UPDATE vehiculos SET
+                 carpeta_stock = ?,
+                 km = COALESCE(km, ?),
+                 combustible = COALESCE(combustible, ?),
+                 caja = COALESCE(caja, ?),
+                 ubicacion = COALESCE(ubicacion, ?),
+                 condiciones_pago = COALESCE(condiciones_pago, ?),
+                 estado_general = COALESCE(estado_general, ?),
+                 equipamiento = COALESCE(equipamiento, ?),
+                 valor_publicado = CASE WHEN valor_publicado IS NULL OR valor_publicado = 0
+                                         THEN ? ELSE valor_publicado END,
+                 updated_at = datetime('now')
+               WHERE id = ?""",
+            (
+                carpeta_stock, km, combustible, caja, ubicacion, condiciones_pago,
+                estado_general, equipamiento, valor_publicado, manual["id"],
+            ),
+        )
+
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
@@ -461,6 +569,8 @@ def init_db():
     _migrar_financiaciones(conn)
     _migrar_red_publicaciones(conn)
     _limpiar_marketing_vehiculo(conn)
+    _limpiar_tomas_demo(conn)
+    _fusionar_duplicados_stock_manual(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")
     if cur.fetchone()[0] == 0:

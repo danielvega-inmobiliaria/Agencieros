@@ -19,6 +19,14 @@ Qué hace:
     compra, gastos, estado (disponible / por ingresar / en reparación /
     vendido) ni valor/fecha de venta.
   - Si es una carpeta nueva, la inserta en Stock con estado "disponible".
+  - Si es una carpeta nueva pero ya existe un vehículo cargado a mano con
+    la misma marca/modelo/año y todavía sin carpeta vinculada (por ejemplo,
+    uno cargado por foto del título antes de tener su ficha en STOCK/), lo
+    vincula a esa carpeta en vez de crear un duplicado -- completando solo
+    los datos que estén vacíos, sin pisar marca/modelo/versión/dominio que
+    Daniel ya cargó a mano (agregado 17/09/2026, después de que la primera
+    sincronización real duplicara Fiat ARGO y Peugeot 408 que ya estaban
+    cargados).
 
 Qué NO hace (todavía):
   - No trae las fotos incrustadas en la ficha — eso se conecta más
@@ -116,7 +124,7 @@ def sync_stock(stock_dir=None, db_path=None):
     {"nuevos": [...], "actualizados": [...], "sin_ficha": [...], "error": str|None}
     """
     stock_dir = stock_dir or STOCK_DIR
-    resultado = {"nuevos": [], "actualizados": [], "sin_ficha": [], "error": None}
+    resultado = {"nuevos": [], "actualizados": [], "vinculados": [], "sin_ficha": [], "error": None}
 
     if not os.path.isdir(stock_dir):
         resultado["error"] = f"No encuentro la carpeta STOCK en: {stock_dir}"
@@ -142,7 +150,46 @@ def sync_stock(stock_dir=None, db_path=None):
                 "SELECT id FROM vehiculos WHERE carpeta_stock = ?", (carpeta_nombre,)
             ).fetchone()
 
-            if existente:
+            vinculado_ahora = False
+            if not existente and datos["marca"] and datos["modelo"] and datos["anio"]:
+                candidato = conn.execute(
+                    """SELECT * FROM vehiculos
+                       WHERE carpeta_stock IS NULL
+                         AND LOWER(marca) = LOWER(?) AND LOWER(modelo) = LOWER(?) AND anio = ?
+                       ORDER BY id LIMIT 1""",
+                    (datos["marca"], datos["modelo"], datos["anio"]),
+                ).fetchone()
+                if candidato:
+                    # Ya estaba cargado a mano (ej. por foto del título) -- se
+                    # vincula a esta carpeta en vez de crear un duplicado.
+                    # Solo se completan los campos que están vacíos; nunca se
+                    # pisa lo que Daniel ya cargó a mano.
+                    conn.execute(
+                        """UPDATE vehiculos SET
+                             carpeta_stock = ?,
+                             km = COALESCE(km, ?),
+                             combustible = COALESCE(combustible, ?),
+                             caja = COALESCE(caja, ?),
+                             ubicacion = COALESCE(ubicacion, ?),
+                             condiciones_pago = COALESCE(condiciones_pago, ?),
+                             estado_general = COALESCE(estado_general, ?),
+                             equipamiento = COALESCE(equipamiento, ?),
+                             valor_publicado = CASE WHEN valor_publicado IS NULL OR valor_publicado = 0
+                                                     THEN ? ELSE valor_publicado END,
+                             updated_at = datetime('now')
+                           WHERE id = ?""",
+                        (
+                            carpeta_nombre, datos["km"], datos["combustible"], datos["caja"],
+                            datos["ubicacion"], datos["condiciones_pago"], datos["estado_general"],
+                            datos["equipamiento"], datos["valor_publicado"], candidato["id"],
+                        ),
+                    )
+                    resultado.setdefault("vinculados", []).append(carpeta_nombre)
+                    vinculado_ahora = True
+
+            if vinculado_ahora:
+                pass
+            elif existente:
                 conn.execute(
                     """UPDATE vehiculos SET
                          marca=?, modelo=?, version=?, anio=?, km=?, combustible=?, caja=?,
@@ -188,6 +235,7 @@ if __name__ == "__main__":
         print("No se pudo sincronizar:", r["error"])
     else:
         print(f"Nuevos: {len(r['nuevos'])} {r['nuevos']}")
+        print(f"Vinculados a uno ya cargado a mano: {len(r['vinculados'])} {r['vinculados']}")
         print(f"Actualizados: {len(r['actualizados'])} {r['actualizados']}")
         if r["sin_ficha"]:
             print(f"Carpetas sin ficha (ignoradas): {r['sin_ficha']}")
