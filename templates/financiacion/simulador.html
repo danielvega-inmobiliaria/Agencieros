@@ -128,18 +128,18 @@
   </div>
   <div class="card">
     <div class="label">Cuota aplicada (redondeada, la que se cobra)</div>
-    <input type="number" step="1" name="cuota_aplicada" form="form-confirmar-operacion"
+    <input type="number" step="1" name="cuota_aplicada" id="cuota_aplicada_input" form="form-confirmar-operacion"
            value="{{ valores.cuota_aplicada or '%.0f' % cuota }}"
            style="width:100%; font-size:22px; font-weight:700; color:var(--gold-light); background:transparent; border:1px solid var(--border); border-radius:8px; padding:4px 8px;">
     <div class="sub">Este es el monto que va a figurar en todas las cuotas del plan.</div>
   </div>
   <div class="card">
-    <div class="label">Total a pagar (sobre la cuota calculada)</div>
-    <div class="value">${{ "{:,.0f}".format(total_pagar).replace(",", ".") }}</div>
+    <div class="label">Total a pagar (según la cuota aplicada)</div>
+    <div class="value" id="total-pagar-valor">${{ "{:,.0f}".format(total_pagar).replace(",", ".") }}</div>
   </div>
   <div class="card">
     <div class="label">Total de interés</div>
-    <div class="value">${{ "{:,.0f}".format(total_pagar - (valores.monto_financiado|float)).replace(",", ".") }}</div>
+    <div class="value" id="total-interes-valor">${{ "{:,.0f}".format(total_pagar - (valores.monto_financiado|float)).replace(",", ".") }}</div>
   </div>
 </div>
 
@@ -155,7 +155,7 @@
     <tr>
       <td data-label="#">{{ c.numero }}</td>
       <td data-label="Vencimiento">{{ c.fecha.strftime("%d/%m/%Y") }}</td>
-      <td data-label="Cuota">${{ "{:,.0f}".format(c.monto).replace(",", ".") }}</td>
+      <td data-label="Cuota" class="celda-cuota-cronograma">${{ "{:,.0f}".format(c.monto).replace(",", ".") }}</td>
       {% if desglose %}
       <td data-label="Interés">${{ "{:,.0f}".format(c.interes).replace(",", ".") }}</td>
       <td data-label="Amortización">${{ "{:,.0f}".format(c.amortizacion).replace(",", ".") }}</td>
@@ -299,6 +299,32 @@
     }
     actualizarCuotaEstimada();
   })();
+
+  // Cuota aplicada (18/09/2026, pedido de Daniel): al redondear la cuota a
+  // mano, actualizar en vivo Total a pagar / Total de interés / el monto de
+  // cada cuota del cronograma -- sin recargar la página. Refleja lo mismo
+  // que después va a aplicar el servidor al guardar (reemplaza el monto de
+  // TODAS las cuotas por la cuota aplicada, no toca Interés/Amortización/
+  // Saldo -- esas columnas siguen siendo la referencia de cómo se compuso
+  // la cuota calculada original).
+  var campoCuotaAplicada = document.getElementById('cuota_aplicada_input');
+  if (campoCuotaAplicada) {
+    var totalPagarEl = document.getElementById('total-pagar-valor');
+    var totalInteresEl = document.getElementById('total-interes-valor');
+    var celdasCuota = document.querySelectorAll('.celda-cuota-cronograma');
+    function actualizarTotalesPorCuotaAplicada() {
+      var cuotaAplicada = parseFloat(campoCuotaAplicada.value);
+      if (isNaN(cuotaAplicada) || cuotaAplicada <= 0 || !celdasCuota.length) return;
+      var montoFinanciado = parseFloat(campoMontoFinanciado.value) || 0;
+      var totalPagar = cuotaAplicada * celdasCuota.length;
+      totalPagarEl.textContent = formatearPesos(totalPagar);
+      totalInteresEl.textContent = formatearPesos(totalPagar - montoFinanciado);
+      celdasCuota.forEach(function (celda) {
+        celda.textContent = formatearPesos(cuotaAplicada);
+      });
+    }
+    campoCuotaAplicada.addEventListener('input', actualizarTotalesPorCuotaAplicada);
+  }
 
   // Confirmación explícita antes de registrar la operación: nada se guarda
   // hasta que el agenciero confirma que la venta realmente se realiza.
