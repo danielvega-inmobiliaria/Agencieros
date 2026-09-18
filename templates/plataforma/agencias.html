@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Panel de Agencias — Agencieros{% endblock %}
+{% block header %}Panel de Agencias{% endblock %}
+{% block content %}
+<div class="cards">
+  <div class="card">
+    <div class="label">Agencias registradas</div>
+    <div class="value">{{ resumen.total_agencias }}</div>
+    <div class="sub">{{ resumen.verificadas }} con mail verificado</div>
+  </div>
+  <div class="card">
+    <div class="label">Ventas del mes (todas las agencias)</div>
+    <div class="value">{{ resumen.ventas_mes_total }}</div>
+  </div>
+  <div class="card">
+    <div class="label">Créditos otorgados (monto total)</div>
+    <div class="value">${{ "{:,.0f}".format(resumen.creditos_monto_total).replace(",", ".") }}</div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Agencias de la Red</h2>
+  <table class="tabla-responsive">
+    <tr class="fila-header">
+      <th>Agencia</th>
+      <th>Contacto</th>
+      <th>Ubicación</th>
+      <th>Stock (Disp. / Por ingresar / En rep.)</th>
+      <th>Ventas (mes / total)</th>
+      <th>Créditos otorgados</th>
+      <th>Alta</th>
+      <th>Estado</th>
+    </tr>
+    {% for f in filas %}
+    <tr>
+      <td data-label="Agencia">{{ f.nombre }}</td>
+      <td data-label="Contacto">{{ f.email }}{% if f.telefono %}<br>{{ f.telefono }}{% endif %}</td>
+      <td data-label="Ubicación">
+        {% if f.ciudad or f.provincia %}{{ f.ciudad or "" }}{% if f.ciudad and f.provincia %}, {% endif %}{{ f.provincia or "" }}{% else %}<span style="color:var(--text-dim);">Sin cargar</span>{% endif %}
+      </td>
+      <td data-label="Stock">{{ f.disponibles }} / {{ f.por_ingresar }} / {{ f.en_reparacion }}</td>
+      <td data-label="Ventas">{{ f.ventas_mes }} / {{ f.ventas_totales }}</td>
+      <td data-label="Créditos">{{ f.creditos_cantidad }} (${{ "{:,.0f}".format(f.creditos_monto).replace(",", ".") }})</td>
+      <td data-label="Alta">{{ f.alta.split(" ")[0] if f.alta else "" }}</td>
+      <td data-label="Estado">
+        {% if f.verificada %}<span class="badge disponible">Verificada</span>{% else %}<span class="badge por_ingresar">Mail pendiente</span>{% endif %}
+        {% if not f.activa %}<span class="badge en_reparacion">Inactiva</span>{% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8">Todavía no hay agencias registradas.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

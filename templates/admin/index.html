@@ -14,8 +14,21 @@
     <p style="color:var(--text-dim); font-size:12px; margin-top:-8px;">El teléfono va solo con números, sin espacios ni guiones ni +: 549 + código de área + número (ej: 341 301-7371 → 5493413017371).</p>
 
     <div class="form-row">
-      <div><label>Dirección</label><input type="text" name="direccion" value="{{ config.direccion or '' }}" placeholder="Ej: Roldán, Santa Fe"></div>
+      <div><label>Dirección</label><input type="text" name="direccion" value="{{ config.direccion or '' }}" placeholder="Ej: Av. San Martín 1234"></div>
       <div><label>Sitio web</label><input type="text" name="sitio_web" value="{{ config.sitio_web or '' }}" placeholder="Ej: https://..."></div>
+    </div>
+
+    <div class="form-row">
+      <div><label>Ciudad</label><input type="text" name="ciudad" value="{{ config.ciudad or '' }}" placeholder="Ej: Roldán"></div>
+      <div>
+        <label>Provincia</label>
+        <select name="provincia">
+          <option value="">Sin especificar</option>
+          {% for p in provincias %}
+          <option value="{{ p }}" {{ "selected" if config.provincia == p else "" }}>{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
     </div>
 
     <div class="form-row">

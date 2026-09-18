@@ -28,6 +28,7 @@ def create_app():
     from routes.financiacion import bp as financiacion_bp
     from routes.matches import bp as matches_bp
     from routes.admin import bp as admin_bp
+    from routes.plataforma import bp as plataforma_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -42,6 +43,7 @@ def create_app():
     app.register_blueprint(financiacion_bp)
     app.register_blueprint(matches_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(plataforma_bp)
 
     @app.context_processor
     def _inject_catalogo():
@@ -107,7 +109,7 @@ def create_app():
     # (mercado compartido), y quedó probado con una 2da agencia de prueba.
     MODULOS_SOLO_AGENCIA_1 = {
         "dashboard", "tomas", "inspeccion",
-        "tasacion", "finanzas", "financiacion", "matches",
+        "tasacion", "finanzas", "financiacion", "matches", "plataforma",
     }
 
     @app.before_request

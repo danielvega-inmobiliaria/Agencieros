@@ -838,6 +838,20 @@ def _migrar_agencia_config_multi_tenant(conn):
     conn.execute("DROP TABLE agencia_config_pre_multi_tenant")
 
 
+def _migrar_agencia_config_ciudad_provincia(conn):
+    """Ubicación estructurada (18/09/2026, Panel de Agencias): Ciudad y
+    Provincia como columnas separadas de `agencia_config`, además de la
+    Dirección de texto libre que ya existía -- pedido de Daniel para poder
+    ver/agrupar las agencias de la Red por zona en el panel nuevo
+    (routes/plataforma.py), algo que con Dirección como texto libre
+    ("Roldán, Santa Fe" todo junto) no se podía hacer de forma confiable."""
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(agencia_config)")]
+    if "ciudad" not in cols:
+        conn.execute("ALTER TABLE agencia_config ADD COLUMN ciudad TEXT")
+    if "provincia" not in cols:
+        conn.execute("ALTER TABLE agencia_config ADD COLUMN provincia TEXT")
+
+
 def _migrar_multi_tenant_columnas(conn):
     """Agrega `agencia_id` a las tablas de negocio "raíz" (las que se
     consultan directo por agencia en las rutas) y deja todo lo que ya
@@ -889,6 +903,7 @@ def init_db():
     _limpiar_hilux_petrini_confirmado(conn)
     _migrar_multi_tenant_agencias(conn)
     _migrar_agencia_config_multi_tenant(conn)
+    _migrar_agencia_config_ciudad_provincia(conn)
     _migrar_multi_tenant_columnas(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")
@@ -952,6 +967,8 @@ _CONFIG_AGENCIA_DEFAULT = {
     "nombre_agencia": None,
     "logo_url": None,
     "direccion": None,
+    "ciudad": None,
+    "provincia": None,
     "telefono": None,
     "instagram": None,
     "facebook": None,

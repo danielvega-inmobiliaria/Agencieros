@@ -21,6 +21,17 @@ bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 EXTENSIONES_PERMITIDAS_LOGO = {"jpg", "jpeg", "png", "webp"}
 
+# Lista cerrada de provincias argentinas (18/09/2026, Panel de Agencias) --
+# select real en vez de texto libre, para que el panel pueda agrupar/filtrar
+# agencias por provincia sin duplicados por tipeo ("Bs As" vs "Buenos Aires").
+PROVINCIAS_AR = [
+    "Buenos Aires", "Ciudad Autónoma de Buenos Aires", "Catamarca", "Chaco",
+    "Chubut", "Córdoba", "Corrientes", "Entre Ríos", "Formosa", "Jujuy",
+    "La Pampa", "La Rioja", "Mendoza", "Misiones", "Neuquén", "Río Negro",
+    "Salta", "San Juan", "San Luis", "Santa Cruz", "Santa Fe",
+    "Santiago del Estero", "Tierra del Fuego", "Tucumán",
+]
+
 
 @bp.route("/", methods=["GET", "POST"])
 def index():
@@ -29,6 +40,8 @@ def index():
     if request.method == "POST":
         nombre_agencia = request.form.get("nombre_agencia", "").strip() or None
         direccion = request.form.get("direccion", "").strip() or None
+        ciudad = request.form.get("ciudad", "").strip() or None
+        provincia = request.form.get("provincia", "").strip() or None
         telefono = request.form.get("telefono", "").strip() or None
         instagram = request.form.get("instagram", "").strip() or None
         facebook = request.form.get("facebook", "").strip() or None
@@ -61,17 +74,17 @@ def index():
         if existe:
             execute(
                 """UPDATE agencia_config
-                   SET nombre_agencia = ?, logo_url = ?, direccion = ?, telefono = ?,
-                       instagram = ?, facebook = ?, sitio_web = ?, updated_at = datetime('now')
+                   SET nombre_agencia = ?, logo_url = ?, direccion = ?, ciudad = ?, provincia = ?,
+                       telefono = ?, instagram = ?, facebook = ?, sitio_web = ?, updated_at = datetime('now')
                    WHERE agencia_id = ?""",
-                (nombre_agencia, logo_url, direccion, telefono, instagram, facebook, sitio_web, agencia_id),
+                (nombre_agencia, logo_url, direccion, ciudad, provincia, telefono, instagram, facebook, sitio_web, agencia_id),
             )
         else:
             execute(
                 """INSERT INTO agencia_config
-                   (agencia_id, nombre_agencia, logo_url, direccion, telefono, instagram, facebook, sitio_web)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (agencia_id, nombre_agencia, logo_url, direccion, telefono, instagram, facebook, sitio_web),
+                   (agencia_id, nombre_agencia, logo_url, direccion, ciudad, provincia, telefono, instagram, facebook, sitio_web)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (agencia_id, nombre_agencia, logo_url, direccion, ciudad, provincia, telefono, instagram, facebook, sitio_web),
             )
 
         # El nombre comercial de Admin es también el que se muestra en el
@@ -86,4 +99,4 @@ def index():
         return redirect(url_for("admin.index"))
 
     config = obtener_config_agencia(agencia_id)
-    return render_template("admin/index.html", config=config)
+    return render_template("admin/index.html", config=config, provincias=PROVINCIAS_AR)
