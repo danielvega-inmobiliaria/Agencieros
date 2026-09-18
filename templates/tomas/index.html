@@ -9,16 +9,10 @@
   <a class="btn btn-primary btn-sm" style="margin-left:auto;" href="{{ url_for('tomas.nueva') }}">+ Nueva toma</a>
 </div>
 
-{% if vista == 'pendientes' %}
-<p style="color:var(--text-dim); font-size:12.5px; margin-bottom:10px;">
-  💡 Si alguna de estas ya está cargada en Stock (entró por otro camino, no por este flujo), vinculala con el desplegable de la derecha para que deje de aparecer acá -- es algo temporal mientras ordenás el Stock.
-</p>
-{% endif %}
 <div class="panel">
   <table class="tabla-responsive">
     <tr class="fila-header">
       <th>Vehículo</th><th>Evaluador</th><th>Fecha</th><th>Fotos</th><th>Tasación</th><th></th>
-      {% if vista == 'pendientes' %}<th>Vincular a Stock</th>{% endif %}
     </tr>
     {% for d in tomas_data %}
     <tr>
@@ -34,22 +28,9 @@
         {% endif %}
       </td>
       <td><a class="btn btn-secondary btn-sm" href="{{ url_for('tomas.detalle', toma_id=d.toma.id) }}">Ver</a></td>
-      {% if vista == 'pendientes' %}
-      <td data-label="Vincular a Stock">
-        <form method="post" action="{{ url_for('tomas.vincular', toma_id=d.toma.id) }}" style="display:flex; gap:4px; flex-wrap:wrap;">
-          <select name="vehiculo_id" style="max-width:170px; font-size:12px;">
-            <option value="">Elegir auto de Stock...</option>
-            {% for v in vehiculos_stock %}
-            <option value="{{ v.id }}">{{ v.marca }} {{ v.modelo }} {{ v.version or '' }} {% if v.anio %}({{ v.anio }}){% endif %}</option>
-            {% endfor %}
-          </select>
-          <button class="btn btn-secondary btn-sm" type="submit">Vincular</button>
-        </form>
-      </td>
-      {% endif %}
     </tr>
     {% else %}
-    <tr><td colspan="7">{{ 'No hay tomas pendientes.' if vista == 'pendientes' else 'Ninguna toma terminó en un vehículo de Stock todavía.' }}</td></tr>
+    <tr><td colspan="6">{{ 'No hay tomas pendientes.' if vista == 'pendientes' else 'Ninguna toma terminó en un vehículo de Stock todavía.' }}</td></tr>
     {% endfor %}
   </table>
 </div>

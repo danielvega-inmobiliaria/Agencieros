@@ -669,6 +669,45 @@ def _sumar_meses_simple(fecha, meses):
     return date(anio, mes, dia)
 
 
+def _limpiar_stock_demo_muestra(conn):
+    """Borra los vehículos de Stock que quedaron de la carga de ejemplo
+    inicial -- Chevrolet Onix 2020, Volkswagen Amarok 2020, Ford Focus 2018
+    y Renault Duster 2021 (ids 2 a 5) -- confirmados por Daniel como datos
+    de muestra (pedido 17/09/2026). OJO: de la lista original de 6 quedan
+    afuera a propósito el Toyota Hilux (id 1, hoy vendido con una
+    financiación real cargada -- 'Ezequiel Petrini') y el LIFAN X50 (id 6,
+    ya vinculado a una ficha real de Stock -- 'LIFAN_X50_2018_Roldan' -- por
+    el sync); esos dos hay que confirmarlos aparte antes de tocarlos. Solo
+    borra cada id si sigue matcheando exactamente marca/modelo/año Y no
+    tiene fotos, financiación ni toma vinculada (por si alguno pasó a usarse
+    de verdad después de la carga de ejemplo)."""
+    candidatos = {
+        2: ("Chevrolet", "Onix", 2020),
+        3: ("Volkswagen", "Amarok", 2020),
+        4: ("Ford", "Focus", 2018),
+        5: ("Renault", "Duster", 2021),
+    }
+    for vehiculo_id, (marca, modelo, anio) in candidatos.items():
+        fila = conn.execute(
+            "SELECT id FROM vehiculos WHERE id = ? AND LOWER(marca) = LOWER(?) AND LOWER(modelo) = LOWER(?) AND anio = ?",
+            (vehiculo_id, marca, modelo, anio),
+        ).fetchone()
+        if not fila:
+            continue
+        tiene_fotos = conn.execute(
+            "SELECT 1 FROM vehiculo_fotos WHERE vehiculo_id = ?", (vehiculo_id,)
+        ).fetchone()
+        tiene_financiacion = conn.execute(
+            "SELECT 1 FROM financiaciones WHERE vehiculo_id = ?", (vehiculo_id,)
+        ).fetchone()
+        tiene_toma = conn.execute(
+            "SELECT 1 FROM tomas_vehiculo WHERE vehiculo_id = ?", (vehiculo_id,)
+        ).fetchone()
+        if tiene_fotos or tiene_financiacion or tiene_toma:
+            continue
+        conn.execute("DELETE FROM vehiculos WHERE id = ?", (vehiculo_id,))
+
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
@@ -688,6 +727,7 @@ def init_db():
     _fusionar_duplicados_stock_manual(conn)
     _cargar_financiacion_gol_historica(conn)
     _corregir_financiacion_cruze_lezcano(conn)
+    _limpiar_stock_demo_muestra(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")
     if cur.fetchone()[0] == 0:
