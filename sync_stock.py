@@ -146,15 +146,19 @@ def sync_stock(stock_dir=None, db_path=None):
                 continue
 
             datos = _parsear_ficha(ficha_path)
+            # sync_stock lee de una carpeta fija en la compu de Daniel
+            # (03_AUTOMOTOR/STOCK/) -- la ruta que la llama (stock.sincronizar)
+            # ya está bloqueada para cualquier otra agencia (18/09/2026), así
+            # que todo lo que esta función toca es siempre de la agencia 1.
             existente = conn.execute(
-                "SELECT id FROM vehiculos WHERE carpeta_stock = ?", (carpeta_nombre,)
+                "SELECT id FROM vehiculos WHERE carpeta_stock = ? AND agencia_id = 1", (carpeta_nombre,)
             ).fetchone()
 
             vinculado_ahora = False
             if not existente and datos["marca"] and datos["modelo"] and datos["anio"]:
                 candidato = conn.execute(
                     """SELECT * FROM vehiculos
-                       WHERE carpeta_stock IS NULL
+                       WHERE carpeta_stock IS NULL AND agencia_id = 1
                          AND LOWER(marca) = LOWER(?) AND LOWER(modelo) = LOWER(?) AND anio = ?
                        ORDER BY id LIMIT 1""",
                     (datos["marca"], datos["modelo"], datos["anio"]),
@@ -210,8 +214,8 @@ def sync_stock(stock_dir=None, db_path=None):
                     """INSERT INTO vehiculos
                        (marca, modelo, version, anio, km, combustible, caja, dominio, estado,
                         ubicacion, condiciones_pago, estado_general, equipamiento,
-                        valor_compra, gastos, valor_publicado, fecha_ingreso, carpeta_stock)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                        valor_compra, gastos, valor_publicado, fecha_ingreso, carpeta_stock, agencia_id)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)""",
                     (
                         datos["marca"], datos["modelo"], datos["version"], datos["anio"],
                         datos["km"], datos["combustible"], datos["caja"], datos["dominio"],

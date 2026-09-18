@@ -101,14 +101,20 @@ def condiciones_sql(filtros, campo_precio="valor_publicado", campo_km="km",
     return condiciones, params
 
 
-def _buscar_posible_entrega(filtros):
+def _buscar_posible_entrega(filtros, agencia_id):
     """"Posible entrega": el vehículo que un cliente ya ofreció como parte
     de pago (permuta) en un pedido propio todavía activo (`buscando`), y
     que por lo tanto podría estar disponible pronto aunque todavía no llegó
     físicamente al stock — una fuente más para tener la máxima posibilidad
     de match, tanto buscando en Stock como al cargar un pedido nuevo (pedido
     de Daniel 15/09/2026, continuación 26). No se filtra por precio: el
-    vehículo de permuta todavía no tiene un precio de venta asignado."""
+    vehículo de permuta todavía no tiene un precio de venta asignado.
+
+    Escopeado por `agencia_id` (18/09/2026): son pedidos de clientes de una
+    agencia puntual (nombre y teléfono incluidos en el resultado) -- Pedidos
+    todavía no es multi-tenant en sus propias rutas, pero esta búsqueda
+    combinada de Stock no puede mostrarle datos de un cliente de otra
+    agencia."""
     from database import query
 
     filtros_sin_precio = {k: v for k, v in filtros.items() if k not in ("precio_min", "precio_max")}
@@ -117,14 +123,18 @@ def _buscar_posible_entrega(filtros):
         campo_marca="permuta_marca", campo_modelo="permuta_modelo",
         campo_version="permuta_version", campo_anio="permuta_anio", campo_km="permuta_km",
     )
-    condiciones += ["estado = 'buscando'", "forma_pago = 'permuta'", "permuta_marca IS NOT NULL", "permuta_marca != ''"]
+    condiciones += [
+        "agencia_id = ?", "estado = 'buscando'", "forma_pago = 'permuta'",
+        "permuta_marca IS NOT NULL", "permuta_marca != ''",
+    ]
+    params.append(agencia_id)
     return query(
         f"SELECT * FROM pedidos_clientes WHERE {' AND '.join(condiciones)} ORDER BY created_at DESC",
         tuple(params),
     )
 
 
-def buscar_combinado(filtros):
+def buscar_combinado(filtros, agencia_id):
     """Un solo buscador para Disponible + Por ingresar + En reparación
     (Stock, sin Vendido) + Red de Agencieros + Posible entrega — pedido de
     Daniel 15/09/2026 (continuación 18, ampliado en continuación 26): que
@@ -133,7 +143,12 @@ def buscar_combinado(filtros):
     dicts ya normalizados (mismas claves para un vehículo propio, una
     publicación de la Red o un vehículo de permuta) y ordenados por origen
     según ORDEN_ORIGEN: Disponible, Por ingresar, En reparación, Red · Ofrece,
-    Posible entrega, Red · Busca."""
+    Posible entrega, Red · Busca.
+
+    Multi-tenant (18/09/2026): Stock y "Posible entrega" (pedidos propios)
+    se filtran por `agencia_id` -- son datos propios. Red de Agencieros a
+    propósito NO se filtra: es la cartelera compartida entre todas las
+    agencias, se busca igual que se ve en /red/."""
     # Import acá adentro (no al tope del módulo) para evitar un import
     # circular: database.py no depende de este módulo, pero varias rutas
     # importan buscador antes que database en el arranque de la app.
@@ -142,6 +157,8 @@ def buscar_combinado(filtros):
 
     cond_stock, params_stock = condiciones_sql(filtros, campo_precio="valor_publicado", campo_km="km")
     cond_stock.append("estado IN ('disponible','por_ingresar','en_reparacion')")
+    cond_stock.append("agencia_id = ?")
+    params_stock.append(agencia_id)
     vehiculos = query(
         f"SELECT * FROM vehiculos WHERE {' AND '.join(cond_stock)} ORDER BY created_at DESC",
         tuple(params_stock),
@@ -154,7 +171,7 @@ def buscar_combinado(filtros):
         tuple(params_red),
     )
 
-    posibles_entregas = _buscar_posible_entrega(filtros)
+    posibles_entregas = _buscar_posible_entrega(filtros, agencia_id)
 
     por_origen = {clave: [] for clave in ORDEN_ORIGEN}
     for v in vehiculos:

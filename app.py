@@ -1,8 +1,9 @@
 import json
 import os
-from flask import Flask, redirect, url_for, session, flash
+from flask import Flask, redirect, url_for, session, flash, send_from_directory
 
 from database import init_db, close_db, obtener_catalogo
+from storage import uploads_dir
 
 
 def create_app():
@@ -98,8 +99,14 @@ def create_app():
     # datos de Italia Automotores ni de otra agencia por un WHERE que
     # todavía falta agregar) -- ver Pendientes en PROYECTO.md para el
     # orden en que se van habilitando.
+    # Stock salió de esta lista el 18/09/2026: ya filtra todo por
+    # `agencia_id` (routes/stock.py, buscador.py, sync_stock.py) y quedó
+    # probado con una 2da agencia de prueba antes de habilitarlo acá.
+    # Pedidos (Banco de pedidos) salió el 18/09/2026: ya filtra todo por
+    # `agencia_id` (routes/pedidos.py), con "Red" a propósito sin filtrar
+    # (mercado compartido), y quedó probado con una 2da agencia de prueba.
     MODULOS_SOLO_AGENCIA_1 = {
-        "dashboard", "stock", "pedidos", "tomas", "inspeccion",
+        "dashboard", "tomas", "inspeccion",
         "tasacion", "finanzas", "financiacion", "matches",
     }
 
@@ -120,6 +127,16 @@ def create_app():
     def index():
         # La Consulta de precios es la pantalla principal del producto.
         return redirect(url_for("precios.index"))
+
+    # Intercepta /static/uploads/... para servir las fotos desde el volumen
+    # persistente de Railway (storage.uploads_dir()) en vez de la carpeta
+    # static/ del codigo, que en Railway se pisa en cada redeploy. Las URLs
+    # guardadas en la base no cambian (siguen siendo /static/uploads/...),
+    # asi que las fotos ya subidas no se rompen -- en local, uploads_dir()
+    # apunta a la misma carpeta static/uploads de siempre.
+    @app.route("/static/uploads/<path:filename>")
+    def uploads_estaticas(filename):
+        return send_from_directory(uploads_dir(), filename)
 
     return app
 

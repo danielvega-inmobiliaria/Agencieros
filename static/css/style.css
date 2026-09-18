@@ -430,6 +430,8 @@ form textarea { min-height: 80px; }
    tabla completa de siempre con sus columnas y botones.*/
 .tabla-pedidos-compacta tr[data-href] { cursor: pointer; }
 .tabla-pedidos-compacta tr[data-href]:hover td { background: var(--navy-card-2); }
+.tabla-financiacion tr[data-href] { cursor: pointer; }
+.tabla-financiacion tr[data-href]:hover td { background: var(--navy-card-2); }
 @media (max-width: 700px) {
   .tabla-pedidos-compacta td:not(.fila-compacta) { display: none; }
   .tabla-pedidos-compacta .fila-compacta {

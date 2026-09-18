@@ -13,6 +13,8 @@ import uuid
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session
 
+from storage import uploads_dir
+
 from database import query, execute, obtener_config_agencia
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -49,7 +51,7 @@ def index():
             if ext not in EXTENSIONES_PERMITIDAS_LOGO:
                 flash("El logo tiene que ser una imagen JPG, PNG o WEBP.", "error")
                 return redirect(url_for("admin.index"))
-            carpeta = os.path.join(current_app.root_path, "static", "uploads", "agencia")
+            carpeta = uploads_dir("agencia")
             os.makedirs(carpeta, exist_ok=True)
             nombre_archivo = f"logo_{uuid.uuid4().hex}.{ext}"
             archivo.save(os.path.join(carpeta, nombre_archivo))

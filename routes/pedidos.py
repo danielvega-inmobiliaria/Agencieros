@@ -1,6 +1,6 @@
 from datetime import date
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 
 from database import query, execute
 from buscador import buscar_combinado
@@ -15,7 +15,7 @@ FORMA_PAGO_LABEL = {
 }
 
 
-def _buscar_matches_permuta(marca, modelo, excluir_pedido_id=None):
+def _buscar_matches_permuta(agencia_id, marca, modelo, excluir_pedido_id=None):
     """Cruza el vehículo que el cliente ofrece en permuta contra:
     - otros pedidos propios (clientes buscando ese mismo marca/modelo), y
     - la Red de Agencieros (publicaciones tipo 'busco' de otras agencias).
@@ -23,8 +23,8 @@ def _buscar_matches_permuta(marca, modelo, excluir_pedido_id=None):
     if not marca:
         return [], []
 
-    cond_propios = "estado = 'buscando' AND LOWER(marca) = LOWER(?)"
-    params_propios = [marca]
+    cond_propios = "agencia_id = ? AND estado = 'buscando' AND LOWER(marca) = LOWER(?)"
+    params_propios = [agencia_id, marca]
     if excluir_pedido_id:
         cond_propios += " AND id != ?"
         params_propios.append(excluir_pedido_id)
@@ -66,7 +66,7 @@ def _buscar_oferta_para_pedido(marca, modelo, anio_desde=None, precio_maximo=Non
         filtros["anio"] = anio_desde
     if precio_maximo:
         filtros["precio_max"] = precio_maximo
-    return [r for r in buscar_combinado(filtros) if r["origen"] != "red_busca"]
+    return [r for r in buscar_combinado(filtros, session["agencia_id"]) if r["origen"] != "red_busca"]
 
 
 def _con_fecha_y_dias(pedido):
@@ -88,12 +88,16 @@ def _con_fecha_y_dias(pedido):
 
 @bp.route("/")
 def index():
+    agencia_id = session["agencia_id"]
     estado_filtro = request.args.get("estado", "buscando")
     if estado_filtro == "todos":
-        pedidos_raw = query("SELECT * FROM pedidos_clientes ORDER BY created_at DESC")
+        pedidos_raw = query(
+            "SELECT * FROM pedidos_clientes WHERE agencia_id = ? ORDER BY created_at DESC", (agencia_id,)
+        )
     else:
         pedidos_raw = query(
-            "SELECT * FROM pedidos_clientes WHERE estado = ? ORDER BY created_at DESC", (estado_filtro,)
+            "SELECT * FROM pedidos_clientes WHERE agencia_id = ? AND estado = ? ORDER BY created_at DESC",
+            (agencia_id, estado_filtro),
         )
     pedidos = [_con_fecha_y_dias(p) for p in pedidos_raw]
     return render_template(
@@ -107,6 +111,7 @@ def index():
 @bp.route("/nuevo", methods=["GET", "POST"])
 def nuevo():
     if request.method == "POST":
+        agencia_id = session["agencia_id"]
         f = request.form
         forma_pago = f.get("forma_pago", "contado")
         con_financiacion = forma_pago in ("cuotas", "permuta")
@@ -122,13 +127,14 @@ def nuevo():
 
         pedido_id = execute(
             """INSERT INTO pedidos_clientes
-               (cliente_nombre, telefono, marca, modelo, version, anio_desde, anio_hasta,
+               (agencia_id, cliente_nombre, telefono, marca, modelo, version, anio_desde, anio_hasta,
                 precio_maximo, forma_pago, observaciones,
                 efectivo_disponible, cuota_maxima,
                 permuta_marca, permuta_modelo, permuta_version, permuta_anio, permuta_km,
                 permuta_combustible, permuta_caja, permuta_color, permuta_observaciones)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
+                agencia_id,
                 f.get("cliente_nombre"), f.get("telefono"), f.get("marca"), f.get("modelo"),
                 f.get("version"), f.get("anio_desde") or None, f.get("anio_hasta") or None,
                 float(f.get("precio_maximo") or 0) or None, forma_pago, f.get("observaciones"),
@@ -165,7 +171,7 @@ def nuevo():
         # 2) Si además ofrece un vehículo en permuta, ¿alguien ya lo busca?
         if es_permuta and f.get("permuta_marca"):
             propios, red = _buscar_matches_permuta(
-                f.get("permuta_marca"), f.get("permuta_modelo"), excluir_pedido_id=pedido_id
+                agencia_id, f.get("permuta_marca"), f.get("permuta_modelo"), excluir_pedido_id=pedido_id
             )
             if propios or red:
                 partes = []
@@ -183,7 +189,10 @@ def nuevo():
 
 @bp.route("/<int:pedido_id>")
 def detalle(pedido_id):
-    pedido_raw = query("SELECT * FROM pedidos_clientes WHERE id = ?", (pedido_id,), one=True)
+    agencia_id = session["agencia_id"]
+    pedido_raw = query(
+        "SELECT * FROM pedidos_clientes WHERE id = ? AND agencia_id = ?", (pedido_id, agencia_id), one=True
+    )
     if not pedido_raw:
         flash("Pedido no encontrado.", "error")
         return redirect(url_for("pedidos.index"))
@@ -197,7 +206,7 @@ def detalle(pedido_id):
     matches_propios, matches_red = [], []
     if pedido["forma_pago"] == "permuta" and pedido.get("permuta_marca"):
         matches_propios, matches_red = _buscar_matches_permuta(
-            pedido["permuta_marca"], pedido.get("permuta_modelo"), excluir_pedido_id=pedido_id
+            agencia_id, pedido["permuta_marca"], pedido.get("permuta_modelo"), excluir_pedido_id=pedido_id
         )
 
     # Mismo criterio: qué se le podría ofrecer a este cliente por lo que
@@ -220,13 +229,31 @@ def detalle(pedido_id):
 
 @bp.route("/<int:pedido_id>/resolver")
 def resolver(pedido_id):
-    execute("UPDATE pedidos_clientes SET estado = 'resuelto' WHERE id = ?", (pedido_id,))
+    agencia_id = session["agencia_id"]
+    pedido = query(
+        "SELECT id FROM pedidos_clientes WHERE id = ? AND agencia_id = ?", (pedido_id, agencia_id), one=True
+    )
+    if not pedido:
+        flash("Pedido no encontrado.", "error")
+        return redirect(url_for("pedidos.index"))
+    execute(
+        "UPDATE pedidos_clientes SET estado = 'resuelto' WHERE id = ? AND agencia_id = ?", (pedido_id, agencia_id)
+    )
     flash("Pedido marcado como resuelto.", "success")
     return redirect(url_for("pedidos.index"))
 
 
 @bp.route("/<int:pedido_id>/cancelar")
 def cancelar(pedido_id):
-    execute("UPDATE pedidos_clientes SET estado = 'cancelado' WHERE id = ?", (pedido_id,))
+    agencia_id = session["agencia_id"]
+    pedido = query(
+        "SELECT id FROM pedidos_clientes WHERE id = ? AND agencia_id = ?", (pedido_id, agencia_id), one=True
+    )
+    if not pedido:
+        flash("Pedido no encontrado.", "error")
+        return redirect(url_for("pedidos.index"))
+    execute(
+        "UPDATE pedidos_clientes SET estado = 'cancelado' WHERE id = ? AND agencia_id = ?", (pedido_id, agencia_id)
+    )
     flash("Pedido cancelado.", "success")
     return redirect(url_for("pedidos.index"))

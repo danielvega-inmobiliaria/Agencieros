@@ -4,7 +4,9 @@ from datetime import date
 from flask import g
 from werkzeug.security import generate_password_hash
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "data", "agencieros.db")
+from storage import db_path
+
+DB_PATH = db_path()
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS usuarios (

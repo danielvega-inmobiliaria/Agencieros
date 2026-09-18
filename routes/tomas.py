@@ -7,6 +7,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 
 from database import query, execute
 from routes.tasacion import FACTOR_MECANICO, FACTOR_ESTETICO, MARGEN_OBJETIVO
+from storage import uploads_dir
 
 bp = Blueprint("tomas", __name__, url_prefix="/tomas")
 
@@ -582,7 +583,7 @@ def subir_foto(toma_id, vista):
         flash("Formato de imagen no soportado (usá JPG, PNG, WEBP o GIF).", "error")
         return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
 
-    carpeta = os.path.join(current_app.root_path, "static", "uploads", "inspeccion", str(toma_id))
+    carpeta = uploads_dir("inspeccion", str(toma_id))
     os.makedirs(carpeta, exist_ok=True)
     nombre_archivo = f"{vista}_{int(time.time())}.{ext}"
     archivo.save(os.path.join(carpeta, nombre_archivo))

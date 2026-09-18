@@ -2,10 +2,11 @@ import os
 import uuid
 from datetime import date
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort, session
 from urllib.parse import quote_plus
 
 from database import query, execute, foto_principal, obtener_catalogo, obtener_config_agencia
+from storage import uploads_dir
 from sync_stock import sync_stock
 from buscador import parsear_filtros, buscar_combinado
 from ocr_titulo import extraer_datos_titulo, TesseractNoDisponible
@@ -47,6 +48,14 @@ def _rentabilidad(v):
 
 @bp.route("/sincronizar", methods=["POST"])
 def sincronizar():
+    # "Sincronizar desde STOCK" lee de una carpeta fija en la compu de
+    # Daniel (03_AUTOMOTOR/STOCK/) -- no tiene sentido para otra agencia
+    # (no tiene esa carpeta), así que queda bloqueado para cualquiera que
+    # no sea la agencia 1 (mismo bloqueo puntual que ya usa app.py para
+    # módulos enteros, acá aplicado a una sola ruta dentro de Stock, que
+    # para el resto ya es multi-tenant).
+    if session.get("agencia_id") != 1:
+        abort(404)
     resultado = sync_stock()
     if resultado["error"]:
         flash(f"No se pudo sincronizar con STOCK: {resultado['error']}", "error")
@@ -78,20 +87,30 @@ def index():
     # 15/09/2026, continuación 18). Sin filtros, se mantiene el browse
     # normal por pestaña de siempre (incluida Vendido, que el buscador
     # combinado no cubre a propósito).
+    agencia_id = session["agencia_id"]
     if filtros:
-        resultados = buscar_combinado(filtros)
+        resultados = buscar_combinado(filtros, agencia_id)
         vehiculos = None
     else:
         resultados = None
         if estado_filtro in ESTADOS:
-            vehiculos = query("SELECT * FROM vehiculos WHERE estado = ? ORDER BY created_at DESC", (estado_filtro,))
+            vehiculos = query(
+                "SELECT * FROM vehiculos WHERE agencia_id = ? AND estado = ? ORDER BY created_at DESC",
+                (agencia_id, estado_filtro),
+            )
         else:
             # "Todos" no incluye Vendido — solo se ve entrando puntualmente a
             # esa pestaña (pedido de Daniel 15/09/2026, continuación 19). El
             # buscador combinado (buscar_combinado, arriba) ya lo excluía.
-            vehiculos = query("SELECT * FROM vehiculos WHERE estado != 'vendido' ORDER BY created_at DESC")
+            vehiculos = query(
+                "SELECT * FROM vehiculos WHERE agencia_id = ? AND estado != 'vendido' ORDER BY created_at DESC",
+                (agencia_id,),
+            )
 
-    conteos = {r["estado"]: r["c"] for r in query("SELECT estado, COUNT(*) c FROM vehiculos GROUP BY estado")}
+    conteos = {
+        r["estado"]: r["c"]
+        for r in query("SELECT estado, COUNT(*) c FROM vehiculos WHERE agencia_id = ? GROUP BY estado", (agencia_id,))
+    }
     return render_template(
         "stock/index.html",
         vehiculos=vehiculos,
@@ -208,13 +227,14 @@ def nuevo():
         f = request.form
         propiedad = f.get("propiedad", "propio")
         es_consignacion = propiedad == "consignacion"
+        agencia_id = session["agencia_id"]
         vehiculo_id = execute(
             """INSERT INTO vehiculos
                (marca, modelo, version, anio, km, combustible, caja, color, dominio, estado,
                 equipamiento, observaciones, documentacion, valor_compra, gastos, valor_publicado,
                 fecha_ingreso, entrega_quien, fecha_ingreso_estimada,
-                propiedad, consignante_nombre, consignante_telefono)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                propiedad, consignante_nombre, consignante_telefono, agencia_id)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 f.get("marca"), f.get("modelo"), f.get("version"), f.get("anio") or None,
                 f.get("km") or None, f.get("combustible"), f.get("caja"), f.get("color"),
@@ -226,16 +246,20 @@ def nuevo():
                 propiedad,
                 f.get("consignante_nombre") if es_consignacion else None,
                 f.get("consignante_telefono") if es_consignacion else None,
+                agencia_id,
             ),
         )
 
-        # Módulo 3: aviso automático si hay un pedido de cliente que matchea.
+        # Módulo 3: aviso automático si hay un pedido de cliente que matchea
+        # -- escopeado a la propia agencia (18/09/2026): Pedidos todavía no
+        # está multi-tenant en sus rutas, pero esta consulta puntual no
+        # puede mostrarle a una agencia el nombre de un cliente de otra.
         matches = query(
             """SELECT * FROM pedidos_clientes
-               WHERE estado = 'buscando' AND marca = ? AND modelo = ?
+               WHERE agencia_id = ? AND estado = 'buscando' AND marca = ? AND modelo = ?
                  AND (anio_desde IS NULL OR ? >= anio_desde)
                  AND (anio_hasta IS NULL OR ? <= anio_hasta)""",
-            (f.get("marca"), f.get("modelo"), f.get("anio") or 0, f.get("anio") or 9999),
+            (agencia_id, f.get("marca"), f.get("modelo"), f.get("anio") or 0, f.get("anio") or 9999),
         )
         if matches:
             nombres = ", ".join(m["cliente_nombre"] for m in matches)
@@ -280,7 +304,9 @@ def nuevo():
 
 @bp.route("/<int:vehiculo_id>")
 def detalle(vehiculo_id):
-    vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (vehiculo_id,), one=True)
+    vehiculo = query(
+        "SELECT * FROM vehiculos WHERE id = ? AND agencia_id = ?", (vehiculo_id, session["agencia_id"]), one=True
+    )
     if not vehiculo:
         flash("Vehículo no encontrado.", "error")
         return redirect(url_for("stock.index"))
@@ -300,7 +326,9 @@ def detalle(vehiculo_id):
 
 @bp.route("/<int:vehiculo_id>/fotos", methods=["POST"])
 def subir_fotos(vehiculo_id):
-    vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (vehiculo_id,), one=True)
+    vehiculo = query(
+        "SELECT * FROM vehiculos WHERE id = ? AND agencia_id = ?", (vehiculo_id, session["agencia_id"]), one=True
+    )
     if not vehiculo:
         flash("Vehículo no encontrado.", "error")
         return redirect(url_for("stock.index"))
@@ -313,7 +341,7 @@ def subir_fotos(vehiculo_id):
     orden_actual = query(
         "SELECT COALESCE(MAX(orden), -1) o FROM vehiculo_fotos WHERE vehiculo_id = ?", (vehiculo_id,), one=True
     )["o"]
-    carpeta = os.path.join(current_app.root_path, "static", "uploads", "vehiculos", str(vehiculo_id))
+    carpeta = uploads_dir("vehiculos", str(vehiculo_id))
     os.makedirs(carpeta, exist_ok=True)
 
     subidas, rechazadas = 0, 0
@@ -344,12 +372,23 @@ def subir_fotos(vehiculo_id):
 
 @bp.route("/<int:vehiculo_id>/fotos/<int:foto_id>/eliminar", methods=["POST"])
 def eliminar_foto(vehiculo_id, foto_id):
+    vehiculo = query(
+        "SELECT id FROM vehiculos WHERE id = ? AND agencia_id = ?", (vehiculo_id, session["agencia_id"]), one=True
+    )
+    if not vehiculo:
+        flash("Vehículo no encontrado.", "error")
+        return redirect(url_for("stock.index"))
     foto = query(
         "SELECT * FROM vehiculo_fotos WHERE id = ? AND vehiculo_id = ?", (foto_id, vehiculo_id), one=True
     )
     if foto:
         execute("DELETE FROM vehiculo_fotos WHERE id = ?", (foto_id,))
-        ruta_local = os.path.join(current_app.root_path, foto["url"].lstrip("/"))
+        # La URL guardada es "/static/uploads/vehiculos/<id>/<archivo>"; la
+        # parte fisica puede vivir en el volumen de Railway (storage.uploads_dir()),
+        # no necesariamente bajo static/ del codigo -- por eso no se usa
+        # root_path acá, sino el mismo helper que se usa al guardarlas.
+        relativo = foto["url"].split("uploads/", 1)[-1]
+        ruta_local = uploads_dir(relativo)
         try:
             if os.path.isfile(ruta_local):
                 os.remove(ruta_local)
@@ -361,7 +400,9 @@ def eliminar_foto(vehiculo_id, foto_id):
 
 @bp.route("/<int:vehiculo_id>/editar", methods=["GET", "POST"])
 def editar(vehiculo_id):
-    vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (vehiculo_id,), one=True)
+    vehiculo = query(
+        "SELECT * FROM vehiculos WHERE id = ? AND agencia_id = ?", (vehiculo_id, session["agencia_id"]), one=True
+    )
     if not vehiculo:
         flash("Vehículo no encontrado.", "error")
         return redirect(url_for("stock.index"))
@@ -416,7 +457,11 @@ def ficha(vehiculo_id):
     # agencia) -- si todavía no cargó nada ahí, se usa el default confirmado
     # el 16/09/2026 (341 301-7371), pisable con la variable de entorno
     # WHATSAPP_COMERCIAL si hiciera falta.
-    agencia = obtener_config_agencia()
+    # Multi-tenant (18/09/2026): la ficha muestra los datos/WhatsApp de la
+    # agencia dueña del vehículo (no siempre la de Daniel) -- si esa
+    # agencia todavía no cargó nada en Admin, cae al default fijo de
+    # siempre (pisable con WHATSAPP_COMERCIAL).
+    agencia = obtener_config_agencia(vehiculo["agencia_id"] or 1)
     whatsapp_numero = (
         agencia.get("telefono")
         or os.environ.get("WHATSAPP_COMERCIAL", "5493413017371").strip()

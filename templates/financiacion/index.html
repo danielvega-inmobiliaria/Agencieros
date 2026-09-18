@@ -21,29 +21,26 @@
 </div>
 
 <div class="panel">
-  <table class="tabla-responsive">
-    <tr class="fila-header"><th>Cliente</th><th>Vehículo</th><th>Plan</th><th>Monto financiado</th><th>Cuotas</th><th>Por cobrar</th><th>Estado</th><th></th></tr>
+  <table class="tabla-responsive tabla-financiacion">
+    <tr class="fila-header"><th>Cliente</th><th>Cuota</th><th>Estado</th></tr>
     {% for p in planes %}
-    <tr>
+    <tr data-href="{{ url_for('financiacion.detalle', financiacion_id=p.id) }}">
       <td data-label="Cliente">{{ p.cliente_nombre }}{% if p.cliente_telefono %}<br><span style="color:var(--text-dim); font-size:11.5px;">{{ p.cliente_telefono }}</span>{% endif %}</td>
-      <td data-label="Vehículo">
-        {% if p.vehiculo_id %}
-          <a href="{{ url_for('stock.detalle', vehiculo_id=p.vehiculo_id) }}">Ver vehículo</a>
+      <td data-label="Cuota">{{ p.cuotas_pagadas }}/{{ p.cuotas_totales }}</td>
+      <td data-label="Estado">
+        {% if p.estado == 'finalizado' %}
+          <span class="badge vendido">Finalizado</span>
+        {% elif p.estado == 'cancelado' %}
+          <span class="badge cancelado">Cancelado</span>
+        {% elif p.cuotas_vencidas %}
+          <span class="badge en_reparacion">{{ p.cuotas_vencidas }} vencida{{ 's' if p.cuotas_vencidas != 1 else '' }} · ${{ "{:,.0f}".format(p.monto_vencido).replace(",", ".") }}</span>
         {% else %}
-          <span style="color:var(--text-dim);">-</span>
+          <span class="badge disponible">Al día</span>
         {% endif %}
       </td>
-      <td data-label="Plan">{{ periodicidad_label.get(p.periodicidad, p.periodicidad) }}<br><span style="color:var(--text-dim); font-size:11.5px;">{{ metodo_label.get(p.metodo_interes, p.metodo_interes) }}</span></td>
-      <td data-label="Monto financiado">${{ "{:,.0f}".format(p.monto_financiado).replace(",", ".") }}</td>
-      <td data-label="Cuotas">{{ p.cuotas_pagadas }}/{{ p.cuotas_totales }}
-        {% if p.cuotas_vencidas %}<br><span style="color:var(--red); font-size:11.5px;">{{ p.cuotas_vencidas }} vencida(s)</span>{% endif %}
-      </td>
-      <td data-label="Por cobrar">${{ "{:,.0f}".format(p.total_adeudado).replace(",", ".") }}</td>
-      <td data-label="Estado"><span class="badge {{ estado_badge.get(p.estado, '') }}">{{ estado_label.get(p.estado, p.estado) }}</span></td>
-      <td><a class="btn btn-secondary btn-sm" href="{{ url_for('financiacion.detalle', financiacion_id=p.id) }}">Ver</a></td>
     </tr>
     {% else %}
-    <tr><td colspan="8">Todavía no hay planes de financiación cargados.</td></tr>
+    <tr><td colspan="3">Todavía no hay planes de financiación cargados.</td></tr>
     {% endfor %}
   </table>
 </div>
