@@ -92,6 +92,26 @@ def create_app():
         if request.endpoint and request.endpoint not in publicas and "agencia_id" not in session:
             return redirect(url_for("auth.login"))
 
+    @app.before_request
+    def _registrar_actividad():
+        # "Última actividad" por agencia (18/09/2026, Panel de Agencias) --
+        # se pisa en cada request autenticado (salvo estáticos) para que el
+        # panel de plataforma.agencias pueda mostrar qué tan viva está cada
+        # agencia de la Red. Sin throttle: son pocas agencias y un UPDATE
+        # por request no pesa nada en SQLite -- si el volumen crece se puede
+        # limitar a 1 vez cada X minutos por sesión más adelante.
+        from flask import request
+        agencia_id = session.get("agencia_id")
+        if agencia_id and request.endpoint != "static":
+            from database import execute
+            try:
+                execute(
+                    "UPDATE agencias SET ultima_actividad = datetime('now') WHERE id = ?",
+                    (agencia_id,),
+                )
+            except Exception:
+                pass
+
     # Red de Agencieros multi-tenant (18/09/2026): por ahora solo la
     # agencia 1 (Italia Automotores, la de Daniel) tiene estos módulos
     # separados y probados por agencia -- el resto ya tiene la columna

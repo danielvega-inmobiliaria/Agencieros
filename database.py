@@ -838,6 +838,17 @@ def _migrar_agencia_config_multi_tenant(conn):
     conn.execute("DROP TABLE agencia_config_pre_multi_tenant")
 
 
+def _migrar_agencias_ultima_actividad(conn):
+    """Última actividad por agencia (18/09/2026, Panel de Agencias): se pisa
+    en cada request autenticado (ver app.py::_registrar_actividad) -- sirve
+    para que el panel muestre qué tan viva está cada agencia de la Red, no
+    solo sus datos de perfil. Arranca en NULL ("Nunca") hasta el primer
+    request de cada agencia después de este cambio."""
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(agencias)")]
+    if "ultima_actividad" not in cols:
+        conn.execute("ALTER TABLE agencias ADD COLUMN ultima_actividad TEXT")
+
+
 def _migrar_agencia_config_ciudad_provincia(conn):
     """Ubicación estructurada (18/09/2026, Panel de Agencias): Ciudad y
     Provincia como columnas separadas de `agencia_config`, además de la
@@ -904,6 +915,7 @@ def init_db():
     _migrar_multi_tenant_agencias(conn)
     _migrar_agencia_config_multi_tenant(conn)
     _migrar_agencia_config_ciudad_provincia(conn)
+    _migrar_agencias_ultima_actividad(conn)
     _migrar_multi_tenant_columnas(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")
