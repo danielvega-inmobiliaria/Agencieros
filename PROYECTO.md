@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 17/09/2026 — 21:28 ART_
+_Última actualización: 17/09/2026 — 21:38 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -98,6 +98,15 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ## Cambios recientes
 
 > **Nota (15/09/2026, 21:27 ART):** las entradas de continuación 21 a 30 de abajo se reconstruyeron retroactivamente a partir del historial de git y los comentarios dejados en el código — quedaron 9 rondas de trabajo (y 3 commits ya pusheados) sin documentar en tiempo real en este archivo. No incluyen el detalle de verificación manual que sí tienen las entradas más viejas, porque no quedó registro de qué se probó en su momento.
+
+### Sesión 17/09/2026 (continuación) — Financiación: bug de fecha de pago en pagos parciales
+
+Daniel estaba por registrar el pago de una cuota vencida (con recargo por atraso sugerido) y pidió que quedara asentada la fecha de pago. Revisando el código apareció un bug real: `pagar_cuota` solo guardaba la fecha de pago cuando el pago cargado completaba la cuota entera -- si Daniel registraba un pago parcial (menos que el monto de la cuota), la fecha que hubiera cargado se descartaba en silencio y la cuota quedaba con la fecha en blanco hasta el pago que la termine de completar.
+
+- **Arreglado** (`routes/financiacion.py`, `pagar_cuota`): la fecha de pago ahora se guarda siempre que se registra cualquier cobro, parcial o completo.
+- **La fecha de pago ahora se ve** en la tabla de cuotas del detalle del plan, debajo del monto pagado -- así queda visible que se registró.
+
+Verificado con un pago parcial (\$600.000 de \$1.200.000, fecha propia) seguido de uno que completa la cuota (otra fecha): ambas fechas quedan guardadas correctamente en su momento, no solo la última.
 
 ### Sesión 17/09/2026 (continuación) — Financiación: mostrar la fecha de venta en el plan, corregir fechas de vencimiento, desglose de recargo por atraso y tasa de interés punitorio
 

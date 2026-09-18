@@ -417,10 +417,14 @@ def pagar_cuota(financiacion_id, cuota_id):
 
     nuevo_pagado = round((cuota["monto_pagado"] or 0) + monto_pagado, 2)
     nuevo_estado = "pagada" if nuevo_pagado >= cuota["monto"] - 0.01 else "pendiente"
+    # 18/09/2026: la fecha de pago se guarda siempre que se registra un
+    # cobro (antes solo se guardaba si el pago completaba la cuota -- un
+    # pago parcial quedaba con la fecha en blanco, aunque Daniel la hubiera
+    # cargado).
     execute(
         """UPDATE financiacion_cuotas SET monto_pagado = ?, estado = ?,
            fecha_pago = ? WHERE id = ?""",
-        (nuevo_pagado, nuevo_estado, str(fecha_pago) if nuevo_estado == "pagada" else cuota["fecha_pago"], cuota_id),
+        (nuevo_pagado, nuevo_estado, str(fecha_pago), cuota_id),
     )
 
     # Si ya están todas pagadas, el plan pasa a finalizado automáticamente.

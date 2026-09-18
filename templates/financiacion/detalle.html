@@ -120,7 +120,10 @@
       <td data-label="#">{{ c.numero }}</td>
       <td data-label="Vencimiento">{{ c.fecha_vencimiento }}{% if c.estado != 'pagada' and c.fecha_vencimiento and c.fecha_vencimiento < hoy %} <span style="color:var(--red); font-size:11px;">(vencida)</span>{% endif %}</td>
       <td data-label="Monto">${{ "{:,.0f}".format(c.monto).replace(",", ".") }}</td>
-      <td data-label="Pagado">${{ "{:,.0f}".format(c.monto_pagado or 0).replace(",", ".") }}</td>
+      <td data-label="Pagado">
+        ${{ "{:,.0f}".format(c.monto_pagado or 0).replace(",", ".") }}
+        {% if c.fecha_pago %}<div style="color:var(--text-dim); font-size:11px;">{{ c.fecha_pago }}</div>{% endif %}
+      </td>
       <td data-label="Recargo por atraso">{% if recargo_cuota > 0.5 %}${{ "{:,.0f}".format(recargo_cuota).replace(",", ".") }}{% else %}—{% endif %}</td>
       <td data-label="Estado">
         {% if c.estado == 'pagada' %}
