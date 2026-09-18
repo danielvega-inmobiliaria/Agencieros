@@ -198,6 +198,17 @@
 {% endif %}
 
 <script>
+  // Seleccionar todo el contenido al enfocar un campo numérico (18/09/2026,
+  // pedido de Daniel): con el valor por defecto en 0 (Anticipo, Tasa de
+  // interés, Tasa de atraso), al tocar el campo y escribir sin seleccionar
+  // antes quedaba "05" en vez de "5" -- con el valor ya seleccionado, el
+  // primer caracter que se escribe reemplaza todo el campo (se comporta
+  // como si arrancara vacío), sin perder el valor si el agenciero solo
+  // pasa por el campo sin tocar nada.
+  document.querySelectorAll('input[type="number"]').forEach(function (input) {
+    input.addEventListener('focus', function () { this.select(); });
+  });
+
   // Autocompletar precio de venta al elegir un vehículo vendido de la lista.
   document.querySelector('select[name="vehiculo_id"]').addEventListener('change', function () {
     var opt = this.options[this.selectedIndex];
