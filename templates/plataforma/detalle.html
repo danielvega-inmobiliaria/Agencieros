@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ f.nombre }} — Panel de Agencias{% endblock %}
+{% block header %}{{ f.nombre }}{% endblock %}
+{% block content %}
+<a href="{{ url_for('plataforma.agencias') }}" style="display:inline-block; margin-bottom:14px; font-size:13px; color:var(--text-dim);">&larr; Volver al Panel de Agencias</a>
+
+<div class="grid-2">
+  <div class="panel">
+    <h2>Datos de la agencia
+      {% if f.verificada %}<span class="badge disponible">Verificada</span>{% else %}<span class="badge por_ingresar">Mail pendiente</span>{% endif %}
+      {% if not f.activa %}<span class="badge en_reparacion">Inactiva</span>{% endif %}
+    </h2>
+    <table>
+      <tr><td>Nombre</td><td>{{ f.nombre }}</td></tr>
+      <tr><td>Email</td><td>{{ f.email }}</td></tr>
+      <tr><td>Teléfono</td><td>{{ f.telefono or "-" }}</td></tr>
+      <tr><td>Contacto de referencia</td><td>{{ f.contacto_referencia or "-" }}</td></tr>
+      <tr><td>Dirección</td><td>{{ f.direccion or "-" }}</td></tr>
+      <tr><td>Ciudad</td><td>{{ f.ciudad or "-" }}</td></tr>
+      <tr><td>Provincia</td><td>{{ f.provincia or "-" }}</td></tr>
+      <tr><td>Alta</td><td>{{ f.alta_fmt or "-" }}</td></tr>
+      <tr><td>Última actividad</td><td>{{ f.ultima_actividad_fmt or "Nunca" }}</td></tr>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h2>Actividad en la app</h2>
+    <table>
+      <tr><td>Stock disponible</td><td>{{ f.disponibles }}</td></tr>
+      <tr><td>Por ingresar</td><td>{{ f.por_ingresar }}</td></tr>
+      <tr><td>En reparación</td><td>{{ f.en_reparacion }}</td></tr>
+      <tr><td>Ventas este mes</td><td>{{ f.ventas_mes }}</td></tr>
+      <tr><td>Ventas totales</td><td>{{ f.ventas_totales }}</td></tr>
+      <tr><td>Créditos otorgados (cantidad)</td><td>{{ f.creditos_cantidad }}</td></tr>
+      <tr><td>Créditos otorgados (monto)</td><td>${{ "{:,.0f}".format(f.creditos_monto).replace(",", ".") }}</td></tr>
+    </table>
+  </div>
+</div>
+{% endblock %}

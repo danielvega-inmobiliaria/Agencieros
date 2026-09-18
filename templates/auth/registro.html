@@ -22,6 +22,8 @@
         <input type="email" name="email" value="{{ prev.get('email', '') }}" required>
         <label>Teléfono / WhatsApp (opcional)</label>
         <input type="text" name="telefono" value="{{ prev.get('telefono', '') }}" placeholder="Solo números, ej: 3413017371">
+        <label>Contacto de referencia (opcional)</label>
+        <input type="text" name="contacto_referencia" value="{{ prev.get('contacto_referencia', '') }}" placeholder="Nombre y cargo, ej: Juan Pérez (dueño)">
         <label>Contraseña (mínimo 6 caracteres)</label>
         <input type="password" name="password" required>
         <label>Repetir contraseña</label>

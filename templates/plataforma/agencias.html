@@ -18,7 +18,7 @@
   </div>
 </div>
 
-<div class="panel">
+<div class="panel panel-agencias">
   <form method="get" class="form-row" style="align-items:end; margin-bottom:16px;">
     <div>
       <label>Buscar</label>
@@ -48,10 +48,9 @@
   </form>
 
   <h2>Agencias de la Red{% if q %} — resultados para "{{ q }}"{% endif %}</h2>
-  <table class="tabla-responsive">
+  <table class="tabla-responsive tabla-agencias-compacta">
     <tr class="fila-header">
       <th>Agencia</th>
-      <th>Contacto</th>
       <th>Ubicación</th>
       <th>Stock (Disp. / Por ingresar / En rep.)</th>
       <th>Ventas (mes / total)</th>
@@ -61,9 +60,20 @@
       <th>Estado</th>
     </tr>
     {% for f in filas %}
-    <tr>
+    <tr data-href="{{ url_for('plataforma.detalle', agencia_id=f.id) }}">
+      <td class="fila-compacta">
+        <div class="fila-agencia-nombre">{{ f.nombre }}</div>
+        <div class="fila-agencia-linea">
+          {% if f.ciudad or f.provincia %}{{ f.ciudad or "" }}{% if f.ciudad and f.provincia %}, {% endif %}{{ f.provincia or "" }}{% else %}Sin ubicación cargada{% endif %}
+        </div>
+        <div class="fila-agencia-linea">Stock {{ f.disponibles }}/{{ f.por_ingresar }}/{{ f.en_reparacion }} · Ventas {{ f.ventas_mes }}/{{ f.ventas_totales }} · Créditos {{ f.creditos_cantidad }} (${{ "{:,.0f}".format(f.creditos_monto).replace(",", ".") }})</div>
+        <div class="fila-agencia-linea">
+          Act.: {{ f.ultima_actividad_fmt or "nunca" }} · Alta: {{ f.alta.split(" ")[0] if f.alta else "" }}
+          {% if f.verificada %}<span class="badge disponible">Verificada</span>{% else %}<span class="badge por_ingresar">Pendiente</span>{% endif %}
+          {% if not f.activa %}<span class="badge en_reparacion">Inactiva</span>{% endif %}
+        </div>
+      </td>
       <td data-label="Agencia">{{ f.nombre }}</td>
-      <td data-label="Contacto">{{ f.email }}{% if f.telefono %}<br>{{ f.telefono }}{% endif %}</td>
       <td data-label="Ubicación">
         {% if f.ciudad or f.provincia %}{{ f.ciudad or "" }}{% if f.ciudad and f.provincia %}, {% endif %}{{ f.provincia or "" }}{% else %}<span style="color:var(--text-dim);">Sin cargar</span>{% endif %}
       </td>
@@ -78,7 +88,7 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="9">No hay agencias que coincidan con la búsqueda.</td></tr>
+    <tr><td colspan="8">No hay agencias que coincidan con la búsqueda.</td></tr>
     {% endfor %}
   </table>
 </div>

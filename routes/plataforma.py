@@ -1,13 +1,18 @@
 """Panel de Agencias (18/09/2026, ampliado el mismo día con búsqueda +
-orden y "última actividad").
+orden, "última actividad", y una ficha de detalle por agencia).
 
 Vista de plataforma para Daniel (agencia_id=1, el dueño de AGENCIEROS) --
 no es un módulo de negocio de ninguna agencia en particular, sino el
 "pulso" del sector: quiénes son las agencias registradas, dónde están, y
-cuánto están usando la app (stock, ventas, financiación, y ahora también
-cuándo fue su último request autenticado). Pensado para cuando empiecen a
-sumarse agencias reales a la Red -- hoy con 1-2 agencias de prueba sirve
-igual para dejar el panel armado y probado de antemano.
+cuánto están usando la app (stock, ventas, financiación, y último
+request autenticado). Pensado para cuando empiecen a sumarse agencias
+reales a la Red -- hoy con pocas agencias sirve igual para dejar el panel
+armado y probado de antemano.
+
+El listado (agencias()) muestra lo justo para escanear rápido de un
+vistazo (pedido de Daniel: compacto, poco texto). Los datos de contacto
+(teléfono, contacto de referencia) viven en la ficha de detalle
+(detalle()), a un click de cada fila.
 
 Acceso: gateado en app.py (MODULOS_SOLO_AGENCIA_1) -- solo la agencia 1
 puede ver esto, igual que Dashboard/Finanzas/Tomas/Financiación.
@@ -15,7 +20,7 @@ puede ver esto, igual que Dashboard/Finanzas/Tomas/Financiación.
 
 from datetime import datetime
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, abort, render_template, request
 
 from database import query
 
@@ -23,7 +28,7 @@ bp = Blueprint("plataforma", __name__, url_prefix="/plataforma")
 
 # Campos por los que se puede ordenar el listado, y la función que saca la
 # clave de orden de cada fila ya armada (ver _armar_filas). "actividad",
-# "stock", "ventas" y "creditos" son justamente los 3 pedidos por Daniel
+# "stock", "ventas" y "creditos" son justamente los pedidos por Daniel
 # (mayor stock / mayores ventas / mayores créditos) + última actividad.
 _CLAVES_ORDEN = {
     "nombre":    lambda f: (f["nombre"] or "").lower(),
@@ -53,12 +58,13 @@ def _formatear_fecha(iso_str):
 
 def _armar_filas():
     """Une agencias + agencia_config + agregados de stock/ventas/créditos
-    en una lista de dicts lista para filtrar/ordenar/mostrar. Separado de
-    la vista para que el orden por 'actividad' pueda usar el valor crudo
-    (ISO, ordena bien como texto) antes de formatearlo para mostrar."""
+    en una lista de dicts lista para filtrar/ordenar/mostrar (listado) o
+    buscar por id (detalle) -- una sola fuente de verdad para no
+    duplicar la lógica de agregación en dos lugares."""
     agencias_rows = query(
         """SELECT a.id, a.nombre_agencia, a.email, a.telefono AS telefono_registro,
-                  a.email_verificado, a.activo, a.created_at, a.ultima_actividad,
+                  a.contacto_referencia, a.email_verificado, a.activo,
+                  a.created_at, a.ultima_actividad,
                   c.telefono AS telefono_comercial, c.direccion, c.ciudad, c.provincia
            FROM agencias a
            LEFT JOIN agencia_config c ON c.agencia_id = a.id"""
@@ -97,12 +103,14 @@ def _armar_filas():
             "nombre": a["nombre_agencia"],
             "email": a["email"],
             "telefono": a["telefono_comercial"] or a["telefono_registro"],
+            "contacto_referencia": a["contacto_referencia"],
             "direccion": a["direccion"],
             "ciudad": a["ciudad"],
             "provincia": a["provincia"],
             "verificada": bool(a["email_verificado"]),
             "activa": bool(a["activo"]),
             "alta": a["created_at"],
+            "alta_fmt": _formatear_fecha(a["created_at"]),
             "ultima_actividad": a["ultima_actividad"],
             "ultima_actividad_fmt": _formatear_fecha(a["ultima_actividad"]),
             "disponibles": disponibles,
@@ -153,3 +161,11 @@ def agencias():
         filas=filas, resumen=resumen,
         q=q, orden=orden, direccion=direccion, orden_opciones=ORDEN_OPCIONES,
     )
+
+
+@bp.route("/agencias/<int:agencia_id>")
+def detalle(agencia_id):
+    fila = next((f for f in _armar_filas() if f["id"] == agencia_id), None)
+    if fila is None:
+        abort(404)
+    return render_template("plataforma/detalle.html", f=fila)

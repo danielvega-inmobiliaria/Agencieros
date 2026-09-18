@@ -440,6 +440,35 @@ form textarea { min-height: 80px; }
   .tabla-pedidos-compacta .fila-compacta .badge { margin-right: 6px; }
 }
 
+/* Panel de Agencias (18/09/2026): mismo criterio de tarjeta simplificada
+   que Stock -- en el celu, una sola tarjeta por agencia con 4 líneas
+   (Nombre / Ubicación / Stock-Ventas-Créditos / Actividad-Alta-Estado,
+   sin los títulos en mayúscula de la tabla genérica) y sin el marco propio
+   de .tabla-responsive (border+fondo+margen) para ganar ancho en la
+   pantalla chica -- pedido de Daniel 18/09/2026 ("hay 3 espacios
+   contenedores que se pueden eliminar"). La fila entera es clickeable a
+   la ficha de detalle (tr[data-href], ver base.html) tanto en compu como
+   en el celu -- ahí quedaron Teléfono y Contacto de referencia. */
+.tabla-agencias-compacta tr[data-href] { cursor: pointer; }
+.tabla-agencias-compacta tr[data-href]:hover td { background: var(--navy-card-2); }
+@media (max-width: 700px) {
+  .tabla-agencias-compacta td:not(.fila-compacta) { display: none; }
+  .tabla-agencias-compacta tr {
+    border: none; border-radius: 0; background: none; padding: 0; margin-bottom: 0;
+  }
+  .tabla-agencias-compacta .fila-compacta {
+    display: block; padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .tabla-agencias-compacta tr:last-child .fila-compacta { border-bottom: none; }
+  .fila-agencia-nombre { font-size: 15px; font-weight: 600; }
+  .fila-agencia-linea { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
+  .fila-agencia-linea .badge { margin-left: 4px; }
+  /* El panel que envuelve esta tabla pierde su padding lateral en el celu
+     (uno de los "3 contenedores" que achicaban el ancho útil junto con
+     .main y la tarjeta de .tabla-responsive) -- solo en esta pantalla. */
+  .panel-agencias { padding: 16px 8px; }
+}
+
 /* --- Foto principal en los listados --- miniatura del vehículo al lado de
    sus datos (columna aparte en compu, dentro del renglón resumido en el
    celu). Mientras no hay foto real cargada se usa una de las 2 fotos de

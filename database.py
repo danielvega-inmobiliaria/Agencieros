@@ -849,6 +849,17 @@ def _migrar_agencias_ultima_actividad(conn):
         conn.execute("ALTER TABLE agencias ADD COLUMN ultima_actividad TEXT")
 
 
+def _migrar_agencias_contacto_referencia(conn):
+    """Contacto de referencia (18/09/2026, Panel de Agencias -- pedido de
+    Daniel): nombre/cargo de la persona de referencia en cada agencia, para
+    tener a quién llamar además del mail/teléfono general. Se carga en el
+    formulario de inscripción (routes/auth.py::registro) y se muestra en la
+    ficha de detalle del Panel de Agencias."""
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(agencias)")]
+    if "contacto_referencia" not in cols:
+        conn.execute("ALTER TABLE agencias ADD COLUMN contacto_referencia TEXT")
+
+
 def _migrar_agencia_config_ciudad_provincia(conn):
     """Ubicación estructurada (18/09/2026, Panel de Agencias): Ciudad y
     Provincia como columnas separadas de `agencia_config`, además de la
@@ -916,6 +927,7 @@ def init_db():
     _migrar_agencia_config_multi_tenant(conn)
     _migrar_agencia_config_ciudad_provincia(conn)
     _migrar_agencias_ultima_actividad(conn)
+    _migrar_agencias_contacto_referencia(conn)
     _migrar_multi_tenant_columnas(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")

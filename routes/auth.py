@@ -55,6 +55,7 @@ def registro():
         nombre_agencia = request.form.get("nombre_agencia", "").strip()
         email = request.form.get("email", "").strip().lower()
         telefono = request.form.get("telefono", "").strip() or None
+        contacto_referencia = request.form.get("contacto_referencia", "").strip() or None
         password = request.form.get("password", "")
         password2 = request.form.get("password2", "")
 
@@ -72,9 +73,10 @@ def registro():
             return render_template("auth/registro.html", prev=request.form)
 
         agencia_id = execute(
-            """INSERT INTO agencias (nombre_agencia, email, password_hash, telefono, email_verificado, activo)
-               VALUES (?, ?, ?, ?, 0, 1)""",
-            (nombre_agencia, email, generate_password_hash(password), telefono),
+            """INSERT INTO agencias
+               (nombre_agencia, email, password_hash, telefono, contacto_referencia, email_verificado, activo)
+               VALUES (?, ?, ?, ?, ?, 0, 1)""",
+            (nombre_agencia, email, generate_password_hash(password), telefono, contacto_referencia),
         )
         codigo = crear_codigo(agencia_id)
         enviado = enviar_codigo_email(email, nombre_agencia, codigo)
