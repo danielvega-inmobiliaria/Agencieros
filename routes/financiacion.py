@@ -159,13 +159,36 @@ def _con_resumen(fin):
     vencidas = sum(
         1 for c in cuotas if c["estado"] != "pagada" and c["fecha_vencimiento"] and c["fecha_vencimiento"] < hoy
     )
+    # Recargo por atraso cobrado (18/09/2026): no es una columna aparte en
+    # la base -- se infiere de lo que se cobró de más sobre el monto de la
+    # cuota (lo que exceda `monto` en una cuota pagada es, por definición,
+    # el interés/recargo que se le cobró al cliente por pagar tarde).
+    recargo = round(sum(max(0, (c["monto_pagado"] or 0) - c["monto"]) for c in cuotas), 2)
     f["total_plan"] = total
     f["total_cobrado"] = cobrado
     f["total_adeudado"] = round(total - cobrado, 2)
+    f["total_recargo_atraso"] = recargo
     f["cuotas_vencidas"] = vencidas
     f["cuotas_totales"] = len(cuotas)
     f["cuotas_pagadas"] = sum(1 for c in cuotas if c["estado"] == "pagada")
     return f
+
+
+def _monto_sugerido_con_recargo(cuota, tasa_punitoria, hoy):
+    """Saldo pendiente de una cuota, sumando el recargo por atraso si
+    corresponde: criterio de Daniel (17/09/2026) es un % fijo que se
+    acumula cada 30 días de atraso (ej. 10% si pasaron entre 30 y 59 días
+    desde el vencimiento, 20% si pasaron entre 60 y 89, etc. -- no
+    compuesto, se suma sobre el saldo original). Sin tasa cargada o si la
+    cuota todavía no venció, devuelve el saldo tal cual."""
+    saldo = round(cuota["monto"] - (cuota["monto_pagado"] or 0), 2)
+    if not tasa_punitoria or not cuota["fecha_vencimiento"] or cuota["fecha_vencimiento"] >= hoy:
+        return saldo
+    dias_atraso = (date.fromisoformat(hoy) - date.fromisoformat(cuota["fecha_vencimiento"])).days
+    bloques = dias_atraso // 30
+    if bloques <= 0:
+        return saldo
+    return round(saldo * (1 + (bloques * tasa_punitoria) / 100), 2)
 
 
 @bp.route("/")
@@ -214,6 +237,7 @@ def simulador():
         "periodicidad": request.values.get("periodicidad", "mensual"),
         "fecha_venta": request.values.get("fecha_venta", str(date.today())),
         "cuota_aplicada": request.values.get("cuota_aplicada", ""),
+        "tasa_interes_punitorio": request.values.get("tasa_interes_punitorio", "0"),
     }
 
     # Autocompletar monto a financiar a partir de precio de venta - anticipo,
@@ -278,6 +302,10 @@ def nuevo():
     periodicidad = f.get("periodicidad") or "mensual"
     cuota, cronograma = _generar_cronograma(monto, tasa, n, fecha_inicio, metodo, periodicidad)
     vehiculo_id = f.get("vehiculo_id") or None
+    try:
+        tasa_punitoria = float(f.get("tasa_interes_punitorio") or 0)
+    except ValueError:
+        tasa_punitoria = 0
 
     # Cuota aplicada (17/09/2026): la cuota calculada por la fórmula casi
     # nunca es un número redondo (ej. $286.667) -- Daniel la redondea a mano
@@ -297,13 +325,13 @@ def nuevo():
     financiacion_id = execute(
         """INSERT INTO financiaciones
            (vehiculo_id, cliente_nombre, cliente_telefono, precio_venta, anticipo,
-            monto_financiado, tasa_interes_mensual, metodo_interes, periodicidad,
-            plazo_meses, cantidad_cuotas, valor_cuota, fecha_inicio, observaciones)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            monto_financiado, tasa_interes_mensual, tasa_interes_punitorio, metodo_interes,
+            periodicidad, plazo_meses, cantidad_cuotas, valor_cuota, fecha_inicio, observaciones)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
             vehiculo_id, f.get("cliente_nombre"), f.get("cliente_telefono") or None,
             float(f.get("precio_venta")) if f.get("precio_venta") else None,
-            float(f.get("anticipo") or 0), monto, tasa, metodo, periodicidad,
+            float(f.get("anticipo") or 0), monto, tasa, tasa_punitoria, metodo, periodicidad,
             n, len(cronograma), valor_cuota_final, str(fecha_inicio), f.get("observaciones") or None,
         ),
     )
@@ -344,10 +372,15 @@ def detalle(financiacion_id):
     vehiculo = None
     if fin["vehiculo_id"]:
         vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (fin["vehiculo_id"],), one=True)
-    cuotas = query(
-        "SELECT * FROM financiacion_cuotas WHERE financiacion_id = ? ORDER BY numero", (financiacion_id,)
-    )
     hoy = str(date.today())
+    cuotas = [dict(c) for c in query(
+        "SELECT * FROM financiacion_cuotas WHERE financiacion_id = ? ORDER BY numero", (financiacion_id,)
+    )]
+    for c in cuotas:
+        c["monto_sugerido"] = (
+            _monto_sugerido_con_recargo(c, fin["tasa_interes_punitorio"], hoy)
+            if c["estado"] != "pagada" else None
+        )
     return render_template(
         "financiacion/detalle.html",
         fin=_con_resumen(fin),
@@ -400,6 +433,58 @@ def pagar_cuota(financiacion_id, cuota_id):
         flash("Cuota registrada. ¡Plan finalizado, todas las cuotas están cobradas!", "success")
     else:
         flash("Pago registrado.", "success")
+    return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+
+
+@bp.route("/<int:financiacion_id>/corregir-fechas", methods=["POST"])
+def corregir_fechas(financiacion_id):
+    """Recalcula el vencimiento de TODAS las cuotas a partir de una nueva
+    fecha de la primera cuota (18/09/2026, pedido de Daniel después de
+    cargar un plan dejando la fecha sugerida por default en vez de la real).
+    No toca número, monto, pagos ni estado de ninguna cuota -- solo corre
+    de nuevo el cronograma de fechas con la misma periodicidad del plan."""
+    fin = query("SELECT * FROM financiaciones WHERE id = ?", (financiacion_id,), one=True)
+    if not fin:
+        flash("Plan de financiación no encontrado.", "error")
+        return redirect(url_for("financiacion.index"))
+
+    nueva_fecha = _parsear_fecha(request.form.get("fecha_inicio"), default=None)
+    if not nueva_fecha:
+        flash("Cargá una fecha válida para la primera cuota.", "error")
+        return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+
+    cuotas = query(
+        "SELECT * FROM financiacion_cuotas WHERE financiacion_id = ? ORDER BY numero", (financiacion_id,)
+    )
+    for c in cuotas:
+        if fin["periodicidad"] == "semanal":
+            nueva_venc = nueva_fecha + timedelta(days=7 * (c["numero"] - 1))
+        else:
+            nueva_venc = _sumar_meses(nueva_fecha, c["numero"] - 1)
+        execute(
+            "UPDATE financiacion_cuotas SET fecha_vencimiento = ? WHERE id = ?",
+            (str(nueva_venc), c["id"]),
+        )
+    execute("UPDATE financiaciones SET fecha_inicio = ? WHERE id = ?", (str(nueva_fecha), financiacion_id))
+    flash("Fechas de vencimiento corregidas.", "success")
+    return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+
+
+@bp.route("/<int:financiacion_id>/tasa-punitoria", methods=["POST"])
+def actualizar_tasa_punitoria(financiacion_id):
+    """Carga o corrige la tasa de interés por atraso de un plan ya creado
+    (18/09/2026) -- por ejemplo, para planes cargados antes de que existiera
+    este campo, como el de Laura Lezcano/Chevrolet CRUZE."""
+    fin = query("SELECT * FROM financiaciones WHERE id = ?", (financiacion_id,), one=True)
+    if not fin:
+        flash("Plan de financiación no encontrado.", "error")
+        return redirect(url_for("financiacion.index"))
+    try:
+        tasa = float(request.form.get("tasa_interes_punitorio") or 0)
+    except ValueError:
+        tasa = 0
+    execute("UPDATE financiaciones SET tasa_interes_punitorio = ? WHERE id = ?", (tasa, financiacion_id))
+    flash("Tasa de interés por atraso actualizada.", "success")
     return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
 
 

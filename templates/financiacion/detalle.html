@@ -13,6 +13,7 @@
     <div class="sub">
       {{ fin.cantidad_cuotas }} cuotas ({{ periodicidad_label.get(fin.periodicidad, fin.periodicidad) }}) de ${{ "{:,.0f}".format(fin.valor_cuota).replace(",", ".") }}
       · {{ fin.tasa_interes_mensual }}% mensual · {{ metodo_label.get(fin.metodo_interes, fin.metodo_interes) }}
+      {% if fin.tasa_interes_punitorio %} · {{ fin.tasa_interes_punitorio }}% de recargo cada 30 días de atraso{% endif %}
     </div>
   </div>
   <div class="card">
@@ -20,6 +21,13 @@
     <div class="value">${{ "{:,.0f}".format(fin.total_cobrado).replace(",", ".") }}</div>
     <div class="sub">{{ fin.cuotas_pagadas }}/{{ fin.cuotas_totales }} cuotas pagas</div>
   </div>
+  {% if fin.total_recargo_atraso %}
+  <div class="card">
+    <div class="label">De eso, recargo por atraso</div>
+    <div class="value" style="font-size:20px;">${{ "{:,.0f}".format(fin.total_recargo_atraso).replace(",", ".") }}</div>
+    <div class="sub">Cobrado de más sobre el monto de cuota, en cuotas pagadas tarde</div>
+  </div>
+  {% endif %}
   <div class="card">
     <div class="label">Adeudado</div>
     <div class="value" style="color: {{ 'var(--red)' if fin.total_adeudado > 0 else 'var(--green)' }};">${{ "{:,.0f}".format(fin.total_adeudado).replace(",", ".") }}</div>
@@ -45,12 +53,40 @@
   <p style="color:var(--text-dim); font-size:13px; margin:0 0 4px;">
     <b style="color:var(--text);">Precio de venta:</b> ${{ "{:,.0f}".format(fin.precio_venta).replace(",", ".") }}
     {% if fin.anticipo %} · Anticipo: ${{ "{:,.0f}".format(fin.anticipo).replace(",", ".") }}{% endif %}
+    {% if vehiculo and vehiculo.fecha_venta %} · Fecha de venta: {{ vehiculo.fecha_venta }}{% endif %}
   </p>
   {% endif %}
   {% if fin.observaciones %}
   <p style="color:var(--text-dim); font-size:13px; margin:0;">{{ fin.observaciones }}</p>
   {% endif %}
   {% if fin.estado == 'activo' %}
+  <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+    <p style="color:var(--text-dim); font-size:13px; margin:0 0 8px;">
+      <b style="color:var(--text);">Corregir fecha de la primera cuota:</b> por si se cargó mal (por ejemplo, se dejó
+      la fecha sugerida por default en vez de la real). Recalcula el vencimiento de las 13 cuotas a partir de esta
+      fecha, sin tocar montos ni pagos ya registrados.
+    </p>
+    <form method="post" action="{{ url_for('financiacion.corregir_fechas', financiacion_id=fin.id) }}"
+          style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; margin-bottom:4px;">
+      <label style="font-size:13px; color:var(--text-dim);">
+        Fecha de la primera cuota
+        <input type="date" name="fecha_inicio" value="{{ fin.fecha_inicio }}" style="display:block; margin-top:4px; padding:6px;">
+      </label>
+      <button class="btn btn-secondary btn-sm" type="submit">Corregir fechas</button>
+    </form>
+    <p style="color:var(--text-dim); font-size:13px; margin:14px 0 8px;">
+      <b style="color:var(--text);">Tasa de interés por atraso:</b> % que se acumula cada 30 días de atraso sobre
+      una cuota vencida, para que "Registrar pago" sugiera el monto con recargo incluido.
+    </p>
+    <form method="post" action="{{ url_for('financiacion.actualizar_tasa_punitoria', financiacion_id=fin.id) }}"
+          style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+      <label style="font-size:13px; color:var(--text-dim);">
+        % cada 30 días
+        <input type="number" step="0.01" name="tasa_interes_punitorio" value="{{ fin.tasa_interes_punitorio }}" style="display:block; margin-top:4px; padding:6px; width:100px;">
+      </label>
+      <button class="btn btn-secondary btn-sm" type="submit">Actualizar tasa</button>
+    </form>
+  </div>
   <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
     <p style="color:var(--text-dim); font-size:13px; margin:0 0 8px;">
       <b style="color:var(--text);">Cancelar y liquidar el saldo:</b> el vehículo ya está vendido, esto no lo toca —
@@ -77,13 +113,15 @@
 <div class="panel">
   <h2>Cuotas</h2>
   <table class="tabla-responsive">
-    <tr class="fila-header"><th>#</th><th>Vencimiento</th><th>Monto</th><th>Pagado</th><th>Estado</th><th></th></tr>
+    <tr class="fila-header"><th>#</th><th>Vencimiento</th><th>Monto</th><th>Pagado</th><th>Recargo por atraso</th><th>Estado</th><th></th></tr>
     {% for c in cuotas %}
+    {% set recargo_cuota = (c.monto_pagado or 0) - c.monto %}
     <tr>
       <td data-label="#">{{ c.numero }}</td>
-      <td data-label="Vencimiento">{{ c.fecha_vencimiento }}</td>
+      <td data-label="Vencimiento">{{ c.fecha_vencimiento }}{% if c.estado != 'pagada' and c.fecha_vencimiento and c.fecha_vencimiento < hoy %} <span style="color:var(--red); font-size:11px;">(vencida)</span>{% endif %}</td>
       <td data-label="Monto">${{ "{:,.0f}".format(c.monto).replace(",", ".") }}</td>
       <td data-label="Pagado">${{ "{:,.0f}".format(c.monto_pagado or 0).replace(",", ".") }}</td>
+      <td data-label="Recargo por atraso">{% if recargo_cuota > 0.5 %}${{ "{:,.0f}".format(recargo_cuota).replace(",", ".") }}{% else %}—{% endif %}</td>
       <td data-label="Estado">
         {% if c.estado == 'pagada' %}
         <span class="badge disponible">Pagada</span>
@@ -96,10 +134,13 @@
       <td>
         {% if c.estado != 'pagada' and fin.estado == 'activo' %}
         <form method="post" action="{{ url_for('financiacion.pagar_cuota', financiacion_id=fin.id, cuota_id=c.id) }}" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
-          <input type="number" step="1" name="monto_pagado" placeholder="${{ '{:,.0f}'.format(c.monto - (c.monto_pagado or 0)).replace(',', '.') }}" style="width:110px; padding:6px;">
+          <input type="number" step="1" name="monto_pagado" placeholder="${{ '{:,.0f}'.format(c.monto_sugerido).replace(',', '.') }}" style="width:110px; padding:6px;">
           <input type="date" name="fecha_pago" title="Fecha de pago (por defecto hoy -- cambiala para cargar un cobro de otra fecha)" style="padding:6px;">
           <button class="btn btn-secondary btn-sm" type="submit">Registrar pago</button>
         </form>
+        {% if fin.tasa_interes_punitorio and c.monto_sugerido > (c.monto - (c.monto_pagado or 0)) + 0.5 %}
+        <p style="color:var(--gold-light); font-size:11px; margin:4px 0 0;">Incluye recargo por atraso sugerido ({{ fin.tasa_interes_punitorio }}% cada 30 días).</p>
+        {% endif %}
         {% endif %}
       </td>
     </tr>

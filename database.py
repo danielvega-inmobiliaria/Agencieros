@@ -147,6 +147,7 @@ CREATE TABLE IF NOT EXISTS financiaciones (
     anticipo REAL DEFAULT 0,
     monto_financiado REAL NOT NULL,
     tasa_interes_mensual REAL NOT NULL DEFAULT 0,
+    tasa_interes_punitorio REAL NOT NULL DEFAULT 0,
     metodo_interes TEXT NOT NULL DEFAULT 'frances',
     periodicidad TEXT NOT NULL DEFAULT 'mensual',
     plazo_meses INTEGER NOT NULL DEFAULT 0,
@@ -353,12 +354,18 @@ def _migrar_financiaciones(conn):
     simple), la periodicidad de cobro (mensual / semanal) y el plazo en
     meses usado para calcular la cuota, pedidos por Daniel el 14/09/2026
     para poder elegir por plan — sin tocar bases ya creadas con la versión
-    anterior de la tabla (solo monto financiado mensual, francés)."""
+    anterior de la tabla (solo monto financiado mensual, francés).
+
+    17/09/2026: se suma `tasa_interes_punitorio` -- % que se acumula cada
+    30 días de atraso sobre una cuota vencida (ej. 10% fijo cada 30 días,
+    el criterio real que ya usa Daniel), para que la app pueda sugerir el
+    monto a cobrar en vez de calcularlo a mano."""
     columnas_actuales = {row[1] for row in conn.execute("PRAGMA table_info(financiaciones)")}
     nuevas_columnas = {
         "metodo_interes": "TEXT NOT NULL DEFAULT 'frances'",
         "periodicidad": "TEXT NOT NULL DEFAULT 'mensual'",
         "plazo_meses": "INTEGER NOT NULL DEFAULT 0",
+        "tasa_interes_punitorio": "REAL NOT NULL DEFAULT 0",
     }
     for columna, tipo in nuevas_columnas.items():
         if columna not in columnas_actuales:
@@ -612,6 +619,56 @@ def _cargar_financiacion_gol_historica(conn):
         )
 
 
+def _corregir_financiacion_cruze_lezcano(conn):
+    """Corrige el plan de financiación de Laura Lezcano (Chevrolet CRUZE)
+    que Daniel cargó dejando la fecha de la primera cuota en la sugerida
+    por default (17/10/2026) en vez de la real (10/01/2026) -- ella viene
+    pagando con un mes de atraso constante y un recargo fijo de 10% cada
+    30 días, que Daniel calculaba a mano (pedido 17/09/2026).
+
+    Recalcula el vencimiento de las 13 cuotas desde el 10/01/2026 (mensual,
+    sin tocar números, montos ni pagos ya cargados) y carga la tasa de
+    interés punitorio del plan en 10%. Corre una sola vez: si el plan ya
+    no tiene la fecha de inicio equivocada, no hace nada -- así no pisa una
+    corrección manual que Daniel haga desde la propia app."""
+    conn.row_factory = sqlite3.Row
+    fin = conn.execute(
+        """SELECT f.* FROM financiaciones f
+           JOIN vehiculos v ON v.id = f.vehiculo_id
+           WHERE f.cliente_nombre = 'Laura Lezcano'
+             AND UPPER(v.marca) = 'CHEVROLET' AND UPPER(v.modelo) = 'CRUZE'
+             AND f.fecha_inicio = '2026-10-17'"""
+    ).fetchone()
+    if not fin:
+        return
+
+    cuotas = conn.execute(
+        "SELECT * FROM financiacion_cuotas WHERE financiacion_id = ? ORDER BY numero", (fin["id"],)
+    ).fetchall()
+    base = date(2026, 1, 10)
+    for c in cuotas:
+        nueva_venc = _sumar_meses_simple(base, c["numero"] - 1)
+        conn.execute(
+            "UPDATE financiacion_cuotas SET fecha_vencimiento = ? WHERE id = ?",
+            (str(nueva_venc), c["id"]),
+        )
+    conn.execute(
+        "UPDATE financiaciones SET fecha_inicio = ?, tasa_interes_punitorio = 10 WHERE id = ?",
+        (str(base), fin["id"]),
+    )
+
+
+def _sumar_meses_simple(fecha, meses):
+    """Igual criterio que \`_sumar_meses\` de routes/financiacion.py (evita
+    importar routes desde database.py): suma meses respetando fin de mes."""
+    mes_total = fecha.month - 1 + meses
+    anio = fecha.year + mes_total // 12
+    mes = mes_total % 12 + 1
+    import calendar as _calendar
+    dia = min(fecha.day, _calendar.monthrange(anio, mes)[1])
+    return date(anio, mes, dia)
+
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
@@ -630,6 +687,7 @@ def init_db():
     _limpiar_tomas_demo(conn)
     _fusionar_duplicados_stock_manual(conn)
     _cargar_financiacion_gol_historica(conn)
+    _corregir_financiacion_cruze_lezcano(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")
     if cur.fetchone()[0] == 0:

@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 17/09/2026 — 19:55 ART_
+_Última actualización: 17/09/2026 — 21:28 ART_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -98,6 +98,23 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ## Cambios recientes
 
 > **Nota (15/09/2026, 21:27 ART):** las entradas de continuación 21 a 30 de abajo se reconstruyeron retroactivamente a partir del historial de git y los comentarios dejados en el código — quedaron 9 rondas de trabajo (y 3 commits ya pusheados) sin documentar en tiempo real en este archivo. No incluyen el detalle de verificación manual que sí tienen las entradas más viejas, porque no quedó registro de qué se probó en su momento.
+
+### Sesión 17/09/2026 (continuación) — Financiación: mostrar la fecha de venta en el plan, corregir fechas de vencimiento, desglose de recargo por atraso y tasa de interés punitorio
+
+Daniel cargó un segundo plan real (Chevrolet CRUZE, cliente Laura Lezcano, vendido 23/12/2025) y encontró dos problemas: la fecha de venta que cargó en el simulador no se veía reflejada en ningún lado (aunque sí se había guardado -- el vehículo la tiene bien, `stock.detalle` la muestra, pero el detalle del plan de financiación no la mostraba, así que parecía perdida), y dejó sin querer la fecha de la primera cuota en la sugerida por default (17/10/2026) en vez de la real (10/01/2026) -- Laura viene pagando con un mes de atraso constante, con un recargo fijo de $120.000 (10%) por cuota atrasada, y quería poder corregir esto y separar cuánto de lo cobrado es cuota y cuánto es recargo por atraso.
+
+- **Fecha de venta ahora se muestra** en el detalle del plan de financiación (`templates/financiacion/detalle.html`), al lado de precio de venta y anticipo -- ya no hace falta ir a Stock a verla.
+- **Nuevo: "Corregir fecha de la primera cuota"** en el detalle del plan (`routes/financiacion.py`, ruta `corregir_fechas`): recalcula el vencimiento de todas las cuotas a partir de una fecha nueva, respetando la periodicidad del plan, sin tocar montos ni pagos ya cargados. Pensado para este mismo tipo de error (quedarse con la fecha sugerida por default) si vuelve a pasar.
+- **Desglose de recargo por atraso**: no hace falta un campo nuevo -- se infiere de lo que ya está cargado (lo que se cobró de más sobre el monto de la cuota es, por definición, el recargo). Se agregó una tarjeta "De eso, recargo por atraso" en el resumen del plan y una columna "Recargo por atraso" en la tabla de cuotas.
+
+**Verificado end-to-end** contra una copia de la base real: la fecha de venta se ve en el plan de Laura, "Corregir fechas" con 10/01/2026 deja las 13 cuotas mensuales bien (10/01, 10/02, ... 10/01/2027) sin tocar las 3 ya pagadas, y el recargo de $120.000 x 3 cuotas se ve desglosado.
+
+Daniel confirmó el criterio (17/09/2026): **% fijo que se acumula cada 30 días de atraso** (no compuesto, se suma sobre el saldo -- ej. 10% si pasaron entre 30 y 59 días del vencimiento, 20% entre 60 y 89, etc.), igual al 10% que ya venía cobrando a mano en las cuotas de Laura.
+
+- **Nueva columna `tasa_interes_punitorio`** en `financiaciones` (migración automática, `database.py`), cargable desde el simulador al crear un plan nuevo, y editable después desde el detalle del plan (`routes/financiacion.py`: ruta `actualizar_tasa_punitoria`) -- para planes viejos como el de Laura que no la tenían.
+- **"Registrar pago" ahora sugiere el monto con recargo incluido** en cuotas vencidas: el campo viene precargado con el saldo + el % acumulado según cuántos bloques de 30 días pasaron desde el vencimiento, con un aviso aclarando que incluye el recargo -- Daniel sigue pudiendo escribir el monto real si cobra otra cosa.
+
+**Verificado end-to-end** contra una copia de la base real: al plan de Laura se le cargó 10% cada 30 días, y la cuota 4 (vencida desde el 10/04/2026, ~5 bloques de 30 días de atraso a la fecha) sugiere .800.000 (los .200.000 de la cuota + 50% de recargo) en vez del monto sin recargo.
 
 ### Sesión 17/09/2026 (continuación) — Financiación: "cuota aplicada" (redondeo real de cobro), fecha de venta y fecha de pago históricas, y carga del plan real del Gol
 
