@@ -159,6 +159,21 @@ def _con_resumen(fin):
     vencidas = sum(
         1 for c in cuotas if c["estado"] != "pagada" and c["fecha_vencimiento"] and c["fecha_vencimiento"] < hoy
     )
+    # Monto vencido (18/09/2026, pedido de Daniel para el resumen de
+    # Financiación): saldo pendiente de las cuotas que ya vencieron y
+    # todavía no se terminaron de cobrar -- a propósito NO incluye el
+    # recargo por atraso (ver `_monto_sugerido_con_recargo`, que sí lo
+    # suma para sugerir el monto a cobrar en una cuota puntual): acá es
+    # "cuánto es la deuda original que está vencida", sin mezclar la
+    # penalidad, que varía según cuándo se termine cobrando cada una.
+    monto_vencido = round(
+        sum(
+            (c["monto"] - (c["monto_pagado"] or 0))
+            for c in cuotas
+            if c["estado"] != "pagada" and c["fecha_vencimiento"] and c["fecha_vencimiento"] < hoy
+        ),
+        2,
+    )
     # Recargo por atraso cobrado (18/09/2026): no es una columna aparte en
     # la base -- se infiere de lo que se cobró de más sobre el monto de la
     # cuota (lo que exceda `monto` en una cuota pagada es, por definición,
@@ -169,6 +184,7 @@ def _con_resumen(fin):
     f["total_adeudado"] = round(total - cobrado, 2)
     f["total_recargo_atraso"] = recargo
     f["cuotas_vencidas"] = vencidas
+    f["monto_vencido"] = monto_vencido
     f["cuotas_totales"] = len(cuotas)
     f["cuotas_pagadas"] = sum(1 for c in cuotas if c["estado"] == "pagada")
     return f
@@ -200,6 +216,7 @@ def index():
         "total_cobrado": sum(p["total_cobrado"] for p in activos),
         "total_adeudado": sum(p["total_adeudado"] for p in activos),
         "cuotas_vencidas": sum(p["cuotas_vencidas"] for p in activos),
+        "monto_vencido": round(sum(p["monto_vencido"] for p in activos), 2),
     }
     return render_template(
         "financiacion/index.html",

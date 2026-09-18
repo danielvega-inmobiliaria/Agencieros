@@ -4,21 +4,14 @@
 {% block content %}
 <div class="cards">
   <div class="card">
-    <div class="label">Total a cobrar (planes activos)</div>
-    <div class="value">${{ "{:,.0f}".format(resumen.total_a_cobrar).replace(",", ".") }}</div>
-  </div>
-  <div class="card">
-    <div class="label">Cobrado</div>
-    <div class="value">${{ "{:,.0f}".format(resumen.total_cobrado).replace(",", ".") }}</div>
-    <div class="sub">Sobre planes activos</div>
-  </div>
-  <div class="card">
-    <div class="label">Adeudado</div>
+    <div class="label">Por cobrar</div>
     <div class="value">${{ "{:,.0f}".format(resumen.total_adeudado).replace(",", ".") }}</div>
+    <div class="sub">Planes activos</div>
   </div>
   <div class="card">
-    <div class="label">Cuotas vencidas</div>
-    <div class="value" style="color: {{ 'var(--red)' if resumen.cuotas_vencidas else 'var(--text)' }};">{{ resumen.cuotas_vencidas }}</div>
+    <div class="label">Vencido</div>
+    <div class="value" style="color: {{ 'var(--red)' if resumen.monto_vencido else 'var(--text)' }};">${{ "{:,.0f}".format(resumen.monto_vencido).replace(",", ".") }}</div>
+    <div class="sub">{{ resumen.cuotas_vencidas }} cuota{{ 's' if resumen.cuotas_vencidas != 1 else '' }} · sin recargo por atraso</div>
   </div>
 </div>
 
@@ -29,7 +22,7 @@
 
 <div class="panel">
   <table class="tabla-responsive">
-    <tr class="fila-header"><th>Cliente</th><th>Vehículo</th><th>Plan</th><th>Monto financiado</th><th>Cuotas</th><th>Adeudado</th><th>Estado</th><th></th></tr>
+    <tr class="fila-header"><th>Cliente</th><th>Vehículo</th><th>Plan</th><th>Monto financiado</th><th>Cuotas</th><th>Por cobrar</th><th>Estado</th><th></th></tr>
     {% for p in planes %}
     <tr>
       <td data-label="Cliente">{{ p.cliente_nombre }}{% if p.cliente_telefono %}<br><span style="color:var(--text-dim); font-size:11.5px;">{{ p.cliente_telefono }}</span>{% endif %}</td>
@@ -45,7 +38,7 @@
       <td data-label="Cuotas">{{ p.cuotas_pagadas }}/{{ p.cuotas_totales }}
         {% if p.cuotas_vencidas %}<br><span style="color:var(--red); font-size:11.5px;">{{ p.cuotas_vencidas }} vencida(s)</span>{% endif %}
       </td>
-      <td data-label="Adeudado">${{ "{:,.0f}".format(p.total_adeudado).replace(",", ".") }}</td>
+      <td data-label="Por cobrar">${{ "{:,.0f}".format(p.total_adeudado).replace(",", ".") }}</td>
       <td data-label="Estado"><span class="badge {{ estado_badge.get(p.estado, '') }}">{{ estado_label.get(p.estado, p.estado) }}</span></td>
       <td><a class="btn btn-secondary btn-sm" href="{{ url_for('financiacion.detalle', financiacion_id=p.id) }}">Ver</a></td>
     </tr>
