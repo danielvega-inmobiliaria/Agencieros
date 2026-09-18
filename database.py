@@ -204,6 +204,34 @@ CREATE TABLE IF NOT EXISTS agencia_config (
     sitio_web TEXT,
     updated_at TEXT DEFAULT (datetime('now'))
 );
+
+-- Red de Agencieros multi-tenant (18/09/2026): cada agencia que se
+-- registra es una cuenta real, con su propio login y su propia copia de
+-- toda la app (Stock, Financiación, Tomas, etc. separados por
+-- `agencia_id` en cada tabla de negocio -- ver las migraciones
+-- `_migrar_multi_tenant_*` más abajo). Auth simple (registro + login +
+-- validación por mail con código de 6 dígitos vía Resend) -- sin cobro
+-- todavía, eso queda para cuando se definan los planes de suscripción
+-- (pendiente 🔴 aparte).
+CREATE TABLE IF NOT EXISTS agencias (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre_agencia TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    telefono TEXT,
+    email_verificado INTEGER DEFAULT 0,
+    activo INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS verificacion_codigos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agencia_id INTEGER NOT NULL,
+    codigo TEXT NOT NULL,
+    expira_at TEXT NOT NULL,
+    usado INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+);
 """
 
 # Datos de ejemplo para que la app se pueda probar de entrada.
@@ -708,6 +736,134 @@ def _limpiar_stock_demo_muestra(conn):
         conn.execute("DELETE FROM vehiculos WHERE id = ?", (vehiculo_id,))
 
 
+def _limpiar_hilux_petrini_confirmado(conn):
+    """Borra el Toyota Hilux (id 1, de la carga de ejemplo inicial) y su
+    financiación asociada (cliente 'Ezequiel Petrini', cancelada, sin
+    cobros reales -- ver _limpiar_stock_demo_muestra para el resto del
+    lote). Daniel confirmó 17/09/2026 que este vehículo y ese crédito
+    eran datos de prueba, a diferencia del LIFAN X50 (id 6) que sí quedó
+    como dato real y no se toca. Verifica marca/modelo/año antes de
+    borrar por si el id se reutilizó para un vehículo real después."""
+    fila = conn.execute(
+        "SELECT id FROM vehiculos WHERE id = 1 AND LOWER(marca) = 'toyota' AND LOWER(modelo) = 'hilux' AND anio = 2021"
+    ).fetchone()
+    if not fila:
+        return
+    planes = conn.execute(
+        "SELECT id FROM financiaciones WHERE vehiculo_id = 1"
+    ).fetchall()
+    for plan in planes:
+        conn.execute(
+            "DELETE FROM financiacion_cuotas WHERE financiacion_id = ?", (plan["id"],)
+        )
+        conn.execute("DELETE FROM financiaciones WHERE id = ?", (plan["id"],))
+    conn.execute("DELETE FROM vehiculo_fotos WHERE vehiculo_id = 1")
+    conn.execute("DELETE FROM tomas_vehiculo WHERE vehiculo_id = 1")
+    conn.execute("DELETE FROM vehiculos WHERE id = 1")
+
+
+def _migrar_multi_tenant_agencias(conn):
+    """Crea la agencia real de Daniel (id 1) a partir de su usuario admin
+    actual, la primera vez que corre esta migración -- ver Red de
+    Agencieros multi-tenant (18/09/2026). Reutiliza el mismo email y el
+    mismo password_hash que ya tenía en `usuarios` (mismo login de
+    siempre), toma el nombre comercial de `agencia_config` si ya lo había
+    cargado en Admin (si no, cae a 'Tu agencia'), y la marca con el mail
+    ya verificado (es el dueño de la cuenta, no hace falta que se mande un
+    código a sí mismo). No toca `usuarios` -- esa tabla queda como estaba,
+    sin usarse más para el login (ver routes/auth.py), por si hace falta
+    mirar el historial."""
+    if conn.execute("SELECT COUNT(*) FROM agencias").fetchone()[0] > 0:
+        return
+    admin = conn.execute(
+        "SELECT * FROM usuarios WHERE email = 'admin@agencieros.com'"
+    ).fetchone()
+    if not admin:
+        return
+    config = conn.execute("SELECT nombre_agencia, telefono FROM agencia_config WHERE id = 1").fetchone()
+    nombre_agencia = (config["nombre_agencia"] if config and config["nombre_agencia"] else None) or "Tu agencia"
+    telefono = config["telefono"] if config else None
+    conn.execute(
+        """INSERT INTO agencias (id, nombre_agencia, email, password_hash, telefono, email_verificado, activo)
+           VALUES (1, ?, ?, ?, ?, 1, 1)""",
+        (nombre_agencia, admin["email"], admin["password_hash"], telefono),
+    )
+    # Alinea el autoincrement para que la próxima agencia que se registre
+    # arranque en id 2, no choque con la 1 ya insertada a mano.
+    conn.execute(
+        "INSERT OR REPLACE INTO sqlite_sequence (name, seq) VALUES ('agencias', "
+        "(SELECT MAX(id) FROM agencias))"
+    )
+
+
+def _migrar_agencia_config_multi_tenant(conn):
+    """`agencia_config` era una fila única fija (id=1, CHECK) -- con
+    multi-tenant cada agencia necesita la suya. SQLite no permite sacar un
+    CHECK con ALTER TABLE, así que se recrea la tabla (mismo patrón que
+    cualquier migración de esquema en SQLite: crear la nueva, copiar los
+    datos, borrar la vieja) y se preserva la fila de Daniel como
+    agencia_id 1."""
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(agencia_config)")]
+    if "agencia_id" in cols:
+        return
+    fila_vieja = conn.execute("SELECT * FROM agencia_config WHERE id = 1").fetchone()
+    conn.execute("ALTER TABLE agencia_config RENAME TO agencia_config_pre_multi_tenant")
+    conn.execute(
+        """CREATE TABLE agencia_config (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agencia_id INTEGER UNIQUE NOT NULL,
+            nombre_agencia TEXT,
+            logo_url TEXT,
+            direccion TEXT,
+            telefono TEXT,
+            instagram TEXT,
+            facebook TEXT,
+            sitio_web TEXT,
+            updated_at TEXT DEFAULT (datetime('now'))
+        )"""
+    )
+    if fila_vieja:
+        conn.execute(
+            """INSERT INTO agencia_config
+               (agencia_id, nombre_agencia, logo_url, direccion, telefono, instagram, facebook, sitio_web, updated_at)
+               VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                fila_vieja["nombre_agencia"], fila_vieja["logo_url"], fila_vieja["direccion"],
+                fila_vieja["telefono"], fila_vieja["instagram"], fila_vieja["facebook"],
+                fila_vieja["sitio_web"], fila_vieja["updated_at"],
+            ),
+        )
+    conn.execute("DROP TABLE agencia_config_pre_multi_tenant")
+
+
+def _migrar_multi_tenant_columnas(conn):
+    """Agrega `agencia_id` a las tablas de negocio "raíz" (las que se
+    consultan directo por agencia en las rutas) y deja todo lo que ya
+    existía marcado como de la agencia 1 (Daniel/Italia Automotores) --
+    así ningún dato viejo queda huérfano. Las tablas hijas (vehiculo_fotos,
+    financiacion_cuotas, inspeccion_visual, inspeccion_marcadores) no
+    llevan su propia columna: se llega a ellas siempre a través del id del
+    padre (vehiculo_id/financiacion_id/toma_id), que ya queda protegido
+    apenas se valide que el padre es de la agencia logueada -- por eso no
+    hace falta duplicar la columna ahí.
+
+    IMPORTANTE (ver Pendientes en PROYECTO.md): agregar la columna acá NO
+    alcanza por sí solo para que los datos queden separados -- cada ruta
+    tiene que filtrar por `agencia_id = session['agencia_id']` a mano.
+    Mientras eso no esté hecho para un módulo, `app.py` lo bloquea para
+    cualquier agencia que no sea la 1, así no hay forma de que una agencia
+    nueva vea datos de otra por un WHERE que todavía falta agregar."""
+    tablas = [
+        "vehiculos", "pedidos_clientes", "tomas_vehiculo",
+        "tasaciones", "financiaciones", "red_publicaciones",
+    ]
+    for tabla in tablas:
+        cols = [r[1] for r in conn.execute(f"PRAGMA table_info({tabla})")]
+        if "agencia_id" not in cols:
+            conn.execute(f"ALTER TABLE {tabla} ADD COLUMN agencia_id INTEGER")
+        conn.execute(f"UPDATE {tabla} SET agencia_id = 1 WHERE agencia_id IS NULL")
+
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
@@ -728,6 +884,10 @@ def init_db():
     _cargar_financiacion_gol_historica(conn)
     _corregir_financiacion_cruze_lezcano(conn)
     _limpiar_stock_demo_muestra(conn)
+    _limpiar_hilux_petrini_confirmado(conn)
+    _migrar_multi_tenant_agencias(conn)
+    _migrar_agencia_config_multi_tenant(conn)
+    _migrar_multi_tenant_columnas(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")
     if cur.fetchone()[0] == 0:
@@ -797,12 +957,16 @@ _CONFIG_AGENCIA_DEFAULT = {
 }
 
 
-def obtener_config_agencia():
+def obtener_config_agencia(agencia_id=1):
     """Datos de perfil de la agencia cargados en Admin (logo, nombre,
-    dirección, teléfono, redes) -- fila única. Si todavía no se cargó nada,
+    dirección, teléfono, redes) -- una fila por agencia desde el
+    multi-tenant de Red de Agencieros (18/09/2026, ver `agencia_id` en
+    `agencia_config`). Default `agencia_id=1` para no romper los llamados
+    viejos (ej. la ficha comercial pública de Stock, que por ahora sigue
+    siendo solo de la agencia 1). Si esa agencia todavía no cargó nada,
     devuelve el default en blanco en vez de None, para no tener que estar
     chequeando en cada template si `config` existe."""
-    fila = query("SELECT * FROM agencia_config WHERE id = 1", one=True)
+    fila = query("SELECT * FROM agencia_config WHERE agencia_id = ?", (agencia_id,), one=True)
     if fila is None:
         return dict(_CONFIG_AGENCIA_DEFAULT)
     return dict(fila)

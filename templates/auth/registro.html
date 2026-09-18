@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrar mi agencia — Agencieros</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div style="max-width:420px; margin:60px auto; padding:0 16px;">
+    <div class="brand" style="border:none; text-align:center; margin-bottom:24px;">AGENCIEROS<span>Sumá tu agencia a la Red</span></div>
+    <div class="panel">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
+      <form method="post">
+        <label>Nombre de tu agencia</label>
+        <input type="text" name="nombre_agencia" value="{{ prev.get('nombre_agencia', '') }}" required autofocus>
+        <label>Email</label>
+        <input type="email" name="email" value="{{ prev.get('email', '') }}" required>
+        <label>Teléfono / WhatsApp (opcional)</label>
+        <input type="text" name="telefono" value="{{ prev.get('telefono', '') }}" placeholder="Solo números, ej: 3413017371">
+        <label>Contraseña (mínimo 6 caracteres)</label>
+        <input type="password" name="password" required>
+        <label>Repetir contraseña</label>
+        <input type="password" name="password2" required>
+        <button class="btn btn-primary" style="width:100%; margin-top:20px;" type="submit">Crear mi cuenta</button>
+      </form>
+      <p style="text-align:center; margin-top:18px; font-size:.9rem;">
+        ¿Ya tenés cuenta? <a href="{{ url_for('auth.login') }}">Ingresá acá</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

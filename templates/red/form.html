@@ -5,7 +5,7 @@
 <div class="panel">
   <form method="post">
     <div class="form-row">
-      <div><label>Tu agencia</label><input name="agencia_nombre" value="{{ session.get('agencia_nombre','') }}" required></div>
+      <div><label>Tu agencia</label><input value="{{ session.get('agencia_nombre','') }}" disabled></div>
       <div>
         <label>Tipo de publicación</label>
         <select name="tipo">

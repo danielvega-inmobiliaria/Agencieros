@@ -11,7 +11,7 @@ vez de datos genéricos.
 import os
 import uuid
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session
 
 from database import query, execute, obtener_config_agencia
 
@@ -22,6 +22,8 @@ EXTENSIONES_PERMITIDAS_LOGO = {"jpg", "jpeg", "png", "webp"}
 
 @bp.route("/", methods=["GET", "POST"])
 def index():
+    agencia_id = session["agencia_id"]
+
     if request.method == "POST":
         nombre_agencia = request.form.get("nombre_agencia", "").strip() or None
         direccion = request.form.get("direccion", "").strip() or None
@@ -38,7 +40,7 @@ def index():
             )
             return redirect(url_for("admin.index"))
 
-        config_actual = obtener_config_agencia()
+        config_actual = obtener_config_agencia(agencia_id)
         logo_url = config_actual.get("logo_url")
 
         archivo = request.files.get("logo")
@@ -53,25 +55,33 @@ def index():
             archivo.save(os.path.join(carpeta, nombre_archivo))
             logo_url = url_for("static", filename=f"uploads/agencia/{nombre_archivo}")
 
-        existe = query("SELECT id FROM agencia_config WHERE id = 1", one=True)
+        existe = query("SELECT id FROM agencia_config WHERE agencia_id = ?", (agencia_id,), one=True)
         if existe:
             execute(
                 """UPDATE agencia_config
                    SET nombre_agencia = ?, logo_url = ?, direccion = ?, telefono = ?,
                        instagram = ?, facebook = ?, sitio_web = ?, updated_at = datetime('now')
-                   WHERE id = 1""",
-                (nombre_agencia, logo_url, direccion, telefono, instagram, facebook, sitio_web),
+                   WHERE agencia_id = ?""",
+                (nombre_agencia, logo_url, direccion, telefono, instagram, facebook, sitio_web, agencia_id),
             )
         else:
             execute(
                 """INSERT INTO agencia_config
-                   (id, nombre_agencia, logo_url, direccion, telefono, instagram, facebook, sitio_web)
-                   VALUES (1, ?, ?, ?, ?, ?, ?, ?)""",
-                (nombre_agencia, logo_url, direccion, telefono, instagram, facebook, sitio_web),
+                   (agencia_id, nombre_agencia, logo_url, direccion, telefono, instagram, facebook, sitio_web)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (agencia_id, nombre_agencia, logo_url, direccion, telefono, instagram, facebook, sitio_web),
             )
+
+        # El nombre comercial de Admin es también el que se muestra en el
+        # menú y en Red de Agencieros -- si lo cambió acá, se actualiza
+        # también en `agencias` y en la sesión actual para que se vea
+        # reflejado ya mismo, sin tener que volver a loguearse.
+        if nombre_agencia:
+            execute("UPDATE agencias SET nombre_agencia = ? WHERE id = ?", (nombre_agencia, agencia_id))
+            session["agencia_nombre"] = nombre_agencia
 
         flash("Datos de la agencia guardados.", "success")
         return redirect(url_for("admin.index"))
 
-    config = obtener_config_agencia()
+    config = obtener_config_agencia(agencia_id)
     return render_template("admin/index.html", config=config)

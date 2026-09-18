@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ingresar — Agencieros</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
@@ -16,11 +17,15 @@
       {% endwith %}
       <form method="post">
         <label>Email</label>
-        <input type="email" name="email" value="admin@agencieros.com" required>
+        <input type="email" name="email" required autofocus>
         <label>Contraseña</label>
-        <input type="password" name="password" value="admin1234" required>
+        <input type="password" name="password" required>
         <button class="btn btn-primary" style="width:100%; margin-top:20px;" type="submit">Ingresar</button>
       </form>
+      <p style="text-align:center; margin-top:18px; font-size:.9rem;">
+        ¿Tu agencia todavía no tiene cuenta?
+        <a href="{{ url_for('auth.registro') }}">Registrate acá</a>
+      </p>
     </div>
   </div>
 </body>

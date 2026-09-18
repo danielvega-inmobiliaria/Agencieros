@@ -1,4 +1,10 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+"""Red de Agencieros (multi-tenant real desde 18/09/2026): cartelera
+compartida entre TODAS las agencias registradas -- cualquiera logueada ve
+las publicaciones de las demás, pero solo puede crear/cerrar las suyas
+propias (filtro por `agencia_id` de la sesión, no por el texto libre que
+antes era `agencia_nombre`)."""
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, abort
 
 from database import query, execute
 from buscador import parsear_filtros, condiciones_sql
@@ -26,6 +32,7 @@ def index():
         filtro_tab_nombre="tipo",
         filtro_tab_valor=tipo_filtro,
         limpiar_url=url_for("red.index", tipo=tipo_filtro),
+        mi_agencia_id=session.get("agencia_id"),
     )
 
 
@@ -33,12 +40,16 @@ def index():
 def nueva():
     if request.method == "POST":
         f = request.form
+        # El nombre de agencia ya no se tipea a mano -- se toma de la
+        # cuenta logueada, así una agencia no puede publicar haciéndose
+        # pasar por otra.
+        agencia_nombre = session.get("agencia_nombre", "")
         execute(
             """INSERT INTO red_publicaciones
-               (agencia_nombre, tipo, marca, modelo, version, anio, km, precio, descripcion, contacto)
-               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+               (agencia_id, agencia_nombre, tipo, marca, modelo, version, anio, km, precio, descripcion, contacto)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
             (
-                f.get("agencia_nombre"), f.get("tipo"), f.get("marca"), f.get("modelo"),
+                session.get("agencia_id"), agencia_nombre, f.get("tipo"), f.get("marca"), f.get("modelo"),
                 f.get("version"), f.get("anio") or None, f.get("km") or None,
                 float(f.get("precio") or 0) or None,
                 f.get("descripcion"), f.get("contacto"),
@@ -51,6 +62,12 @@ def nueva():
 
 @bp.route("/<int:pub_id>/cerrar")
 def cerrar(pub_id):
+    publicacion = query("SELECT * FROM red_publicaciones WHERE id = ?", (pub_id,), one=True)
+    if not publicacion:
+        abort(404)
+    if publicacion["agencia_id"] != session.get("agencia_id"):
+        flash("Esa publicación no es de tu agencia -- no la podés cerrar.", "error")
+        return redirect(url_for("red.index"))
     execute("UPDATE red_publicaciones SET estado = 'cerrado' WHERE id = ?", (pub_id,))
     flash("Publicación cerrada.", "success")
     return redirect(url_for("red.index"))
