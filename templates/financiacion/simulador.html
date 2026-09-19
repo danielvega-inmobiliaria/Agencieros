@@ -16,56 +16,19 @@
   <form method="post">
     <div class="grid-2">
       <div>
-        <label>Vehículo (opcional — de Stock, Disponible o ya Vendido)</label>
-        <select name="vehiculo_id">
-          <option value="">— Sin vehículo asociado —</option>
-          {% for v in vehiculos_stock %}
-          <option value="{{ v.id }}" {{ 'selected' if valores.vehiculo_id|string == v.id|string else '' }}
-                  data-precio="{{ v.valor_vendido or v.valor_publicado or 0 }}">
-            [{{ estado_label.get(v.estado, v.estado) }}] {{ v.marca }} {{ v.modelo }} {{ v.version }} {{ v.anio }} — ${{ "{:,.0f}".format(v.valor_vendido or v.valor_publicado or 0).replace(",", ".") }}
-          </option>
-          {% endfor %}
-        </select>
-        <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
-          Si elegís un auto que todavía figura "Disponible", al guardar el plan pasa automáticamente a "Vendido" en Stock.
-        </p>
-      </div>
-      <div>
-        <label>Cliente</label>
-        <input type="text" name="cliente_nombre" value="{{ valores.cliente_nombre }}" placeholder="Nombre y apellido">
-      </div>
-    </div>
-    <div class="grid-2">
-      <div>
-        <label>Teléfono</label>
-        <input type="text" name="cliente_telefono" value="{{ valores.cliente_telefono }}">
-      </div>
-      <div>
-        <label>Precio de venta (informativo)</label>
-        <input type="number" step="1" name="precio_venta" id="precio_venta" value="{{ valores.precio_venta }}">
-      </div>
-    </div>
-    <div class="grid-2">
-      <div>
-        <label>Anticipo</label>
-        <input type="number" step="1" name="anticipo" id="anticipo" value="{{ valores.anticipo }}">
-      </div>
-      <div>
         <label>Monto a financiar</label>
         <input type="number" step="1" name="monto_financiado" id="monto_financiado" value="{{ valores.monto_financiado }}" required>
       </div>
-    </div>
-    <div class="grid-2">
       <div>
         <label>Tasa de interés mensual (%)</label>
         <input type="number" step="0.01" name="tasa_interes_mensual" id="tasa_interes_mensual" value="{{ valores.tasa_interes_mensual }}">
       </div>
+    </div>
+    <div class="grid-2">
       <div>
         <label>Plazo (cantidad de cuotas mensuales)</label>
         <input type="number" step="1" name="cantidad_cuotas" id="cantidad_cuotas" value="{{ valores.cantidad_cuotas }}" required>
       </div>
-    </div>
-    <div class="grid-2">
       <div>
         <label>Tasa de interés por atraso (%, opcional)</label>
         <input type="number" step="0.01" name="tasa_interes_punitorio" value="{{ valores.tasa_interes_punitorio }}">
@@ -74,7 +37,6 @@
           detalle del plan, para sugerir el monto a cobrar en cuotas vencidas. Dejalo en 0 si no cobrás recargo.
         </p>
       </div>
-      <div></div>
     </div>
     <div class="grid-2">
       <div>
@@ -116,6 +78,52 @@
     {% endif %}
     <div style="margin-top:16px;">
       <button class="btn btn-primary" type="submit">Calcular cuotas</button>
+    </div>
+
+    <div style="margin-top:22px; padding-top:16px; border-top:1px solid var(--border);">
+      <p style="color:var(--text-dim); font-size:12.5px; margin:0 0 10px;">
+        Datos para relacionar (opcional acá) — si ya tenés vehículo y cliente confirmados, cargalos y usá
+        "Confirmar operación" más abajo. Si todavía falta que los garantes vengan a firmar, dejalos en blanco
+        y usá "Otorgar crédito": después los cargás en la ficha del plan.
+      </p>
+      <div class="grid-2">
+        <div>
+          <label>Vehículo (opcional — de Stock, Disponible o ya Vendido)</label>
+          <select name="vehiculo_id">
+            <option value="">— Sin vehículo asociado —</option>
+            {% for v in vehiculos_stock %}
+            <option value="{{ v.id }}" {{ 'selected' if valores.vehiculo_id|string == v.id|string else '' }}
+                    data-precio="{{ v.valor_vendido or v.valor_publicado or 0 }}">
+              [{{ estado_label.get(v.estado, v.estado) }}] {{ v.marca }} {{ v.modelo }} {{ v.version }} {{ v.anio }} — ${{ "{:,.0f}".format(v.valor_vendido or v.valor_publicado or 0).replace(",", ".") }}
+            </option>
+            {% endfor %}
+          </select>
+          <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
+            Si elegís un auto que todavía figura "Disponible", al confirmar la operación pasa automáticamente a "Vendido" en Stock.
+          </p>
+        </div>
+        <div>
+          <label>Cliente</label>
+          <input type="text" name="cliente_nombre" value="{{ valores.cliente_nombre }}" placeholder="Nombre y apellido">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <label>Teléfono</label>
+          <input type="text" name="cliente_telefono" value="{{ valores.cliente_telefono }}">
+        </div>
+        <div>
+          <label>Precio de venta (informativo)</label>
+          <input type="number" step="1" name="precio_venta" id="precio_venta" value="{{ valores.precio_venta }}">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <label>Anticipo</label>
+          <input type="number" step="1" name="anticipo" id="anticipo" value="{{ valores.anticipo }}">
+        </div>
+        <div></div>
+      </div>
     </div>
   </form>
 </div>
@@ -165,7 +173,30 @@
     {% endfor %}
   </table>
 
-  <form method="post" action="{{ url_for('financiacion.nuevo') }}" id="form-confirmar-operacion" style="margin-top:16px;">
+  <div style="display:flex; gap:12px; align-items:center; margin:16px 0; flex-wrap:wrap;">
+    <form method="post" action="{{ url_for('financiacion.otorgar') }}" id="form-otorgar">
+      <input type="hidden" name="cliente_nombre" value="{{ valores.cliente_nombre }}">
+      <input type="hidden" name="cliente_telefono" value="{{ valores.cliente_telefono }}">
+      <input type="hidden" name="monto_financiado" value="{{ valores.monto_financiado }}">
+      <input type="hidden" name="tasa_interes_mensual" value="{{ valores.tasa_interes_mensual }}">
+      <input type="hidden" name="tasa_interes_punitorio" value="{{ valores.tasa_interes_punitorio }}">
+      <input type="hidden" name="cantidad_cuotas" value="{{ valores.cantidad_cuotas }}">
+      <input type="hidden" name="metodo_interes" value="{{ valores.metodo_interes }}">
+      <input type="hidden" name="periodicidad" value="{{ valores.periodicidad }}">
+      <input type="hidden" name="fecha_inicio" value="{{ valores.fecha_inicio }}">
+      <input type="hidden" name="cuota_aplicada" id="cuota_aplicada_input_otorgar" value="{{ valores.cuota_aplicada or '%.0f' % cuota }}">
+      <button class="btn btn-primary" type="submit">📝 Otorgar crédito (pendiente de firma)</button>
+    </form>
+    <span style="color:var(--text-dim); font-size:12.5px; max-width:340px;">
+      Guarda el plan y las cuotas ya, sin vehículo ni cliente confirmados todavía — los cargás
+      después en la ficha del plan, junto con los garantes.
+    </span>
+  </div>
+
+  <p style="color:var(--text-dim); font-size:12.5px; margin:0 0 4px;">
+    ¿Ya tenés vehículo y cliente confirmados, sin necesidad de esperar garantes? Confirmá la operación directo:
+  </p>
+  <form method="post" action="{{ url_for('financiacion.nuevo') }}" id="form-confirmar-operacion" style="margin-top:8px;">
     <input type="hidden" name="vehiculo_id" value="{{ valores.vehiculo_id }}">
     <input type="hidden" name="cliente_nombre" value="{{ valores.cliente_nombre }}">
     <input type="hidden" name="cliente_telefono" value="{{ valores.cliente_telefono }}">
@@ -323,8 +354,10 @@
     var totalPagarEl = document.getElementById('total-pagar-valor');
     var totalInteresEl = document.getElementById('total-interes-valor');
     var celdasCuota = document.querySelectorAll('.celda-cuota-cronograma');
+    var campoCuotaAplicadaOtorgar = document.getElementById('cuota_aplicada_input_otorgar');
     function actualizarTotalesPorCuotaAplicada() {
       var cuotaAplicada = parseFloat(campoCuotaAplicada.value);
+      if (campoCuotaAplicadaOtorgar) campoCuotaAplicadaOtorgar.value = campoCuotaAplicada.value;
       if (isNaN(cuotaAplicada) || cuotaAplicada <= 0 || !celdasCuota.length) return;
       var montoFinanciado = parseFloat(campoMontoFinanciado.value) || 0;
       var totalPagar = cuotaAplicada * celdasCuota.length;
@@ -335,6 +368,18 @@
       });
     }
     campoCuotaAplicada.addEventListener('input', actualizarTotalesPorCuotaAplicada);
+  }
+
+  // Confirmación explícita antes de otorgar el crédito (18/09/2026): esto
+  // ya guarda el plan en la base, aunque todavía no haya vehículo ni
+  // cliente cargados -- por eso conviene un aviso corto antes de mandarlo.
+  var formOtorgar = document.getElementById('form-otorgar');
+  if (formOtorgar) {
+    formOtorgar.addEventListener('submit', function (ev) {
+      if (!window.confirm('¿Otorgar este crédito como "Pendiente de firma"? Se guardan ya el plan y las cuotas; después cargás vehículo, cliente y garantes en la ficha del plan.')) {
+        ev.preventDefault();
+      }
+    });
   }
 
   // Confirmación explícita antes de registrar la operación: nada se guarda

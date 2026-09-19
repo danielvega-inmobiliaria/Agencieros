@@ -8,12 +8,20 @@ from database import query, execute
 bp = Blueprint("financiacion", __name__, url_prefix="/financiacion")
 
 ESTADO_PLAN_LABEL = {
+    "pendiente_firma": "Pendiente de firma",
     "activo": "Activo",
     "finalizado": "Finalizado",
     "cancelado": "Cancelado",
+    "cancelado_reserva": "Reserva cancelada",
 }
 # Reutiliza los colores de badge ya definidos en style.css para no agregar CSS nuevo.
-ESTADO_PLAN_BADGE = {"activo": "disponible", "finalizado": "vendido", "cancelado": "cancelado"}
+ESTADO_PLAN_BADGE = {
+    "pendiente_firma": "por_ingresar",
+    "activo": "disponible",
+    "finalizado": "vendido",
+    "cancelado": "cancelado",
+    "cancelado_reserva": "cancelado",
+}
 
 METODO_LABEL = {"frances": "Francés (interés compuesto)", "simple": "Interés simple/directo"}
 PERIODICIDAD_LABEL = {"mensual": "Mensual", "semanal": "Semanal"}
@@ -398,12 +406,27 @@ def detalle(financiacion_id):
             _monto_sugerido_con_recargo(c, fin["tasa_interes_punitorio"], hoy)
             if c["estado"] != "pagada" else None
         )
+
+    # Datos extra para completar un crédito "Pendiente de firma" (18/09/2026):
+    # garantes ya cargados y vehículos que se pueden relacionar -- los
+    # Disponibles de Stock más el que ya esté señado por ESTE mismo plan
+    # (si no, al recargar la página desaparecería del <select>).
+    garantes = query(
+        "SELECT * FROM garantes WHERE financiacion_id = ? ORDER BY id", (financiacion_id,)
+    ) if fin["estado"] == "pendiente_firma" else []
+    vehiculos_disponibles = query(
+        "SELECT * FROM vehiculos WHERE estado = 'disponible' OR id = ? ORDER BY created_at DESC",
+        (fin["vehiculo_id"] or 0,),
+    ) if fin["estado"] == "pendiente_firma" else []
+
     return render_template(
         "financiacion/detalle.html",
         fin=_con_resumen(fin),
         vehiculo=vehiculo,
         cuotas=cuotas,
         hoy=hoy,
+        garantes=garantes,
+        vehiculos_disponibles=vehiculos_disponibles,
         estado_label=ESTADO_PLAN_LABEL,
         estado_badge=ESTADO_PLAN_BADGE,
         metodo_label=METODO_LABEL,
@@ -567,4 +590,230 @@ def cancelar(financiacion_id):
         (observaciones, financiacion_id),
     )
     flash(f"Plan cancelado — saldo liquidado por ${monto_final:,.0f}.".replace(",", "."), "success")
+    return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+
+
+@bp.route("/otorgar", methods=["POST"])
+def otorgar():
+    """Otorgar un crédito directo desde el simulador SIN tener todavía
+    vehículo, cliente ni garantes confirmados (18/09/2026, pedido de
+    Daniel): muchas veces el monto/tasa/plazo se define primero y recién
+    después -- mientras los garantes vienen a firmar -- se relaciona el
+    auto y se cargan los datos del cliente. Guarda ya el plan y las cuotas
+    (con la fecha de la primera cuota tal como se calculó; si la firma
+    tarda, se corrige después con "Corregir fechas") en estado
+    'pendiente_firma' -- no toca Stock todavía, eso pasa recién al cargar
+    el vehículo en la ficha del plan (ahí se marca "Señado")."""
+    f = request.form
+    try:
+        monto = float(f.get("monto_financiado") or 0)
+        tasa = float(f.get("tasa_interes_mensual") or 0)
+        n = int(f.get("cantidad_cuotas") or 0)
+        fecha_inicio = _parsear_fecha(f.get("fecha_inicio"))
+    except ValueError:
+        flash("Revisá los valores antes de otorgar el crédito.", "error")
+        return redirect(url_for("financiacion.simulador"))
+
+    if monto <= 0 or n <= 0:
+        flash("Cargá un monto a financiar y una cantidad de cuotas válidos.", "error")
+        return redirect(url_for("financiacion.simulador"))
+
+    metodo = f.get("metodo_interes") or "frances"
+    periodicidad = f.get("periodicidad") or "mensual"
+    cuota, cronograma = _generar_cronograma(monto, tasa, n, fecha_inicio, metodo, periodicidad)
+    try:
+        tasa_punitoria = float(f.get("tasa_interes_punitorio") or 0)
+    except ValueError:
+        tasa_punitoria = 0
+    try:
+        cuota_aplicada = float(f.get("cuota_aplicada") or 0)
+    except ValueError:
+        cuota_aplicada = 0
+    valor_cuota_final = cuota_aplicada if cuota_aplicada > 0 else cuota
+    if cuota_aplicada > 0:
+        for fila in cronograma:
+            fila["monto"] = cuota_aplicada
+
+    # cliente_nombre es NOT NULL en la base -- si todavía no se cargó, se
+    # guarda vacío ("") en vez de NULL, y se completa después en la ficha
+    # del plan (completar_datos).
+    financiacion_id = execute(
+        """INSERT INTO financiaciones
+           (cliente_nombre, cliente_telefono, monto_financiado, tasa_interes_mensual,
+            tasa_interes_punitorio, metodo_interes, periodicidad, plazo_meses,
+            cantidad_cuotas, valor_cuota, fecha_inicio, estado)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,'pendiente_firma')""",
+        (
+            f.get("cliente_nombre") or "", f.get("cliente_telefono") or None,
+            monto, tasa, tasa_punitoria, metodo, periodicidad,
+            n, len(cronograma), valor_cuota_final, str(fecha_inicio),
+        ),
+    )
+    for fila in cronograma:
+        execute(
+            """INSERT INTO financiacion_cuotas (financiacion_id, numero, fecha_vencimiento, monto)
+               VALUES (?,?,?,?)""",
+            (financiacion_id, fila["numero"], str(fila["fecha"]), fila["monto"]),
+        )
+
+    flash(
+        f"Crédito otorgado, pendiente de firma — {len(cronograma)} cuotas de ${valor_cuota_final:,.0f}. "
+        "Ahora podés relacionar vehículo, cliente y garantes.".replace(",", "."),
+        "success",
+    )
+    return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+
+
+@bp.route("/<int:financiacion_id>/completar-datos", methods=["POST"])
+def completar_datos(financiacion_id):
+    """Carga o corrige cliente/vehículo/precio/seña de un crédito todavía
+    'pendiente_firma' -- se puede llamar varias veces mientras se van
+    juntando los datos (18/09/2026). Si se elige un vehículo Disponible,
+    pasa a 'Señado' para dejar de ofrecerlo; si se cambia por otro, el
+    anterior (si estaba señado por este mismo plan) vuelve a Disponible."""
+    fin = query("SELECT * FROM financiaciones WHERE id = ?", (financiacion_id,), one=True)
+    if not fin:
+        flash("Plan de financiación no encontrado.", "error")
+        return redirect(url_for("financiacion.index"))
+    if fin["estado"] != "pendiente_firma":
+        flash("Este plan ya no está pendiente de firma.", "error")
+        return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+
+    f = request.form
+    nuevo_vehiculo_id = f.get("vehiculo_id") or None
+    nuevo_vehiculo_id = int(nuevo_vehiculo_id) if nuevo_vehiculo_id else None
+
+    if fin["vehiculo_id"] and fin["vehiculo_id"] != nuevo_vehiculo_id:
+        anterior = query("SELECT * FROM vehiculos WHERE id = ?", (fin["vehiculo_id"],), one=True)
+        if anterior and anterior["estado"] == "senado":
+            execute(
+                "UPDATE vehiculos SET estado = 'disponible', updated_at = datetime('now') WHERE id = ?",
+                (fin["vehiculo_id"],),
+            )
+
+    if nuevo_vehiculo_id:
+        vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (nuevo_vehiculo_id,), one=True)
+        if vehiculo and vehiculo["estado"] == "disponible":
+            execute(
+                "UPDATE vehiculos SET estado = 'senado', updated_at = datetime('now') WHERE id = ?",
+                (nuevo_vehiculo_id,),
+            )
+
+    try:
+        precio_venta = float(f.get("precio_venta")) if f.get("precio_venta") else None
+    except ValueError:
+        precio_venta = None
+    try:
+        anticipo = float(f.get("anticipo")) if f.get("anticipo") else 0
+    except ValueError:
+        anticipo = 0
+
+    execute(
+        """UPDATE financiaciones SET cliente_nombre = ?, cliente_telefono = ?,
+           vehiculo_id = ?, precio_venta = ?, anticipo = ? WHERE id = ?""",
+        (
+            f.get("cliente_nombre") or "", f.get("cliente_telefono") or None,
+            nuevo_vehiculo_id, precio_venta, anticipo, financiacion_id,
+        ),
+    )
+    flash("Datos guardados.", "success")
+    return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+
+
+@bp.route("/<int:financiacion_id>/garantes/agregar", methods=["POST"])
+def agregar_garante(financiacion_id):
+    fin = query("SELECT * FROM financiaciones WHERE id = ?", (financiacion_id,), one=True)
+    if not fin:
+        flash("Plan de financiación no encontrado.", "error")
+        return redirect(url_for("financiacion.index"))
+    nombre = (request.form.get("nombre") or "").strip()
+    if not nombre:
+        flash("El nombre del garante es obligatorio.", "error")
+        return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+    execute(
+        """INSERT INTO garantes (financiacion_id, nombre, dni, telefono, domicilio)
+           VALUES (?,?,?,?,?)""",
+        (
+            financiacion_id, nombre,
+            request.form.get("dni") or None,
+            request.form.get("telefono") or None,
+            request.form.get("domicilio") or None,
+        ),
+    )
+    flash("Garante agregado.", "success")
+    return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+
+
+@bp.route("/<int:financiacion_id>/garantes/<int:garante_id>/eliminar", methods=["POST"])
+def eliminar_garante(financiacion_id, garante_id):
+    execute("DELETE FROM garantes WHERE id = ? AND financiacion_id = ?", (garante_id, financiacion_id))
+    flash("Garante eliminado.", "success")
+    return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+
+
+@bp.route("/<int:financiacion_id>/confirmar-venta", methods=["POST"])
+def confirmar_venta(financiacion_id):
+    """Cierra el trámite: el vehículo pasa de 'Señado' (o 'Disponible', si
+    no se había marcado por algún motivo) a 'Vendido', y el plan pasa de
+    'pendiente_firma' a 'activo' -- recién ahí empieza a poder cobrarse
+    cuota a cuota, igual que un plan cargado por el camino de siempre."""
+    fin = query("SELECT * FROM financiaciones WHERE id = ?", (financiacion_id,), one=True)
+    if not fin:
+        flash("Plan de financiación no encontrado.", "error")
+        return redirect(url_for("financiacion.index"))
+    if fin["estado"] != "pendiente_firma":
+        flash("Este plan ya no está pendiente de firma.", "error")
+        return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+    if not fin["cliente_nombre"] or not fin["vehiculo_id"]:
+        flash("Cargá cliente y vehículo antes de confirmar la venta.", "error")
+        return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+
+    vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (fin["vehiculo_id"],), one=True)
+    if vehiculo:
+        precio_venta = fin["precio_venta"] or vehiculo["valor_publicado"]
+        execute(
+            """UPDATE vehiculos SET estado = 'vendido', valor_vendido = ?,
+               fecha_venta = ?, updated_at = datetime('now') WHERE id = ?""",
+            (precio_venta, str(date.today()), fin["vehiculo_id"]),
+        )
+    execute("UPDATE financiaciones SET estado = 'activo' WHERE id = ?", (financiacion_id,))
+    flash("Venta confirmada — el plan pasa a activo y el vehículo a Vendido.", "success")
+    return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+
+
+@bp.route("/<int:financiacion_id>/cancelar-reserva", methods=["POST"])
+def cancelar_reserva(financiacion_id):
+    """Si se cae la firma con los garantes: el vehículo (si estaba
+    'Señado' por este plan) vuelve a 'Disponible' para poder ofrecerse de
+    nuevo, y el plan queda 'cancelado_reserva' -- distinto del 'cancelado'
+    que usa /cancelar (esa es una liquidación anticipada de un plan que ya
+    estaba activo cobrándose). La seña recibida, si la hubo, queda anotada
+    en observaciones para que Daniel decida a mano si corresponde
+    devolverla o no."""
+    fin = query("SELECT * FROM financiaciones WHERE id = ?", (financiacion_id,), one=True)
+    if not fin:
+        flash("Plan de financiación no encontrado.", "error")
+        return redirect(url_for("financiacion.index"))
+    if fin["estado"] != "pendiente_firma":
+        flash("Este plan ya no está pendiente de firma.", "error")
+        return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+
+    if fin["vehiculo_id"]:
+        vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (fin["vehiculo_id"],), one=True)
+        if vehiculo and vehiculo["estado"] == "senado":
+            execute(
+                "UPDATE vehiculos SET estado = 'disponible', updated_at = datetime('now') WHERE id = ?",
+                (fin["vehiculo_id"],),
+            )
+
+    hoy = str(date.today())
+    nota = f"[Reserva cancelada {hoy}]"
+    if fin["anticipo"]:
+        nota += f" Seña recibida: ${fin['anticipo']:,.0f} -- a definir si se devuelve.".replace(",", ".")
+    observaciones = f"{fin['observaciones']}\n{nota}" if fin["observaciones"] else nota
+    execute(
+        "UPDATE financiaciones SET estado = 'cancelado_reserva', observaciones = ? WHERE id = ?",
+        (observaciones, financiacion_id),
+    )
+    flash("Reserva cancelada — el vehículo vuelve a Disponible.", "success")
     return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))

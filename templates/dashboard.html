@@ -15,6 +15,11 @@
     <div class="label">En reparación</div>
     <div class="value">{{ stock_counts.get('en_reparacion', 0) }}</div>
   </a>
+  <a class="card" href="{{ url_for('stock.index', estado='senado') }}">
+    <div class="label">Señados</div>
+    <div class="value">{{ stock_counts.get('senado', 0) }}</div>
+    <div class="sub">Reservados, esperando firma de garantes</div>
+  </a>
   <a class="card" href="{{ url_for('pedidos.index') }}">
     <div class="label">Pedidos activos</div>
     <div class="value">{{ pedidos_activos }}</div>

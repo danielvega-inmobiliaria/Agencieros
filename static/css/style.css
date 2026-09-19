@@ -9,6 +9,7 @@
   --green: #3ecf8e;
   --red: #e5615a;
   --border: #22314a;
+  --violet: #9b8cf0;
 }
 
 * { box-sizing: border-box; }
@@ -236,6 +237,7 @@ tr:hover td { background: var(--navy-card-2); }
 .badge.buscando { background: rgba(217,164,65,.18); color: var(--gold-light); }
 .badge.resuelto { background: rgba(62,207,142,.15); color: var(--green); }
 .badge.cancelado { background: rgba(154,167,187,.18); color: var(--text-dim); }
+.badge.senado { background: rgba(155,140,240,.18); color: var(--violet); }
 
 .tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
 .tab {

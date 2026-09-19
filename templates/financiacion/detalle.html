@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Plan de financiación — Agencieros{% endblock %}
-{% block header %}Plan de financiación — {{ fin.cliente_nombre }}{% endblock %}
+{% block header %}Plan de financiación — {{ fin.cliente_nombre or 'Cliente a cargar' }}{% endblock %}
 {% block content %}
 <div class="tabs">
   <a class="tab" href="{{ url_for('financiacion.index') }}">← Volver a Financiación</a>
@@ -39,10 +39,98 @@
   </div>
 </div>
 
+{% if fin.estado == 'pendiente_firma' %}
+<div class="panel" style="border:1px solid var(--gold);">
+  <h2>⏳ Pendiente de firma — completar antes de confirmar la venta</h2>
+  <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
+    Este crédito ya está otorgado y las cuotas calculadas. Cargá acá cliente, vehículo, seña y garantes a
+    medida que los tengas — se puede guardar de a partes. Cuando esté todo, confirmá la venta.
+  </p>
+
+  <form method="post" action="{{ url_for('financiacion.completar_datos', financiacion_id=fin.id) }}">
+    <div class="grid-2">
+      <div>
+        <label>Cliente</label>
+        <input type="text" name="cliente_nombre" value="{{ fin.cliente_nombre }}" placeholder="Nombre y apellido">
+      </div>
+      <div>
+        <label>Teléfono</label>
+        <input type="text" name="cliente_telefono" value="{{ fin.cliente_telefono or '' }}">
+      </div>
+    </div>
+    <div class="grid-2">
+      <div>
+        <label>Vehículo (al guardar, si está Disponible pasa a "Señado")</label>
+        <select name="vehiculo_id">
+          <option value="">— Sin vehículo asociado —</option>
+          {% for v in vehiculos_disponibles %}
+          <option value="{{ v.id }}" {{ 'selected' if fin.vehiculo_id == v.id else '' }}>
+            {{ v.marca }} {{ v.modelo }} {{ v.version }} {{ v.anio }} — ${{ "{:,.0f}".format(v.valor_publicado or 0).replace(",", ".") }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Precio de venta</label>
+        <input type="number" step="1" name="precio_venta" value="{{ fin.precio_venta or '' }}">
+      </div>
+    </div>
+    <div class="grid-2">
+      <div>
+        <label>Seña recibida</label>
+        <input type="number" step="1" name="anticipo" value="{{ fin.anticipo or '' }}">
+      </div>
+      <div></div>
+    </div>
+    <button class="btn btn-secondary btn-sm" type="submit">Guardar datos</button>
+  </form>
+
+  <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--border);">
+    <h3 style="margin:0 0 8px;">Garantes</h3>
+    {% if garantes %}
+    <table style="margin-bottom:12px;">
+      <tr class="fila-header"><th>Nombre</th><th>DNI</th><th>Teléfono</th><th>Domicilio</th><th></th></tr>
+      {% for g in garantes %}
+      <tr>
+        <td>{{ g.nombre }}</td><td>{{ g.dni or '-' }}</td><td>{{ g.telefono or '-' }}</td><td>{{ g.domicilio or '-' }}</td>
+        <td>
+          <form method="post" action="{{ url_for('financiacion.eliminar_garante', financiacion_id=fin.id, garante_id=g.id) }}">
+            <button class="btn-eliminar-foto" type="submit" title="Quitar garante">✕</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p style="color:var(--text-dim); font-size:13px;">Todavía no cargaste garantes.</p>
+    {% endif %}
+    <form method="post" action="{{ url_for('financiacion.agregar_garante', financiacion_id=fin.id) }}" style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+      <label style="font-size:13px; color:var(--text-dim);">Nombre<input type="text" name="nombre" required style="display:block; padding:6px; margin-top:4px;"></label>
+      <label style="font-size:13px; color:var(--text-dim);">DNI<input type="text" name="dni" style="display:block; padding:6px; margin-top:4px;"></label>
+      <label style="font-size:13px; color:var(--text-dim);">Teléfono<input type="text" name="telefono" style="display:block; padding:6px; margin-top:4px;"></label>
+      <label style="font-size:13px; color:var(--text-dim);">Domicilio<input type="text" name="domicilio" style="display:block; padding:6px; margin-top:4px;"></label>
+      <button class="btn btn-secondary btn-sm" type="submit">+ Agregar garante</button>
+    </form>
+  </div>
+
+  <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--border); display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+    <form method="post" action="{{ url_for('financiacion.confirmar_venta', financiacion_id=fin.id) }}" id="form-confirmar-venta">
+      <button class="btn btn-primary" type="submit" {{ 'disabled' if not fin.cliente_nombre or not fin.vehiculo_id else '' }}>✅ Confirmar venta</button>
+    </form>
+    <form method="post" action="{{ url_for('financiacion.cancelar_reserva', financiacion_id=fin.id) }}" id="form-cancelar-reserva">
+      <button class="btn btn-secondary" type="submit" style="border-color:var(--red); color:var(--red);">✕ Cancelar reserva</button>
+    </form>
+    {% if not fin.cliente_nombre or not fin.vehiculo_id %}
+    <span style="color:var(--gold-light); font-size:12px;">Para confirmar la venta necesitás cargar cliente y vehículo.</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
 <div class="panel">
   <h2>Datos del cliente y del plan</h2>
   <p style="color:var(--text-dim); font-size:13px; margin:0 0 4px;">
-    <b style="color:var(--text);">Cliente:</b> {{ fin.cliente_nombre }}{% if fin.cliente_telefono %} · {{ fin.cliente_telefono }}{% endif %}
+    <b style="color:var(--text);">Cliente:</b> {{ fin.cliente_nombre or 'Todavía sin cargar' }}{% if fin.cliente_telefono %} · {{ fin.cliente_telefono }}{% endif %}
   </p>
   {% if vehiculo %}
   <p style="color:var(--text-dim); font-size:13px; margin:0 0 4px;">
@@ -154,16 +242,35 @@
 <script>
   (function () {
     var formCancelar = document.getElementById('form-cancelar-plan');
-    if (!formCancelar) return;
-    formCancelar.addEventListener('submit', function (e) {
-      var input = document.getElementById('monto_final_cancelacion');
-      var monto = parseFloat(input.value || '0') || 0;
-      var texto = 'Vas a cancelar este plan: todas las cuotas pendientes quedan marcadas como saldadas por $' +
-        monto.toLocaleString('es-AR') + ' en total. Esta acción no se puede deshacer. ¿Confirmás?';
-      if (!window.confirm(texto)) {
-        e.preventDefault();
-      }
-    });
+    if (formCancelar) {
+      formCancelar.addEventListener('submit', function (e) {
+        var input = document.getElementById('monto_final_cancelacion');
+        var monto = parseFloat(input.value || '0') || 0;
+        var texto = 'Vas a cancelar este plan: todas las cuotas pendientes quedan marcadas como saldadas por $' +
+          monto.toLocaleString('es-AR') + ' en total. Esta acción no se puede deshacer. ¿Confirmás?';
+        if (!window.confirm(texto)) {
+          e.preventDefault();
+        }
+      });
+    }
+
+    var formConfirmarVenta = document.getElementById('form-confirmar-venta');
+    if (formConfirmarVenta) {
+      formConfirmarVenta.addEventListener('submit', function (e) {
+        if (!window.confirm('¿Confirmás la venta? El vehículo pasa a "Vendido" y el plan queda activo, empezando a cobrar las cuotas.')) {
+          e.preventDefault();
+        }
+      });
+    }
+
+    var formCancelarReserva = document.getElementById('form-cancelar-reserva');
+    if (formCancelarReserva) {
+      formCancelarReserva.addEventListener('submit', function (e) {
+        if (!window.confirm('¿Cancelar la reserva? El vehículo (si estaba señado) vuelve a Disponible y este plan queda cancelado.')) {
+          e.preventDefault();
+        }
+      });
+    }
   })();
 </script>
 {% endblock %}

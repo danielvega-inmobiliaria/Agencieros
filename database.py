@@ -174,6 +174,17 @@ CREATE TABLE IF NOT EXISTS financiacion_cuotas (
     FOREIGN KEY (financiacion_id) REFERENCES financiaciones(id)
 );
 
+CREATE TABLE IF NOT EXISTS garantes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    financiacion_id INTEGER NOT NULL,
+    nombre TEXT NOT NULL,
+    dni TEXT,
+    telefono TEXT,
+    domicilio TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (financiacion_id) REFERENCES financiaciones(id)
+);
+
 CREATE TABLE IF NOT EXISTS red_publicaciones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     agencia_nombre TEXT NOT NULL,

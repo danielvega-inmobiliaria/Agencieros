@@ -14,11 +14,12 @@ from equipamiento_destacado import equipamiento_destacado
 
 bp = Blueprint("stock", __name__, url_prefix="/stock")
 
-ESTADOS = ["disponible", "por_ingresar", "en_reparacion", "vendido"]
+ESTADOS = ["disponible", "por_ingresar", "en_reparacion", "senado", "vendido"]
 ESTADO_LABEL = {
     "disponible": "Disponible",
     "por_ingresar": "Por ingresar",
     "en_reparacion": "En reparación",
+    "senado": "Señado",
     "vendido": "Vendido",
 }
 EXTENSIONES_PERMITIDAS = {"jpg", "jpeg", "png", "webp", "gif"}

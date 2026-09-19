@@ -25,11 +25,15 @@
     <tr class="fila-header"><th>Cliente</th><th>Cuota</th><th>Estado</th></tr>
     {% for p in planes %}
     <tr data-href="{{ url_for('financiacion.detalle', financiacion_id=p.id) }}">
-      <td data-label="Cliente">{{ p.cliente_nombre }}{% if p.cliente_telefono %}<br><span style="color:var(--text-dim); font-size:11.5px;">{{ p.cliente_telefono }}</span>{% endif %}</td>
+      <td data-label="Cliente">{{ p.cliente_nombre or 'Cliente a cargar' }}{% if p.cliente_telefono %}<br><span style="color:var(--text-dim); font-size:11.5px;">{{ p.cliente_telefono }}</span>{% endif %}</td>
       <td data-label="Cuota">{{ p.cuotas_pagadas }}/{{ p.cuotas_totales }}</td>
       <td data-label="Estado">
-        {% if p.estado == 'finalizado' %}
+        {% if p.estado == 'pendiente_firma' %}
+          <span class="badge por_ingresar">Pendiente de firma</span>
+        {% elif p.estado == 'finalizado' %}
           <span class="badge vendido">Finalizado</span>
+        {% elif p.estado == 'cancelado_reserva' %}
+          <span class="badge cancelado">Reserva cancelada</span>
         {% elif p.estado == 'cancelado' %}
           <span class="badge cancelado">Cancelado</span>
         {% elif p.cuotas_vencidas %}
