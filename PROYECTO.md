@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 19/09/2026 — 17:20 ART_
+_Última actualización: 19/09/2026 — 16:01 ART (cierre de sesión)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -114,6 +114,7 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - **Garantes como filas dinámicas:** se agregan/quitan con JS en la misma pantalla del simulador (sin guardarse de a uno como antes), viajan al servidor como listas paralelas (`garante_nombre[]`, `garante_dni[]`, etc.) y se insertan todas juntas en el mismo POST de "Guardar" -- las filas sin nombre se descartan.
 - **Ficha del plan "Pendiente de firma" ampliada:** ahora también permite corregir Permuta (mismo buscador de Tasaciones + campos editables) y Entrega en contado, además de lo que ya dejaba tocar (cliente/vehículo/precio de venta/seña) -- `completar_datos()` actualizado para persistir estos 4 campos nuevos. El panel de resumen de solo lectura ahora muestra "Permuta" y "Entrega en contado" cuando están cargados.
 - **Probado con `test_client()` sobre copia de la base real** (nunca la base real directo): simulador con los campos nuevos, `/otorgar` confirmado eliminado (404), `guardar()` con y sin permuta/vehículo/garantes (fila vacía descartada, tasación ya usada no vuelve a ofrecerse), edición de permuta/entrega contado desde la ficha vía `completar_datos`, "Cerrar operación" funcionando después de guardar con permuta, y regresión completa de Stock/Dashboard/Financiación/Panel de Agencias.
+- **Dos bugs reportados por Daniel después de probar en producción, corregidos el mismo día:** (1) **"Ingresos del mes" en el Dashboard no sumaba la Entrega en contado** -- solo contaba la seña (`anticipo`) cuando había financiación, dejando afuera el efectivo real cobrado al cierre; ahora suma seña + entrega en contado (la Permuta sigue sin contar a propósito, es un vehículo, no efectivo). (2) **Aparecían planes "Pendiente de firma" con "Cliente a cargar" que Daniel no reconocía** -- entradas reales creadas al probar el flujo nuevo de Avanzar/Guardar sin completar los datos (antes no había forma de borrarlas del todo, solo "Cancelar reserva" que las deja igual visibles con otro estado). Se agregó una acción nueva **"🗑 Eliminar"** en la ficha del plan, habilitada solo mientras sigue "Pendiente de firma" (nunca en un plan Activo/Finalizado/Cancelado, ahí ya hay cobros reales de por medio) -- borra el plan, sus cuotas y garantes por completo, y libera el vehículo si estaba "Señado" por ese plan. **Importante:** estos dos planes fantasma están en la base de **producción** (Railway), no en la base local -- hace falta desplegar este fix y despues usar el botón "Eliminar" en cada uno desde la ficha del plan para que desaparezcan de verdad.
 
 ### Sesión 18/09/2026 — Limpieza Hilux/Petrini, Red+Auth multi-tenant, Stock y Pedidos multi-tenant, deploy a Railway, Panel de Agencias, y rediseño de Financiación (Otorgar/garantes/Señado)
 

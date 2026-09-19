@@ -185,6 +185,9 @@
     <form method="post" action="{{ url_for('financiacion.cancelar_reserva', financiacion_id=fin.id) }}" id="form-cancelar-reserva">
       <button class="btn btn-secondary" type="submit" style="border-color:var(--red); color:var(--red);">✕ Cancelar reserva</button>
     </form>
+    <form method="post" action="{{ url_for('financiacion.eliminar', financiacion_id=fin.id) }}" id="form-eliminar-plan">
+      <button class="btn btn-secondary" type="submit" style="border-color:var(--red); color:var(--red);" title="Borra el plan por completo -- para cuando se guardó por error o solo probando">🗑 Eliminar</button>
+    </form>
     {% if not fin.cliente_nombre or not fin.vehiculo_id %}
     <span style="color:var(--gold-light); font-size:12px;">Para cerrar la operación necesitás cargar cliente y vehículo.</span>
     {% endif %}
@@ -342,6 +345,15 @@
     if (formCancelarReserva) {
       formCancelarReserva.addEventListener('submit', function (e) {
         if (!window.confirm('¿Cancelar la reserva? El vehículo (si estaba señado) vuelve a Disponible y este plan queda cancelado.')) {
+          e.preventDefault();
+        }
+      });
+    }
+
+    var formEliminarPlan = document.getElementById('form-eliminar-plan');
+    if (formEliminarPlan) {
+      formEliminarPlan.addEventListener('submit', function (e) {
+        if (!window.confirm('¿Eliminar este plan por completo? No queda ningún registro -- usalo solo si se guardó por error o probando el simulador. Esta acción no se puede deshacer.')) {
           e.preventDefault();
         }
       });

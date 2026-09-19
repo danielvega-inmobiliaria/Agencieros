@@ -61,7 +61,7 @@ def index():
     # "Ganancia" no cambia: sigue siendo la rentabilidad total de la venta
     # (precio completo - costo), se cobre ya o en cuotas.
     ventas_mes_detalle = query(
-        """SELECT v.valor_vendido, v.valor_compra, v.gastos, f.anticipo
+        """SELECT v.valor_vendido, v.valor_compra, v.gastos, f.anticipo, f.entrega_contado
            FROM vehiculos v
            LEFT JOIN financiaciones f ON f.vehiculo_id = v.id
            WHERE v.estado = 'vendido' AND strftime('%Y-%m', v.fecha_venta) = strftime('%Y-%m', 'now')"""
@@ -75,9 +75,19 @@ def index():
             ),
             2,
         ),
+        # 19/09/2026 (bug reportado por Daniel): si el vehículo se vendió
+        # con un plan de financiación que además tenía "Entrega en
+        # contado" (además de la seña), ese efectivo también entró este
+        # mes -- antes solo se contaba la seña (`anticipo`) y la entrega
+        # en contado quedaba afuera. La Permuta (vehículo, no efectivo) se
+        # sigue sin contar acá a propósito.
         "ingresos": round(
             sum(
-                (r["anticipo"] if r["anticipo"] is not None else (r["valor_vendido"] or 0))
+                (
+                    (r["anticipo"] or 0) + (r["entrega_contado"] or 0)
+                    if r["anticipo"] is not None
+                    else (r["valor_vendido"] or 0)
+                )
                 for r in ventas_mes_detalle
             ),
             2,

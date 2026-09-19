@@ -822,6 +822,40 @@ def eliminar_garante(financiacion_id, garante_id):
     return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
 
 
+@bp.route("/<int:financiacion_id>/eliminar", methods=["POST"])
+def eliminar(financiacion_id):
+    """Borra por completo un plan 'pendiente_firma' -- pensado para los
+    casos en los que se guardó por error o solo probando el simulador
+    (19/09/2026, pedido de Daniel: "me aparecen financiaciones que no
+    existen" -- entradas vacías que había cargado sin querer al probar el
+    flujo nuevo). Solo se puede borrar mientras sigue pendiente de firma
+    -- no se toca nunca un plan Activo/Finalizado/Cancelado, ahí ya hay
+    historia real de cobros de por medio y "Cancelar reserva" es el
+    camino correcto en su lugar. Si el vehículo estaba 'Señado' por este
+    plan, vuelve a 'Disponible'."""
+    fin = query("SELECT * FROM financiaciones WHERE id = ?", (financiacion_id,), one=True)
+    if not fin:
+        flash("Plan de financiación no encontrado.", "error")
+        return redirect(url_for("financiacion.index"))
+    if fin["estado"] != "pendiente_firma":
+        flash("Solo se puede eliminar un plan que todavía está pendiente de firma.", "error")
+        return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+
+    if fin["vehiculo_id"]:
+        vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (fin["vehiculo_id"],), one=True)
+        if vehiculo and vehiculo["estado"] == "senado":
+            execute(
+                "UPDATE vehiculos SET estado = 'disponible', updated_at = datetime('now') WHERE id = ?",
+                (fin["vehiculo_id"],),
+            )
+
+    execute("DELETE FROM garantes WHERE financiacion_id = ?", (financiacion_id,))
+    execute("DELETE FROM financiacion_cuotas WHERE financiacion_id = ?", (financiacion_id,))
+    execute("DELETE FROM financiaciones WHERE id = ?", (financiacion_id,))
+    flash("Plan eliminado -- no queda ningún registro de esto.", "success")
+    return redirect(url_for("financiacion.index"))
+
+
 @bp.route("/<int:financiacion_id>/confirmar-venta", methods=["POST"])
 def confirmar_venta(financiacion_id):
     """Cierra el trámite: el vehículo pasa de 'Señado' (o 'Disponible', si
