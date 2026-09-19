@@ -252,7 +252,7 @@ def _tasaciones_disponibles(excluir_tasacion_id=None):
                )
                AND id NOT IN (
                    SELECT permuta_tasacion_id FROM ventas
-                   WHERE permuta_tasacion_id IS NOT NULL AND estado = 'cerrada'
+                   WHERE permuta_tasacion_id IS NOT NULL AND estado IN ('senado', 'cerrada')
                )
            ) OR id = ?
            ORDER BY created_at DESC""",

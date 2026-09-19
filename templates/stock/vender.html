@@ -87,7 +87,7 @@
       <div>
         {% if venta %}
         <label>Seña ya recibida</label>
-        <input type="text" value="${{ '{:,.0f}'.format(venta.sena or 0).replace(',', '.') }} ({{ venta.fecha_sena }})" disabled style="opacity:0.75;">
+        <input type="text" value="{% if venta.sena %}${{ '{:,.0f}'.format(venta.sena).replace(',', '.') }} en efectivo ({{ venta.fecha_sena }}){% else %}Sin seña en efectivo (la seña es la permuta){% endif %}" disabled style="opacity:0.75;">
         <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">Ya está incluida en el efectivo cobrado.</p>
         {% else %}
         <label>Seña ya recibida (opcional)</label>

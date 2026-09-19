@@ -81,7 +81,8 @@
   {% elif vehiculo.estado == 'senado' %}
     {% if venta_abierta %}
     <p style="margin-top:0;">Señado por <b>{{ venta_abierta.cliente_nombre }}</b>{% if venta_abierta.cliente_telefono %} · {{ venta_abierta.cliente_telefono }}{% endif %}
-      — seña de <b>${{ m.format(venta_abierta.sena or 0).replace(",", ".") }}</b> el {{ venta_abierta.fecha_sena }}{% if venta_abierta.precio_venta %} (precio acordado ${{ m.format(venta_abierta.precio_venta).replace(",", ".") }}){% endif %}.</p>
+      el {{ venta_abierta.fecha_sena }}:
+      {% if venta_abierta.sena %}seña en efectivo de <b>${{ m.format(venta_abierta.sena).replace(",", ".") }}</b>{% endif %}{% if venta_abierta.sena and venta_abierta.permuta_valor %} + {% endif %}{% if venta_abierta.permuta_valor %}permuta <b>{{ venta_abierta.permuta_descripcion or 'vehículo' }}</b> por <b>${{ m.format(venta_abierta.permuta_valor).replace(",", ".") }}</b>{% endif %}{% if venta_abierta.precio_venta %} (precio acordado ${{ m.format(venta_abierta.precio_venta).replace(",", ".") }}){% endif %}.</p>
     {% if venta_abierta.observaciones %}<p style="color:var(--text-dim); font-size:13px;">{{ venta_abierta.observaciones }}</p>{% endif %}
     {% elif plan_pendiente %}
     <p style="margin-top:0;">Este vehículo está señado por un <b>crédito de Financiación en trámite</b>
@@ -118,14 +119,71 @@
           <div><label>Teléfono (opcional)</label><input type="text" name="cliente_telefono"></div>
         </div>
         <div class="grid-2">
-          <div><label>Monto de la seña</label><input type="number" step="1" min="1" name="sena" required></div>
-          <div><label>Precio acordado (opcional)</label><input type="number" step="1" name="precio_venta" value="{{ vehiculo.valor_publicado or '' }}"></div>
+          <div>
+            <label>Seña en efectivo</label>
+            <input type="number" step="1" min="0" name="sena">
+            <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">Podés dejarlo vacío si la seña es solo la permuta.</p>
+          </div>
+          <div><label>Precio acordado (opcional)</label><input type="number" step="1" name="precio_venta" value="{{ precio_sugerido }}"></div>
         </div>
+        <div class="panel" style="background:var(--navy-card-2); margin:14px 0;">
+          <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
+            <input type="checkbox" name="permuta_hay" id="sena_permuta_hay" value="1" style="width:auto;">
+            Deja un vehículo en permuta
+          </label>
+          <div id="sena-permuta-datos" hidden style="margin-top:12px;">
+            <div class="grid-2">
+              <div>
+                <label>Tasación de origen (opcional)</label>
+                <select id="sena_permuta_tasacion" name="permuta_tasacion_id">
+                  <option value="">-- Sin tasación / cargar valor a mano --</option>
+                  {% for t in tasaciones_permuta %}
+                  <option value="{{ t.id }}" data-precio="{{ t.precio_max_recomendado or 0 }}"
+                          data-desc="{{ t.marca or '' }} {{ t.modelo or '' }} {{ t.anio or '' }}">
+                    {{ t.marca }} {{ t.modelo }} {{ t.anio or '' }} — toma sugerida ${{ '%.0f'|format(t.precio_max_recomendado or 0) }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div>
+                <label>Descripción del vehículo en permuta</label>
+                <input type="text" name="permuta_descripcion" id="sena_permuta_desc" placeholder="Marca, modelo, año...">
+              </div>
+            </div>
+            <div class="grid-2">
+              <div>
+                <label>Precio de toma</label>
+                <input type="number" step="1" name="permuta_valor" id="sena_permuta_valor">
+                <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">Se completa solo al elegir una tasación, pero lo podés cambiar.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <script>
+          (function () {
+            var hay = document.getElementById('sena_permuta_hay');
+            var datos = document.getElementById('sena-permuta-datos');
+            var sel = document.getElementById('sena_permuta_tasacion');
+            var desc = document.getElementById('sena_permuta_desc');
+            var valor = document.getElementById('sena_permuta_valor');
+            hay.addEventListener('change', function () {
+              datos.hidden = !hay.checked;
+              if (!hay.checked) { sel.value = ''; desc.value = ''; valor.value = ''; }
+            });
+            sel.addEventListener('change', function () {
+              var opt = sel.options[sel.selectedIndex];
+              if (opt && opt.value) {
+                desc.value = (opt.getAttribute('data-desc') || '').trim();
+                valor.value = Math.round(parseFloat(opt.getAttribute('data-precio')) || 0) || '';
+              }
+            });
+          })();
+        </script>
         <label>Observaciones (opcional)</label>
         <input type="text" name="observaciones">
         <button class="btn btn-primary btn-sm" type="submit" style="margin-top:12px;">Guardar seña</button>
         <p style="color:var(--text-dim); font-size:11.5px; margin:8px 0 0;">
-          El vehículo pasa a "Señado" y deja de ofrecerse. Al cerrar la venta, la seña queda incluida en el efectivo cobrado (no se suma aparte).
+          El vehículo pasa a "Señado" y deja de ofrecerse. Al cerrar la venta, la seña en efectivo queda incluida en el efectivo cobrado (no se suma aparte) y la permuta se precarga.
         </p>
       </form>
     </details>

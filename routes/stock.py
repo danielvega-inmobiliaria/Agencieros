@@ -341,6 +341,10 @@ def detalle(vehiculo_id):
         "stock/detalle.html", vehiculo=vehiculo, rent=_rentabilidad(vehiculo), estado_label=ESTADO_LABEL, fotos=fotos,
         toma_vinculada=toma_vinculada, venta_abierta=venta_abierta, plan_pendiente=plan_pendiente,
         venta_cerrada=venta_cerrada, plan_cierre=plan_cierre, hoy=str(date.today()),
+        tasaciones_permuta=(
+            _tasaciones_para_permuta(session["agencia_id"]) if vehiculo["estado"] in ESTADOS_SENABLES else []
+        ),
+        precio_sugerido=_entero(vehiculo["valor_publicado"]),
     )
 
 
@@ -516,7 +520,7 @@ def _tasaciones_para_permuta(agencia_id, incluir_id=None):
            WHERE agencia_id = ? AND (
                (id NOT IN (SELECT permuta_tasacion_id FROM financiaciones WHERE permuta_tasacion_id IS NOT NULL)
                 AND id NOT IN (SELECT permuta_tasacion_id FROM ventas
-                               WHERE permuta_tasacion_id IS NOT NULL AND estado = 'cerrada'))
+                               WHERE permuta_tasacion_id IS NOT NULL AND estado IN ('senado', 'cerrada')))
                OR id = ?)
            ORDER BY created_at DESC""",
         (agencia_id, incluir_id or 0),
@@ -534,6 +538,39 @@ def _pesos(n):
     return "$" + "{:,.0f}".format(n or 0).replace(",", ".")
 
 
+def _entero(valor):
+    """Número para mostrar en un <input type="number">: sin el ".0" que
+    el navegador en español muestra como "14800000,0" cuando llega un float."""
+    if valor in (None, "", 0):
+        return ""
+    try:
+        return int(valor) if float(valor) == int(float(valor)) else valor
+    except (TypeError, ValueError):
+        return valor
+
+
+def _leer_permuta(f, tasaciones):
+    """Permuta del formulario (seña o cierre): (valor, descripción,
+    tasacion_id). Si no está tildado "hay permuta" -> (0, None, None). La
+    tasación solo cuenta si es una de las ofrecidas a esta agencia; si no
+    hay descripción escrita, sale de la tasación elegida."""
+    if not f.get("permuta_hay"):
+        return 0, None, None
+    valor = _numero(f.get("permuta_valor"), 0)
+    desc = (f.get("permuta_descripcion") or "").strip() or None
+    tasacion_id = None
+    try:
+        elegido = int(f.get("permuta_tasacion_id")) if f.get("permuta_tasacion_id") else None
+    except ValueError:
+        elegido = None
+    t = next((t for t in tasaciones if t["id"] == elegido), None) if elegido else None
+    if t:
+        tasacion_id = t["id"]
+        if not desc:
+            desc = f"{t['marca'] or ''} {t['modelo'] or ''} {t['anio'] or ''}".strip() or None
+    return valor, desc, tasacion_id
+
+
 @bp.route("/<int:vehiculo_id>/senar", methods=["POST"])
 def senar(vehiculo_id):
     vehiculo = _vehiculo_propio(vehiculo_id)
@@ -548,21 +585,36 @@ def senar(vehiculo_id):
     cliente = (f.get("cliente_nombre") or "").strip()
     sena = _numero(f.get("sena"), 0)
     precio = _numero(f.get("precio_venta"))
+    # Permuta al señar (19/09/2026, pedido de Daniel): el cliente puede
+    # dejar la seña en efectivo, un vehículo en permuta, o las dos cosas.
+    # Queda guardada en la operación y se precarga al cerrar la venta.
+    hay_permuta = bool(f.get("permuta_hay"))
+    permuta_valor, permuta_desc, permuta_tasacion_id = _leer_permuta(
+        f, _tasaciones_para_permuta(session["agencia_id"])
+    )
+    error = None
     if not cliente:
-        flash("Cargá el nombre de quien deja la seña.", "error")
-        return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
-    if sena <= 0:
-        flash("Cargá el monto de la seña (mayor a 0).", "error")
+        error = "Cargá el nombre de quien deja la seña."
+    elif hay_permuta and permuta_valor <= 0:
+        error = "Cargá el precio de toma de la permuta (o desmarcá \"Deja un vehículo en permuta\")."
+    elif sena <= 0 and permuta_valor <= 0:
+        error = "Cargá el monto de la seña en efectivo o una permuta."
+    elif precio and sena + permuta_valor > precio + 0.5:
+        error = "La seña en efectivo + la permuta superan el precio acordado. Revisá los montos."
+    if error:
+        flash(error, "error")
         return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
     hoy = str(date.today())
     execute(
         """INSERT INTO ventas (agencia_id, vehiculo_id, estado, estado_previo, cliente_nombre,
-                               cliente_telefono, precio_venta, sena, fecha_sena, observaciones)
-           VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                               cliente_telefono, precio_venta, sena, fecha_sena, permuta_tasacion_id,
+                               permuta_valor, permuta_descripcion, observaciones)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
             session["agencia_id"], vehiculo_id, "senado", vehiculo["estado"], cliente,
             (f.get("cliente_telefono") or "").strip() or None, precio, sena, hoy,
+            permuta_tasacion_id, permuta_valor or None, permuta_desc,
             (f.get("observaciones") or "").strip() or None,
         ),
     )
@@ -570,7 +622,12 @@ def senar(vehiculo_id):
         "UPDATE vehiculos SET estado = 'senado', updated_at = datetime('now') WHERE id = ? AND agencia_id = ?",
         (vehiculo_id, session["agencia_id"]),
     )
-    flash(f"Seña de {_pesos(sena)} registrada — el vehículo queda Señado.", "success")
+    partes = []
+    if sena:
+        partes.append(f"seña de {_pesos(sena)} en efectivo")
+    if permuta_valor:
+        partes.append(f"permuta por {_pesos(permuta_valor)}")
+    flash(f"Seña registrada ({' + '.join(partes)}) — el vehículo queda Señado.", "success")
     return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
 
@@ -585,7 +642,12 @@ def cancelar_sena(vehiculo_id):
         flash("Este vehículo no tiene una seña abierta para cancelar.", "error")
         return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
-    nota = f"[Seña cancelada {date.today()}] Seña recibida: {_pesos(venta['sena'])} -- a definir si se devuelve."
+    recibido = []
+    if venta["sena"]:
+        recibido.append(f"Seña recibida: {_pesos(venta['sena'])}")
+    if venta["permuta_valor"]:
+        recibido.append(f"Permuta ofrecida: {venta['permuta_descripcion'] or 'vehículo'} ({_pesos(venta['permuta_valor'])})")
+    nota = f"[Seña cancelada {date.today()}] {'; '.join(recibido)} -- a definir si se devuelve."
     observaciones = f"{venta['observaciones']}\n{nota}" if venta["observaciones"] else nota
     execute(
         "UPDATE ventas SET estado = 'cancelada', observaciones = ? WHERE id = ?",
@@ -621,7 +683,6 @@ def vender(vehiculo_id):
     tasaciones = _tasaciones_para_permuta(
         session["agencia_id"], venta["permuta_tasacion_id"] if venta else None
     )
-    ids_tasaciones = {t["id"] for t in tasaciones}
 
     def render(datos):
         return render_template(
@@ -633,8 +694,12 @@ def vender(vehiculo_id):
         return render({
             "cliente_nombre": (venta["cliente_nombre"] if venta else "") or "",
             "cliente_telefono": (venta["cliente_telefono"] if venta else "") or "",
-            "precio_venta": (venta["precio_venta"] if venta and venta["precio_venta"] else vehiculo["valor_publicado"]) or "",
+            "precio_venta": _entero((venta["precio_venta"] if venta and venta["precio_venta"] else vehiculo["valor_publicado"]) or 0),
             "fecha_venta": str(date.today()),
+            "permuta_hay": "1" if venta and venta["permuta_valor"] else "",
+            "permuta_tasacion_id": (venta["permuta_tasacion_id"] if venta else None) or "",
+            "permuta_descripcion": (venta["permuta_descripcion"] if venta else "") or "",
+            "permuta_valor": _entero(venta["permuta_valor"]) if venta else "",
         })
 
     f = request.form
@@ -642,19 +707,7 @@ def vender(vehiculo_id):
     cliente = (f.get("cliente_nombre") or "").strip()
     precio = _numero(f.get("precio_venta"), 0)
     hay_permuta = bool(f.get("permuta_hay"))
-    permuta_valor = _numero(f.get("permuta_valor"), 0) if hay_permuta else 0
-    permuta_desc = (f.get("permuta_descripcion") or "").strip() or None if hay_permuta else None
-    permuta_tasacion_id = None
-    if hay_permuta and f.get("permuta_tasacion_id"):
-        try:
-            tid = int(f.get("permuta_tasacion_id"))
-            permuta_tasacion_id = tid if tid in ids_tasaciones else None
-        except ValueError:
-            permuta_tasacion_id = None
-    if permuta_tasacion_id and not permuta_desc:
-        t = next((t for t in tasaciones if t["id"] == permuta_tasacion_id), None)
-        if t:
-            permuta_desc = f"{t['marca'] or ''} {t['modelo'] or ''} {t['anio'] or ''}".strip() or None
+    permuta_valor, permuta_desc, permuta_tasacion_id = _leer_permuta(f, tasaciones)
     efectivo = _numero(f.get("efectivo_cobrado"))
     if efectivo is None:
         efectivo = max(precio - permuta_valor, 0)
