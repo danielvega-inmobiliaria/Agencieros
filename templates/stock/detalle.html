@@ -78,6 +78,19 @@
     {% else %}
     <p style="color:var(--text-dim); font-size:13px; margin:0;">Figura como vendido pero no tiene una operación registrada (se marcó a mano desde Editar).</p>
     {% endif %}
+    {% if permuta_op %}
+    <div style="margin-top:12px; padding:10px 12px; border-left:3px solid var(--gold-light); background:var(--navy-card-2); font-size:13px;">
+      {% if not permuta_op.destino %}
+      <b>La permuta ({{ permuta_op.desc }}) todavía no ingresó.</b> Sigue como "Posible entrega" para los matches.
+      <a class="btn btn-primary btn-sm" style="margin-left:8px;" href="{{ url_for('stock.permuta_destino', origen=permuta_op.origen, item_id=permuta_op.id) }}">Decidir: Stock o reparación</a>
+      {% elif permuta_op.destino == 'no_ingresa' %}
+      La permuta ({{ permuta_op.desc }}) quedó marcada como que no ingresa a Stock.
+      {% else %}
+      La permuta ({{ permuta_op.desc }}) {{ 'ingresó a reparación' if permuta_op.destino == 'reparacion' else 'ingresó a Stock' }}{% if permuta_op.vehiculo_id %} —
+      <a href="{{ url_for('stock.detalle', vehiculo_id=permuta_op.vehiculo_id) }}">ver el vehículo</a>{% endif %}.
+      {% endif %}
+    </div>
+    {% endif %}
 
   {% elif vehiculo.estado == 'senado' %}
     {% if venta_abierta %}

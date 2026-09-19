@@ -51,6 +51,13 @@
     <div class="sub" style="color:var(--gold-light);">{% if senas_pendientes_total %}${{ "{:,.0f}".format(senas_pendientes_total).replace(",", ".") }} · {% endif %}Retenerlas o devolverlas</div>
   </a>
   {% endif %}
+  {% if permutas_pendientes %}
+  <a class="card" href="{{ url_for('stock.permutas') }}">
+    <div class="label">Permutas por ingresar</div>
+    <div class="value">{{ permutas_pendientes|length }}</div>
+    <div class="sub" style="color:var(--gold-light);">Decidir: Stock o reparación · siguen como Posible entrega</div>
+  </a>
+  {% endif %}
 </div>
 
 <div class="dashboard-charts-row">

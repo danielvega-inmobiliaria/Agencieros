@@ -223,6 +223,11 @@ def nuevo():
         # Tasación (ver _url_agregar_a_stock en routes/tomas.py) -- permite
         # linkear de vuelta esa Toma a este vehículo una vez creado.
         "toma_id_origen": request.args.get("toma_id_origen", ""),
+        # Solo llegan desde "¿Qué hacemos con la permuta?" (stock.permuta_destino):
+        # el estado con el que ingresa y la operación de la que viene la permuta,
+        # para registrar el destino una vez guardada la carga.
+        "estado": request.args.get("estado", ""),
+        "permuta_origen": request.args.get("permuta_origen", ""),
     }
     if request.method == "POST":
         f = request.form
@@ -298,9 +303,23 @@ def nuevo():
                 (vehiculo_id, f.get("toma_id_origen")),
             )
 
+        # Si el alta es la de una permuta (viene de "¿Qué hacemos con la permuta?"):
+        # se registra el destino y, si entra a reparación, se arranca el seguimiento.
+        if f.get("permuta_origen"):
+            destino_url = _registrar_ingreso_permuta(
+                f.get("permuta_origen"), vehiculo_id, f.get("estado"), f.get("toma_id_origen"),
+                {"marca": f.get("marca"), "modelo": f.get("modelo"), "version": f.get("version"), "anio": f.get("anio")},
+            )
+            if destino_url:
+                return redirect(destino_url)
+
         return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
-    return render_template("stock/form.html", vehiculo=None, prefill=prefill, estados=ESTADOS, estado_label=ESTADO_LABEL)
+    origen, item_id = _parse_permuta_origen(prefill["permuta_origen"])
+    return render_template(
+        "stock/form.html", vehiculo=None, prefill=prefill, estados=ESTADOS, estado_label=ESTADO_LABEL,
+        permuta_op=_permuta_operacion(origen, item_id) if origen else None,
+    )
 
 
 @bp.route("/<int:vehiculo_id>")
@@ -337,8 +356,18 @@ def detalle(vehiculo_id):
                 "SELECT * FROM ventas WHERE vehiculo_id = ? AND estado = 'cerrada' ORDER BY id DESC LIMIT 1",
                 (vehiculo_id,), one=True,
             )
+    # Permuta de la operación con la que se vendió: ¿ya se decidió qué hacer con ella?
+    permuta_op = None
+    origen_op = plan_cierre or venta_cerrada
+    if origen_op and origen_op["permuta_marca"]:
+        permuta_op = {
+            "origen": "plan" if plan_cierre else "venta", "id": origen_op["id"],
+            "destino": origen_op["permuta_destino"], "vehiculo_id": origen_op["permuta_vehiculo_id"],
+            "desc": origen_op["permuta_descripcion"],
+        }
     return render_template(
         "stock/detalle.html", vehiculo=vehiculo, rent=_rentabilidad(vehiculo), estado_label=ESTADO_LABEL, fotos=fotos,
+        permuta_op=permuta_op,
         toma_vinculada=toma_vinculada, venta_abierta=venta_abierta, plan_pendiente=plan_pendiente,
         venta_cerrada=venta_cerrada, plan_cierre=plan_cierre, hoy=str(date.today()),
         tasaciones_permuta=(
@@ -550,28 +579,6 @@ def _entero(valor):
         return valor
 
 
-def _leer_permuta(f, tasaciones):
-    """Permuta del formulario (seña o cierre): (valor, descripción,
-    tasacion_id). Si no está tildado "hay permuta" -> (0, None, None). La
-    tasación solo cuenta si es una de las ofrecidas a esta agencia; si no
-    hay descripción escrita, sale de la tasación elegida."""
-    if not f.get("permuta_hay"):
-        return 0, None, None
-    valor = _numero(f.get("permuta_valor"), 0)
-    desc = (f.get("permuta_descripcion") or "").strip() or None
-    tasacion_id = None
-    try:
-        elegido = int(f.get("permuta_tasacion_id")) if f.get("permuta_tasacion_id") else None
-    except ValueError:
-        elegido = None
-    t = next((t for t in tasaciones if t["id"] == elegido), None) if elegido else None
-    if t:
-        tasacion_id = t["id"]
-        if not desc:
-            desc = f"{t['marca'] or ''} {t['modelo'] or ''} {t['anio'] or ''}".strip() or None
-    return valor, desc, tasacion_id
-
-
 def _leer_permuta_sena(f, tasaciones):
     """Permuta prevista al señar -> (datos, error). Sin tildar "va a entregar
     un vehículo en permuta" -> (None, None). Si se elige una tasación ya
@@ -610,6 +617,169 @@ def _leer_permuta_sena(f, tasaciones):
         "tasacion_id": t["id"] if t else None,
         "desc": " ".join(str(p) for p in (marca, modelo, version, anio) if p),
     }, None
+
+
+# ---------------------------------------------------------------------------
+# Destino de la permuta una vez cerrada la operación (19/09/2026, pedido de Daniel):
+# el vehículo sigue como "Posible entrega" (matchea con pedidos) hasta que se decide
+# si ingresa a Stock (se completa la carga) o va a reparación (arranca el seguimiento).
+# ---------------------------------------------------------------------------
+DESTINO_PERMUTA_LABEL = {
+    "stock": "Ingresó a Stock",
+    "reparacion": "Ingresó a reparación",
+    "no_ingresa": "No ingresó a Stock",
+}
+
+
+def _parse_permuta_origen(token):
+    try:
+        origen, item_id = (token or "").split(":")
+        return (origen, int(item_id)) if origen in ("venta", "plan") else (None, None)
+    except ValueError:
+        return None, None
+
+
+def _permuta_operacion(origen, item_id):
+    """Operación ya cerrada (venta directa o plan de Financiación activo/finalizado)
+    de esta agencia que trae una permuta con datos estructurados. None si no existe,
+    es de otra agencia, todavía no se cerró o no tiene permuta."""
+    agencia = session["agencia_id"]
+    if origen == "venta":
+        fila = query("SELECT * FROM ventas WHERE id = ? AND agencia_id = ? AND estado = 'cerrada'",
+                     (item_id, agencia), one=True)
+        tabla = "ventas"
+    elif origen == "plan":
+        fila = query("""SELECT * FROM financiaciones WHERE id = ? AND COALESCE(agencia_id, 1) = ?
+                        AND estado IN ('activo', 'finalizado')""", (item_id, agencia), one=True)
+        tabla = "financiaciones"
+    else:
+        return None
+    if not fila or not fila["permuta_marca"]:
+        return None
+    vendido = query("SELECT id, marca, modelo, version, anio FROM vehiculos WHERE id = ?",
+                    (fila["vehiculo_id"],), one=True) if fila["vehiculo_id"] else None
+    return {
+        "origen": origen, "id": item_id, "tabla": tabla, "fila": fila, "cliente": fila["cliente_nombre"],
+        "vendido": vendido, "destino": fila["permuta_destino"], "vehiculo_ingresado": fila["permuta_vehiculo_id"],
+    }
+
+
+def _permutas_pendientes(agencia_id):
+    """Permutas de operaciones ya cerradas que todavía esperan destino."""
+    filas = []
+    for r in query(
+        """SELECT vt.id, vt.cliente_nombre, vt.permuta_descripcion, vt.permuta_km, vt.permuta_valor,
+                  vt.fecha_venta AS fecha, v.marca AS v_marca, v.modelo AS v_modelo, v.version AS v_version, v.anio AS v_anio
+           FROM ventas vt LEFT JOIN vehiculos v ON v.id = vt.vehiculo_id
+           WHERE vt.agencia_id = ? AND vt.estado = 'cerrada' AND vt.permuta_marca IS NOT NULL
+                 AND vt.permuta_marca != '' AND vt.permuta_destino IS NULL""", (agencia_id,)):
+        filas.append(dict(r, origen="venta"))
+    for r in query(
+        """SELECT f.id, f.cliente_nombre, f.permuta_descripcion, f.permuta_km, f.permuta_valor,
+                  COALESCE(v.fecha_venta, substr(f.created_at, 1, 10)) AS fecha,
+                  v.marca AS v_marca, v.modelo AS v_modelo, v.version AS v_version, v.anio AS v_anio
+           FROM financiaciones f LEFT JOIN vehiculos v ON v.id = f.vehiculo_id
+           WHERE COALESCE(f.agencia_id, 1) = ? AND f.estado IN ('activo', 'finalizado') AND f.permuta_marca IS NOT NULL
+                 AND f.permuta_marca != '' AND f.permuta_destino IS NULL""", (agencia_id,)):
+        filas.append(dict(r, origen="plan"))
+    filas.sort(key=lambda x: (x["fecha"] or "", x["id"]), reverse=True)
+    return filas
+
+
+def _url_alta_permuta(op, estado):
+    """Alta en Stock precargada con la permuta: si vino de una Tasación con Toma, con
+    todo lo ya cargado ahí (reparaciones, equipamiento, gastos); si no, con los datos
+    mínimos. El valor de compra es el precio de toma pactado en la operación."""
+    fila = op["fila"]
+    params = {}
+    if fila["permuta_tasacion_id"]:
+        t = query("SELECT toma_id FROM tasaciones WHERE id = ?", (fila["permuta_tasacion_id"],), one=True)
+        if t and t["toma_id"]:
+            from routes.tomas import datos_alta_stock_de_toma
+            params = datos_alta_stock_de_toma(t["toma_id"]) or {}
+    nota = f"Ingresó como permuta de la venta a {op['cliente'] or 'cliente sin nombre'}."
+    previas = params.get("observaciones")
+    params.update({
+        "marca": fila["permuta_marca"], "modelo": fila["permuta_modelo"], "version": fila["permuta_version"],
+        "anio": fila["permuta_anio"], "km": fila["permuta_km"],
+        "valor_compra": _entero(fila["permuta_valor"]),
+        "observaciones": nota + ("\n" + previas if previas else ""),
+        "estado": estado, "permuta_origen": f"{op['origen']}:{op['id']}",
+    })
+    return url_for("stock.nuevo", **{k: v for k, v in params.items() if v not in (None, "")})
+
+
+def _registrar_ingreso_permuta(token, vehiculo_id, estado_final, toma_id_origen, datos):
+    """Se guardó el alta de una permuta: queda registrado el destino en la operación (deja
+    de ser "Posible entrega": ya es un vehículo de Stock). Si entra a reparación devuelve
+    la URL del seguimiento (Toma técnica); si no, None."""
+    origen, item_id = _parse_permuta_origen(token)
+    op = _permuta_operacion(origen, item_id) if origen else None
+    if not op or op["destino"] is not None:
+        return None
+    destino = "reparacion" if estado_final == "en_reparacion" else "stock"
+    execute(
+        f"UPDATE {op['tabla']} SET permuta_destino = ?, permuta_vehiculo_id = ?, permuta_destino_fecha = ? WHERE id = ?",
+        (destino, vehiculo_id, str(date.today()), item_id),
+    )
+    if destino == "stock":
+        flash("La permuta quedó registrada como ingresada a Stock.", "success")
+        return None
+    flash("La permuta ingresó a reparación. Arrancá el seguimiento: la Toma técnica (checklist de 44 puntos con "
+          "el costo de cada reparación) y después la inspección de chapa.", "success")
+    if toma_id_origen:
+        try:
+            return url_for("tomas.detalle", toma_id=int(toma_id_origen))
+        except ValueError:
+            pass
+    return url_for("tomas.nueva", vehiculo_id=vehiculo_id, marca=datos.get("marca") or "", modelo=datos.get("modelo") or "",
+                   version=datos.get("version") or "", anio=datos.get("anio") or "")
+
+
+@bp.route("/permutas")
+def permutas():
+    """Permutas de ventas ya cerradas que todavía esperan destino."""
+    return render_template("stock/permutas.html", permutas=_permutas_pendientes(session["agencia_id"]))
+
+
+@bp.route("/permuta/<origen>/<int:item_id>")
+def permuta_destino(origen, item_id):
+    """¿Qué hacemos con el vehículo que entró en permuta?: ingresa a Stock (se completa la
+    carga) o va a reparación (se arranca el seguimiento). Mientras tanto sigue como
+    "Posible entrega" para los matches."""
+    op = _permuta_operacion(origen, item_id)
+    if not op:
+        flash("No encontré esa permuta (o la operación todavía no se cerró).", "error")
+        return redirect(url_for("stock.index"))
+    fila = op["fila"]
+    propios, red = ([], [])
+    if op["destino"] is None:
+        from routes.pedidos import _buscar_matches_permuta
+        propios, red = _buscar_matches_permuta(session["agencia_id"], fila["permuta_marca"], fila["permuta_modelo"])
+    ingresado = query("SELECT id, marca, modelo, version, anio, estado FROM vehiculos WHERE id = ?",
+                      (op["vehiculo_ingresado"],), one=True) if op["vehiculo_ingresado"] else None
+    return render_template(
+        "stock/permuta_destino.html", op=op, fila=fila, propios=propios, red=red, ingresado=ingresado,
+        destino_label=DESTINO_PERMUTA_LABEL,
+        url_stock=_url_alta_permuta(op, "disponible") if op["destino"] is None else None,
+        url_reparacion=_url_alta_permuta(op, "en_reparacion") if op["destino"] is None else None,
+    )
+
+
+@bp.route("/permuta/<origen>/<int:item_id>/no-ingresa", methods=["POST"])
+def permuta_no_ingresa(origen, item_id):
+    """La permuta no va a entrar a Stock (ya estaba cargada, no llegó, se vendió afuera):
+    sale de "Posible entrega" y deja de figurar como pendiente."""
+    op = _permuta_operacion(origen, item_id)
+    if not op or op["destino"] is not None:
+        flash("Esa permuta ya no está pendiente.", "error")
+        return redirect(url_for("stock.permutas"))
+    execute(
+        f"UPDATE {op['tabla']} SET permuta_destino = 'no_ingresa', permuta_destino_fecha = ? WHERE id = ?",
+        (str(date.today()), item_id),
+    )
+    flash("Listo: la permuta quedó marcada como que no ingresa a Stock y dejó de ofrecerse para los matches.", "success")
+    return redirect(url_for("stock.permutas"))
 
 
 ORIGENES_CREDITO_BASE = ["Banco", "Financiera", "Prendario"]
@@ -793,6 +963,12 @@ def vender(vehiculo_id):
             "permuta_tasacion_id": (venta["permuta_tasacion_id"] if venta else None) or "",
             "permuta_descripcion": (venta["permuta_descripcion"] if venta else "") or "",
             "permuta_valor": _entero(venta["permuta_valor"]) if venta else "",
+            # Datos estructurados de la permuta prevista al señar (Año/Marca/Modelo/Versión/Km).
+            "permuta_marca": (venta["permuta_marca"] if venta else "") or "",
+            "permuta_modelo": (venta["permuta_modelo"] if venta else "") or "",
+            "permuta_version": (venta["permuta_version"] if venta else "") or "",
+            "permuta_anio": (venta["permuta_anio"] if venta else "") or "",
+            "permuta_km": _entero(venta["permuta_km"]) if venta else "",
             "credito_hay": "1" if venta and venta["credito_monto"] else "",
             "credito_origen": (venta["credito_origen"] if venta else "") or "",
             "credito_monto": _entero(venta["credito_monto"]) if venta else "",
@@ -803,7 +979,13 @@ def vender(vehiculo_id):
     cliente = (f.get("cliente_nombre") or "").strip()
     precio = _numero(f.get("precio_venta"), 0)
     hay_permuta = bool(f.get("permuta_hay"))
-    permuta_valor, permuta_desc, permuta_tasacion_id = _leer_permuta(f, tasaciones)
+    # Permuta estructurada (Año/Marca/Modelo o tasación): así el vehículo que entra queda
+    # cargado para los matches y para precargar el alta en Stock (ver permuta_destino).
+    permuta, error_permuta = _leer_permuta_sena(f, tasaciones)
+    permuta = permuta or {}
+    permuta_valor = permuta.get("valor") or 0
+    permuta_desc = permuta.get("desc")
+    permuta_tasacion_id = permuta.get("tasacion_id")
     credito_origen, credito_monto, error_credito = _leer_credito(f)
     credito = credito_monto or 0
     efectivo = _numero(f.get("efectivo_cobrado"))
@@ -820,7 +1002,9 @@ def vender(vehiculo_id):
         errores.append("Cargá el nombre del comprador.")
     if precio <= 0:
         errores.append("Cargá el precio de venta.")
-    if hay_permuta and permuta_valor <= 0:
+    if hay_permuta and error_permuta:
+        errores.append(error_permuta)
+    elif hay_permuta and permuta_valor <= 0:
         errores.append("Cargá el precio de toma de la permuta (o desmarcá \"Hay un vehículo en permuta\").")
     if error_credito:
         errores.append(error_credito)
@@ -849,27 +1033,27 @@ def vender(vehiculo_id):
         execute(
             """UPDATE ventas SET estado = 'cerrada', cliente_nombre = ?, cliente_telefono = ?,
                    precio_venta = ?, permuta_tasacion_id = ?, permuta_valor = ?, permuta_descripcion = ?,
+                   permuta_marca = ?, permuta_modelo = ?, permuta_version = ?, permuta_anio = ?, permuta_km = ?,
                    efectivo_cobrado = ?, fecha_venta = ?, credito_origen = ?, credito_monto = ? WHERE id = ?""",
             (cliente, telefono, precio, permuta_tasacion_id, permuta_valor or None, permuta_desc,
+             permuta.get("marca"), permuta.get("modelo"), permuta.get("version"), permuta.get("anio"), permuta.get("km"),
              efectivo, fecha_venta, credito_origen, credito_monto, venta["id"]),
         )
+        venta_id = venta["id"]
     else:
-        execute(
+        venta_id = execute(
             """INSERT INTO ventas (agencia_id, vehiculo_id, estado, estado_previo, cliente_nombre,
                                    cliente_telefono, precio_venta, sena, fecha_sena, permuta_tasacion_id,
-                                   permuta_valor, permuta_descripcion, efectivo_cobrado, fecha_venta,
+                                   permuta_valor, permuta_descripcion, permuta_marca, permuta_modelo,
+                                   permuta_version, permuta_anio, permuta_km, efectivo_cobrado, fecha_venta,
                                    credito_origen, credito_monto)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (session["agencia_id"], vehiculo_id, "cerrada", vehiculo["estado"], cliente, telefono,
              precio, sena or 0, fecha_venta if sena else None, permuta_tasacion_id,
-             permuta_valor or None, permuta_desc, efectivo, fecha_venta, credito_origen, credito_monto),
+             permuta_valor or None, permuta_desc, permuta.get("marca"), permuta.get("modelo"), permuta.get("version"),
+             permuta.get("anio"), permuta.get("km"), efectivo, fecha_venta, credito_origen, credito_monto),
         )
-    if venta and not hay_permuta:
-        execute(
-            """UPDATE ventas SET permuta_marca = NULL, permuta_modelo = NULL, permuta_version = NULL,
-                   permuta_anio = NULL, permuta_km = NULL WHERE id = ?""",
-            (venta["id"],),
-        )
+
     execute(
         """UPDATE vehiculos SET estado = 'vendido', valor_vendido = ?, fecha_venta = ?,
                updated_at = datetime('now') WHERE id = ? AND agencia_id = ?""",
@@ -883,6 +1067,10 @@ def vender(vehiculo_id):
     if permuta_valor:
         mensaje += f" + permuta por {_pesos(permuta_valor)}"
     flash(mensaje + ". El vehículo pasa a Vendido.", "success")
+    if permuta.get("marca"):
+        # El vehículo de la permuta sigue disponible para matchear ("Posible entrega")
+        # hasta que se decida qué hacer con él.
+        return redirect(url_for("stock.permuta_destino", origen="venta", item_id=venta_id))
     return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
 

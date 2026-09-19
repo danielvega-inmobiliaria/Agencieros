@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Permutas por ingresar — Agencieros{% endblock %}
+{% block header %}Permutas por ingresar{% endblock %}
+{% block content %}
+{% set m = "{:,.0f}" %}
+<div class="tabs">
+  <a class="tab" href="{{ url_for('stock.index') }}">← Volver a Stock</a>
+</div>
+<div class="panel">
+  <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
+    Vehículos que entraron en permuta en una operación ya cerrada y todavía no se cargaron. Mientras tanto siguen como
+    <b>Posible entrega</b> y matchean con los pedidos. Para cada uno decidí si <b>ingresa a Stock</b> (completar la carga)
+    o <b>va a reparación</b> (comenzar el seguimiento).
+  </p>
+  {% if permutas %}
+  <table class="tabla-responsive">
+    <tr class="fila-header"><th>Fecha</th><th>Vehículo en permuta</th><th>Operación</th><th></th></tr>
+    {% for p in permutas %}
+    <tr>
+      <td data-label="Fecha">{{ p.fecha or '-' }}<br><span style="color:var(--text-dim); font-size:11.5px;">{{ 'Venta directa' if p.origen == 'venta' else 'Financiación' }}</span></td>
+      <td data-label="Vehículo en permuta"><b>{{ p.permuta_descripcion }}</b><br>
+        <span style="color:var(--text-dim); font-size:12.5px;">{% if p.permuta_km %}{{ m.format(p.permuta_km).replace(",", ".") }} km · {% endif %}{% if p.permuta_valor %}toma ${{ m.format(p.permuta_valor).replace(",", ".") }}{% else %}sin precio de toma{% endif %}</span></td>
+      <td data-label="Operación">{{ p.cliente_nombre or 'Cliente sin nombre' }}<br>
+        <span style="color:var(--text-dim); font-size:12.5px;">{% if p.v_marca %}compró {{ p.v_marca }} {{ p.v_modelo }} {{ p.v_version or '' }} {{ p.v_anio or '' }}{% endif %}</span></td>
+      <td><a class="btn btn-primary btn-sm" href="{{ url_for('stock.permuta_destino', origen=p.origen, item_id=p.id) }}">Decidir</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p style="color:var(--text-dim); font-size:13px; margin:0;">No hay permutas por ingresar.</p>
+  {% endif %}
+</div>
+{% endblock %}

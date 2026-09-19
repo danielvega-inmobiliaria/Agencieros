@@ -215,6 +215,8 @@ def index():
     # que se queda la agencia sin costo asociado, entra completa.
     ventas_mes["ganancia"] = round(ventas_mes["ganancia"] + ventas_mes["senas_retenidas"], 2)
     senas_pendientes = _senas_por_resolver(agencia_id)
+    from routes.stock import _permutas_pendientes
+    permutas_pendientes = _permutas_pendientes(agencia_id)
     gastos_en_reparacion = query(
         "SELECT COALESCE(SUM(gastos), 0) c FROM vehiculos WHERE estado = 'en_reparacion'", one=True
     )["c"]
@@ -257,6 +259,7 @@ def index():
         pedidos_activos=pedidos_activos,
         ventas_mes=ventas_mes,
         senas_pendientes=senas_pendientes,
+        permutas_pendientes=permutas_pendientes,
         senas_pendientes_total=sum(r["monto"] for r in senas_pendientes),
         gastos_en_reparacion=gastos_en_reparacion,
         cuotas_por_cobrar=cuotas_por_cobrar,

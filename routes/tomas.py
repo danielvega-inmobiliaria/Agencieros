@@ -266,6 +266,31 @@ def _url_agregar_a_stock(toma, tasacion_previa, puntos_a_reparar, danios_por_vis
     )
 
 
+def datos_alta_stock_de_toma(toma_id):
+    """Datos que precarga el botón "Agregar a Stock" de una Toma con Tasación
+    (marca/modelo/versión/año, valor de compra, gastos, reparaciones pendientes,
+    equipamiento y `toma_id_origen`), como dict. None si la Toma no existe,
+    no tiene Tasación o ya está vinculada a un vehículo. Lo usa la permuta que
+    ingresa a Stock (stock.permuta_destino) para no volver a tipear lo ya
+    cargado en la Toma."""
+    from urllib.parse import urlparse, parse_qsl
+    toma = query("SELECT * FROM tomas_vehiculo WHERE id = ?", (toma_id,), one=True)
+    if not toma or toma["vehiculo_id"]:
+        return None
+    tasacion = _tasacion_con_extra(
+        query("SELECT * FROM tasaciones WHERE toma_id = ? ORDER BY id DESC LIMIT 1", (toma_id,), one=True)
+    )
+    if not tasacion:
+        return None
+    marcadores = _marcadores_de_toma(toma_id)
+    url = _url_agregar_a_stock(
+        toma, tasacion, _puntos_a_reparar(toma),
+        _agrupar_danios_por_vista([m for m in marcadores if m["costo_reparacion"]]),
+        dict(TIPOS_DANIO), dict(GRAVEDADES),
+    )
+    return dict(parse_qsl(urlparse(url).query))
+
+
 def _tasacion_con_extra(tasacion_row):
     """Agrega a una fila de `tasaciones` el % de beneficio (margen esperado
     sobre el precio de toma) y la fecha ya formateada, para no repetir esta

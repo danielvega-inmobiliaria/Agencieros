@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "financiacion/_permuta.html" as permuta_ui %}
 {% block title %}Cerrar venta — Agencieros{% endblock %}
 {% block header %}Cerrar venta — {{ vehiculo.marca }} {{ vehiculo.modelo }} {{ vehiculo.version or '' }} ({{ vehiculo.anio }}){% endblock %}
 {% block content %}
@@ -38,44 +39,7 @@
       </div>
     </div>
 
-    <div class="panel" style="background:var(--navy-card-2); margin:16px 0;">
-      <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
-        <input type="checkbox" name="permuta_hay" id="permuta_hay" value="1" style="width:auto;" {{ 'checked' if datos.get('permuta_hay') else '' }}>
-        Hay un vehículo en permuta
-      </label>
-      <div id="permuta-datos" {{ '' if datos.get('permuta_hay') else 'hidden' }} style="margin-top:12px;">
-        <div class="grid-2">
-          <div>
-            <label>Tasación de origen (opcional)</label>
-            <select id="permuta_tasacion_select" name="permuta_tasacion_id">
-              <option value="">-- Sin tasación / cargar valor a mano --</option>
-              {% for t in tasaciones %}
-              <option value="{{ t.id }}"
-                      data-precio="{{ t.precio_max_recomendado or 0 }}"
-                      data-desc="{{ t.marca or '' }} {{ t.modelo or '' }} {{ t.anio or '' }}"
-                      {{ 'selected' if datos.get('permuta_tasacion_id')|string == t.id|string else '' }}>
-                {{ t.marca }} {{ t.modelo }} {{ t.anio or '' }} — toma sugerida ${{ '%.0f'|format(t.precio_max_recomendado or 0) }}
-              </option>
-              {% endfor %}
-            </select>
-          </div>
-          <div>
-            <label>Descripción del vehículo en permuta</label>
-            <input type="text" name="permuta_descripcion" id="permuta_descripcion" value="{{ datos.get('permuta_descripcion') or '' }}" placeholder="Marca, modelo, año...">
-          </div>
-        </div>
-        <div class="grid-2">
-          <div>
-            <label>Precio de toma</label>
-            <input type="number" step="1" name="permuta_valor" id="permuta_valor" value="{{ datos.get('permuta_valor') or '' }}">
-            <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
-              Acá hace falta el valor final: es lo que se descuenta del precio (la permuta no es efectivo). Para cargar
-              el vehículo a Stock usá "Toma y tasación → Agregar a Stock".
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+    {{ permuta_ui.bloque(tasaciones, datos, cierre=True) }}
 
     <div class="panel" style="background:var(--navy-card-2); margin:16px 0;">
       <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
@@ -142,9 +106,11 @@
   var precio = document.getElementById('precio_venta');
   var hay = document.getElementById('permuta_hay');
   var datos = document.getElementById('permuta-datos');
+  var manual = document.getElementById('permuta-manual');
   var select = document.getElementById('permuta_tasacion_select');
-  var desc = document.getElementById('permuta_descripcion');
+  var km = document.getElementById('permuta_km');
   var valor = document.getElementById('permuta_valor');
+  var PERMUTA_CAMPOS = ['permuta_anio', 'permuta_marca', 'permuta_modelo', 'permuta_version'];
   var efectivo = document.getElementById('efectivo_cobrado');
   var creditoHay = document.getElementById('credito_hay');
   var creditoDatos = document.getElementById('credito-datos');
@@ -161,6 +127,10 @@
   function actualizar() {
     var p = num(precio);
     var pv = hay.checked ? num(valor) : 0;
+    // Con permuta: Año/Marca/Modelo (si no hay tasación) y precio de toma son obligatorios.
+    var pide = hay.checked && !select.value;
+    ['permuta_anio', 'permuta_marca', 'permuta_modelo'].forEach(function (id) { var el = document.getElementById(id); if (el) el.required = pide; });
+    valor.required = hay.checked;
     var cr = creditoHay.checked ? num(creditoMonto) : 0;
     creditoOrigen.required = creditoHay.checked;
     creditoMonto.required = creditoHay.checked;
@@ -198,18 +168,22 @@
   if (sena) sena.addEventListener('input', actualizar);
   hay.addEventListener('change', function () {
     datos.hidden = !hay.checked;
-    if (!hay.checked) { select.value = ''; desc.value = ''; valor.value = ''; }
+    if (!hay.checked) {
+      select.value = ''; manual.hidden = false; valor.value = ''; km.value = '';
+      PERMUTA_CAMPOS.forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
+    }
     actualizar();
   });
+  // Con una tasación elegida, Año/Marca/Modelo/Versión salen de ella y se sugiere el precio de toma.
   select.addEventListener('change', function () {
     var opt = select.options[select.selectedIndex];
-    if (opt && opt.value) {
-      desc.value = (opt.getAttribute('data-desc') || '').trim();
-      valor.value = Math.round(parseFloat(opt.getAttribute('data-precio')) || 0) || '';
-    }
+    var conTasacion = !!(opt && opt.value);
+    manual.hidden = conTasacion;
+    if (conTasacion) valor.value = Math.round(parseFloat(opt.getAttribute('data-precio')) || 0) || '';
     actualizar();
   });
   actualizar();
 })();
 </script>
+{{ permuta_ui.scripts(catalogo_json, datos) }}
 {% endblock %}

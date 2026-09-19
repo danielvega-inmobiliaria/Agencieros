@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Permuta — qué hacemos con el vehículo — Agencieros{% endblock %}
+{% block header %}Permuta recibida — ¿qué hacemos con el vehículo?{% endblock %}
+{% block content %}
+{% set m = "{:,.0f}" %}
+<div class="tabs">
+  {% if op.fila.vehiculo_id %}<a class="tab" href="{{ url_for('stock.detalle', vehiculo_id=op.fila.vehiculo_id) }}">← Volver a la venta</a>{% endif %}
+  <a class="tab" href="{{ url_for('stock.permutas') }}">Permutas por ingresar</a>
+</div>
+
+<div class="panel">
+  <h2 style="margin-top:0;">{{ fila.permuta_descripcion }}</h2>
+  <p style="color:var(--text-dim); font-size:13px; margin:0;">
+    {% if fila.permuta_km %}{{ m.format(fila.permuta_km).replace(",", ".") }} km · {% endif %}
+    {% if fila.permuta_valor %}toma pactada ${{ m.format(fila.permuta_valor).replace(",", ".") }}{% else %}sin precio de toma cargado{% endif %}
+    · la entregó {{ op.cliente or 'el cliente' }}{% if op.vendido %} en la compra del {{ op.vendido.marca }} {{ op.vendido.modelo }} {{ op.vendido.version or '' }} {{ op.vendido.anio or '' }}{% endif %}.
+  </p>
+</div>
+
+{% if op.destino %}
+<div class="panel">
+  <p style="margin:0;"><b>{{ destino_label.get(op.destino, op.destino) }}</b>{% if fila.permuta_destino_fecha %} el {{ fila.permuta_destino_fecha }}{% endif %}.
+    {% if ingresado %}<a href="{{ url_for('stock.detalle', vehiculo_id=ingresado.id) }}">Ver {{ ingresado.marca }} {{ ingresado.modelo }} {{ ingresado.anio or '' }} en Stock</a>{% endif %}</p>
+</div>
+{% else %}
+<div class="panel">
+  <p style="margin-top:0;">
+    Mientras no decidas, este vehículo <b>sigue disponible para matchear</b> como "Posible entrega" (buscador de Stock, Pedidos y Matches).
+    {% if propios or red %}
+    <br><b style="color:var(--gold-light);">⚡ Ya tiene comprador:</b>
+    {% for p in propios %}<a href="{{ url_for('pedidos.detalle', pedido_id=p.id) }}">pedido de {{ p.cliente_nombre }}</a>{% if not loop.last or red %}, {% endif %}{% endfor %}
+    {% if red %}{{ red|length }} publicación(es) de la Red buscándolo{% endif %}.
+    {% endif %}
+  </p>
+  <div class="grid-2" style="margin-top:14px;">
+    <div class="panel" style="background:var(--navy-card-2); margin:0;">
+      <h3 style="margin-top:0;">📦 Ingresa a Stock</h3>
+      <p style="color:var(--text-dim); font-size:13px;">Se abre la carga con los datos que ya tenemos (y lo de la Toma, si estaba tasado). Completás km, color, dominio y precio publicado.</p>
+      <a class="btn btn-primary" href="{{ url_stock }}">Completar la carga en Stock</a>
+    </div>
+    <div class="panel" style="background:var(--navy-card-2); margin:0;">
+      <h3 style="margin-top:0;">🔧 Va a reparación</h3>
+      <p style="color:var(--text-dim); font-size:13px;">Se carga en Stock como "En reparación" y arrancás el seguimiento: la Toma técnica (checklist de 44 puntos con el costo de cada reparación) y la inspección de chapa.</p>
+      <a class="btn btn-primary" href="{{ url_reparacion }}">Cargar y comenzar el seguimiento</a>
+    </div>
+  </div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; align-items:center;">
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('stock.permutas') }}">Decidir después</a>
+    <form method="post" action="{{ url_for('stock.permuta_no_ingresa', origen=op.origen, item_id=op.id) }}"
+          onsubmit="return window.confirm('¿Marcar que esta permuta no ingresa a Stock? Deja de ofrecerse para los matches.');">
+      <button class="btn btn-secondary btn-sm" type="submit">No ingresa a Stock (ya cargado / no llegó)</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

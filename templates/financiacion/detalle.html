@@ -201,6 +201,18 @@
     <b style="color:var(--text);">Permuta:</b> {{ fin.permuta_descripcion or 'Vehículo en permuta' }}{% if fin.permuta_km %} · {{ "{:,.0f}".format(fin.permuta_km).replace(",", ".") }} km{% endif %}{% if fin.permuta_valor %} — ${{ "{:,.0f}".format(fin.permuta_valor).replace(",", ".") }}{% else %} — a tasar{% endif %}
     {% if fin.estado == 'pendiente_firma' and fin.permuta_marca %}<span style="font-size:12px;"> · figura como "Posible entrega" en el buscador, en Pedidos y en Matches.</span>{% endif %}
   </p>
+  {% if fin.permuta_marca and fin.estado in ('activo', 'finalizado') %}
+  <p style="font-size:13px; margin:0 0 4px; padding:8px 10px; border-left:3px solid var(--gold-light); background:var(--navy-card-2);">
+    {% if not fin.permuta_destino %}
+    <b>La permuta todavía no ingresó.</b> Sigue como "Posible entrega" para los matches.
+    <a class="btn btn-primary btn-sm" style="margin-left:8px;" href="{{ url_for('stock.permuta_destino', origen='plan', item_id=fin.id) }}">Decidir: Stock o reparación</a>
+    {% elif fin.permuta_destino == 'no_ingresa' %}
+    La permuta quedó marcada como que no ingresa a Stock.
+    {% else %}
+    La permuta {{ 'ingresó a reparación' if fin.permuta_destino == 'reparacion' else 'ingresó a Stock' }}{% if fin.permuta_vehiculo_id %} — <a href="{{ url_for('stock.detalle', vehiculo_id=fin.permuta_vehiculo_id) }}">ver el vehículo</a>{% endif %}.
+    {% endif %}
+  </p>
+  {% endif %}
   {% endif %}
   {% if fin.entrega_contado or fin.anticipo %}
   {% set entrega_total = [fin.entrega_contado or 0, fin.anticipo or 0]|max %}

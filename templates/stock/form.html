@@ -11,6 +11,15 @@
     {% if prefill and prefill.toma_id_origen %}
     <input type="hidden" name="toma_id_origen" value="{{ prefill.toma_id_origen }}">
     {% endif %}
+    {% if prefill and prefill.permuta_origen %}
+    <input type="hidden" name="permuta_origen" value="{{ prefill.permuta_origen }}">
+    <p style="margin:0 0 14px; padding:10px 12px; border-left:3px solid var(--gold-light); background:var(--navy-card-2); font-size:13px;">
+      <b>Ingreso de una permuta{% if permuta_op and permuta_op.cliente %} — entregada por {{ permuta_op.cliente }}{% endif %}.</b>
+      Ya están cargados los datos que se conocen{% if prefill.valor_compra %} (el valor de compra es el precio de toma pactado){% endif %};
+      completá lo que falta (km, color, dominio, precio publicado...).
+      {% if prefill.estado == 'en_reparacion' %}Al guardar arrancás el seguimiento de la reparación.{% endif %}
+    </p>
+    {% endif %}
     <div class="form-row">
       <div><label>Año</label><input type="number" id="anio" name="anio" value="{{ vehiculo.anio if vehiculo else (prefill.anio if prefill else '') }}"></div>
       <div><label>Marca</label><select id="marca" name="marca" data-placeholder-libre="Marca nueva" required></select></div>
@@ -51,7 +60,7 @@
         <label>Estado</label>
         <select name="estado" id="estado" onchange="actualizarPorIngresar()">
           {% for e in estados %}
-          <option value="{{ e }}" {{ 'selected' if vehiculo and vehiculo.estado == e else '' }}>{{ estado_label[e] }}</option>
+          <option value="{{ e }}" {{ 'selected' if (vehiculo and vehiculo.estado == e) or (not vehiculo and prefill and prefill.estado == e) else '' }}>{{ estado_label[e] }}</option>
           {% endfor %}
         </select>
       </div>

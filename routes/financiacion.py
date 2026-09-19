@@ -929,6 +929,10 @@ def confirmar_venta(financiacion_id):
         )
     execute("UPDATE financiaciones SET estado = 'activo' WHERE id = ?", (financiacion_id,))
     flash("Operación cerrada — el plan pasa a activo y el vehículo a Vendido.", "success")
+    if fin["permuta_marca"]:
+        # El vehículo de la permuta sigue disponible para matchear ("Posible entrega")
+        # hasta que se decida qué hacer con él (ingresa a Stock o va a reparación).
+        return redirect(url_for("stock.permuta_destino", origen="plan", item_id=financiacion_id))
     return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
 
 

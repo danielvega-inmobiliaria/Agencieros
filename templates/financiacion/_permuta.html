@@ -6,8 +6,10 @@
    Ids fijos (permuta_hay, permuta-datos, permuta_tasacion_select,
    permuta-manual, permuta_anio/marca/modelo/version, permuta_km, permuta_valor):
    los usan el JS de cada página y catalogo.js. #}
-{% macro bloque(tasaciones, fin=None) %}
-{% set tiene = fin and (fin.permuta_marca or fin.permuta_valor or fin.permuta_descripcion) %}
+{# `fin` puede ser un plan de Financiación o los datos de un formulario ya enviado (mismos nombres
+   de campo). `cierre=True` es el cierre de una venta directa: el precio de toma es obligatorio. #}
+{% macro bloque(tasaciones, fin=None, cierre=False) %}
+{% set tiene = fin and (fin.permuta_hay or fin.permuta_marca or fin.permuta_valor or fin.permuta_descripcion) %}
 <div class="panel" style="background:var(--navy-card-2); margin:16px 0;">
   <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
     <input type="checkbox" name="permuta_hay" id="permuta_hay" value="1" style="width:auto;" {{ 'checked' if tiene else '' }}>
@@ -15,8 +17,13 @@
   </label>
   <div id="permuta-datos" {{ '' if tiene else 'hidden' }} style="margin-top:12px;">
     <p style="color:var(--text-dim); font-size:11.5px; margin:0 0 10px;">
+      {% if cierre %}
+      Datos mínimos del vehículo que entra. Al cerrar la venta te pregunto qué hacer con él (ingresa a Stock o va a
+      reparación); mientras tanto sigue como "Posible entrega" para los matches.
+      {% else %}
       Se piden los datos mínimos del vehículo para dejarlo cargado como "Posible entrega" y cruzarlo con los
       pedidos, aunque todavía no esté tasado.
+      {% endif %}
     </p>
     {% if fin and fin.permuta_descripcion and not fin.permuta_marca %}
     <p style="color:var(--gold-light); font-size:12.5px; margin:0 0 10px;">
@@ -30,7 +37,7 @@
         <option value="">-- Todavía no está tasado: cargo los datos --</option>
         {% for t in tasaciones %}
         <option value="{{ t.id }}" data-precio="{{ t.precio_max_recomendado or 0 }}"
-                {{ 'selected' if fin and fin.permuta_tasacion_id == t.id else '' }}>
+                {{ 'selected' if fin and fin.permuta_tasacion_id and (fin.permuta_tasacion_id|string) == (t.id|string) else '' }}>
           {{ t.marca }} {{ t.modelo }} {{ t.version or '' }} {{ t.anio or '' }} — toma sugerida ${{ '%.0f'|format(t.precio_max_recomendado or 0) }}
         </option>
         {% endfor %}
@@ -53,8 +60,13 @@
         <label>Precio de toma</label>
         <input type="number" step="1" name="permuta_valor" id="permuta_valor" value="{{ fin.permuta_valor|int if fin and fin.permuta_valor else '' }}">
         <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
+          {% if cierre %}
+          Acá hace falta el valor final: es lo que se descuenta del precio (la permuta no es efectivo). Se completa
+          solo al elegir una tasación.
+          {% else %}
           Se completa solo al elegir una tasación (lo podés redondear o cambiar). Si todavía no está tasado
           dejalo vacío y se define después.
+          {% endif %}
         </p>
       </div>
     </div>
@@ -70,7 +82,7 @@
   (function () {
     var catalogo = {{ catalogo_json | safe }};
     initCatalogoSelects(catalogo, 'permuta_anio', 'permuta_marca', 'permuta_modelo', 'permuta_version'{% if fin and fin.permuta_marca %},
-      {{ {'anio': fin.permuta_anio, 'marca': fin.permuta_marca, 'modelo': fin.permuta_modelo, 'version': fin.permuta_version}|tojson }}{% endif %});
+      {{ {'anio': fin.permuta_anio or '', 'marca': fin.permuta_marca or '', 'modelo': fin.permuta_modelo or '', 'version': fin.permuta_version or ''}|tojson }}{% endif %});
   })();
 </script>
 {% endmacro %}
