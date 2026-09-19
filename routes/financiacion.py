@@ -237,71 +237,19 @@ def index():
     )
 
 
-@bp.route("/simulador", methods=["GET", "POST"])
+@bp.route("/simulador")
 def simulador():
-    # Lista para el desplegable: autos Disponibles (lo más común — se arma el
-    # plan de financiación como parte de la venta) y también los ya Vendidos
-    # (por si la venta se cerró en Stock antes de armar el plan). No se
-    # ofrecen los que ya tienen un plan de financiación activo/cargado.
-    vehiculos_stock = query(
-        """SELECT * FROM vehiculos WHERE estado IN ('disponible', 'vendido')
-           AND id NOT IN (SELECT vehiculo_id FROM financiaciones WHERE vehiculo_id IS NOT NULL)
-           ORDER BY (estado = 'disponible') DESC, COALESCE(fecha_venta, fecha_ingreso) DESC"""
-    )
-    valores = {
-        "vehiculo_id": request.values.get("vehiculo_id", ""),
-        "cliente_nombre": request.values.get("cliente_nombre", ""),
-        "cliente_telefono": request.values.get("cliente_telefono", ""),
-        "precio_venta": request.values.get("precio_venta", ""),
-        "anticipo": request.values.get("anticipo", "0"),
-        "monto_financiado": request.values.get("monto_financiado", ""),
-        "tasa_interes_mensual": request.values.get("tasa_interes_mensual", "0"),
-        "cantidad_cuotas": request.values.get("cantidad_cuotas", "12"),
-        "fecha_inicio": request.values.get("fecha_inicio", str(date.today())),
-        "metodo_interes": request.values.get("metodo_interes", "frances"),
-        "periodicidad": request.values.get("periodicidad", "mensual"),
-        "fecha_venta": request.values.get("fecha_venta", str(date.today())),
-        "cuota_aplicada": request.values.get("cuota_aplicada", ""),
-        "tasa_interes_punitorio": request.values.get("tasa_interes_punitorio", "0"),
-    }
-
-    # Autocompletar monto a financiar a partir de precio de venta - anticipo,
-    # si el usuario no tocó el campo a mano.
-    if request.method == "POST" and not valores["monto_financiado"] and valores["precio_venta"]:
-        try:
-            valores["monto_financiado"] = str(
-                round(float(valores["precio_venta"]) - float(valores["anticipo"] or 0), 2)
-            )
-        except ValueError:
-            pass
-
-    cuota = None
-    cronograma = None
-    desglose = valores["metodo_interes"] == "frances" and valores["periodicidad"] == "mensual"
-    if request.method == "POST":
-        try:
-            monto = float(valores["monto_financiado"] or 0)
-            tasa = float(valores["tasa_interes_mensual"] or 0)
-            n = int(valores["cantidad_cuotas"] or 0)
-            fecha_inicio = _parsear_fecha(valores["fecha_inicio"])
-            if monto <= 0 or n <= 0:
-                flash("Cargá un monto a financiar y una cantidad de cuotas válidos.", "error")
-            else:
-                cuota, cronograma = _generar_cronograma(
-                    monto, tasa, n, fecha_inicio, valores["metodo_interes"], valores["periodicidad"]
-                )
-        except ValueError:
-            flash("Revisá los valores cargados (monto, tasa y cuotas deben ser números).", "error")
-
+    # 19/09/2026 (pedido de Daniel): el simulador dejó de tener un paso
+    # intermedio de "Calcular cuotas" con ida y vuelta al servidor -- la
+    # cuota calculada/aplicada/total a pagar/total de interés ahora se
+    # calculan en vivo con JS (mismas fórmulas que _cuota_frances /
+    # _cuota_simple, ver el <script> del template) apenas se cargan
+    # monto/tasa/plazo. El único botón de esta página ("Otorgar crédito")
+    # manda derecho a /financiacion/otorgar, que ya guarda el plan --
+    # vehículo, cliente y garantes se cargan después en la ficha del plan
+    # (detalle.html), no acá.
     return render_template(
         "financiacion/simulador.html",
-        valores=valores,
-        vehiculos_stock=vehiculos_stock,
-        estado_label={"disponible": "Disponible", "vendido": "Vendido"},
-        cuota=cuota,
-        cronograma=cronograma,
-        desglose=desglose,
-        total_pagar=(sum(f["monto"] for f in cronograma)) if cronograma else None,
         metodo_label=METODO_LABEL,
         periodicidad_label=PERIODICIDAD_LABEL,
     )
@@ -777,7 +725,7 @@ def confirmar_venta(financiacion_id):
             (precio_venta, str(date.today()), fin["vehiculo_id"]),
         )
     execute("UPDATE financiaciones SET estado = 'activo' WHERE id = ?", (financiacion_id,))
-    flash("Venta confirmada — el plan pasa a activo y el vehículo a Vendido.", "success")
+    flash("Operación cerrada — el plan pasa a activo y el vehículo a Vendido.", "success")
     return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
 
 

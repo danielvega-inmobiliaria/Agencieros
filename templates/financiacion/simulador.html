@@ -8,30 +8,29 @@
 
 <div class="panel">
   <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
-    Calculá cuotas para cualquier consulta, aunque todavía no hayas cerrado la venta — este cálculo
-    no se guarda en ningún lado hasta que confirmes la operación. Elegí método de interés y
-    periodicidad de cobro; recién al confirmar que la venta se realiza queda registrado el plan
-    para empezar a controlar lo cobrado y lo adeudado.
+    Calculá cuotas para cualquier consulta -- no se guarda nada hasta que otorgués el crédito. Elegí método
+    de interés y periodicidad de cobro; al otorgar, el plan queda "Pendiente de firma" con las cuotas ya
+    armadas, y recién ahí cargás vehículo, cliente y garantes en la ficha del plan.
   </p>
-  <form method="post">
+  <form method="post" action="{{ url_for('financiacion.otorgar') }}" id="form-otorgar">
     <div class="grid-2">
       <div>
         <label>Monto a financiar</label>
-        <input type="number" step="1" name="monto_financiado" id="monto_financiado" value="{{ valores.monto_financiado }}" required>
+        <input type="number" step="1" name="monto_financiado" id="monto_financiado" required>
       </div>
       <div>
         <label>Tasa de interés mensual (%)</label>
-        <input type="number" step="0.01" name="tasa_interes_mensual" id="tasa_interes_mensual" value="{{ valores.tasa_interes_mensual }}">
+        <input type="number" step="0.01" name="tasa_interes_mensual" id="tasa_interes_mensual" value="0">
       </div>
     </div>
     <div class="grid-2">
       <div>
         <label>Plazo (cantidad de cuotas mensuales)</label>
-        <input type="number" step="1" name="cantidad_cuotas" id="cantidad_cuotas" value="{{ valores.cantidad_cuotas }}" required>
+        <input type="number" step="1" name="cantidad_cuotas" id="cantidad_cuotas" value="12" required>
       </div>
       <div>
         <label>Tasa de interés por atraso (%, opcional)</label>
-        <input type="number" step="0.01" name="tasa_interes_punitorio" value="{{ valores.tasa_interes_punitorio }}">
+        <input type="number" step="0.01" name="tasa_interes_punitorio" value="0">
         <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
           Si el cliente paga una cuota tarde, este % se acumula cada 30 días de atraso -- se usa después, en el
           detalle del plan, para sugerir el monto a cobrar en cuotas vencidas. Dejalo en 0 si no cobrás recargo.
@@ -43,7 +42,7 @@
         <label>Método de interés</label>
         <select name="metodo_interes" id="metodo_interes">
           {% for k, label in metodo_label.items() %}
-          <option value="{{ k }}" {{ 'selected' if valores.metodo_interes == k else '' }}>{{ label }}</option>
+          <option value="{{ k }}" {{ 'selected' if k == 'frances' else '' }}>{{ label }}</option>
           {% endfor %}
         </select>
       </div>
@@ -51,237 +50,91 @@
         <label>Periodicidad de cobro</label>
         <select name="periodicidad" id="periodicidad">
           {% for k, label in periodicidad_label.items() %}
-          <option value="{{ k }}" {{ 'selected' if valores.periodicidad == k else '' }}>{{ label }}</option>
+          <option value="{{ k }}" {{ 'selected' if k == 'mensual' else '' }}>{{ label }}</option>
           {% endfor %}
         </select>
       </div>
     </div>
-    <div id="cuota-estimada-preview" style="display:none; background:var(--navy-card-2); border:1px solid var(--gold); border-radius:10px; padding:10px 14px; margin-bottom:16px;">
-      <span style="color:var(--text-dim); font-size:12px; text-transform:uppercase; letter-spacing:.03em;">Cuota estimada</span>
-      <div style="color:var(--gold-light); font-size:22px; font-weight:700;" id="cuota-estimada-valor">$0</div>
-    </div>
     <div class="grid-2">
       <div>
         <label>Fecha de la primera cuota</label>
-        <input type="date" name="fecha_inicio" id="fecha_inicio" value="{{ valores.fecha_inicio }}">
+        <input type="date" name="fecha_inicio" id="fecha_inicio">
         <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
           Se completa sola con 30 días (mensual) o 7 días (semanal) desde hoy — la podés cambiar a mano si hace falta.
         </p>
       </div>
     </div>
-    {% if valores.periodicidad == 'semanal' %}
-    <p style="color:var(--text-dim); font-size:12.5px;">
+    <p id="nota-semanal" hidden style="color:var(--text-dim); font-size:12.5px;">
       En semanal, la cuota es la cuota mensual dividida 4, y la cantidad de cuotas sale de contar
       semanas entre la primera fecha y el mismo día del plazo elegido en meses — por eso el total
       pagado en semanal siempre da un poco más que en mensual.
     </p>
-    {% endif %}
+
+    <div class="cards" id="resultado-cards" hidden style="margin-bottom:16px;">
+      <div class="card">
+        <div class="label" id="cuota-calculada-label">Cuota calculada</div>
+        <div class="value" id="cuota-calculada-valor">$0</div>
+      </div>
+      <div class="card">
+        <div class="label">Cuota aplicada (redondeada, la que se cobra)</div>
+        <input type="number" step="1" name="cuota_aplicada" id="cuota_aplicada_input"
+               style="width:100%; font-size:22px; font-weight:700; color:var(--gold-light); background:transparent; border:1px solid var(--border); border-radius:8px; padding:4px 8px;">
+        <div class="sub">Este es el monto que va a figurar en todas las cuotas del plan.</div>
+      </div>
+      <div class="card">
+        <div class="label">Total a pagar</div>
+        <div class="value" id="total-pagar-valor">$0</div>
+      </div>
+      <div class="card">
+        <div class="label">Total de interés</div>
+        <div class="value" id="total-interes-valor">$0</div>
+      </div>
+    </div>
+
     <div style="margin-top:16px;">
-      <button class="btn btn-primary" type="submit">Calcular cuotas</button>
+      <button class="btn btn-primary" type="submit">📝 Otorgar crédito</button>
     </div>
-
-    <div style="margin-top:22px; padding-top:16px; border-top:1px solid var(--border);">
-      <p style="color:var(--text-dim); font-size:12.5px; margin:0 0 10px;">
-        Datos para relacionar (opcional acá) — si ya tenés vehículo y cliente confirmados, cargalos y usá
-        "Confirmar operación" más abajo. Si todavía falta que los garantes vengan a firmar, dejalos en blanco
-        y usá "Otorgar crédito": después los cargás en la ficha del plan.
-      </p>
-      <div class="grid-2">
-        <div>
-          <label>Vehículo (opcional — de Stock, Disponible o ya Vendido)</label>
-          <select name="vehiculo_id">
-            <option value="">— Sin vehículo asociado —</option>
-            {% for v in vehiculos_stock %}
-            <option value="{{ v.id }}" {{ 'selected' if valores.vehiculo_id|string == v.id|string else '' }}
-                    data-precio="{{ v.valor_vendido or v.valor_publicado or 0 }}">
-              [{{ estado_label.get(v.estado, v.estado) }}] {{ v.marca }} {{ v.modelo }} {{ v.version }} {{ v.anio }} — ${{ "{:,.0f}".format(v.valor_vendido or v.valor_publicado or 0).replace(",", ".") }}
-            </option>
-            {% endfor %}
-          </select>
-          <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
-            Si elegís un auto que todavía figura "Disponible", al confirmar la operación pasa automáticamente a "Vendido" en Stock.
-          </p>
-        </div>
-        <div>
-          <label>Cliente</label>
-          <input type="text" name="cliente_nombre" value="{{ valores.cliente_nombre }}" placeholder="Nombre y apellido">
-        </div>
-      </div>
-      <div class="grid-2">
-        <div>
-          <label>Teléfono</label>
-          <input type="text" name="cliente_telefono" value="{{ valores.cliente_telefono }}">
-        </div>
-        <div>
-          <label>Precio de venta (informativo)</label>
-          <input type="number" step="1" name="precio_venta" id="precio_venta" value="{{ valores.precio_venta }}">
-        </div>
-      </div>
-      <div class="grid-2">
-        <div>
-          <label>Anticipo</label>
-          <input type="number" step="1" name="anticipo" id="anticipo" value="{{ valores.anticipo }}">
-        </div>
-        <div></div>
-      </div>
-    </div>
-  </form>
-</div>
-
-{% if cuota %}
-<div class="cards">
-  <div class="card">
-    <div class="label">Cuota calculada ({{ periodicidad_label.get(valores.periodicidad, '') }})</div>
-    <div class="value">${{ "{:,.0f}".format(cuota).replace(",", ".") }}</div>
-  </div>
-  <div class="card">
-    <div class="label">Cuota aplicada (redondeada, la que se cobra)</div>
-    <input type="number" step="1" name="cuota_aplicada" id="cuota_aplicada_input" form="form-confirmar-operacion"
-           value="{{ valores.cuota_aplicada or '%.0f' % cuota }}"
-           style="width:100%; font-size:22px; font-weight:700; color:var(--gold-light); background:transparent; border:1px solid var(--border); border-radius:8px; padding:4px 8px;">
-    <div class="sub">Este es el monto que va a figurar en todas las cuotas del plan.</div>
-  </div>
-  <div class="card">
-    <div class="label">Total a pagar (según la cuota aplicada)</div>
-    <div class="value" id="total-pagar-valor">${{ "{:,.0f}".format(total_pagar).replace(",", ".") }}</div>
-  </div>
-  <div class="card">
-    <div class="label">Total de interés</div>
-    <div class="value" id="total-interes-valor">${{ "{:,.0f}".format(total_pagar - (valores.monto_financiado|float)).replace(",", ".") }}</div>
-  </div>
-</div>
-
-<div class="panel">
-  <h2>Cronograma de cuotas</h2>
-  <table class="tabla-responsive">
-    {% if desglose %}
-    <tr class="fila-header"><th>#</th><th>Vencimiento</th><th>Cuota</th><th>Interés</th><th>Amortización</th><th>Saldo</th></tr>
-    {% else %}
-    <tr class="fila-header"><th>#</th><th>Vencimiento</th><th>Cuota</th></tr>
-    {% endif %}
-    {% for c in cronograma %}
-    <tr>
-      <td data-label="#">{{ c.numero }}</td>
-      <td data-label="Vencimiento">{{ c.fecha.strftime("%d/%m/%Y") }}</td>
-      <td data-label="Cuota" class="celda-cuota-cronograma">${{ "{:,.0f}".format(c.monto).replace(",", ".") }}</td>
-      {% if desglose %}
-      <td data-label="Interés">${{ "{:,.0f}".format(c.interes).replace(",", ".") }}</td>
-      <td data-label="Amortización">${{ "{:,.0f}".format(c.amortizacion).replace(",", ".") }}</td>
-      <td data-label="Saldo">${{ "{:,.0f}".format(c.saldo).replace(",", ".") }}</td>
-      {% endif %}
-    </tr>
-    {% endfor %}
-  </table>
-
-  <div style="display:flex; gap:12px; align-items:center; margin:16px 0; flex-wrap:wrap;">
-    <form method="post" action="{{ url_for('financiacion.otorgar') }}" id="form-otorgar">
-      <input type="hidden" name="cliente_nombre" value="{{ valores.cliente_nombre }}">
-      <input type="hidden" name="cliente_telefono" value="{{ valores.cliente_telefono }}">
-      <input type="hidden" name="monto_financiado" value="{{ valores.monto_financiado }}">
-      <input type="hidden" name="tasa_interes_mensual" value="{{ valores.tasa_interes_mensual }}">
-      <input type="hidden" name="tasa_interes_punitorio" value="{{ valores.tasa_interes_punitorio }}">
-      <input type="hidden" name="cantidad_cuotas" value="{{ valores.cantidad_cuotas }}">
-      <input type="hidden" name="metodo_interes" value="{{ valores.metodo_interes }}">
-      <input type="hidden" name="periodicidad" value="{{ valores.periodicidad }}">
-      <input type="hidden" name="fecha_inicio" value="{{ valores.fecha_inicio }}">
-      <input type="hidden" name="cuota_aplicada" id="cuota_aplicada_input_otorgar" value="{{ valores.cuota_aplicada or '%.0f' % cuota }}">
-      <button class="btn btn-primary" type="submit">📝 Otorgar crédito (pendiente de firma)</button>
-    </form>
-    <span style="color:var(--text-dim); font-size:12.5px; max-width:340px;">
-      Guarda el plan y las cuotas ya, sin vehículo ni cliente confirmados todavía — los cargás
-      después en la ficha del plan, junto con los garantes.
-    </span>
-  </div>
-
-  <p style="color:var(--text-dim); font-size:12.5px; margin:0 0 4px;">
-    ¿Ya tenés vehículo y cliente confirmados, sin necesidad de esperar garantes? Confirmá la operación directo:
-  </p>
-  <form method="post" action="{{ url_for('financiacion.nuevo') }}" id="form-confirmar-operacion" style="margin-top:8px;">
-    <input type="hidden" name="vehiculo_id" value="{{ valores.vehiculo_id }}">
-    <input type="hidden" name="cliente_nombre" value="{{ valores.cliente_nombre }}">
-    <input type="hidden" name="cliente_telefono" value="{{ valores.cliente_telefono }}">
-    <input type="hidden" name="precio_venta" value="{{ valores.precio_venta }}">
-    <input type="hidden" name="anticipo" value="{{ valores.anticipo }}">
-    <input type="hidden" name="monto_financiado" value="{{ valores.monto_financiado }}">
-    <input type="hidden" name="tasa_interes_mensual" value="{{ valores.tasa_interes_mensual }}">
-    <input type="hidden" name="tasa_interes_punitorio" value="{{ valores.tasa_interes_punitorio }}">
-    <input type="hidden" name="cantidad_cuotas" value="{{ valores.cantidad_cuotas }}">
-    <input type="hidden" name="metodo_interes" value="{{ valores.metodo_interes }}">
-    <input type="hidden" name="periodicidad" value="{{ valores.periodicidad }}">
-    <input type="hidden" name="fecha_inicio" value="{{ valores.fecha_inicio }}">
-    {% if valores.vehiculo_id %}
-    <div style="max-width:260px; margin-bottom:12px;">
-      <label>Fecha de venta real (si la operación ya se hizo antes de hoy)</label>
-      <input type="date" name="fecha_venta" value="{{ valores.fecha_venta }}">
-    </div>
-    {% endif %}
-    {% if not valores.cliente_nombre %}
-    <p style="color:var(--gold-light); font-size:12.5px;">Cargá el nombre del cliente arriba para poder confirmar la operación.</p>
-    {% endif %}
-    <p style="color:var(--text-dim); font-size:12px;">
-      Este cálculo no se guarda solo — recién queda registrado cuando confirmás que la operación se realiza.
-      Al confirmar: el vehículo (si elegiste uno) pasa a "Vendido" con el precio de venta cargado arriba,
-      y {{ valores.cliente_nombre or 'el cliente' }} queda en la lista de financiaciones a cobrar.
+    <p style="color:var(--text-dim); font-size:12.5px; margin:8px 0 0;">
+      Guarda ya el plan y el cronograma de cuotas, en estado "Pendiente de firma". Vehículo, cliente y
+      garantes se cargan después en la ficha del plan.
     </p>
-    <button class="btn btn-primary" type="submit" {{ 'disabled' if not valores.cliente_nombre else '' }}>✅ Confirmar operación y empezar a cobrar</button>
   </form>
 </div>
-{% endif %}
 
 <script>
   // Seleccionar todo el contenido al enfocar un campo numérico (18/09/2026,
-  // pedido de Daniel): con el valor por defecto en 0 (Anticipo, Tasa de
-  // interés, Tasa de atraso), al tocar el campo y escribir sin seleccionar
-  // antes quedaba "05" en vez de "5" -- con el valor ya seleccionado, el
-  // primer caracter que se escribe reemplaza todo el campo (se comporta
-  // como si arrancara vacío), sin perder el valor si el agenciero solo
-  // pasa por el campo sin tocar nada.
+  // pedido de Daniel): con el valor por defecto en 0 (Tasa de interés,
+  // Tasa de atraso), al tocar el campo y escribir sin seleccionar antes
+  // quedaba "05" en vez de "5" -- con el valor ya seleccionado, el primer
+  // caracter que se escribe reemplaza todo el campo (se comporta como si
+  // arrancara vacío), sin perder el valor si el agenciero solo pasa por
+  // el campo sin tocar nada.
   document.querySelectorAll('input[type="number"]').forEach(function (input) {
     input.addEventListener('focus', function () { this.select(); });
   });
 
-  // Autocompletar precio de venta al elegir un vehículo vendido de la lista.
-  document.querySelector('select[name="vehiculo_id"]').addEventListener('change', function () {
-    var opt = this.options[this.selectedIndex];
-    var precio = opt.getAttribute('data-precio');
-    var campoPrecio = document.getElementById('precio_venta');
-    if (precio && campoPrecio && !campoPrecio.value) {
-      campoPrecio.value = precio;
-    }
-    actualizarMontoFinanciado();
-  });
-
-  // --- Cálculo en vivo (sin recargar la página) ---------------------------
-  var campoPrecioVenta = document.getElementById('precio_venta');
-  var campoAnticipo = document.getElementById('anticipo');
   var campoMontoFinanciado = document.getElementById('monto_financiado');
   var campoTasa = document.getElementById('tasa_interes_mensual');
   var campoCuotas = document.getElementById('cantidad_cuotas');
   var campoMetodo = document.getElementById('metodo_interes');
   var campoPeriodicidad = document.getElementById('periodicidad');
   var campoFecha = document.getElementById('fecha_inicio');
-  var previewBox = document.getElementById('cuota-estimada-preview');
-  var previewValor = document.getElementById('cuota-estimada-valor');
+  var notaSemanal = document.getElementById('nota-semanal');
+  var resultadoCards = document.getElementById('resultado-cards');
+  var cuotaCalculadaLabel = document.getElementById('cuota-calculada-label');
+  var cuotaCalculadaValor = document.getElementById('cuota-calculada-valor');
+  var campoCuotaAplicada = document.getElementById('cuota_aplicada_input');
+  var totalPagarValor = document.getElementById('total-pagar-valor');
+  var totalInteresValor = document.getElementById('total-interes-valor');
 
   function formatearPesos(monto) {
     return '$' + Math.round(monto).toLocaleString('es-AR');
   }
 
-  // 1) Precio de venta - anticipo => monto a financiar, en vivo.
-  function actualizarMontoFinanciado() {
-    var precio = parseFloat(campoPrecioVenta.value);
-    var anticipo = parseFloat(campoAnticipo.value) || 0;
-    if (!isNaN(precio) && precio > 0) {
-      campoMontoFinanciado.value = Math.max(precio - anticipo, 0);
-    }
-    actualizarCuotaEstimada();
-  }
-  campoPrecioVenta.addEventListener('input', actualizarMontoFinanciado);
-  campoAnticipo.addEventListener('input', actualizarMontoFinanciado);
-
-  // 2) Cuota estimada en vivo, con las mismas fórmulas que usa el servidor
-  // (routes/financiacion.py: _cuota_frances / _cuota_simple), para mostrar
-  // el número antes de tocar "Calcular cuotas".
+  // Mismas fórmulas que usa el servidor (routes/financiacion.py:
+  // _cuota_frances / _cuota_simple), para calcular todo en vivo sin ida
+  // y vuelta al servidor (19/09/2026, pedido de Daniel: reemplazar la
+  // vieja vista previa de "Cuota estimada" por las 4 tarjetas completas).
   function cuotaFrances(monto, tasaPct, n) {
     var i = (tasaPct || 0) / 100;
     if (!n) return 0;
@@ -294,26 +147,79 @@
     var i = (tasaPct || 0) / 100;
     return (monto / n) * (1 + i * n);
   }
-  function actualizarCuotaEstimada() {
-    var monto = parseFloat(campoMontoFinanciado.value) || 0;
-    var tasa = parseFloat(campoTasa.value) || 0;
-    var n = parseInt(campoCuotas.value, 10) || 0;
-    if (monto <= 0 || n <= 0) {
-      previewBox.style.display = 'none';
-      return;
-    }
-    var cuotaMensual = campoMetodo.value === 'simple' ? cuotaSimple(monto, tasa, n) : cuotaFrances(monto, tasa, n);
-    var esSemanal = campoPeriodicidad.value === 'semanal';
-    var cuota = esSemanal ? cuotaMensual / 4 : cuotaMensual;
-    previewValor.textContent = formatearPesos(cuota) + (esSemanal ? ' por semana' : ' por mes');
-    previewBox.style.display = 'block';
+
+  // Réplica en JS de _sumar_meses (routes/financiacion.py): suma `meses`
+  // respetando fin de mes (ej. 31/01 + 1 mes = 28/02). Se usa acá solo
+  // para contar cuántas cuotas semanales entran en el plazo elegido en
+  // meses, igual que hace el servidor en _cronograma_semanal.
+  function sumarMesesJS(fecha, meses) {
+    var d = new Date(fecha.getTime());
+    var dia = d.getDate();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + meses);
+    var ultimoDiaMes = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(dia, ultimoDiaMes));
+    return d;
   }
-  [campoMontoFinanciado, campoTasa, campoCuotas, campoMetodo, campoPeriodicidad].forEach(function (el) {
-    el.addEventListener('input', actualizarCuotaEstimada);
-    el.addEventListener('change', actualizarCuotaEstimada);
+  function contarCuotasSemanales(plazoMeses, fechaInicioStr) {
+    var fechaInicio = fechaInicioStr ? new Date(fechaInicioStr + 'T00:00:00') : new Date();
+    var fechaFin = sumarMesesJS(fechaInicio, plazoMeses);
+    var totalDias = Math.round((fechaFin - fechaInicio) / 86400000);
+    return Math.floor(totalDias / 7) + 1;
+  }
+
+  // Si el agenciero ya editó "Cuota aplicada" a mano, no se lo pisamos
+  // más aunque cambien otros campos (mismo criterio que ya usaba el
+  // simulador viejo con "Precio de venta").
+  var cuotaAplicadaTocada = false;
+  campoCuotaAplicada.addEventListener('input', function () {
+    cuotaAplicadaTocada = true;
+    actualizarTotales();
   });
 
-  // 3) Fecha de la primera cuota sugerida: 30 días (mensual) o 7 días
+  function actualizarTotales(cantidadCuotasParam, montoParam) {
+    var monto = montoParam !== undefined ? montoParam : (parseFloat(campoMontoFinanciado.value) || 0);
+    var nMeses = parseInt(campoCuotas.value, 10) || 0;
+    var esSemanal = campoPeriodicidad.value === 'semanal';
+    var cantidadCuotas = cantidadCuotasParam !== undefined
+      ? cantidadCuotasParam
+      : (esSemanal ? contarCuotasSemanales(nMeses, campoFecha.value) : nMeses);
+    var cuotaAplicada = parseFloat(campoCuotaAplicada.value) || 0;
+    var totalPagar = cuotaAplicada * cantidadCuotas;
+    totalPagarValor.textContent = formatearPesos(totalPagar);
+    totalInteresValor.textContent = formatearPesos(totalPagar - monto);
+  }
+
+  function actualizarResultados() {
+    var monto = parseFloat(campoMontoFinanciado.value) || 0;
+    var tasa = parseFloat(campoTasa.value) || 0;
+    var nMeses = parseInt(campoCuotas.value, 10) || 0;
+    var esSemanal = campoPeriodicidad.value === 'semanal';
+    notaSemanal.hidden = !esSemanal;
+
+    if (monto <= 0 || nMeses <= 0) {
+      resultadoCards.hidden = true;
+      return;
+    }
+    var cuotaMensual = campoMetodo.value === 'simple' ? cuotaSimple(monto, tasa, nMeses) : cuotaFrances(monto, tasa, nMeses);
+    var cuotaCalculada = esSemanal ? cuotaMensual / 4 : cuotaMensual;
+    var cantidadCuotas = esSemanal ? contarCuotasSemanales(nMeses, campoFecha.value) : nMeses;
+
+    cuotaCalculadaLabel.textContent = 'Cuota calculada (' + (esSemanal ? 'semanal' : 'mensual') + ')';
+    cuotaCalculadaValor.textContent = formatearPesos(cuotaCalculada);
+
+    if (!cuotaAplicadaTocada) {
+      campoCuotaAplicada.value = Math.round(cuotaCalculada);
+    }
+    actualizarTotales(cantidadCuotas, monto);
+    resultadoCards.hidden = false;
+  }
+  [campoMontoFinanciado, campoTasa, campoCuotas, campoMetodo, campoPeriodicidad, campoFecha].forEach(function (el) {
+    el.addEventListener('input', actualizarResultados);
+    el.addEventListener('change', actualizarResultados);
+  });
+
+  // Fecha de la primera cuota sugerida: 30 días (mensual) o 7 días
   // (semanal) desde hoy, según la periodicidad elegida.
   function fechaSugerida() {
     var dias = campoPeriodicidad.value === 'semanal' ? 7 : 30;
@@ -323,86 +229,26 @@
     var dd = String(f.getDate()).padStart(2, '0');
     return f.getFullYear() + '-' + mm + '-' + dd;
   }
-  function actualizarFechaSugerida() {
+  campoPeriodicidad.addEventListener('change', function () {
     campoFecha.value = fechaSugerida();
-  }
-  campoPeriodicidad.addEventListener('change', actualizarFechaSugerida);
+    actualizarResultados();
+  });
 
-  // Estado inicial de la página: si la fecha todavía tiene el valor por
-  // defecto de hoy (o está vacía), la reemplazamos por la sugerida. El
-  // script está al final del body, así que el DOM ya está listo acá —
-  // no hace falta esperar a DOMContentLoaded (y esperarlo sería tarde,
-  // ese evento ya disparó para cuando se ejecuta este script).
+  // Estado inicial de la página: la fecha arranca con la sugerida y, si
+  // ya hay monto/plazo cargados (el navegador restauró el formulario al
+  // volver atrás), se recalcula todo de una.
   (function inicializar() {
-    var hoy = new Date();
-    var hoyStr = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
-    if (!campoFecha.value || campoFecha.value === hoyStr) {
-      actualizarFechaSugerida();
-    }
-    actualizarCuotaEstimada();
+    if (!campoFecha.value) campoFecha.value = fechaSugerida();
+    actualizarResultados();
   })();
 
-  // Cuota aplicada (18/09/2026, pedido de Daniel): al redondear la cuota a
-  // mano, actualizar en vivo Total a pagar / Total de interés / el monto de
-  // cada cuota del cronograma -- sin recargar la página. Refleja lo mismo
-  // que después va a aplicar el servidor al guardar (reemplaza el monto de
-  // TODAS las cuotas por la cuota aplicada, no toca Interés/Amortización/
-  // Saldo -- esas columnas siguen siendo la referencia de cómo se compuso
-  // la cuota calculada original).
-  var campoCuotaAplicada = document.getElementById('cuota_aplicada_input');
-  if (campoCuotaAplicada) {
-    var totalPagarEl = document.getElementById('total-pagar-valor');
-    var totalInteresEl = document.getElementById('total-interes-valor');
-    var celdasCuota = document.querySelectorAll('.celda-cuota-cronograma');
-    var campoCuotaAplicadaOtorgar = document.getElementById('cuota_aplicada_input_otorgar');
-    function actualizarTotalesPorCuotaAplicada() {
-      var cuotaAplicada = parseFloat(campoCuotaAplicada.value);
-      if (campoCuotaAplicadaOtorgar) campoCuotaAplicadaOtorgar.value = campoCuotaAplicada.value;
-      if (isNaN(cuotaAplicada) || cuotaAplicada <= 0 || !celdasCuota.length) return;
-      var montoFinanciado = parseFloat(campoMontoFinanciado.value) || 0;
-      var totalPagar = cuotaAplicada * celdasCuota.length;
-      totalPagarEl.textContent = formatearPesos(totalPagar);
-      totalInteresEl.textContent = formatearPesos(totalPagar - montoFinanciado);
-      celdasCuota.forEach(function (celda) {
-        celda.textContent = formatearPesos(cuotaAplicada);
-      });
+  // Confirmación explícita antes de otorgar el crédito: esto ya guarda
+  // el plan en la base, aunque todavía no haya vehículo ni cliente
+  // cargados -- por eso conviene un aviso corto antes de mandarlo.
+  document.getElementById('form-otorgar').addEventListener('submit', function (ev) {
+    if (!window.confirm('¿Otorgar este crédito como "Pendiente de firma"? Se guardan ya el plan y las cuotas; después cargás vehículo, cliente y garantes en la ficha del plan.')) {
+      ev.preventDefault();
     }
-    campoCuotaAplicada.addEventListener('input', actualizarTotalesPorCuotaAplicada);
-  }
-
-  // Confirmación explícita antes de otorgar el crédito (18/09/2026): esto
-  // ya guarda el plan en la base, aunque todavía no haya vehículo ni
-  // cliente cargados -- por eso conviene un aviso corto antes de mandarlo.
-  var formOtorgar = document.getElementById('form-otorgar');
-  if (formOtorgar) {
-    formOtorgar.addEventListener('submit', function (ev) {
-      if (!window.confirm('¿Otorgar este crédito como "Pendiente de firma"? Se guardan ya el plan y las cuotas; después cargás vehículo, cliente y garantes en la ficha del plan.')) {
-        ev.preventDefault();
-      }
-    });
-  }
-
-  // Confirmación explícita antes de registrar la operación: nada se guarda
-  // hasta que el agenciero confirma que la venta realmente se realiza.
-  var formConfirmar = document.getElementById('form-confirmar-operacion');
-  if (formConfirmar) {
-    formConfirmar.addEventListener('submit', function (ev) {
-      var cliente = formConfirmar.cliente_nombre.value || 'el cliente';
-      var vehiculoSelect = document.querySelector('select[name="vehiculo_id"]');
-      var vehiculoTexto = (vehiculoSelect && vehiculoSelect.selectedIndex > 0)
-        ? vehiculoSelect.options[vehiculoSelect.selectedIndex].text.replace(/^\[[^\]]+\]\s*/, '')
-        : null;
-      var precio = formConfirmar.precio_venta.value;
-      var mensaje = '¿Confirmás que la operación con ' + cliente + ' se realiza?\n\n';
-      if (vehiculoTexto) {
-        mensaje += '• El vehículo "' + vehiculoTexto + '" va a pasar a Vendido' +
-          (precio ? ' por $' + Number(precio).toLocaleString('es-AR') : '') + '.\n';
-      }
-      mensaje += '• El plan de financiación va a quedar activo, empezando a cobrar las cuotas.';
-      if (!window.confirm(mensaje)) {
-        ev.preventDefault();
-      }
-    });
-  }
+  });
 </script>
 {% endblock %}

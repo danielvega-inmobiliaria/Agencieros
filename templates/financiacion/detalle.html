@@ -41,10 +41,10 @@
 
 {% if fin.estado == 'pendiente_firma' %}
 <div class="panel" style="border:1px solid var(--gold);">
-  <h2>⏳ Pendiente de firma — completar antes de confirmar la venta</h2>
+  <h2>⏳ Pendiente de firma — completar antes de cerrar la operación</h2>
   <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
     Este crédito ya está otorgado y las cuotas calculadas. Cargá acá cliente, vehículo, seña y garantes a
-    medida que los tengas — se puede guardar de a partes. Cuando esté todo, confirmá la venta.
+    medida que los tengas — se puede guardar de a partes. Cuando esté todo, cerrá la operación.
   </p>
 
   <form method="post" action="{{ url_for('financiacion.completar_datos', financiacion_id=fin.id) }}">
@@ -115,13 +115,13 @@
 
   <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--border); display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
     <form method="post" action="{{ url_for('financiacion.confirmar_venta', financiacion_id=fin.id) }}" id="form-confirmar-venta">
-      <button class="btn btn-primary" type="submit" {{ 'disabled' if not fin.cliente_nombre or not fin.vehiculo_id else '' }}>✅ Confirmar venta</button>
+      <button class="btn btn-primary" type="submit" {{ 'disabled' if not fin.cliente_nombre or not fin.vehiculo_id else '' }}>🔒 Cerrar operación</button>
     </form>
     <form method="post" action="{{ url_for('financiacion.cancelar_reserva', financiacion_id=fin.id) }}" id="form-cancelar-reserva">
       <button class="btn btn-secondary" type="submit" style="border-color:var(--red); color:var(--red);">✕ Cancelar reserva</button>
     </form>
     {% if not fin.cliente_nombre or not fin.vehiculo_id %}
-    <span style="color:var(--gold-light); font-size:12px;">Para confirmar la venta necesitás cargar cliente y vehículo.</span>
+    <span style="color:var(--gold-light); font-size:12px;">Para cerrar la operación necesitás cargar cliente y vehículo.</span>
     {% endif %}
   </div>
 </div>
@@ -257,7 +257,7 @@
     var formConfirmarVenta = document.getElementById('form-confirmar-venta');
     if (formConfirmarVenta) {
       formConfirmarVenta.addEventListener('submit', function (e) {
-        if (!window.confirm('¿Confirmás la venta? El vehículo pasa a "Vendido" y el plan queda activo, empezando a cobrar las cuotas.')) {
+        if (!window.confirm('¿Cerrar la operación? El vehículo pasa a "Vendido" y el plan queda activo, empezando a cobrar las cuotas.')) {
           e.preventDefault();
         }
       });
