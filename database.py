@@ -871,6 +871,29 @@ def _migrar_agencias_contacto_referencia(conn):
         conn.execute("ALTER TABLE agencias ADD COLUMN contacto_referencia TEXT")
 
 
+def _migrar_financiaciones_permuta(conn):
+    """Agrega a `financiaciones` los datos de Permuta + Entrega Contado
+    (19/09/2026, pedido de Daniel): al armar un credito con Otorgar/Guardar
+    ahora se puede sumar un vehiculo que el cliente entrega como parte de
+    pago, tomando como sugerencia el "Valor de toma" de una Tasacion ya
+    hecha (permuta_tasacion_id + permuta_valor, este ultimo editable/
+    redondeable a mano, o cargado directo si no hay tasacion) mas una
+    descripcion libre (permuta_descripcion) para cuando no hay tasacion
+    vinculada. `entrega_contado` es el efectivo que completa la operacion
+    (precio de venta - permuta - monto financiado, sugerido pero se puede
+    pisar a mano)."""
+    columnas_actuales = {row[1] for row in conn.execute("PRAGMA table_info(financiaciones)")}
+    nuevas_columnas = {
+        "permuta_tasacion_id": "INTEGER REFERENCES tasaciones(id)",
+        "permuta_valor": "REAL",
+        "permuta_descripcion": "TEXT",
+        "entrega_contado": "REAL",
+    }
+    for columna, tipo in nuevas_columnas.items():
+        if columna not in columnas_actuales:
+            conn.execute(f"ALTER TABLE financiaciones ADD COLUMN {columna} {tipo}")
+
+
 def _migrar_agencia_config_ciudad_provincia(conn):
     """Ubicación estructurada (18/09/2026, Panel de Agencias): Ciudad y
     Provincia como columnas separadas de `agencia_config`, además de la
@@ -939,6 +962,7 @@ def init_db():
     _migrar_agencia_config_ciudad_provincia(conn)
     _migrar_agencias_ultima_actividad(conn)
     _migrar_agencias_contacto_referencia(conn)
+    _migrar_financiaciones_permuta(conn)
     _migrar_multi_tenant_columnas(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")

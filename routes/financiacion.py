@@ -237,21 +237,45 @@ def index():
     )
 
 
+def _tasaciones_disponibles(excluir_tasacion_id=None):
+    """Tasaciones que se pueden ofrecer como origen del valor de una
+    Permuta (19/09/2026): cualquiera ya hecha en el módulo de Toma y
+    tasación, salvo la que ya esté usada como permuta de otro crédito --
+    `excluir_tasacion_id` deja pasar la que ya tenía elegida el propio
+    plan que se está editando, si la tuviera."""
+    filas = query(
+        """SELECT * FROM tasaciones
+           WHERE id NOT IN (
+               SELECT permuta_tasacion_id FROM financiaciones
+               WHERE permuta_tasacion_id IS NOT NULL
+           ) OR id = ?
+           ORDER BY created_at DESC""",
+        (excluir_tasacion_id or 0,),
+    )
+    return filas
+
+
 @bp.route("/simulador")
 def simulador():
     # 19/09/2026 (pedido de Daniel): el simulador dejó de tener un paso
     # intermedio de "Calcular cuotas" con ida y vuelta al servidor -- la
-    # cuota calculada/aplicada/total a pagar/total de interés ahora se
-    # calculan en vivo con JS (mismas fórmulas que _cuota_frances /
-    # _cuota_simple, ver el <script> del template) apenas se cargan
-    # monto/tasa/plazo. El único botón de esta página ("Otorgar crédito")
-    # manda derecho a /financiacion/otorgar, que ya guarda el plan --
-    # vehículo, cliente y garantes se cargan después en la ficha del plan
-    # (detalle.html), no acá.
+    # cuota calculada/aplicada/total a pagar/total de interés se calculan
+    # en vivo con JS apenas se cargan monto/tasa/plazo. El botón "Avanzar"
+    # abre (con JS, sin ida y vuelta al servidor) el resto de los datos --
+    # cliente, vehículo a vender, permuta, entrega contado, seña y
+    # garantes -- y recién el botón "Guardar" manda todo junto a
+    # /financiacion/guardar. Acá solo hace falta juntar las listas para
+    # los dos <select> de esa segunda parte (vehículos y tasaciones).
+    vehiculos_disponibles = query(
+        "SELECT * FROM vehiculos WHERE estado = 'disponible' ORDER BY created_at DESC"
+    )
+    tasaciones_disponibles = _tasaciones_disponibles()
     return render_template(
         "financiacion/simulador.html",
         metodo_label=METODO_LABEL,
         periodicidad_label=PERIODICIDAD_LABEL,
+        vehiculos_disponibles=vehiculos_disponibles,
+        tasaciones_disponibles=tasaciones_disponibles,
     )
 
 
@@ -366,6 +390,12 @@ def detalle(financiacion_id):
         "SELECT * FROM vehiculos WHERE estado = 'disponible' OR id = ? ORDER BY created_at DESC",
         (fin["vehiculo_id"] or 0,),
     ) if fin["estado"] == "pendiente_firma" else []
+    # Tasaciones para corregir la Permuta desde esta misma ficha (19/09/2026):
+    # deja pasar la que ya tenía elegida este plan, si la tuviera.
+    tasaciones_disponibles = (
+        _tasaciones_disponibles(excluir_tasacion_id=fin["permuta_tasacion_id"])
+        if fin["estado"] == "pendiente_firma" else []
+    )
 
     return render_template(
         "financiacion/detalle.html",
@@ -375,6 +405,7 @@ def detalle(financiacion_id):
         hoy=hoy,
         garantes=garantes,
         vehiculos_disponibles=vehiculos_disponibles,
+        tasaciones_disponibles=tasaciones_disponibles,
         estado_label=ESTADO_PLAN_LABEL,
         estado_badge=ESTADO_PLAN_BADGE,
         metodo_label=METODO_LABEL,
@@ -541,17 +572,18 @@ def cancelar(financiacion_id):
     return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
 
 
-@bp.route("/otorgar", methods=["POST"])
-def otorgar():
-    """Otorgar un crédito directo desde el simulador SIN tener todavía
-    vehículo, cliente ni garantes confirmados (18/09/2026, pedido de
-    Daniel): muchas veces el monto/tasa/plazo se define primero y recién
-    después -- mientras los garantes vienen a firmar -- se relaciona el
-    auto y se cargan los datos del cliente. Guarda ya el plan y las cuotas
-    (con la fecha de la primera cuota tal como se calculó; si la firma
-    tarda, se corrige después con "Corregir fechas") en estado
-    'pendiente_firma' -- no toca Stock todavía, eso pasa recién al cargar
-    el vehículo en la ficha del plan (ahí se marca "Señado")."""
+@bp.route("/guardar", methods=["POST"])
+def guardar():
+    """Guardar un crédito "Pendiente de firma" con todo lo juntado en la
+    segunda parte del simulador (19/09/2026, rediseño del botón "Avanzar"
+    pedido por Daniel): a diferencia del viejo "Otorgar" -- que guardaba
+    apenas con monto/tasa/plazo y todo lo demás se completaba después en
+    la ficha del plan -- acá ya llega de una vehículo, cliente, permuta,
+    entrega contado, seña y la lista completa de garantes (cargados como
+    filas dinámicas en el mismo formulario, sin guardarse de a uno). Nada
+    de esto se guardó antes de este POST -- "Avanzar" en el simulador solo
+    mostraba estos campos con JS. Sigue en 'pendiente_firma': falta que
+    los garantes vengan a firmar antes de "Cerrar operación"."""
     f = request.form
     try:
         monto = float(f.get("monto_financiado") or 0)
@@ -559,7 +591,7 @@ def otorgar():
         n = int(f.get("cantidad_cuotas") or 0)
         fecha_inicio = _parsear_fecha(f.get("fecha_inicio"))
     except ValueError:
-        flash("Revisá los valores antes de otorgar el crédito.", "error")
+        flash("Revisá los valores antes de guardar el crédito.", "error")
         return redirect(url_for("financiacion.simulador"))
 
     if monto <= 0 or n <= 0:
@@ -582,17 +614,62 @@ def otorgar():
         for fila in cronograma:
             fila["monto"] = cuota_aplicada
 
+    # Vehículo a vender (opcional en este paso, igual que antes): si está
+    # Disponible, pasa a "Señado" para dejar de ofrecerse mientras se
+    # espera la firma.
+    vehiculo_id = f.get("vehiculo_id") or None
+    vehiculo_id = int(vehiculo_id) if vehiculo_id else None
+    if vehiculo_id:
+        vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (vehiculo_id,), one=True)
+        if vehiculo and vehiculo["estado"] == "disponible":
+            execute(
+                "UPDATE vehiculos SET estado = 'senado', updated_at = datetime('now') WHERE id = ?",
+                (vehiculo_id,),
+            )
+
+    # Permuta (19/09/2026): opcional -- viene de una Tasación ya hecha
+    # (precio de toma sugerido, editable/redondeable) o cargada a mano si
+    # todavía no se tasó ese vehículo. `permuta_valor` es siempre el
+    # número final que se cargó en el campo, tasación de por medio o no.
+    permuta_tasacion_id = f.get("permuta_tasacion_id") or None
+    permuta_tasacion_id = int(permuta_tasacion_id) if permuta_tasacion_id else None
+    try:
+        permuta_valor = float(f.get("permuta_valor")) if f.get("permuta_valor") else None
+    except ValueError:
+        permuta_valor = None
+    permuta_descripcion = (f.get("permuta_descripcion") or "").strip() or None
+    if permuta_tasacion_id and not permuta_descripcion:
+        tasacion = query("SELECT * FROM tasaciones WHERE id = ?", (permuta_tasacion_id,), one=True)
+        if tasacion:
+            permuta_descripcion = f"{tasacion['marca'] or ''} {tasacion['modelo'] or ''} {tasacion['anio'] or ''}".strip()
+
+    try:
+        precio_venta = float(f.get("precio_venta")) if f.get("precio_venta") else None
+    except ValueError:
+        precio_venta = None
+    try:
+        entrega_contado = float(f.get("entrega_contado")) if f.get("entrega_contado") else None
+    except ValueError:
+        entrega_contado = None
+    try:
+        anticipo = float(f.get("anticipo") or 0)
+    except ValueError:
+        anticipo = 0
+
     # cliente_nombre es NOT NULL en la base -- si todavía no se cargó, se
     # guarda vacío ("") en vez de NULL, y se completa después en la ficha
     # del plan (completar_datos).
     financiacion_id = execute(
         """INSERT INTO financiaciones
-           (cliente_nombre, cliente_telefono, monto_financiado, tasa_interes_mensual,
-            tasa_interes_punitorio, metodo_interes, periodicidad, plazo_meses,
-            cantidad_cuotas, valor_cuota, fecha_inicio, estado)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,'pendiente_firma')""",
+           (cliente_nombre, cliente_telefono, vehiculo_id, precio_venta, anticipo,
+            permuta_tasacion_id, permuta_valor, permuta_descripcion, entrega_contado,
+            monto_financiado, tasa_interes_mensual, tasa_interes_punitorio, metodo_interes,
+            periodicidad, plazo_meses, cantidad_cuotas, valor_cuota, fecha_inicio, estado)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pendiente_firma')""",
         (
             f.get("cliente_nombre") or "", f.get("cliente_telefono") or None,
+            vehiculo_id, precio_venta, anticipo,
+            permuta_tasacion_id, permuta_valor, permuta_descripcion, entrega_contado,
             monto, tasa, tasa_punitoria, metodo, periodicidad,
             n, len(cronograma), valor_cuota_final, str(fecha_inicio),
         ),
@@ -604,9 +681,32 @@ def otorgar():
             (financiacion_id, fila["numero"], str(fila["fecha"]), fila["monto"]),
         )
 
+    # Garantes (19/09/2026): filas dinámicas del mismo formulario, ninguna
+    # se guardó antes de este POST -- llegan como listas paralelas
+    # (garante_nombre[], garante_dni[], etc.), una fila por posición. Se
+    # ignoran las filas sin nombre (por ejemplo una fila que se agregó y
+    # se dejó vacía sin usar el botón de quitar).
+    nombres = f.getlist("garante_nombre[]")
+    dnis = f.getlist("garante_dni[]")
+    telefonos = f.getlist("garante_telefono[]")
+    domicilios = f.getlist("garante_domicilio[]")
+    for i, nombre in enumerate(nombres):
+        nombre = (nombre or "").strip()
+        if not nombre:
+            continue
+        execute(
+            """INSERT INTO garantes (financiacion_id, nombre, dni, telefono, domicilio)
+               VALUES (?,?,?,?,?)""",
+            (
+                financiacion_id, nombre,
+                (dnis[i] or None) if i < len(dnis) else None,
+                (telefonos[i] or None) if i < len(telefonos) else None,
+                (domicilios[i] or None) if i < len(domicilios) else None,
+            ),
+        )
+
     flash(
-        f"Crédito otorgado, pendiente de firma — {len(cronograma)} cuotas de ${valor_cuota_final:,.0f}. "
-        "Ahora podés relacionar vehículo, cliente y garantes.".replace(",", "."),
+        f"Crédito guardado, pendiente de firma — {len(cronograma)} cuotas de ${valor_cuota_final:,.0f}.".replace(",", "."),
         "success",
     )
     return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
@@ -656,12 +756,35 @@ def completar_datos(financiacion_id):
     except ValueError:
         anticipo = 0
 
+    # Permuta + Entrega Contado (19/09/2026): se pueden corregir acá igual
+    # que en el simulador -- valor siempre editable/redondeable, con o sin
+    # tasación elegida.
+    permuta_tasacion_id = f.get("permuta_tasacion_id") or None
+    permuta_tasacion_id = int(permuta_tasacion_id) if permuta_tasacion_id else None
+    try:
+        permuta_valor = float(f.get("permuta_valor")) if f.get("permuta_valor") else None
+    except ValueError:
+        permuta_valor = None
+    permuta_descripcion = (f.get("permuta_descripcion") or "").strip() or None
+    if permuta_tasacion_id and not permuta_descripcion:
+        tasacion = query("SELECT * FROM tasaciones WHERE id = ?", (permuta_tasacion_id,), one=True)
+        if tasacion:
+            permuta_descripcion = f"{tasacion['marca'] or ''} {tasacion['modelo'] or ''} {tasacion['anio'] or ''}".strip()
+    try:
+        entrega_contado = float(f.get("entrega_contado")) if f.get("entrega_contado") else None
+    except ValueError:
+        entrega_contado = None
+
     execute(
         """UPDATE financiaciones SET cliente_nombre = ?, cliente_telefono = ?,
-           vehiculo_id = ?, precio_venta = ?, anticipo = ? WHERE id = ?""",
+           vehiculo_id = ?, precio_venta = ?, anticipo = ?,
+           permuta_tasacion_id = ?, permuta_valor = ?, permuta_descripcion = ?,
+           entrega_contado = ? WHERE id = ?""",
         (
             f.get("cliente_nombre") or "", f.get("cliente_telefono") or None,
-            nuevo_vehiculo_id, precio_venta, anticipo, financiacion_id,
+            nuevo_vehiculo_id, precio_venta, anticipo,
+            permuta_tasacion_id, permuta_valor, permuta_descripcion, entrega_contado,
+            financiacion_id,
         ),
     )
     flash("Datos guardados.", "success")

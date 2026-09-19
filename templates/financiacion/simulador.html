@@ -8,11 +8,13 @@
 
 <div class="panel">
   <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
-    Calculá cuotas para cualquier consulta -- no se guarda nada hasta que otorgués el crédito. Elegí método
-    de interés y periodicidad de cobro; al otorgar, el plan queda "Pendiente de firma" con las cuotas ya
-    armadas, y recién ahí cargás vehículo, cliente y garantes en la ficha del plan.
+    Calculá cuotas para cualquier consulta -- no se guarda nada hasta que aprietes "Guardar". Elegí método
+    de interés y periodicidad de cobro y mirá las 4 tarjetas en vivo; cuando estés conforme con la cuota,
+    "Avanzar" abre los datos del cliente, el vehículo, la permuta, la entrega y los garantes -- todavía sin
+    guardar nada -- y recién "Guardar" manda todo junto: el plan queda "Pendiente de firma" con las cuotas
+    ya armadas, esperando la firma de todos.
   </p>
-  <form method="post" action="{{ url_for('financiacion.otorgar') }}" id="form-otorgar">
+  <form method="post" action="{{ url_for('financiacion.guardar') }}" id="form-guardar">
     <div class="grid-2">
       <div>
         <label>Monto a financiar</label>
@@ -91,15 +93,155 @@
       </div>
     </div>
 
-    <div style="margin-top:16px;">
-      <button class="btn btn-primary" type="submit">📝 Otorgar crédito</button>
+    <div id="paso-avanzar" style="margin-top:16px;">
+      <button class="btn btn-primary" type="button" id="btn-avanzar">▶ Avanzar</button>
+      <p style="color:var(--text-dim); font-size:12.5px; margin:8px 0 0;">
+        Todavía no se guarda nada -- esto solo abre los datos del cliente, el vehículo, la permuta y los
+        garantes para completarlos antes de guardar el crédito.
+      </p>
     </div>
-    <p style="color:var(--text-dim); font-size:12.5px; margin:8px 0 0;">
-      Guarda ya el plan y el cronograma de cuotas, en estado "Pendiente de firma". Vehículo, cliente y
-      garantes se cargan después en la ficha del plan.
-    </p>
+
+    <div id="seccion-datos" hidden>
+      <hr style="border-color:var(--border); margin:24px 0;">
+      <h3 style="margin-top:0;">Datos del cliente y de la operación</h3>
+
+      <div class="grid-2">
+        <div>
+          <label>Nombre del cliente</label>
+          <input type="text" name="cliente_nombre" id="cliente_nombre">
+        </div>
+        <div>
+          <label>Teléfono del cliente</label>
+          <input type="text" name="cliente_telefono">
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <label>Vehículo a vender</label>
+          <select name="vehiculo_id">
+            <option value="">-- Sin vehículo por ahora --</option>
+            {% for v in vehiculos_disponibles %}
+            <option value="{{ v.id }}">{{ v.marca }} {{ v.modelo }} {{ v.version or '' }} {{ v.anio or '' }}{{ ' — ' + v.dominio if v.dominio else '' }}</option>
+            {% endfor %}
+          </select>
+          <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
+            Al guardar, si el vehículo está "Disponible" pasa a "Señado" para dejar de ofrecerse mientras se
+            espera la firma.
+          </p>
+        </div>
+        <div>
+          <label>Precio de venta</label>
+          <input type="number" step="1" name="precio_venta" id="precio_venta">
+        </div>
+      </div>
+
+      <div class="panel" style="background:var(--navy-card-2); margin:16px 0;">
+        <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
+          <input type="checkbox" id="permuta_hay" style="width:auto;">
+          Hay un vehículo en permuta
+        </label>
+        <div id="permuta-datos" hidden style="margin-top:12px;">
+          <div class="grid-2">
+            <div>
+              <label>Tasación de origen (opcional)</label>
+              <select id="permuta_tasacion_select" name="permuta_tasacion_id">
+                <option value="">-- Sin tasación / cargar valor a mano --</option>
+                {% for t in tasaciones_disponibles %}
+                <option value="{{ t.id }}"
+                        data-precio="{{ t.precio_max_recomendado or 0 }}"
+                        data-desc="{{ t.marca or '' }} {{ t.modelo or '' }} {{ t.anio or '' }}">
+                  {{ t.marca }} {{ t.modelo }} {{ t.anio or '' }} — toma sugerida ${{ '%.0f'|format(t.precio_max_recomendado or 0) }}
+                </option>
+                {% endfor %}
+              </select>
+              <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
+                Si el vehículo no está tasado, dejá esto en "Sin tasación" y completá la descripción y el
+                precio de toma a mano.
+              </p>
+            </div>
+            <div>
+              <label>Descripción del vehículo en permuta</label>
+              <input type="text" name="permuta_descripcion" id="permuta_descripcion" placeholder="Marca, modelo, año...">
+            </div>
+          </div>
+          <div class="grid-2">
+            <div>
+              <label>Precio de toma</label>
+              <input type="number" step="1" name="permuta_valor" id="permuta_valor">
+              <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
+                Se completa solo al elegir una tasación, pero lo podés redondear o cambiar acá sin problema.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <label>Entrega en contado</label>
+          <input type="number" step="1" name="entrega_contado" id="entrega_contado">
+          <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
+            Se sugiere sola (precio de venta − permuta − monto financiado) pero se puede pisar a mano.
+          </p>
+        </div>
+        <div>
+          <label>Monto financiado</label>
+          <input type="text" id="monto_financiado_display" disabled style="opacity:0.75;">
+          <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
+            Es el mismo monto calculado arriba -- para cambiarlo, corregí "Monto a financiar" más arriba.
+          </p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <label>Seña recibida</label>
+          <input type="number" step="1" name="anticipo" id="anticipo" value="0">
+        </div>
+      </div>
+
+      <h3>Garantes</h3>
+      <div id="garantes-list"></div>
+      <button class="btn btn-secondary btn-sm" type="button" id="btn-agregar-garante">+ Agregar garante</button>
+
+      <div style="margin-top:24px;">
+        <button class="btn btn-primary" type="submit" id="btn-guardar">💾 Guardar</button>
+      </div>
+      <p style="color:var(--text-dim); font-size:12.5px; margin:8px 0 0;">
+        Guarda el plan, el cronograma de cuotas, la permuta y los garantes cargados, en estado
+        "Pendiente de firma" -- esperando la firma de todos. Para dar la operación por cerrada usá después el
+        botón "Cerrar operación" en la ficha del plan.
+      </p>
+    </div>
   </form>
 </div>
+
+<template id="template-garante-row">
+  <div class="grid-2" style="align-items:flex-end; margin-bottom:8px;" data-garante-row>
+    <div>
+      <label>Nombre</label>
+      <input type="text" name="garante_nombre[]">
+    </div>
+    <div>
+      <label>DNI</label>
+      <input type="text" name="garante_dni[]">
+    </div>
+  </div>
+  <div class="grid-2" style="align-items:flex-end; margin-bottom:8px;" data-garante-row-2>
+    <div>
+      <label>Teléfono</label>
+      <input type="text" name="garante_telefono[]">
+    </div>
+    <div style="display:flex; gap:8px; align-items:flex-end;">
+      <div style="flex:1;">
+        <label>Domicilio</label>
+        <input type="text" name="garante_domicilio[]">
+      </div>
+      <button class="btn-eliminar-foto" type="button" title="Quitar garante" data-quitar-garante>✕</button>
+    </div>
+  </div>
+</template>
 
 <script>
   // Seleccionar todo el contenido al enfocar un campo numérico (18/09/2026,
@@ -128,7 +270,7 @@
   var totalInteresValor = document.getElementById('total-interes-valor');
 
   function formatearPesos(monto) {
-    return '$' + Math.round(monto).toLocaleString('es-AR');
+    return '$' + Math.round(monto || 0).toLocaleString('es-AR');
   }
 
   // Mismas fórmulas que usa el servidor (routes/financiacion.py:
@@ -199,20 +341,22 @@
 
     if (monto <= 0 || nMeses <= 0) {
       resultadoCards.hidden = true;
-      return;
-    }
-    var cuotaMensual = campoMetodo.value === 'simple' ? cuotaSimple(monto, tasa, nMeses) : cuotaFrances(monto, tasa, nMeses);
-    var cuotaCalculada = esSemanal ? cuotaMensual / 4 : cuotaMensual;
-    var cantidadCuotas = esSemanal ? contarCuotasSemanales(nMeses, campoFecha.value) : nMeses;
+    } else {
+      var cuotaMensual = campoMetodo.value === 'simple' ? cuotaSimple(monto, tasa, nMeses) : cuotaFrances(monto, tasa, nMeses);
+      var cuotaCalculada = esSemanal ? cuotaMensual / 4 : cuotaMensual;
+      var cantidadCuotas = esSemanal ? contarCuotasSemanales(nMeses, campoFecha.value) : nMeses;
 
-    cuotaCalculadaLabel.textContent = 'Cuota calculada (' + (esSemanal ? 'semanal' : 'mensual') + ')';
-    cuotaCalculadaValor.textContent = formatearPesos(cuotaCalculada);
+      cuotaCalculadaLabel.textContent = 'Cuota calculada (' + (esSemanal ? 'semanal' : 'mensual') + ')';
+      cuotaCalculadaValor.textContent = formatearPesos(cuotaCalculada);
 
-    if (!cuotaAplicadaTocada) {
-      campoCuotaAplicada.value = Math.round(cuotaCalculada);
+      if (!cuotaAplicadaTocada) {
+        campoCuotaAplicada.value = Math.round(cuotaCalculada);
+      }
+      actualizarTotales(cantidadCuotas, monto);
+      resultadoCards.hidden = false;
     }
-    actualizarTotales(cantidadCuotas, monto);
-    resultadoCards.hidden = false;
+    actualizarMontoFinanciadoDisplay();
+    actualizarEntregaContadoSugerida();
   }
   [campoMontoFinanciado, campoTasa, campoCuotas, campoMetodo, campoPeriodicidad, campoFecha].forEach(function (el) {
     el.addEventListener('input', actualizarResultados);
@@ -234,6 +378,106 @@
     actualizarResultados();
   });
 
+  // ------------------------------------------------------------------
+  // Segunda parte (19/09/2026, pedido de Daniel): "Avanzar" solo muestra
+  // con JS los datos de cliente/vehículo/permuta/entrega/garantes -- no
+  // manda nada al servidor todavía. Recién "Guardar" (dentro del mismo
+  // <form>) manda todo junto a /financiacion/guardar.
+  // ------------------------------------------------------------------
+  var seccionDatos = document.getElementById('seccion-datos');
+  var pasoAvanzar = document.getElementById('paso-avanzar');
+  document.getElementById('btn-avanzar').addEventListener('click', function () {
+    var monto = parseFloat(campoMontoFinanciado.value) || 0;
+    var n = parseInt(campoCuotas.value, 10) || 0;
+    if (monto <= 0 || n <= 0) {
+      window.alert('Cargá un monto a financiar y una cantidad de cuotas antes de avanzar.');
+      return;
+    }
+    seccionDatos.hidden = false;
+    pasoAvanzar.hidden = true;
+    actualizarMontoFinanciadoDisplay();
+    seccionDatos.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  var campoMontoFinanciadoDisplay = document.getElementById('monto_financiado_display');
+  function actualizarMontoFinanciadoDisplay() {
+    campoMontoFinanciadoDisplay.value = formatearPesos(parseFloat(campoMontoFinanciado.value) || 0);
+  }
+
+  // Permuta: toggle "hay permuta" muestra/oculta el buscador de
+  // Tasación + los campos editables de descripción y precio de toma. Al
+  // desmarcar, se limpian para no mandar datos de una permuta que ya no
+  // aplica.
+  var permutaHay = document.getElementById('permuta_hay');
+  var permutaDatos = document.getElementById('permuta-datos');
+  var permutaTasacionSelect = document.getElementById('permuta_tasacion_select');
+  var permutaDescripcion = document.getElementById('permuta_descripcion');
+  var permutaValor = document.getElementById('permuta_valor');
+  permutaHay.addEventListener('change', function () {
+    permutaDatos.hidden = !permutaHay.checked;
+    if (!permutaHay.checked) {
+      permutaTasacionSelect.value = '';
+      permutaDescripcion.value = '';
+      permutaValor.value = '';
+      actualizarEntregaContadoSugerida();
+    }
+  });
+  // Al elegir una Tasación, se completan descripción y precio de toma --
+  // pero quedan como campos de texto/número normales, así que se pueden
+  // redondear o corregir en el momento sin problema (pedido de Daniel).
+  permutaTasacionSelect.addEventListener('change', function () {
+    var opt = permutaTasacionSelect.options[permutaTasacionSelect.selectedIndex];
+    if (opt && opt.value) {
+      permutaDescripcion.value = (opt.getAttribute('data-desc') || '').trim();
+      permutaValor.value = Math.round(parseFloat(opt.getAttribute('data-precio')) || 0);
+    }
+    actualizarEntregaContadoSugerida();
+  });
+  permutaValor.addEventListener('input', actualizarEntregaContadoSugerida);
+
+  // Entrega en contado: se sugiere sola (precio de venta − permuta −
+  // monto financiado) pero se puede pisar a mano -- igual criterio que
+  // "Cuota aplicada" arriba: una vez que el agenciero la toca, no se le
+  // pisa más el valor aunque cambien los otros campos.
+  var campoPrecioVenta = document.getElementById('precio_venta');
+  var campoEntregaContado = document.getElementById('entrega_contado');
+  var entregaContadoTocada = false;
+  campoEntregaContado.addEventListener('input', function () { entregaContadoTocada = true; });
+  campoPrecioVenta.addEventListener('input', actualizarEntregaContadoSugerida);
+  function actualizarEntregaContadoSugerida() {
+    if (entregaContadoTocada) return;
+    var precioVenta = parseFloat(campoPrecioVenta.value) || 0;
+    var permuta = permutaHay.checked ? (parseFloat(permutaValor.value) || 0) : 0;
+    var monto = parseFloat(campoMontoFinanciado.value) || 0;
+    if (precioVenta <= 0) {
+      campoEntregaContado.value = '';
+      return;
+    }
+    campoEntregaContado.value = Math.round(precioVenta - permuta - monto);
+  }
+
+  // Garantes: filas dinámicas -- se agregan y quitan con JS, nada se
+  // guarda hasta el "Guardar" general del formulario (pedido de Daniel).
+  var garantesList = document.getElementById('garantes-list');
+  var templateGarante = document.getElementById('template-garante-row');
+  function agregarFilaGarante() {
+    var frag = templateGarante.content.cloneNode(true);
+    var fila1 = frag.querySelector('[data-garante-row]');
+    var fila2 = frag.querySelector('[data-garante-row-2]');
+    var wrapper = document.createElement('div');
+    wrapper.style.borderBottom = '1px solid var(--border)';
+    wrapper.style.paddingBottom = '8px';
+    wrapper.style.marginBottom = '8px';
+    wrapper.appendChild(fila1);
+    wrapper.appendChild(fila2);
+    wrapper.querySelector('[data-quitar-garante]').addEventListener('click', function () {
+      wrapper.remove();
+    });
+    garantesList.appendChild(wrapper);
+  }
+  document.getElementById('btn-agregar-garante').addEventListener('click', agregarFilaGarante);
+  agregarFilaGarante(); // arranca con una fila lista para completar
+
   // Estado inicial de la página: la fecha arranca con la sugerida y, si
   // ya hay monto/plazo cargados (el navegador restauró el formulario al
   // volver atrás), se recalcula todo de una.
@@ -242,11 +486,11 @@
     actualizarResultados();
   })();
 
-  // Confirmación explícita antes de otorgar el crédito: esto ya guarda
-  // el plan en la base, aunque todavía no haya vehículo ni cliente
-  // cargados -- por eso conviene un aviso corto antes de mandarlo.
-  document.getElementById('form-otorgar').addEventListener('submit', function (ev) {
-    if (!window.confirm('¿Otorgar este crédito como "Pendiente de firma"? Se guardan ya el plan y las cuotas; después cargás vehículo, cliente y garantes en la ficha del plan.')) {
+  // Confirmación explícita antes de guardar el crédito: esto ya guarda
+  // el plan, el cronograma, la permuta y los garantes en la base, aunque
+  // todavía falte la firma de todos.
+  document.getElementById('form-guardar').addEventListener('submit', function (ev) {
+    if (!window.confirm('¿Guardar este crédito como "Pendiente de firma"? Se guardan el plan, las cuotas, la permuta y los garantes cargados; para cerrar la operación después usás el botón "Cerrar operación" en la ficha del plan.')) {
       ev.preventDefault();
     }
   });
