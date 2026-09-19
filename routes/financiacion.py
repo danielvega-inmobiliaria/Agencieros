@@ -316,8 +316,16 @@ def simulador():
         "SELECT * FROM vehiculos WHERE estado = 'disponible' ORDER BY created_at DESC"
     )
     tasaciones_disponibles = _tasaciones_disponibles()
+    # Viene de Stock -> "Vender con financiación propia" (?vehiculo_id=N): el
+    # vehículo llega preseleccionado y con su precio publicado como precio de venta.
+    vehiculo_pre = None
+    pedido = request.args.get("vehiculo_id", type=int)
+    if pedido:
+        vehiculo_pre = next((v for v in vehiculos_disponibles if v["id"] == pedido), None)
     return render_template(
         "financiacion/simulador.html",
+        vehiculo_pre=vehiculo_pre,
+        precio_pre=int(vehiculo_pre["valor_publicado"]) if vehiculo_pre and vehiculo_pre["valor_publicado"] else "",
         metodo_label=METODO_LABEL,
         periodicidad_label=PERIODICIDAD_LABEL,
         vehiculos_disponibles=vehiculos_disponibles,

@@ -67,7 +67,7 @@
       <tr><td>Financiado</td><td>${{ m.format(plan_cierre.monto_financiado or 0).replace(",", ".") }} en {{ plan_cierre.cantidad_cuotas }} cuotas</td></tr>
     </table>
     {% elif venta_cerrada %}
-    <p style="margin-top:0;">Vendido <b>sin financiación</b> a {{ venta_cerrada.cliente_nombre }}{% if venta_cerrada.cliente_telefono %} · {{ venta_cerrada.cliente_telefono }}{% endif %}.</p>
+    <p style="margin-top:0;">Vendido <b>sin financiación propia</b> a {{ venta_cerrada.cliente_nombre }}{% if venta_cerrada.cliente_telefono %} · {{ venta_cerrada.cliente_telefono }}{% endif %}.</p>
     <table>
       <tr><td>Fecha de venta</td><td>{{ venta_cerrada.fecha_venta }}</td></tr>
       <tr><td>Precio de venta</td><td>${{ m.format(venta_cerrada.precio_venta or 0).replace(",", ".") }}</td></tr>
@@ -125,11 +125,15 @@
 
   {% else %}
     <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
-      Sin financiación: recibí una seña o cerrá la venta directo. Si el cliente va a pagar en cuotas, usá
-      {% if puede_ver_todo %}<a href="{{ url_for('financiacion.simulador') }}">Financiación → Simulador</a>{% else %}Financiación{% endif %}.
+      <b>Vender:</b> el comprador paga hoy, en efectivo, con un vehículo en permuta y/o con un crédito externo (banco o financiera).
+      {% if puede_ver_todo %}<b>Vender con financiación propia:</b> el saldo lo paga en cuotas con tu plan (te lleva al simulador con este vehículo ya elegido).{% endif %}
+      También podés recibir una seña.
     </p>
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <a class="btn btn-primary btn-sm" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id) }}">✅ Vender (sin financiación)</a>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id) }}">✅ Vender</a>
+      {% if puede_ver_todo %}
+      <a class="btn btn-primary btn-sm" href="{{ url_for('financiacion.simulador', vehiculo_id=vehiculo.id) }}">🏦 Vender con financiación propia</a>
+      {% endif %}
     </div>
     <details style="margin-top:14px;">
       <summary style="cursor:pointer; color:var(--gold-light); font-size:13px;">🤝 Recibir una seña</summary>
