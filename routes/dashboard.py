@@ -1,8 +1,8 @@
 from datetime import date
 
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, session, redirect, url_for, flash, abort
 
-from database import query
+from database import query, execute
 
 bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 
@@ -40,6 +40,80 @@ def _grafico_torta(segmentos):
         resultado.append({**s, "pct": pct})
     gradient = ", ".join(stops) if stops else "var(--border) 0% 100%"
     return {"segmentos": resultado, "gradient": gradient, "total": total}
+
+
+def _senas_por_resolver(agencia_id):
+    """Señas de operaciones canceladas que todavía no se decidieron
+    (retener o devolver): las de Stock/venta directa (`ventas` en estado
+    'cancelada') y las de reservas canceladas de Financiación. Una seña es
+    siempre en efectivo (Daniel 19/09/2026)."""
+    ventas = query(
+        """SELECT vt.id AS id, 'venta' AS origen, vt.cliente_nombre AS cliente, vt.cliente_telefono AS telefono,
+                  COALESCE(vt.sena, 0) AS monto, vt.fecha_sena AS fecha,
+                  v.marca, v.modelo, v.version, v.anio, v.dominio
+           FROM ventas vt JOIN vehiculos v ON v.id = vt.vehiculo_id
+           WHERE vt.estado = 'cancelada' AND vt.sena_resolucion IS NULL
+             AND COALESCE(vt.sena, 0) > 0
+             AND vt.agencia_id = ?""",
+        (agencia_id,),
+    )
+    planes = query(
+        """SELECT f.id AS id, 'plan' AS origen, f.cliente_nombre AS cliente, f.cliente_telefono AS telefono,
+                  COALESCE(f.anticipo, 0) AS monto, substr(f.created_at, 1, 10) AS fecha,
+                  v.marca, v.modelo, v.version, v.anio, v.dominio
+           FROM financiaciones f LEFT JOIN vehiculos v ON v.id = f.vehiculo_id
+           WHERE f.estado = 'cancelado_reserva' AND f.sena_resolucion IS NULL
+             AND COALESCE(f.anticipo, 0) > 0
+             AND COALESCE(f.agencia_id, 1) = ?""",  # Financiación aún no guarda agencia_id al crear un plan: NULL = agencia 1
+        (agencia_id,),
+    )
+    filas = [dict(r) for r in ventas] + [dict(r) for r in planes]
+    filas.sort(key=lambda r: r["fecha"] or "", reverse=True)
+    return filas
+
+
+@bp.route("/senas")
+def senas():
+    pendientes = _senas_por_resolver(session["agencia_id"])
+    return render_template(
+        "dashboard_senas.html", senas=pendientes, total=sum(r["monto"] for r in pendientes)
+    )
+
+
+@bp.route("/senas/<origen>/<int:item_id>/<accion>", methods=["POST"])
+def resolver_sena(origen, item_id, accion):
+    """Decide qué hacer con una seña de una operación cancelada.
+    'retener' -> la agencia se la queda: suma a "Ingresos del mes" del mes
+    en que se retiene. 'devolver' -> no cambia ningún número."""
+    if origen not in ("venta", "plan") or accion not in ("retener", "devolver"):
+        abort(404)
+    tabla, estado, campo = (
+        ("ventas", "cancelada", "sena") if origen == "venta" else ("financiaciones", "cancelado_reserva", "anticipo")
+    )
+    fila = query(
+        # Financiación aún no guarda agencia_id al crear un plan: NULL = agencia 1
+        f"SELECT * FROM {tabla} WHERE id = ? AND COALESCE(agencia_id, 1) = ? AND estado = ? AND sena_resolucion IS NULL",
+        (item_id, session["agencia_id"], estado), one=True,
+    )
+    if not fila:
+        flash("Esa seña ya no está pendiente de resolver.", "error")
+        return redirect(url_for("dashboard.senas"))
+    resolucion = "retenida" if accion == "retener" else "devuelta"
+    execute(
+        f"UPDATE {tabla} SET sena_resolucion = ?, sena_resolucion_fecha = ? WHERE id = ?",
+        (resolucion, str(date.today()), item_id),
+    )
+    monto = fila[campo] or 0
+    monto_txt = "$" + "{:,.0f}".format(monto).replace(",", ".")
+    if accion == "retener":
+        flash(
+            f"Seña de {monto_txt} retenida: suma a los Ingresos y a la Ganancia de este mes." if monto
+            else "Listo: quedó resuelta (no había efectivo que retener).",
+            "success",
+        )
+    else:
+        flash("Seña marcada como devuelta." if monto else "Listo: quedó resuelta.", "success")
+    return redirect(url_for("dashboard.senas"))
 
 
 def efectivo_de_venta(r):
@@ -112,6 +186,29 @@ def index():
         ),
         "ingresos": round(sum(efectivo_de_venta(r) for r in ventas_mes_detalle), 2),
     }
+    # Señas retenidas este mes (19/09/2026): cuando se cae una operación y
+    # la agencia se queda con la seña, ese efectivo es un ingreso del mes en
+    # que se decide retenerla. Las devueltas no cambian nada.
+    agencia_id = session["agencia_id"]
+    ventas_mes["senas_retenidas"] = round(
+        query(
+            """SELECT COALESCE(SUM(m), 0) t FROM (
+                   SELECT sena AS m FROM ventas
+                   WHERE sena_resolucion = 'retenida' AND agencia_id = ?
+                     AND strftime('%Y-%m', sena_resolucion_fecha) = strftime('%Y-%m', 'now')
+                   UNION ALL
+                   SELECT anticipo AS m FROM financiaciones
+                   WHERE sena_resolucion = 'retenida' AND COALESCE(agencia_id, 1) = ?
+                     AND strftime('%Y-%m', sena_resolucion_fecha) = strftime('%Y-%m', 'now'))""",
+            (agencia_id, agencia_id), one=True,
+        )["t"] or 0,
+        2,
+    )
+    ventas_mes["ingresos"] = round(ventas_mes["ingresos"] + ventas_mes["senas_retenidas"], 2)
+    # Una seña retenida también es ganancia (Daniel 19/09/2026): es plata
+    # que se queda la agencia sin costo asociado, entra completa.
+    ventas_mes["ganancia"] = round(ventas_mes["ganancia"] + ventas_mes["senas_retenidas"], 2)
+    senas_pendientes = _senas_por_resolver(agencia_id)
     gastos_en_reparacion = query(
         "SELECT COALESCE(SUM(gastos), 0) c FROM vehiculos WHERE estado = 'en_reparacion'", one=True
     )["c"]
@@ -153,6 +250,8 @@ def index():
         stock_counts=stock_counts,
         pedidos_activos=pedidos_activos,
         ventas_mes=ventas_mes,
+        senas_pendientes=senas_pendientes,
+        senas_pendientes_total=sum(r["monto"] for r in senas_pendientes),
         gastos_en_reparacion=gastos_en_reparacion,
         cuotas_por_cobrar=cuotas_por_cobrar,
         grafico_stock=grafico_stock,

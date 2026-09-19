@@ -32,7 +32,7 @@
   <a class="card" href="{{ url_for('stock.index', estado='vendido') }}">
     <div class="label">Vendidos este mes</div>
     <div class="value">{{ ventas_mes.c }}</div>
-    <div class="sub">Ganancia: ${{ "{:,.0f}".format(ventas_mes.ganancia or 0).replace(",", ".") }}</div>
+    <div class="sub">Ganancia: ${{ "{:,.0f}".format(ventas_mes.ganancia or 0).replace(",", ".") }}{% if ventas_mes.senas_retenidas %} · incluye señas retenidas{% endif %}</div>
   </a>
   <a class="card" href="{{ url_for('stock.index', estado='en_reparacion') }}">
     <div class="label">Gastos en reparación</div>
@@ -42,8 +42,15 @@
   <a class="card" href="{{ url_for('finanzas.index') }}">
     <div class="label">Ingresos del mes</div>
     <div class="value">${{ "{:,.0f}".format(ventas_mes.ingresos or 0).replace(",", ".") }}</div>
-    <div class="sub">{{ ventas_mes.c }} vehículo(s) vendido(s) · recibido al contado</div>
+    <div class="sub">{{ ventas_mes.c }} vehículo(s) vendido(s) · recibido al contado{% if ventas_mes.senas_retenidas %} · incluye ${{ "{:,.0f}".format(ventas_mes.senas_retenidas).replace(",", ".") }} de señas retenidas{% endif %}</div>
   </a>
+  {% if senas_pendientes %}
+  <a class="card" href="{{ url_for('dashboard.senas') }}">
+    <div class="label">Señas por resolver</div>
+    <div class="value">{{ senas_pendientes|length }}</div>
+    <div class="sub" style="color:var(--gold-light);">{% if senas_pendientes_total %}${{ "{:,.0f}".format(senas_pendientes_total).replace(",", ".") }} · {% endif %}Retenerlas o devolverlas</div>
+  </a>
+  {% endif %}
 </div>
 
 <div class="dashboard-charts-row">

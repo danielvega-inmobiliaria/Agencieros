@@ -964,6 +964,39 @@ def _migrar_multi_tenant_columnas(conn):
         conn.execute(f"UPDATE {tabla} SET agencia_id = 1 WHERE agencia_id IS NULL")
 
 
+def _migrar_senas_resolucion(conn):
+    """Estado de resolución de una seña cancelada (19/09/2026, pedido de
+    Daniel): cuando se cae una operación con seña -- "Cancelar seña" en
+    Stock (tabla `ventas`) o "Cancelar reserva" en Financiación -- queda
+    "por resolver" hasta que se decide qué hacer con ella desde el
+    Dashboard: 'retenida' (la agencia se la queda: suma a Ingresos del mes,
+    en el mes en que se retiene) o 'devuelta' (no cambia nada). NULL =
+    todavía por resolver. Los datos que ya existían no se tocan."""
+    for tabla in ("ventas", "financiaciones"):
+        cols = {r[1] for r in conn.execute(f"PRAGMA table_info({tabla})")}
+        if "sena_resolucion" not in cols:
+            conn.execute(f"ALTER TABLE {tabla} ADD COLUMN sena_resolucion TEXT")
+        if "sena_resolucion_fecha" not in cols:
+            conn.execute(f"ALTER TABLE {tabla} ADD COLUMN sena_resolucion_fecha TEXT")
+
+
+def _migrar_ventas_permuta_datos(conn):
+    """Datos estructurados de la permuta prevista al señar (19/09/2026,
+    pedido de Daniel): una seña siempre es en efectivo -- el vehículo en
+    permuta todavía NO llegó, pero se piden sus datos mínimos (Año, Marca,
+    Modelo, y si se puede Versión y Km) para dejarlo cargado como "Posible
+    entrega" y cruzarlo con los pedidos aunque todavía no esté tasado. Mismos
+    nombres de columna que la permuta de `pedidos_clientes`, así el buscador
+    combinado reutiliza el mismo criterio."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(ventas)")}
+    for columna, tipo in (
+        ("permuta_marca", "TEXT"), ("permuta_modelo", "TEXT"), ("permuta_version", "TEXT"),
+        ("permuta_anio", "INTEGER"), ("permuta_km", "INTEGER"),
+    ):
+        if columna not in cols:
+            conn.execute(f"ALTER TABLE ventas ADD COLUMN {columna} {tipo}")
+
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
@@ -992,6 +1025,8 @@ def init_db():
     _migrar_agencias_contacto_referencia(conn)
     _migrar_financiaciones_permuta(conn)
     _migrar_multi_tenant_columnas(conn)
+    _migrar_senas_resolucion(conn)
+    _migrar_ventas_permuta_datos(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")
     if cur.fetchone()[0] == 0:

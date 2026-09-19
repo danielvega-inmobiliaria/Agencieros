@@ -217,7 +217,13 @@ def _monto_sugerido_con_recargo(cuota, tasa_punitoria, hoy):
 
 @bp.route("/")
 def index():
-    planes = [_con_resumen(f) for f in query("SELECT * FROM financiaciones ORDER BY created_at DESC")]
+    # Las reservas canceladas ("Cancelar reserva") ya no se muestran acá
+    # (pedido de Daniel 19/09/2026): la seña, si la hubo, queda en "Señas
+    # por resolver" del Dashboard.
+    planes = [
+        _con_resumen(f)
+        for f in query("SELECT * FROM financiaciones WHERE estado != 'cancelado_reserva' ORDER BY created_at DESC")
+    ]
     activos = [p for p in planes if p["estado"] == "activo"]
     resumen = {
         "total_a_cobrar": sum(p["total_plan"] for p in activos),
@@ -926,5 +932,12 @@ def cancelar_reserva(financiacion_id):
         "UPDATE financiaciones SET estado = 'cancelado_reserva', observaciones = ? WHERE id = ?",
         (observaciones, financiacion_id),
     )
-    flash("Reserva cancelada — el vehículo vuelve a Disponible.", "success")
-    return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+    if fin["anticipo"]:
+        flash(
+            "Reserva cancelada — el vehículo vuelve a Disponible. La seña quedó en \"Señas por resolver\" "
+            "del Dashboard para que decidas si la retenés o la devolvés.",
+            "success",
+        )
+    else:
+        flash("Reserva cancelada — el vehículo vuelve a Disponible.", "success")
+    return redirect(url_for("financiacion.index"))

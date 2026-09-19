@@ -134,6 +134,32 @@ def _buscar_posible_entrega(filtros, agencia_id):
     )
 
 
+def _buscar_posible_entrega_senas(filtros, agencia_id):
+    """"Posible entrega" desde una seña abierta con permuta (19/09/2026): el
+    vehículo que el cliente va a entregar en permuta al cerrar la venta
+    (Stock -> Señar). Todavía no llegó, pero ya se sabe que entra: tiene
+    los datos mínimos (Año/Marca/Modelo, Versión y Km si se cargaron) y por
+    eso se cruza con los pedidos igual que la permuta de un pedido. Solo
+    cuentan las señas abiertas ('senado'): si la seña se cancela o la venta
+    se cierra, deja de ser una posible entrega."""
+    from database import query
+
+    filtros_sin_precio = {k: v for k, v in filtros.items() if k not in ("precio_min", "precio_max")}
+    condiciones, params = condiciones_sql(
+        filtros_sin_precio,
+        campo_marca="permuta_marca", campo_modelo="permuta_modelo",
+        campo_version="permuta_version", campo_anio="permuta_anio", campo_km="permuta_km",
+    )
+    condiciones += [
+        "agencia_id = ?", "estado = 'senado'", "permuta_marca IS NOT NULL", "permuta_marca != ''",
+    ]
+    params.append(agencia_id)
+    return query(
+        f"SELECT * FROM ventas WHERE {' AND '.join(condiciones)} ORDER BY created_at DESC",
+        tuple(params),
+    )
+
+
 def buscar_combinado(filtros, agencia_id):
     """Un solo buscador para Disponible + Por ingresar + En reparación
     (Stock, sin Vendido) + Red de Agencieros + Posible entrega — pedido de
@@ -172,6 +198,7 @@ def buscar_combinado(filtros, agencia_id):
     )
 
     posibles_entregas = _buscar_posible_entrega(filtros, agencia_id)
+    posibles_senas = _buscar_posible_entrega_senas(filtros, agencia_id)
 
     por_origen = {clave: [] for clave in ORDEN_ORIGEN}
     for v in vehiculos:
@@ -205,6 +232,18 @@ def buscar_combinado(filtros, agencia_id):
             "precio": None,
             "ver_url": url_for("pedidos.detalle", pedido_id=pe["id"]),
             "agencia": pe["cliente_nombre"], "contacto": pe["telefono"],
+            "foto": None,
+        })
+
+    for vt in posibles_senas:
+        por_origen["posible_entrega"].append({
+            "origen": "posible_entrega",
+            "marca": vt["permuta_marca"], "modelo": vt["permuta_modelo"], "version": vt["permuta_version"],
+            "anio": vt["permuta_anio"], "km": vt["permuta_km"],
+            "precio": None,
+            # Lleva a la ficha del vehículo que se señó (ahí está la operación).
+            "ver_url": url_for("stock.detalle", vehiculo_id=vt["vehiculo_id"]),
+            "agencia": vt["cliente_nombre"], "contacto": vt["cliente_telefono"],
             "foto": None,
         })
 

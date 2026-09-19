@@ -20,7 +20,7 @@
     <table class="tabla-responsive">
       <tr class="fila-header"><th>Mes</th><th>Unidades</th><th>Ganancia</th></tr>
       {% for g in ganancia_mensual %}
-      <tr><td data-label="Mes">{{ g.mes }}</td><td data-label="Unidades">{{ g.unidades }}</td><td data-label="Ganancia">${{ "{:,.0f}".format(g.ganancia or 0).replace(",", ".") }}</td></tr>
+      <tr><td data-label="Mes">{{ g.mes }}</td><td data-label="Unidades">{{ g.unidades }}</td><td data-label="Ganancia">${{ "{:,.0f}".format(g.ganancia or 0).replace(",", ".") }}{% if g.senas %}<br><span style="color:var(--text-dim); font-size:11.5px;">incluye ${{ "{:,.0f}".format(g.senas).replace(",", ".") }} de señas retenidas</span>{% endif %}</td></tr>
       {% else %}
       <tr><td colspan="3">Todavía no hay ventas registradas.</td></tr>
       {% endfor %}
@@ -31,7 +31,7 @@
     <table class="tabla-responsive">
       <tr class="fila-header"><th>Año</th><th>Ganancia</th></tr>
       {% for g in ganancia_anual %}
-      <tr><td data-label="Año">{{ g.anio }}</td><td data-label="Ganancia">${{ "{:,.0f}".format(g.ganancia or 0).replace(",", ".") }}</td></tr>
+      <tr><td data-label="Año">{{ g.anio }}</td><td data-label="Ganancia">${{ "{:,.0f}".format(g.ganancia or 0).replace(",", ".") }}{% if g.senas %}<br><span style="color:var(--text-dim); font-size:11.5px;">incluye ${{ "{:,.0f}".format(g.senas).replace(",", ".") }} de señas retenidas</span>{% endif %}</td></tr>
       {% else %}
       <tr><td colspan="2">Todavía no hay ventas registradas.</td></tr>
       {% endfor %}

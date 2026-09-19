@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, session
 
 from database import query
 
@@ -22,6 +22,37 @@ def index():
            WHERE estado = 'vendido' AND fecha_venta IS NOT NULL
            GROUP BY anio ORDER BY anio DESC"""
     )
+    # Una seña retenida es ganancia (Daniel 19/09/2026): entra completa en el
+    # mes/año en que se decidió retenerla, sin sumar unidades vendidas.
+    # Financiación todavía no guarda agencia_id al crear un plan: NULL = agencia 1.
+    agencia_id = session["agencia_id"]
+    retenidas = query(
+        """SELECT f AS fecha, SUM(m) total FROM (
+               SELECT sena AS m, sena_resolucion_fecha AS f FROM ventas
+               WHERE sena_resolucion = 'retenida' AND COALESCE(agencia_id, 1) = ?
+               UNION ALL
+               SELECT anticipo AS m, sena_resolucion_fecha AS f FROM financiaciones
+               WHERE sena_resolucion = 'retenida' AND COALESCE(agencia_id, 1) = ?)
+           WHERE f IS NOT NULL GROUP BY f""",
+        (agencia_id, agencia_id),
+    )
+    por_mes = {
+        g["mes"]: {"mes": g["mes"], "unidades": g["unidades"], "ganancia": g["ganancia"] or 0, "senas": 0}
+        for g in ganancia_mensual
+    }
+    por_anio = {
+        g["anio"]: {"anio": g["anio"], "ganancia": g["ganancia"] or 0, "senas": 0} for g in ganancia_anual
+    }
+    for r in retenidas:
+        mes, anio = r["fecha"][:7], r["fecha"][:4]
+        m = por_mes.setdefault(mes, {"mes": mes, "unidades": 0, "ganancia": 0, "senas": 0})
+        m["ganancia"] += r["total"] or 0
+        m["senas"] += r["total"] or 0
+        a = por_anio.setdefault(anio, {"anio": anio, "ganancia": 0, "senas": 0})
+        a["ganancia"] += r["total"] or 0
+        a["senas"] += r["total"] or 0
+    ganancia_mensual = sorted(por_mes.values(), key=lambda g: g["mes"], reverse=True)[:12]
+    ganancia_anual = sorted(por_anio.values(), key=lambda g: g["anio"], reverse=True)
     capital_invertido = query(
         """SELECT COALESCE(SUM(valor_compra + gastos), 0) total FROM vehiculos
            WHERE estado != 'vendido'""",

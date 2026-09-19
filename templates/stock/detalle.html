@@ -81,8 +81,11 @@
   {% elif vehiculo.estado == 'senado' %}
     {% if venta_abierta %}
     <p style="margin-top:0;">Señado por <b>{{ venta_abierta.cliente_nombre }}</b>{% if venta_abierta.cliente_telefono %} · {{ venta_abierta.cliente_telefono }}{% endif %}
-      el {{ venta_abierta.fecha_sena }}:
-      {% if venta_abierta.sena %}seña en efectivo de <b>${{ m.format(venta_abierta.sena).replace(",", ".") }}</b>{% endif %}{% if venta_abierta.sena and venta_abierta.permuta_valor %} + {% endif %}{% if venta_abierta.permuta_valor %}permuta <b>{{ venta_abierta.permuta_descripcion or 'vehículo' }}</b> por <b>${{ m.format(venta_abierta.permuta_valor).replace(",", ".") }}</b>{% endif %}{% if venta_abierta.precio_venta %} (precio acordado ${{ m.format(venta_abierta.precio_venta).replace(",", ".") }}){% endif %}.</p>
+      el {{ venta_abierta.fecha_sena }}: seña de <b>${{ m.format(venta_abierta.sena or 0).replace(",", ".") }}</b> en efectivo{% if venta_abierta.precio_venta %}, precio acordado ${{ m.format(venta_abierta.precio_venta).replace(",", ".") }}{% endif %}.</p>
+    {% if venta_abierta.permuta_marca %}
+    <p style="color:var(--text-dim); font-size:13px; margin:0 0 8px;">Va a entregar en permuta: <b style="color:var(--text);">{{ venta_abierta.permuta_descripcion }}</b>{% if venta_abierta.permuta_km %} · {{ m.format(venta_abierta.permuta_km).replace(",", ".") }} km{% endif %}{% if venta_abierta.permuta_valor %} · toma estimada ${{ m.format(venta_abierta.permuta_valor).replace(",", ".") }}{% else %} · a tasar{% endif %}
+      — figura como "Posible entrega" en el buscador, en Pedidos y en Matches.</p>
+    {% endif %}
     {% if venta_abierta.observaciones %}<p style="color:var(--text-dim); font-size:13px;">{{ venta_abierta.observaciones }}</p>{% endif %}
     {% elif plan_pendiente %}
     <p style="margin-top:0;">Este vehículo está señado por un <b>crédito de Financiación en trámite</b>
@@ -119,42 +122,44 @@
           <div><label>Teléfono (opcional)</label><input type="text" name="cliente_telefono"></div>
         </div>
         <div class="grid-2">
-          <div>
-            <label>Seña en efectivo</label>
-            <input type="number" step="1" min="0" name="sena">
-            <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">Podés dejarlo vacío si la seña es solo la permuta.</p>
-          </div>
+          <div><label>Monto de la seña (en efectivo)</label><input type="number" step="1" min="1" name="sena" required></div>
           <div><label>Precio acordado (opcional)</label><input type="number" step="1" name="precio_venta" value="{{ precio_sugerido }}"></div>
         </div>
         <div class="panel" style="background:var(--navy-card-2); margin:14px 0;">
           <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
             <input type="checkbox" name="permuta_hay" id="sena_permuta_hay" value="1" style="width:auto;">
-            Deja un vehículo en permuta
+            Va a entregar un vehículo en permuta
           </label>
           <div id="sena-permuta-datos" hidden style="margin-top:12px;">
-            <div class="grid-2">
-              <div>
-                <label>Tasación de origen (opcional)</label>
-                <select id="sena_permuta_tasacion" name="permuta_tasacion_id">
-                  <option value="">-- Sin tasación / cargar valor a mano --</option>
-                  {% for t in tasaciones_permuta %}
-                  <option value="{{ t.id }}" data-precio="{{ t.precio_max_recomendado or 0 }}"
-                          data-desc="{{ t.marca or '' }} {{ t.modelo or '' }} {{ t.anio or '' }}">
-                    {{ t.marca }} {{ t.modelo }} {{ t.anio or '' }} — toma sugerida ${{ '%.0f'|format(t.precio_max_recomendado or 0) }}
-                  </option>
-                  {% endfor %}
-                </select>
-              </div>
-              <div>
-                <label>Descripción del vehículo en permuta</label>
-                <input type="text" name="permuta_descripcion" id="sena_permuta_desc" placeholder="Marca, modelo, año...">
+            <p style="color:var(--text-dim); font-size:11.5px; margin:0 0 10px;">
+              El vehículo todavía no llega: se piden estos datos para dejarlo cargado como "Posible entrega" y
+              cruzarlo con los pedidos, aunque todavía no esté tasado.
+            </p>
+            <div>
+              <label>Tasación ya hecha (opcional)</label>
+              <select id="sena_permuta_tasacion" name="permuta_tasacion_id">
+                <option value="">-- Todavía no está tasado: cargo los datos --</option>
+                {% for t in tasaciones_permuta %}
+                <option value="{{ t.id }}" data-precio="{{ t.precio_max_recomendado or 0 }}">
+                  {{ t.marca }} {{ t.modelo }} {{ t.version or '' }} {{ t.anio or '' }} — toma sugerida ${{ '%.0f'|format(t.precio_max_recomendado or 0) }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div id="sena-permuta-manual" style="margin-top:10px;">
+              <div class="form-row">
+                <div><label>Año</label><input type="number" id="permuta_anio" name="permuta_anio"></div>
+                <div><label>Marca</label><select id="permuta_marca" name="permuta_marca" data-placeholder-libre="Marca nueva"></select></div>
+                <div><label>Modelo</label><select id="permuta_modelo" name="permuta_modelo" data-placeholder-libre="Modelo nuevo"></select></div>
+                <div><label>Versión</label><select id="permuta_version" name="permuta_version" data-placeholder-libre="Versión nueva"></select></div>
               </div>
             </div>
-            <div class="grid-2">
+            <div class="grid-2" style="margin-top:10px;">
+              <div><label>Kilómetros (opcional)</label><input type="number" step="1" name="permuta_km" id="sena_permuta_km"></div>
               <div>
-                <label>Precio de toma</label>
+                <label>Valor estimado de toma (opcional)</label>
                 <input type="number" step="1" name="permuta_valor" id="sena_permuta_valor">
-                <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">Se completa solo al elegir una tasación, pero lo podés cambiar.</p>
+                <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">Si todavía no está tasado dejalo vacío: se define al cerrar la venta.</p>
               </div>
             </div>
           </div>
@@ -164,18 +169,19 @@
             var hay = document.getElementById('sena_permuta_hay');
             var datos = document.getElementById('sena-permuta-datos');
             var sel = document.getElementById('sena_permuta_tasacion');
-            var desc = document.getElementById('sena_permuta_desc');
+            var manual = document.getElementById('sena-permuta-manual');
             var valor = document.getElementById('sena_permuta_valor');
+            var km = document.getElementById('sena_permuta_km');
             hay.addEventListener('change', function () {
               datos.hidden = !hay.checked;
-              if (!hay.checked) { sel.value = ''; desc.value = ''; valor.value = ''; }
+              if (!hay.checked) { sel.value = ''; manual.hidden = false; valor.value = ''; km.value = ''; }
             });
+            // Con una tasación elegida, Año/Marca/Modelo/Versión salen de ella.
             sel.addEventListener('change', function () {
               var opt = sel.options[sel.selectedIndex];
-              if (opt && opt.value) {
-                desc.value = (opt.getAttribute('data-desc') || '').trim();
-                valor.value = Math.round(parseFloat(opt.getAttribute('data-precio')) || 0) || '';
-              }
+              var conTasacion = !!(opt && opt.value);
+              manual.hidden = conTasacion;
+              if (conTasacion) valor.value = Math.round(parseFloat(opt.getAttribute('data-precio')) || 0) || '';
             });
           })();
         </script>
@@ -187,6 +193,12 @@
         </p>
       </form>
     </details>
+    <script src="{{ url_for('static', filename='js/autocomplete.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/catalogo.js') }}"></script>
+    <script>
+      const catalogo = {{ catalogo_json | safe }};
+      initCatalogoSelects(catalogo, 'permuta_anio', 'permuta_marca', 'permuta_modelo', 'permuta_version');
+    </script>
   {% endif %}
 </div>
 
