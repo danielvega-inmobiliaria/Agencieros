@@ -319,9 +319,28 @@ def detalle(vehiculo_id):
     toma_vinculada = query(
         "SELECT id FROM tomas_vehiculo WHERE vehiculo_id = ? ORDER BY id DESC LIMIT 1", (vehiculo_id,), one=True
     )
+    # Operación de venta (19/09/2026): seña abierta / plan de Financiación en
+    # trámite / cómo se cerró la venta -- ver bloque "Venta directa" arriba.
+    venta_abierta = _venta_abierta(vehiculo_id) if vehiculo["estado"] == "senado" else None
+    plan_pendiente = (
+        _plan_pendiente(vehiculo_id) if vehiculo["estado"] == "senado" and not venta_abierta else None
+    )
+    venta_cerrada = plan_cierre = None
+    if vehiculo["estado"] == "vendido":
+        plan_cierre = query(
+            """SELECT * FROM financiaciones WHERE vehiculo_id = ?
+               AND estado NOT IN ('pendiente_firma', 'cancelado_reserva') ORDER BY id DESC LIMIT 1""",
+            (vehiculo_id,), one=True,
+        )
+        if not plan_cierre:
+            venta_cerrada = query(
+                "SELECT * FROM ventas WHERE vehiculo_id = ? AND estado = 'cerrada' ORDER BY id DESC LIMIT 1",
+                (vehiculo_id,), one=True,
+            )
     return render_template(
         "stock/detalle.html", vehiculo=vehiculo, rent=_rentabilidad(vehiculo), estado_label=ESTADO_LABEL, fotos=fotos,
-        toma_vinculada=toma_vinculada,
+        toma_vinculada=toma_vinculada, venta_abierta=venta_abierta, plan_pendiente=plan_pendiente,
+        venta_cerrada=venta_cerrada, plan_cierre=plan_cierre, hoy=str(date.today()),
     )
 
 
@@ -413,6 +432,13 @@ def editar(vehiculo_id):
         fecha_venta = str(date.today()) if f.get("estado") == "vendido" and vehiculo["estado"] != "vendido" else vehiculo["fecha_venta"]
         propiedad = f.get("propiedad", "propio")
         es_consignacion = propiedad == "consignacion"
+        if vehiculo["estado"] == "senado" and f.get("estado") != "senado":
+            # Si se cambia a mano el estado de un auto señado desde acá, la
+            # seña abierta de "Venta directa" no puede quedar colgada.
+            execute(
+                "UPDATE ventas SET estado = 'cancelada' WHERE vehiculo_id = ? AND estado = 'senado'",
+                (vehiculo_id,),
+            )
         execute(
             """UPDATE vehiculos SET marca=?, modelo=?, version=?, anio=?, km=?, combustible=?, caja=?,
                color=?, dominio=?, estado=?, equipamiento=?, observaciones=?, documentacion=?,
@@ -440,6 +466,261 @@ def editar(vehiculo_id):
         return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
     return render_template("stock/form.html", vehiculo=vehiculo, prefill=None, estados=ESTADOS, estado_label=ESTADO_LABEL)
+
+
+# ---------------------------------------------------------------------
+# Venta directa desde Stock, SIN financiación (19/09/2026, pedido de
+# Daniel). Dos pasos, los dos opcionales entre sí:
+#   1) "Señar": se recibe una seña -> el vehículo pasa a "Señado" y se
+#      crea una fila en `ventas` (estado 'senado') con cliente y seña.
+#   2) "Cerrar venta": precio, permuta opcional y efectivo cobrado ->
+#      el vehículo pasa a "Vendido" y la fila queda 'cerrada'. También
+#      se puede cerrar directo, sin seña previa (venta de contado).
+# Regla de oro: el efectivo cobrado es el TOTAL que entró, con la seña
+# ADENTRO (la seña es solo la parte que llegó antes, nunca se suma
+# aparte). Sin financiación la cuenta tiene que cerrar exacta:
+#   precio de venta = permuta + efectivo cobrado.
+# Si queda saldo para pagar en cuotas, la venta va por Financiación.
+# ---------------------------------------------------------------------
+ESTADOS_SENABLES = ("disponible", "por_ingresar", "en_reparacion")
+
+
+def _vehiculo_propio(vehiculo_id):
+    return query(
+        "SELECT * FROM vehiculos WHERE id = ? AND agencia_id = ?",
+        (vehiculo_id, session["agencia_id"]), one=True,
+    )
+
+
+def _venta_abierta(vehiculo_id):
+    return query(
+        "SELECT * FROM ventas WHERE vehiculo_id = ? AND estado = 'senado' ORDER BY id DESC LIMIT 1",
+        (vehiculo_id,), one=True,
+    )
+
+
+def _plan_pendiente(vehiculo_id):
+    return query(
+        """SELECT id, cliente_nombre FROM financiaciones
+           WHERE vehiculo_id = ? AND estado = 'pendiente_firma' ORDER BY id DESC LIMIT 1""",
+        (vehiculo_id,), one=True,
+    )
+
+
+def _tasaciones_para_permuta(agencia_id, incluir_id=None):
+    """Tasaciones de esta agencia que se pueden ofrecer como permuta:
+    las que todavía no se usaron en un crédito ni en otra venta (más la
+    que ya tenía elegida esta misma operación, si la tuviera)."""
+    return query(
+        """SELECT * FROM tasaciones
+           WHERE agencia_id = ? AND (
+               (id NOT IN (SELECT permuta_tasacion_id FROM financiaciones WHERE permuta_tasacion_id IS NOT NULL)
+                AND id NOT IN (SELECT permuta_tasacion_id FROM ventas
+                               WHERE permuta_tasacion_id IS NOT NULL AND estado = 'cerrada'))
+               OR id = ?)
+           ORDER BY created_at DESC""",
+        (agencia_id, incluir_id or 0),
+    )
+
+
+def _numero(valor, default=None):
+    try:
+        return float(valor) if valor not in (None, "") else default
+    except (TypeError, ValueError):
+        return default
+
+
+def _pesos(n):
+    return "$" + "{:,.0f}".format(n or 0).replace(",", ".")
+
+
+@bp.route("/<int:vehiculo_id>/senar", methods=["POST"])
+def senar(vehiculo_id):
+    vehiculo = _vehiculo_propio(vehiculo_id)
+    if not vehiculo:
+        flash("Vehículo no encontrado.", "error")
+        return redirect(url_for("stock.index"))
+    if vehiculo["estado"] not in ESTADOS_SENABLES:
+        flash("Este vehículo ya está señado o vendido.", "error")
+        return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
+
+    f = request.form
+    cliente = (f.get("cliente_nombre") or "").strip()
+    sena = _numero(f.get("sena"), 0)
+    precio = _numero(f.get("precio_venta"))
+    if not cliente:
+        flash("Cargá el nombre de quien deja la seña.", "error")
+        return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
+    if sena <= 0:
+        flash("Cargá el monto de la seña (mayor a 0).", "error")
+        return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
+
+    hoy = str(date.today())
+    execute(
+        """INSERT INTO ventas (agencia_id, vehiculo_id, estado, estado_previo, cliente_nombre,
+                               cliente_telefono, precio_venta, sena, fecha_sena, observaciones)
+           VALUES (?,?,?,?,?,?,?,?,?,?)""",
+        (
+            session["agencia_id"], vehiculo_id, "senado", vehiculo["estado"], cliente,
+            (f.get("cliente_telefono") or "").strip() or None, precio, sena, hoy,
+            (f.get("observaciones") or "").strip() or None,
+        ),
+    )
+    execute(
+        "UPDATE vehiculos SET estado = 'senado', updated_at = datetime('now') WHERE id = ? AND agencia_id = ?",
+        (vehiculo_id, session["agencia_id"]),
+    )
+    flash(f"Seña de {_pesos(sena)} registrada — el vehículo queda Señado.", "success")
+    return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
+
+
+@bp.route("/<int:vehiculo_id>/senar/cancelar", methods=["POST"])
+def cancelar_sena(vehiculo_id):
+    vehiculo = _vehiculo_propio(vehiculo_id)
+    if not vehiculo:
+        flash("Vehículo no encontrado.", "error")
+        return redirect(url_for("stock.index"))
+    venta = _venta_abierta(vehiculo_id) if vehiculo["estado"] == "senado" else None
+    if not venta:
+        flash("Este vehículo no tiene una seña abierta para cancelar.", "error")
+        return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
+
+    nota = f"[Seña cancelada {date.today()}] Seña recibida: {_pesos(venta['sena'])} -- a definir si se devuelve."
+    observaciones = f"{venta['observaciones']}\n{nota}" if venta["observaciones"] else nota
+    execute(
+        "UPDATE ventas SET estado = 'cancelada', observaciones = ? WHERE id = ?",
+        (observaciones, venta["id"]),
+    )
+    execute(
+        "UPDATE vehiculos SET estado = ?, updated_at = datetime('now') WHERE id = ? AND agencia_id = ?",
+        (venta["estado_previo"] or "disponible", vehiculo_id, session["agencia_id"]),
+    )
+    flash("Seña cancelada — el vehículo vuelve a estar a la venta. Quedó anotada la seña para que decidas si se devuelve.", "success")
+    return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
+
+
+@bp.route("/<int:vehiculo_id>/vender", methods=["GET", "POST"])
+def vender(vehiculo_id):
+    vehiculo = _vehiculo_propio(vehiculo_id)
+    if not vehiculo:
+        flash("Vehículo no encontrado.", "error")
+        return redirect(url_for("stock.index"))
+    if vehiculo["estado"] == "vendido":
+        flash("Este vehículo ya figura como vendido.", "error")
+        return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
+    plan = _plan_pendiente(vehiculo_id)
+    if plan:
+        flash(
+            "Este vehículo está señado por un crédito de Financiación en trámite -- "
+            "cerrá o cancelá esa operación desde Financiación.",
+            "error",
+        )
+        return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
+
+    venta = _venta_abierta(vehiculo_id) if vehiculo["estado"] == "senado" else None
+    tasaciones = _tasaciones_para_permuta(
+        session["agencia_id"], venta["permuta_tasacion_id"] if venta else None
+    )
+    ids_tasaciones = {t["id"] for t in tasaciones}
+
+    def render(datos):
+        return render_template(
+            "stock/vender.html", vehiculo=vehiculo, venta=venta, tasaciones=tasaciones,
+            datos=datos, estado_label=ESTADO_LABEL,
+        )
+
+    if request.method == "GET":
+        return render({
+            "cliente_nombre": (venta["cliente_nombre"] if venta else "") or "",
+            "cliente_telefono": (venta["cliente_telefono"] if venta else "") or "",
+            "precio_venta": (venta["precio_venta"] if venta and venta["precio_venta"] else vehiculo["valor_publicado"]) or "",
+            "fecha_venta": str(date.today()),
+        })
+
+    f = request.form
+    datos = dict(f.items())
+    cliente = (f.get("cliente_nombre") or "").strip()
+    precio = _numero(f.get("precio_venta"), 0)
+    hay_permuta = bool(f.get("permuta_hay"))
+    permuta_valor = _numero(f.get("permuta_valor"), 0) if hay_permuta else 0
+    permuta_desc = (f.get("permuta_descripcion") or "").strip() or None if hay_permuta else None
+    permuta_tasacion_id = None
+    if hay_permuta and f.get("permuta_tasacion_id"):
+        try:
+            tid = int(f.get("permuta_tasacion_id"))
+            permuta_tasacion_id = tid if tid in ids_tasaciones else None
+        except ValueError:
+            permuta_tasacion_id = None
+    if permuta_tasacion_id and not permuta_desc:
+        t = next((t for t in tasaciones if t["id"] == permuta_tasacion_id), None)
+        if t:
+            permuta_desc = f"{t['marca'] or ''} {t['modelo'] or ''} {t['anio'] or ''}".strip() or None
+    efectivo = _numero(f.get("efectivo_cobrado"))
+    if efectivo is None:
+        efectivo = max(precio - permuta_valor, 0)
+    sena = venta["sena"] if venta else _numero(f.get("sena"), 0)
+    try:
+        fecha_venta = str(date.fromisoformat((f.get("fecha_venta") or "")[:10]))
+    except ValueError:
+        fecha_venta = str(date.today())
+
+    errores = []
+    if not cliente:
+        errores.append("Cargá el nombre del comprador.")
+    if precio <= 0:
+        errores.append("Cargá el precio de venta.")
+    if hay_permuta and permuta_valor <= 0:
+        errores.append("Cargá el precio de toma de la permuta (o desmarcá \"Hay un vehículo en permuta\").")
+    if sena and sena > efectivo + 0.5:
+        errores.append("La seña no puede ser mayor que el efectivo cobrado: la seña ya está incluida en el efectivo.")
+    diferencia = round(precio - permuta_valor - efectivo, 2)
+    if precio > 0 and abs(diferencia) > 0.5:
+        if diferencia > 0:
+            errores.append(
+                f"Faltan {_pesos(diferencia)} para completar el precio (precio − permuta − efectivo cobrado). "
+                "Si ese saldo lo va a pagar en cuotas, cerrá la venta desde Financiación; "
+                "si hubo un descuento, bajá el precio de venta."
+            )
+        else:
+            errores.append(
+                f"El efectivo cobrado + la permuta superan el precio de venta en {_pesos(-diferencia)}. Revisá los montos."
+            )
+    if errores:
+        for e in errores:
+            flash(e, "error")
+        return render(datos)
+
+    telefono = (f.get("cliente_telefono") or "").strip() or None
+    if venta:
+        execute(
+            """UPDATE ventas SET estado = 'cerrada', cliente_nombre = ?, cliente_telefono = ?,
+                   precio_venta = ?, permuta_tasacion_id = ?, permuta_valor = ?, permuta_descripcion = ?,
+                   efectivo_cobrado = ?, fecha_venta = ? WHERE id = ?""",
+            (cliente, telefono, precio, permuta_tasacion_id, permuta_valor or None, permuta_desc,
+             efectivo, fecha_venta, venta["id"]),
+        )
+    else:
+        execute(
+            """INSERT INTO ventas (agencia_id, vehiculo_id, estado, estado_previo, cliente_nombre,
+                                   cliente_telefono, precio_venta, sena, fecha_sena, permuta_tasacion_id,
+                                   permuta_valor, permuta_descripcion, efectivo_cobrado, fecha_venta)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (session["agencia_id"], vehiculo_id, "cerrada", vehiculo["estado"], cliente, telefono,
+             precio, sena or 0, fecha_venta if sena else None, permuta_tasacion_id,
+             permuta_valor or None, permuta_desc, efectivo, fecha_venta),
+        )
+    execute(
+        """UPDATE vehiculos SET estado = 'vendido', valor_vendido = ?, fecha_venta = ?,
+               updated_at = datetime('now') WHERE id = ? AND agencia_id = ?""",
+        (precio, fecha_venta, vehiculo_id, session["agencia_id"]),
+    )
+    mensaje = f"Venta cerrada — {_pesos(precio)}: {_pesos(efectivo)} en efectivo"
+    if sena:
+        mensaje += f" (con la seña de {_pesos(sena)} adentro)"
+    if permuta_valor:
+        mensaje += f" + permuta por {_pesos(permuta_valor)}"
+    flash(mensaje + ". El vehículo pasa a Vendido.", "success")
+    return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
 
 @bp.route("/<int:vehiculo_id>/ficha")

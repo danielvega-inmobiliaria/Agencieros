@@ -114,12 +114,15 @@
     </div>
     <div class="grid-2">
       <div>
-        <label>Seña recibida</label>
+        <label>Seña ya recibida (parte de la entrega en contado)</label>
         <input type="number" step="1" name="anticipo" value="{{ fin.anticipo or '' }}">
       </div>
       <div>
-        <label>Entrega en contado</label>
+        <label>Entrega en contado (efectivo total, seña incluida)</label>
         <input type="number" step="1" name="entrega_contado" value="{{ fin.entrega_contado or '' }}">
+        <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
+          La seña NO se suma a la entrega en contado: es la parte de la entrega que ya te dieron. Por eso la entrega en contado es el efectivo TOTAL de la operación, seña incluida.
+        </p>
       </div>
     </div>
     <button class="btn btn-secondary btn-sm" type="submit">Guardar datos</button>
@@ -208,7 +211,6 @@
   {% if fin.precio_venta %}
   <p style="color:var(--text-dim); font-size:13px; margin:0 0 4px;">
     <b style="color:var(--text);">Precio de venta:</b> ${{ "{:,.0f}".format(fin.precio_venta).replace(",", ".") }}
-    {% if fin.anticipo %} · Seña: ${{ "{:,.0f}".format(fin.anticipo).replace(",", ".") }}{% endif %}
     {% if vehiculo and vehiculo.fecha_venta %} · Fecha de venta: {{ vehiculo.fecha_venta }}{% endif %}
   </p>
   {% endif %}
@@ -217,9 +219,11 @@
     <b style="color:var(--text);">Permuta:</b> {{ fin.permuta_descripcion or 'Vehículo en permuta' }} — ${{ "{:,.0f}".format(fin.permuta_valor).replace(",", ".") }}
   </p>
   {% endif %}
-  {% if fin.entrega_contado %}
+  {% if fin.entrega_contado or fin.anticipo %}
+  {% set entrega_total = [fin.entrega_contado or 0, fin.anticipo or 0]|max %}
   <p style="color:var(--text-dim); font-size:13px; margin:0 0 4px;">
-    <b style="color:var(--text);">Entrega en contado:</b> ${{ "{:,.0f}".format(fin.entrega_contado).replace(",", ".") }}
+    <b style="color:var(--text);">Entrega en contado:</b> ${{ "{:,.0f}".format(entrega_total).replace(",", ".") }}
+    {% if fin.anticipo %}(incluye seña de ${{ "{:,.0f}".format(fin.anticipo).replace(",", ".") }}{% if entrega_total > fin.anticipo %}; resto al cierre ${{ "{:,.0f}".format(entrega_total - fin.anticipo).replace(",", ".") }}{% endif %}){% endif %}
   </p>
   {% endif %}
   {% if fin.observaciones %}

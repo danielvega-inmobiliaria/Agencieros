@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Cerrar venta — Agencieros{% endblock %}
+{% block header %}Cerrar venta — {{ vehiculo.marca }} {{ vehiculo.modelo }} {{ vehiculo.version or '' }} ({{ vehiculo.anio }}){% endblock %}
+{% block content %}
+<div class="tabs">
+  <a class="tab" href="{{ url_for('stock.detalle', vehiculo_id=vehiculo.id) }}">← Volver a la ficha</a>
+</div>
+
+<div class="panel">
+  <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
+    Venta <b>sin financiación</b>: el comprador paga todo ahora, en efectivo y/o con un vehículo en permuta.
+    La cuenta tiene que cerrar exacta: <b>precio de venta = permuta + efectivo cobrado</b>. La seña, si hubo,
+    ya está <b>incluida</b> en el efectivo cobrado (no se suma aparte). Si queda un saldo para pagar en cuotas,
+    cerrá la venta desde Financiación.
+  </p>
+
+  <form method="post" id="form-venta">
+    <div class="grid-2">
+      <div>
+        <label>Nombre del comprador</label>
+        <input type="text" name="cliente_nombre" value="{{ datos.get('cliente_nombre') or '' }}" required>
+      </div>
+      <div>
+        <label>Teléfono (opcional)</label>
+        <input type="text" name="cliente_telefono" value="{{ datos.get('cliente_telefono') or '' }}">
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <label>Precio de venta</label>
+        <input type="number" step="1" name="precio_venta" id="precio_venta" value="{{ datos.get('precio_venta') or '' }}" required>
+      </div>
+      <div>
+        <label>Fecha de venta</label>
+        <input type="date" name="fecha_venta" value="{{ datos.get('fecha_venta') or '' }}">
+      </div>
+    </div>
+
+    <div class="panel" style="background:var(--navy-card-2); margin:16px 0;">
+      <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
+        <input type="checkbox" name="permuta_hay" id="permuta_hay" value="1" style="width:auto;" {{ 'checked' if datos.get('permuta_hay') else '' }}>
+        Hay un vehículo en permuta
+      </label>
+      <div id="permuta-datos" {{ '' if datos.get('permuta_hay') else 'hidden' }} style="margin-top:12px;">
+        <div class="grid-2">
+          <div>
+            <label>Tasación de origen (opcional)</label>
+            <select id="permuta_tasacion_select" name="permuta_tasacion_id">
+              <option value="">-- Sin tasación / cargar valor a mano --</option>
+              {% for t in tasaciones %}
+              <option value="{{ t.id }}"
+                      data-precio="{{ t.precio_max_recomendado or 0 }}"
+                      data-desc="{{ t.marca or '' }} {{ t.modelo or '' }} {{ t.anio or '' }}"
+                      {{ 'selected' if datos.get('permuta_tasacion_id')|string == t.id|string else '' }}>
+                {{ t.marca }} {{ t.modelo }} {{ t.anio or '' }} — toma sugerida ${{ '%.0f'|format(t.precio_max_recomendado or 0) }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label>Descripción del vehículo en permuta</label>
+            <input type="text" name="permuta_descripcion" id="permuta_descripcion" value="{{ datos.get('permuta_descripcion') or '' }}" placeholder="Marca, modelo, año...">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div>
+            <label>Precio de toma</label>
+            <input type="number" step="1" name="permuta_valor" id="permuta_valor" value="{{ datos.get('permuta_valor') or '' }}">
+            <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
+              La permuta no cuenta como ingreso de efectivo: es un vehículo que entra por este valor. Para cargarlo a
+              Stock usá "Toma y tasación → Agregar a Stock".
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <label>Efectivo cobrado (total, con la seña incluida)</label>
+        <input type="number" step="1" name="efectivo_cobrado" id="efectivo_cobrado" value="{{ datos.get('efectivo_cobrado') or '' }}">
+        <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
+          Se sugiere solo (precio de venta − permuta); lo podés pisar a mano.
+        </p>
+      </div>
+      <div>
+        {% if venta %}
+        <label>Seña ya recibida</label>
+        <input type="text" value="${{ '{:,.0f}'.format(venta.sena or 0).replace(',', '.') }} ({{ venta.fecha_sena }})" disabled style="opacity:0.75;">
+        <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">Ya está incluida en el efectivo cobrado.</p>
+        {% else %}
+        <label>Seña ya recibida (opcional)</label>
+        <input type="number" step="1" name="sena" id="sena" value="{{ datos.get('sena') or '' }}">
+        <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">Solo si ya te habían dejado una seña antes: ya está incluida en el efectivo cobrado.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="panel" style="background:var(--navy-card-2); margin:16px 0 0;">
+      <div id="resumen" style="font-size:13.5px; line-height:1.7;"></div>
+    </div>
+
+    <div style="margin-top:20px;">
+      <button class="btn btn-primary" type="submit">✅ Cerrar venta</button>
+      <a class="btn btn-secondary" href="{{ url_for('stock.detalle', vehiculo_id=vehiculo.id) }}">Cancelar</a>
+    </div>
+    <p style="color:var(--text-dim); font-size:12.5px; margin:8px 0 0;">
+      Al cerrar, el vehículo pasa a "Vendido" y el efectivo cobrado suma a "Ingresos del mes" del Dashboard.
+    </p>
+  </form>
+</div>
+
+<script>
+(function () {
+  var precio = document.getElementById('precio_venta');
+  var hay = document.getElementById('permuta_hay');
+  var datos = document.getElementById('permuta-datos');
+  var select = document.getElementById('permuta_tasacion_select');
+  var desc = document.getElementById('permuta_descripcion');
+  var valor = document.getElementById('permuta_valor');
+  var efectivo = document.getElementById('efectivo_cobrado');
+  var sena = document.getElementById('sena');
+  var senaFija = {{ (venta.sena or 0) if venta else 'null' }};
+  var resumen = document.getElementById('resumen');
+  var efectivoTocado = {{ 'true' if datos.get('efectivo_cobrado') else 'false' }};
+
+  function num(el) { return el ? (parseFloat(el.value) || 0) : 0; }
+  function pesos(n) { return '$' + Math.round(n).toLocaleString('es-AR'); }
+
+  function actualizar() {
+    var p = num(precio);
+    var pv = hay.checked ? num(valor) : 0;
+    if (!efectivoTocado) efectivo.value = p > 0 ? Math.max(Math.round(p - pv), 0) : '';
+    var e = num(efectivo);
+    var s = senaFija !== null ? senaFija : num(sena);
+    var dif = Math.round(p - pv - e);
+    var html = 'Precio de venta: <b>' + pesos(p) + '</b>';
+    if (pv) html += '<br>− Permuta: ' + pesos(pv);
+    html += '<br>= Efectivo que tiene que entrar: <b>' + pesos(p - pv) + '</b>';
+    html += '<br>Efectivo cobrado: <b>' + pesos(e) + '</b>';
+    if (s) html += '<br>&nbsp;&nbsp;de los cuales seña ya recibida: ' + pesos(s) + ' — <b>resto a cobrar hoy: ' + pesos(Math.max(e - s, 0)) + '</b>';
+    if (p > 0 && dif !== 0) {
+      html += '<br><span style="color:var(--red);">' + (dif > 0
+        ? 'Faltan ' + pesos(dif) + ' para completar el precio.'
+        : 'Sobran ' + pesos(-dif) + ': el efectivo + la permuta superan el precio.') + '</span>';
+    } else if (p > 0) {
+      html += '<br><span style="color:var(--green);">La cuenta cierra.</span>';
+    }
+    if (s && s > e) html += '<br><span style="color:var(--red);">La seña no puede ser mayor que el efectivo cobrado.</span>';
+    resumen.innerHTML = html;
+  }
+
+  efectivo.addEventListener('input', function () { efectivoTocado = true; actualizar(); });
+  precio.addEventListener('input', actualizar);
+  valor.addEventListener('input', actualizar);
+  if (sena) sena.addEventListener('input', actualizar);
+  hay.addEventListener('change', function () {
+    datos.hidden = !hay.checked;
+    if (!hay.checked) { select.value = ''; desc.value = ''; valor.value = ''; }
+    actualizar();
+  });
+  select.addEventListener('change', function () {
+    var opt = select.options[select.selectedIndex];
+    if (opt && opt.value) {
+      desc.value = (opt.getAttribute('data-desc') || '').trim();
+      valor.value = Math.round(parseFloat(opt.getAttribute('data-precio')) || 0) || '';
+    }
+    actualizar();
+  });
+  actualizar();
+})();
+</script>
+{% endblock %}

@@ -53,6 +53,86 @@
 </div>
 
 <div class="panel">
+  <h2>Venta</h2>
+  {% set m = "{:,.0f}" %}
+  {% if vehiculo.estado == 'vendido' %}
+    {% if plan_cierre %}
+    <p style="margin-top:0;">Vendido <b>con financiación</b> a {{ plan_cierre.cliente_nombre }} —
+      <a href="{{ url_for('financiacion.detalle', financiacion_id=plan_cierre.id) }}">ver plan de financiación</a>.</p>
+    <table>
+      <tr><td>Precio de venta</td><td>${{ m.format(plan_cierre.precio_venta or vehiculo.valor_vendido or 0).replace(",", ".") }}</td></tr>
+      {% if plan_cierre.permuta_valor %}<tr><td>Permuta</td><td>{{ plan_cierre.permuta_descripcion or 'Vehículo en permuta' }} — ${{ m.format(plan_cierre.permuta_valor).replace(",", ".") }}</td></tr>{% endif %}
+      {% set entrega_total = [plan_cierre.entrega_contado or 0, plan_cierre.anticipo or 0]|max %}
+      {% if entrega_total %}<tr><td>Entrega en contado</td><td>${{ m.format(entrega_total).replace(",", ".") }}{% if plan_cierre.anticipo %} (incluye seña de ${{ m.format(plan_cierre.anticipo).replace(",", ".") }}){% endif %}</td></tr>{% endif %}
+      <tr><td>Financiado</td><td>${{ m.format(plan_cierre.monto_financiado or 0).replace(",", ".") }} en {{ plan_cierre.cantidad_cuotas }} cuotas</td></tr>
+    </table>
+    {% elif venta_cerrada %}
+    <p style="margin-top:0;">Vendido <b>sin financiación</b> a {{ venta_cerrada.cliente_nombre }}{% if venta_cerrada.cliente_telefono %} · {{ venta_cerrada.cliente_telefono }}{% endif %}.</p>
+    <table>
+      <tr><td>Fecha de venta</td><td>{{ venta_cerrada.fecha_venta }}</td></tr>
+      <tr><td>Precio de venta</td><td>${{ m.format(venta_cerrada.precio_venta or 0).replace(",", ".") }}</td></tr>
+      {% if venta_cerrada.permuta_valor %}<tr><td>Permuta</td><td>{{ venta_cerrada.permuta_descripcion or 'Vehículo en permuta' }} — ${{ m.format(venta_cerrada.permuta_valor).replace(",", ".") }}</td></tr>{% endif %}
+      <tr><td>Efectivo cobrado</td><td>${{ m.format(venta_cerrada.efectivo_cobrado or 0).replace(",", ".") }}{% if venta_cerrada.sena %} (incluye seña de ${{ m.format(venta_cerrada.sena).replace(",", ".") }}){% endif %}</td></tr>
+    </table>
+    {% else %}
+    <p style="color:var(--text-dim); font-size:13px; margin:0;">Figura como vendido pero no tiene una operación registrada (se marcó a mano desde Editar).</p>
+    {% endif %}
+
+  {% elif vehiculo.estado == 'senado' %}
+    {% if venta_abierta %}
+    <p style="margin-top:0;">Señado por <b>{{ venta_abierta.cliente_nombre }}</b>{% if venta_abierta.cliente_telefono %} · {{ venta_abierta.cliente_telefono }}{% endif %}
+      — seña de <b>${{ m.format(venta_abierta.sena or 0).replace(",", ".") }}</b> el {{ venta_abierta.fecha_sena }}{% if venta_abierta.precio_venta %} (precio acordado ${{ m.format(venta_abierta.precio_venta).replace(",", ".") }}){% endif %}.</p>
+    {% if venta_abierta.observaciones %}<p style="color:var(--text-dim); font-size:13px;">{{ venta_abierta.observaciones }}</p>{% endif %}
+    {% elif plan_pendiente %}
+    <p style="margin-top:0;">Este vehículo está señado por un <b>crédito de Financiación en trámite</b>
+      ({{ plan_pendiente.cliente_nombre or 'cliente a cargar' }}) —
+      <a href="{{ url_for('financiacion.detalle', financiacion_id=plan_pendiente.id) }}">ir al plan</a> para cerrar la operación o cancelar la reserva.</p>
+    {% else %}
+    <p style="color:var(--text-dim); font-size:13px; margin-top:0;">Está marcado como Señado a mano, sin seña registrada.</p>
+    {% endif %}
+    {% if not plan_pendiente %}
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+      <a class="btn btn-primary btn-sm" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id) }}">✅ Cerrar venta</a>
+      {% if venta_abierta %}
+      <form method="post" action="{{ url_for('stock.cancelar_sena', vehiculo_id=vehiculo.id) }}"
+            onsubmit="return window.confirm('¿Cancelar la seña? El vehículo vuelve a estar a la venta y la seña queda anotada para que decidas si se devuelve.');">
+        <button class="btn btn-secondary btn-sm" type="submit">✕ Cancelar seña</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+
+  {% else %}
+    <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
+      Sin financiación: recibí una seña o cerrá la venta directo. Si el cliente va a pagar en cuotas, usá
+      {% if puede_ver_todo %}<a href="{{ url_for('financiacion.simulador') }}">Financiación → Simulador</a>{% else %}Financiación{% endif %}.
+    </p>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn btn-primary btn-sm" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id) }}">✅ Vender (sin financiación)</a>
+    </div>
+    <details style="margin-top:14px;">
+      <summary style="cursor:pointer; color:var(--gold-light); font-size:13px;">🤝 Recibir una seña</summary>
+      <form method="post" action="{{ url_for('stock.senar', vehiculo_id=vehiculo.id) }}" style="margin-top:12px;">
+        <div class="grid-2">
+          <div><label>Nombre de quien deja la seña</label><input type="text" name="cliente_nombre" required></div>
+          <div><label>Teléfono (opcional)</label><input type="text" name="cliente_telefono"></div>
+        </div>
+        <div class="grid-2">
+          <div><label>Monto de la seña</label><input type="number" step="1" min="1" name="sena" required></div>
+          <div><label>Precio acordado (opcional)</label><input type="number" step="1" name="precio_venta" value="{{ vehiculo.valor_publicado or '' }}"></div>
+        </div>
+        <label>Observaciones (opcional)</label>
+        <input type="text" name="observaciones">
+        <button class="btn btn-primary btn-sm" type="submit" style="margin-top:12px;">Guardar seña</button>
+        <p style="color:var(--text-dim); font-size:11.5px; margin:8px 0 0;">
+          El vehículo pasa a "Señado" y deja de ofrecerse. Al cerrar la venta, la seña queda incluida en el efectivo cobrado (no se suma aparte).
+        </p>
+      </form>
+    </details>
+  {% endif %}
+</div>
+
+<div class="panel">
   <h2>Fotos del vehículo</h2>
   {% if fotos %}
   <div class="foto-gallery">

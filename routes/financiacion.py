@@ -245,9 +245,15 @@ def _tasaciones_disponibles(excluir_tasacion_id=None):
     plan que se está editando, si la tuviera."""
     filas = query(
         """SELECT * FROM tasaciones
-           WHERE id NOT IN (
-               SELECT permuta_tasacion_id FROM financiaciones
-               WHERE permuta_tasacion_id IS NOT NULL
+           WHERE (
+               id NOT IN (
+                   SELECT permuta_tasacion_id FROM financiaciones
+                   WHERE permuta_tasacion_id IS NOT NULL
+               )
+               AND id NOT IN (
+                   SELECT permuta_tasacion_id FROM ventas
+                   WHERE permuta_tasacion_id IS NOT NULL AND estado = 'cerrada'
+               )
            ) OR id = ?
            ORDER BY created_at DESC""",
         (excluir_tasacion_id or 0,),

@@ -42,6 +42,32 @@ def _grafico_torta(segmentos):
     return {"segmentos": resultado, "gradient": gradient, "total": total}
 
 
+def efectivo_de_venta(r):
+    """Efectivo que realmente entró por una venta (corregido 19/09/2026).
+
+    Regla de oro: la SEÑA no se suma a la entrega en contado -- la entrega
+    en contado es el efectivo total de la operación (precio de venta -
+    permuta - monto financiado) y la seña es solo la parte de ese efectivo
+    que llegó antes. Sumarlas cuenta la seña dos veces (caso Hilux: seña
+    $1.000.000 + contado total $13.600.000 figuraba como $14.600.000).
+      - Venta financiada: la entrega en contado (seña incluida). Si el plan
+        no tiene entrega cargada (camino viejo `/financiacion/nuevo`, solo
+        guardaba el anticipo), el efectivo es el anticipo. Nunca menos que
+        la seña.
+      - Venta directa sin financiación (tabla `ventas`): efectivo_cobrado.
+      - Vendido a mano desde Editar, sin plan ni venta registrada: el
+        valor vendido completo (comportamiento de siempre).
+    La Permuta nunca cuenta (es un vehículo) y el saldo financiado tampoco
+    (entra cuota a cuota, se sigue en Financiación)."""
+    if r["fin_id"] is not None:
+        sena = r["anticipo"] or 0
+        entrega = r["entrega_contado"] if r["entrega_contado"] is not None else sena
+        return max(entrega, sena)
+    if r["venta_id"] is not None:
+        return r["efectivo_cobrado"] or 0
+    return r["valor_vendido"] or 0
+
+
 @bp.route("/")
 def index():
     stock_counts = {
@@ -51,19 +77,28 @@ def index():
     pedidos_activos = query(
         "SELECT COUNT(*) c FROM pedidos_clientes WHERE estado = 'buscando'", one=True
     )["c"]
-    # "Ingresos del mes" tiene que reflejar el efectivo que realmente entró
-    # este mes, no el precio de venta completo: si el vehículo se vendió con
-    # un plan de financiación, lo que se cobró al contado en el momento de
-    # la venta es el anticipo (el resto llega después, cuota a cuota, y ya
-    # se sigue por separado en "Cuotas por cobrar"/Financiación) — pedido de
-    # Daniel 15/09/2026 (continuación 23). Si no hay plan de financiación
-    # ligado al vehículo, la venta fue de contado por el valor completo.
+    # "Ingresos del mes" = efectivo que realmente entró por las ventas de
+    # este mes (ver efectivo_de_venta). Cada vehículo cuenta UNA sola vez:
+    # antes el LEFT JOIN a financiaciones traía todos los planes del auto,
+    # así que uno con una reserva cancelada o un plan "Pendiente de firma"
+    # de prueba aparecía duplicado y se duplicaban ingresos, ganancia y
+    # cantidad de ventas. Ahora se toma el último plan que realmente
+    # cerró la operación (no 'pendiente_firma' ni 'cancelado_reserva') y,
+    # si no hay, la última venta directa cerrada de Stock.
     # "Ganancia" no cambia: sigue siendo la rentabilidad total de la venta
-    # (precio completo - costo), se cobre ya o en cuotas.
+    # (precio completo - costo), se cobre ya, en cuotas o en permuta.
     ventas_mes_detalle = query(
-        """SELECT v.valor_vendido, v.valor_compra, v.gastos, f.anticipo, f.entrega_contado
+        """SELECT v.id, v.valor_vendido, v.valor_compra, v.gastos,
+                  f.id AS fin_id, f.anticipo, f.entrega_contado,
+                  vt.id AS venta_id, vt.efectivo_cobrado
            FROM vehiculos v
-           LEFT JOIN financiaciones f ON f.vehiculo_id = v.id
+           LEFT JOIN financiaciones f ON f.id = (
+               SELECT MAX(f2.id) FROM financiaciones f2
+               WHERE f2.vehiculo_id = v.id
+                 AND f2.estado NOT IN ('pendiente_firma', 'cancelado_reserva'))
+           LEFT JOIN ventas vt ON vt.id = (
+               SELECT MAX(v2.id) FROM ventas v2
+               WHERE v2.vehiculo_id = v.id AND v2.estado = 'cerrada')
            WHERE v.estado = 'vendido' AND strftime('%Y-%m', v.fecha_venta) = strftime('%Y-%m', 'now')"""
     )
     ventas_mes = {
@@ -75,23 +110,7 @@ def index():
             ),
             2,
         ),
-        # 19/09/2026 (bug reportado por Daniel): si el vehículo se vendió
-        # con un plan de financiación que además tenía "Entrega en
-        # contado" (además de la seña), ese efectivo también entró este
-        # mes -- antes solo se contaba la seña (`anticipo`) y la entrega
-        # en contado quedaba afuera. La Permuta (vehículo, no efectivo) se
-        # sigue sin contar acá a propósito.
-        "ingresos": round(
-            sum(
-                (
-                    (r["anticipo"] or 0) + (r["entrega_contado"] or 0)
-                    if r["anticipo"] is not None
-                    else (r["valor_vendido"] or 0)
-                )
-                for r in ventas_mes_detalle
-            ),
-            2,
-        ),
+        "ingresos": round(sum(efectivo_de_venta(r) for r in ventas_mes_detalle), 2),
     }
     gastos_en_reparacion = query(
         "SELECT COALESCE(SUM(gastos), 0) c FROM vehiculos WHERE estado = 'en_reparacion'", one=True

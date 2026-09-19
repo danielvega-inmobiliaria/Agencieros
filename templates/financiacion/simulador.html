@@ -182,7 +182,7 @@
           <label>Entrega en contado</label>
           <input type="number" step="1" name="entrega_contado" id="entrega_contado">
           <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
-            Se sugiere sola (precio de venta − permuta − monto financiado) pero se puede pisar a mano.
+            Es el efectivo TOTAL, con la seña adentro. Se sugiere sola (precio de venta − permuta − monto financiado) pero se puede pisar a mano.
           </p>
         </div>
         <div>
@@ -196,10 +196,34 @@
 
       <div class="grid-2">
         <div>
-          <label>Seña recibida</label>
+          <label>Seña ya recibida (parte de la entrega en contado)</label>
           <input type="number" step="1" name="anticipo" id="anticipo" value="0">
+          <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
+            La seña NO se suma a la entrega en contado: es la parte de la entrega que ya te dieron. Por eso la entrega en contado es el efectivo TOTAL de la operación, seña incluida.
+          </p>
+          <p id="resto-cierre" style="font-size:12.5px; margin:4px 0 0; color:var(--gold-light);"></p>
         </div>
       </div>
+      <script>
+        // Resto a cobrar al cierre = entrega en contado - seña (la seña ya
+        // está adentro de la entrega, nunca se suma aparte).
+        (function () {
+          var form = document.getElementById('form-guardar');
+          var ent = document.getElementById('entrega_contado');
+          var sen = document.getElementById('anticipo');
+          var out = document.getElementById('resto-cierre');
+          function actualizar() {
+            var e = parseFloat(ent.value) || 0, s = parseFloat(sen.value) || 0;
+            if (!e && !s) { out.textContent = ''; return; }
+            out.textContent = s > e
+              ? 'Ojo: la seña no puede ser mayor que la entrega en contado.'
+              : 'Resto a cobrar al cierre: $' + Math.round(e - s).toLocaleString('es-AR');
+          }
+          form.addEventListener('input', actualizar);
+          form.addEventListener('change', actualizar);
+          actualizar();
+        })();
+      </script>
 
       <h3>Garantes</h3>
       <div id="garantes-list"></div>

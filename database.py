@@ -185,6 +185,34 @@ CREATE TABLE IF NOT EXISTS garantes (
     FOREIGN KEY (financiacion_id) REFERENCES financiaciones(id)
 );
 
+CREATE TABLE IF NOT EXISTS ventas (
+    -- Venta directa desde Stock, SIN financiación (19/09/2026). Una fila
+    -- por operación: nace como 'senado' cuando se recibe una seña, pasa a
+    -- 'cerrada' al cerrar la venta, o a 'cancelada' si se cae. Una venta
+    -- de contado puede nacer directo 'cerrada' (sin seña previa).
+    -- efectivo_cobrado = TODO el efectivo que entró (seña INCLUIDA): la
+    -- seña es solo la parte que llegó antes, nunca se suma aparte.
+    -- Identidad: precio_venta = permuta_valor + efectivo_cobrado.
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agencia_id INTEGER,
+    vehiculo_id INTEGER NOT NULL,
+    estado TEXT NOT NULL DEFAULT 'senado',
+    estado_previo TEXT,
+    cliente_nombre TEXT,
+    cliente_telefono TEXT,
+    precio_venta REAL,
+    sena REAL DEFAULT 0,
+    fecha_sena TEXT,
+    permuta_tasacion_id INTEGER,
+    permuta_valor REAL,
+    permuta_descripcion TEXT,
+    efectivo_cobrado REAL,
+    fecha_venta TEXT,
+    observaciones TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (vehiculo_id) REFERENCES vehiculos(id)
+);
+
 CREATE TABLE IF NOT EXISTS red_publicaciones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     agencia_nombre TEXT NOT NULL,
