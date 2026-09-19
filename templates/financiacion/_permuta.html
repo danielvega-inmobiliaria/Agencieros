@@ -1,0 +1,76 @@
+{# Bloque de "Hay un vehículo en permuta" compartido por el simulador y la ficha
+   del plan (19/09/2026, pedido de Daniel): en vez de una descripción libre se
+   piden los datos mínimos (Año, Marca, Modelo; Versión y Km si se saben) o se
+   elige una tasación ya hecha, así el vehículo queda cargado como "Posible
+   entrega" y se cruza con los pedidos mientras el plan espera la firma.
+   Ids fijos (permuta_hay, permuta-datos, permuta_tasacion_select,
+   permuta-manual, permuta_anio/marca/modelo/version, permuta_km, permuta_valor):
+   los usan el JS de cada página y catalogo.js. #}
+{% macro bloque(tasaciones, fin=None) %}
+{% set tiene = fin and (fin.permuta_marca or fin.permuta_valor or fin.permuta_descripcion) %}
+<div class="panel" style="background:var(--navy-card-2); margin:16px 0;">
+  <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
+    <input type="checkbox" name="permuta_hay" id="permuta_hay" value="1" style="width:auto;" {{ 'checked' if tiene else '' }}>
+    Hay un vehículo en permuta
+  </label>
+  <div id="permuta-datos" {{ '' if tiene else 'hidden' }} style="margin-top:12px;">
+    <p style="color:var(--text-dim); font-size:11.5px; margin:0 0 10px;">
+      Se piden los datos mínimos del vehículo para dejarlo cargado como "Posible entrega" y cruzarlo con los
+      pedidos, aunque todavía no esté tasado.
+    </p>
+    {% if fin and fin.permuta_descripcion and not fin.permuta_marca %}
+    <p style="color:var(--gold-light); font-size:12.5px; margin:0 0 10px;">
+      Esta permuta se cargó antes como texto libre: <b>"{{ fin.permuta_descripcion }}"</b>. Completá Año, Marca y
+      Modelo para que pueda cruzarse con los pedidos.
+    </p>
+    {% endif %}
+    <div>
+      <label>Tasación ya hecha (opcional)</label>
+      <select id="permuta_tasacion_select" name="permuta_tasacion_id">
+        <option value="">-- Todavía no está tasado: cargo los datos --</option>
+        {% for t in tasaciones %}
+        <option value="{{ t.id }}" data-precio="{{ t.precio_max_recomendado or 0 }}"
+                {{ 'selected' if fin and fin.permuta_tasacion_id == t.id else '' }}>
+          {{ t.marca }} {{ t.modelo }} {{ t.version or '' }} {{ t.anio or '' }} — toma sugerida ${{ '%.0f'|format(t.precio_max_recomendado or 0) }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div id="permuta-manual" {{ 'hidden' if fin and fin.permuta_tasacion_id else '' }} style="margin-top:10px;">
+      <div class="form-row">
+        <div><label>Año</label><input type="number" id="permuta_anio" name="permuta_anio"></div>
+        <div><label>Marca</label><select id="permuta_marca" name="permuta_marca"></select></div>
+        <div><label>Modelo</label><select id="permuta_modelo" name="permuta_modelo"></select></div>
+        <div><label>Versión</label><select id="permuta_version" name="permuta_version"></select></div>
+      </div>
+    </div>
+    <div class="grid-2" style="margin-top:10px;">
+      <div>
+        <label>Kilómetros (opcional)</label>
+        <input type="number" step="1" name="permuta_km" id="permuta_km" value="{{ fin.permuta_km or '' if fin else '' }}">
+      </div>
+      <div>
+        <label>Precio de toma</label>
+        <input type="number" step="1" name="permuta_valor" id="permuta_valor" value="{{ fin.permuta_valor|int if fin and fin.permuta_valor else '' }}">
+        <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
+          Se completa solo al elegir una tasación (lo podés redondear o cambiar). Si todavía no está tasado
+          dejalo vacío y se define después.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{# Scripts comunes: Año/Marca/Modelo/Versión con autocompletar (catálogo de la app). #}
+{% macro scripts(catalogo_json, fin=None) %}
+<script src="{{ url_for('static', filename='js/autocomplete.js') }}"></script>
+<script src="{{ url_for('static', filename='js/catalogo.js') }}"></script>
+<script>
+  (function () {
+    var catalogo = {{ catalogo_json | safe }};
+    initCatalogoSelects(catalogo, 'permuta_anio', 'permuta_marca', 'permuta_modelo', 'permuta_version'{% if fin and fin.permuta_marca %},
+      {{ {'anio': fin.permuta_anio, 'marca': fin.permuta_marca, 'modelo': fin.permuta_modelo, 'version': fin.permuta_version}|tojson }}{% endif %});
+  })();
+</script>
+{% endmacro %}

@@ -128,7 +128,9 @@ def efectivo_de_venta(r):
         no tiene entrega cargada (camino viejo `/financiacion/nuevo`, solo
         guardaba el anticipo), el efectivo es el anticipo. Nunca menos que
         la seña.
-      - Venta directa sin financiación (tabla `ventas`): efectivo_cobrado.
+      - Venta directa sin financiación (tabla `ventas`): efectivo_cobrado +
+        el crédito externo (banco/financiera) si lo hubo: lo desembolsa el
+        prestamista al cierre, así que entra igual que el efectivo.
       - Vendido a mano desde Editar, sin plan ni venta registrada: el
         valor vendido completo (comportamiento de siempre).
     La Permuta nunca cuenta (es un vehículo) y el saldo financiado tampoco
@@ -138,7 +140,7 @@ def efectivo_de_venta(r):
         entrega = r["entrega_contado"] if r["entrega_contado"] is not None else sena
         return max(entrega, sena)
     if r["venta_id"] is not None:
-        return r["efectivo_cobrado"] or 0
+        return (r["efectivo_cobrado"] or 0) + (r["credito_monto"] or 0)
     return r["valor_vendido"] or 0
 
 
@@ -164,7 +166,7 @@ def index():
     ventas_mes_detalle = query(
         """SELECT v.id, v.valor_vendido, v.valor_compra, v.gastos,
                   f.id AS fin_id, f.anticipo, f.entrega_contado,
-                  vt.id AS venta_id, vt.efectivo_cobrado
+                  vt.id AS venta_id, vt.efectivo_cobrado, vt.credito_monto
            FROM vehiculos v
            LEFT JOIN financiaciones f ON f.id = (
                SELECT MAX(f2.id) FROM financiaciones f2
@@ -185,6 +187,10 @@ def index():
             2,
         ),
         "ingresos": round(sum(efectivo_de_venta(r) for r in ventas_mes_detalle), 2),
+        # Parte de esos ingresos que llegó como crédito externo (solo ventas directas).
+        "creditos_externos": round(
+            sum((r["credito_monto"] or 0) for r in ventas_mes_detalle if r["fin_id"] is None and r["venta_id"] is not None), 2
+        ),
     }
     # Señas retenidas este mes (19/09/2026): cuando se cae una operación y
     # la agencia se queda con la seña, ese efectivo es un ingreso del mes en

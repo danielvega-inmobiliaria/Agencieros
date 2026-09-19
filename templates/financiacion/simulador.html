@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "financiacion/_permuta.html" as permuta_ui %}
 {% block title %}Simulador de financiación — Agencieros{% endblock %}
 {% block header %}Simulador de financiación{% endblock %}
 {% block content %}
@@ -136,46 +137,7 @@
         </div>
       </div>
 
-      <div class="panel" style="background:var(--navy-card-2); margin:16px 0;">
-        <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
-          <input type="checkbox" id="permuta_hay" style="width:auto;">
-          Hay un vehículo en permuta
-        </label>
-        <div id="permuta-datos" hidden style="margin-top:12px;">
-          <div class="grid-2">
-            <div>
-              <label>Tasación de origen (opcional)</label>
-              <select id="permuta_tasacion_select" name="permuta_tasacion_id">
-                <option value="">-- Sin tasación / cargar valor a mano --</option>
-                {% for t in tasaciones_disponibles %}
-                <option value="{{ t.id }}"
-                        data-precio="{{ t.precio_max_recomendado or 0 }}"
-                        data-desc="{{ t.marca or '' }} {{ t.modelo or '' }} {{ t.anio or '' }}">
-                  {{ t.marca }} {{ t.modelo }} {{ t.anio or '' }} — toma sugerida ${{ '%.0f'|format(t.precio_max_recomendado or 0) }}
-                </option>
-                {% endfor %}
-              </select>
-              <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
-                Si el vehículo no está tasado, dejá esto en "Sin tasación" y completá la descripción y el
-                precio de toma a mano.
-              </p>
-            </div>
-            <div>
-              <label>Descripción del vehículo en permuta</label>
-              <input type="text" name="permuta_descripcion" id="permuta_descripcion" placeholder="Marca, modelo, año...">
-            </div>
-          </div>
-          <div class="grid-2">
-            <div>
-              <label>Precio de toma</label>
-              <input type="number" step="1" name="permuta_valor" id="permuta_valor">
-              <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
-                Se completa solo al elegir una tasación, pero lo podés redondear o cambiar acá sin problema.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {{ permuta_ui.bloque(tasaciones_disponibles) }}
 
       <div class="grid-2">
         <div>
@@ -434,27 +396,42 @@
   // aplica.
   var permutaHay = document.getElementById('permuta_hay');
   var permutaDatos = document.getElementById('permuta-datos');
+  var permutaManual = document.getElementById('permuta-manual');
   var permutaTasacionSelect = document.getElementById('permuta_tasacion_select');
-  var permutaDescripcion = document.getElementById('permuta_descripcion');
+  var permutaKm = document.getElementById('permuta_km');
   var permutaValor = document.getElementById('permuta_valor');
+  var PERMUTA_CAMPOS = ['permuta_anio', 'permuta_marca', 'permuta_modelo', 'permuta_version'];
+  // Año/Marca/Modelo son obligatorios solo mientras se ven (hay permuta y no
+  // se eligió una tasación): con el navegador avisamos antes de enviar y no
+  // se pierde lo cargado en el resto del formulario.
+  function sincronizarPermutaRequeridos() {
+    var pide = permutaHay.checked && !permutaTasacionSelect.value;
+    ['permuta_anio', 'permuta_marca', 'permuta_modelo'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.required = pide;
+    });
+  }
   permutaHay.addEventListener('change', function () {
     permutaDatos.hidden = !permutaHay.checked;
     if (!permutaHay.checked) {
       permutaTasacionSelect.value = '';
-      permutaDescripcion.value = '';
+      permutaManual.hidden = false;
       permutaValor.value = '';
+      permutaKm.value = '';
+      PERMUTA_CAMPOS.forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
       actualizarEntregaContadoSugerida();
     }
+    sincronizarPermutaRequeridos();
   });
-  // Al elegir una Tasación, se completan descripción y precio de toma --
-  // pero quedan como campos de texto/número normales, así que se pueden
-  // redondear o corregir en el momento sin problema (pedido de Daniel).
+  // Al elegir una Tasación, Año/Marca/Modelo/Versión salen de ella (se
+  // ocultan los campos manuales) y se sugiere el precio de toma -- que sigue
+  // siendo un número normal, se puede redondear o corregir (pedido de Daniel).
   permutaTasacionSelect.addEventListener('change', function () {
     var opt = permutaTasacionSelect.options[permutaTasacionSelect.selectedIndex];
-    if (opt && opt.value) {
-      permutaDescripcion.value = (opt.getAttribute('data-desc') || '').trim();
-      permutaValor.value = Math.round(parseFloat(opt.getAttribute('data-precio')) || 0);
-    }
+    var conTasacion = !!(opt && opt.value);
+    permutaManual.hidden = conTasacion;
+    if (conTasacion) permutaValor.value = Math.round(parseFloat(opt.getAttribute('data-precio')) || 0) || '';
+    sincronizarPermutaRequeridos();
     actualizarEntregaContadoSugerida();
   });
   permutaValor.addEventListener('input', actualizarEntregaContadoSugerida);
@@ -519,4 +496,5 @@
     }
   });
 </script>
+{{ permuta_ui.scripts(catalogo_json) }}
 {% endblock %}

@@ -140,8 +140,11 @@ def _buscar_posible_entrega_senas(filtros, agencia_id):
     (Stock -> Señar). Todavía no llegó, pero ya se sabe que entra: tiene
     los datos mínimos (Año/Marca/Modelo, Versión y Km si se cargaron) y por
     eso se cruza con los pedidos igual que la permuta de un pedido. Solo
-    cuentan las señas abiertas ('senado'): si la seña se cancela o la venta
-    se cierra, deja de ser una posible entrega."""
+    cuentan las señas abiertas ('senado') y, una vez cerrada la venta, las
+    permutas que todavía esperan destino (`permuta_destino` NULL: ingresa a
+    Stock o va a reparación, ver stock.permuta_destino): el vehículo ya
+    llegó o está por llegar y sigue disponible para matchear hasta que se
+    cargue. Si la seña se cancela, deja de serlo."""
     from database import query
 
     filtros_sin_precio = {k: v for k, v in filtros.items() if k not in ("precio_min", "precio_max")}
@@ -151,11 +154,41 @@ def _buscar_posible_entrega_senas(filtros, agencia_id):
         campo_version="permuta_version", campo_anio="permuta_anio", campo_km="permuta_km",
     )
     condiciones += [
-        "agencia_id = ?", "estado = 'senado'", "permuta_marca IS NOT NULL", "permuta_marca != ''",
+        "agencia_id = ?",
+        "(estado = 'senado' OR (estado = 'cerrada' AND permuta_destino IS NULL))",
+        "permuta_marca IS NOT NULL", "permuta_marca != ''",
     ]
     params.append(agencia_id)
     return query(
         f"SELECT * FROM ventas WHERE {' AND '.join(condiciones)} ORDER BY created_at DESC",
+        tuple(params),
+    )
+
+
+def _buscar_posible_entrega_planes(filtros, agencia_id):
+    """"Posible entrega" desde un crédito de Financiación pendiente de firma
+    con permuta (19/09/2026): igual que la seña, el vehículo todavía no
+    llegó pero ya se sabe que entra (tiene Año/Marca/Modelo). Solo cuentan
+    los planes 'pendiente_firma' y, una vez cerrada la operación (plan
+    activo/finalizado), los que todavía esperan destino (`permuta_destino`
+    NULL: ingresa a Stock o va a reparación). Si se cancela la reserva no
+    entra."""
+    from database import query
+
+    filtros_sin_precio = {k: v for k, v in filtros.items() if k not in ("precio_min", "precio_max")}
+    condiciones, params = condiciones_sql(
+        filtros_sin_precio,
+        campo_marca="permuta_marca", campo_modelo="permuta_modelo",
+        campo_version="permuta_version", campo_anio="permuta_anio", campo_km="permuta_km",
+    )
+    condiciones += [
+        "COALESCE(agencia_id, 1) = ?",
+        "(estado = 'pendiente_firma' OR (estado IN ('activo', 'finalizado') AND permuta_destino IS NULL))",
+        "permuta_marca IS NOT NULL", "permuta_marca != ''",
+    ]
+    params.append(agencia_id)
+    return query(
+        f"SELECT * FROM financiaciones WHERE {' AND '.join(condiciones)} ORDER BY created_at DESC",
         tuple(params),
     )
 
@@ -199,6 +232,7 @@ def buscar_combinado(filtros, agencia_id):
 
     posibles_entregas = _buscar_posible_entrega(filtros, agencia_id)
     posibles_senas = _buscar_posible_entrega_senas(filtros, agencia_id)
+    posibles_planes = _buscar_posible_entrega_planes(filtros, agencia_id)
 
     por_origen = {clave: [] for clave in ORDEN_ORIGEN}
     for v in vehiculos:
@@ -241,9 +275,25 @@ def buscar_combinado(filtros, agencia_id):
             "marca": vt["permuta_marca"], "modelo": vt["permuta_modelo"], "version": vt["permuta_version"],
             "anio": vt["permuta_anio"], "km": vt["permuta_km"],
             "precio": None,
-            # Lleva a la ficha del vehículo que se señó (ahí está la operación).
-            "ver_url": url_for("stock.detalle", vehiculo_id=vt["vehiculo_id"]),
+            # Seña abierta: a la ficha del vehículo señado (ahí está la operación).
+            # Venta ya cerrada: a la pantalla donde se decide el destino de la permuta.
+            "ver_url": (url_for("stock.permuta_destino", origen="venta", item_id=vt["id"])
+                        if vt["estado"] == "cerrada" else url_for("stock.detalle", vehiculo_id=vt["vehiculo_id"])),
             "agencia": vt["cliente_nombre"], "contacto": vt["cliente_telefono"],
+            "foto": None,
+        })
+
+    for fp in posibles_planes:
+        por_origen["posible_entrega"].append({
+            "origen": "posible_entrega",
+            "marca": fp["permuta_marca"], "modelo": fp["permuta_modelo"], "version": fp["permuta_version"],
+            "anio": fp["permuta_anio"], "km": fp["permuta_km"],
+            "precio": None,
+            # Plan en trámite: al plan (ahí está la operación). Operación ya cerrada:
+            # a la pantalla donde se decide el destino de la permuta.
+            "ver_url": (url_for("stock.permuta_destino", origen="plan", item_id=fp["id"])
+                        if fp["estado"] != "pendiente_firma" else url_for("financiacion.detalle", financiacion_id=fp["id"])),
+            "agencia": fp["cliente_nombre"] or "Financiación en trámite", "contacto": fp["cliente_telefono"],
             "foto": None,
         })
 

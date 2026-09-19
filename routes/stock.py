@@ -345,6 +345,7 @@ def detalle(vehiculo_id):
             _tasaciones_para_permuta(session["agencia_id"]) if vehiculo["estado"] in ESTADOS_SENABLES else []
         ),
         precio_sugerido=_entero(vehiculo["valor_publicado"]),
+        origenes_credito=_origenes_credito(session["agencia_id"]),
     )
 
 
@@ -611,6 +612,37 @@ def _leer_permuta_sena(f, tasaciones):
     }, None
 
 
+ORIGENES_CREDITO_BASE = ["Banco", "Financiera", "Prendario"]
+
+
+def _origenes_credito(agencia_id):
+    """Sugerencias para "de dónde viene el crédito": primero los que esta
+    agencia ya usó (los más frecuentes arriba) y después algunos genéricos."""
+    usados = [
+        r["credito_origen"] for r in query(
+            """SELECT credito_origen, COUNT(*) n FROM ventas
+               WHERE agencia_id = ? AND credito_origen IS NOT NULL AND credito_origen != ''
+               GROUP BY credito_origen ORDER BY n DESC, credito_origen""",
+            (agencia_id,),
+        )
+    ]
+    return usados + [o for o in ORIGENES_CREDITO_BASE if o not in usados]
+
+
+def _leer_credito(f):
+    """Crédito externo del formulario (seña o cierre) -> (origen, monto, error).
+    Sin tildar "parte del saldo con un crédito" no hay crédito. Si se tilda,
+    hay que decir de dónde viene (banco, financiera...) y por qué monto."""
+    if not f.get("credito_hay"):
+        return None, None, None
+    origen = (f.get("credito_origen") or "").strip()
+    monto = _numero(f.get("credito_monto"), 0)
+    if not origen or monto <= 0:
+        return None, None, ("Si parte del saldo se completa con un crédito externo, cargá de dónde viene "
+                            "(banco, financiera...) y por qué monto.")
+    return origen, monto, None
+
+
 @bp.route("/<int:vehiculo_id>/senar", methods=["POST"])
 def senar(vehiculo_id):
     vehiculo = _vehiculo_propio(vehiculo_id)
@@ -631,6 +663,11 @@ def senar(vehiculo_id):
     # mínimos para tenerlo presente en los matches ("Posible entrega").
     permuta, error_permuta = _leer_permuta_sena(f, _tasaciones_para_permuta(session["agencia_id"]))
     valor_permuta = (permuta or {}).get("valor") or 0
+    # Crédito externo (Daniel 19/09/2026): el saldo puede ir todo en efectivo o
+    # una parte con un crédito de un banco/financiera. Se anota de dónde viene
+    # y por cuánto; al cerrar la venta se precarga.
+    credito_origen, credito_monto, error_credito = _leer_credito(f)
+    credito = credito_monto or 0
     error = None
     if not cliente:
         error = "Cargá el nombre de quien deja la seña."
@@ -638,8 +675,13 @@ def senar(vehiculo_id):
         error = "Cargá el monto de la seña en efectivo (mayor a 0)."
     elif error_permuta:
         error = error_permuta
-    elif precio and sena + valor_permuta > precio + 0.5:
-        error = "La seña en efectivo + la permuta superan el precio acordado. Revisá los montos."
+    elif error_credito:
+        error = error_credito
+    elif credito and not precio:
+        error = "Para registrar un crédito cargá también el precio acordado: con él se calcula cuánto queda en efectivo."
+    elif precio and sena + valor_permuta + credito > precio + 0.5:
+        error = ("La seña en efectivo + la permuta + el crédito superan el precio acordado. Revisá los montos."
+                 if credito else "La seña en efectivo + la permuta superan el precio acordado. Revisá los montos.")
     if error:
         flash(error, "error")
         return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
@@ -650,14 +692,16 @@ def senar(vehiculo_id):
         """INSERT INTO ventas (agencia_id, vehiculo_id, estado, estado_previo, cliente_nombre,
                                cliente_telefono, precio_venta, sena, fecha_sena, permuta_tasacion_id,
                                permuta_valor, permuta_descripcion, permuta_marca, permuta_modelo,
-                               permuta_version, permuta_anio, permuta_km, observaciones)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                               permuta_version, permuta_anio, permuta_km, observaciones,
+                               credito_origen, credito_monto)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
             session["agencia_id"], vehiculo_id, "senado", vehiculo["estado"], cliente,
             (f.get("cliente_telefono") or "").strip() or None, precio, sena, hoy,
             p.get("tasacion_id"), p.get("valor"), p.get("desc"), p.get("marca"), p.get("modelo"),
             p.get("version"), p.get("anio"), p.get("km"),
             (f.get("observaciones") or "").strip() or None,
+            credito_origen, credito_monto,
         ),
     )
     execute(
@@ -667,6 +711,8 @@ def senar(vehiculo_id):
     mensaje = f"Seña de {_pesos(sena)} registrada"
     if permuta:
         mensaje += f" — permuta prevista: {permuta['desc']}"
+    if credito_monto:
+        mensaje += f" — crédito de {credito_origen} por {_pesos(credito_monto)}"
     flash(mensaje + " — el vehículo queda Señado.", "success")
     if permuta:
         # ¿Ese vehículo ya tiene comprador? Mismo cruce que al cargar un pedido con permuta.
@@ -734,6 +780,7 @@ def vender(vehiculo_id):
         return render_template(
             "stock/vender.html", vehiculo=vehiculo, venta=venta, tasaciones=tasaciones,
             datos=datos, estado_label=ESTADO_LABEL,
+            origenes_credito=_origenes_credito(session["agencia_id"]),
         )
 
     if request.method == "GET":
@@ -746,6 +793,9 @@ def vender(vehiculo_id):
             "permuta_tasacion_id": (venta["permuta_tasacion_id"] if venta else None) or "",
             "permuta_descripcion": (venta["permuta_descripcion"] if venta else "") or "",
             "permuta_valor": _entero(venta["permuta_valor"]) if venta else "",
+            "credito_hay": "1" if venta and venta["credito_monto"] else "",
+            "credito_origen": (venta["credito_origen"] if venta else "") or "",
+            "credito_monto": _entero(venta["credito_monto"]) if venta else "",
         })
 
     f = request.form
@@ -754,9 +804,11 @@ def vender(vehiculo_id):
     precio = _numero(f.get("precio_venta"), 0)
     hay_permuta = bool(f.get("permuta_hay"))
     permuta_valor, permuta_desc, permuta_tasacion_id = _leer_permuta(f, tasaciones)
+    credito_origen, credito_monto, error_credito = _leer_credito(f)
+    credito = credito_monto or 0
     efectivo = _numero(f.get("efectivo_cobrado"))
     if efectivo is None:
-        efectivo = max(precio - permuta_valor, 0)
+        efectivo = max(precio - permuta_valor - credito, 0)
     sena = venta["sena"] if venta else _numero(f.get("sena"), 0)
     try:
         fecha_venta = str(date.fromisoformat((f.get("fecha_venta") or "")[:10]))
@@ -770,19 +822,22 @@ def vender(vehiculo_id):
         errores.append("Cargá el precio de venta.")
     if hay_permuta and permuta_valor <= 0:
         errores.append("Cargá el precio de toma de la permuta (o desmarcá \"Hay un vehículo en permuta\").")
+    if error_credito:
+        errores.append(error_credito)
     if sena and sena > efectivo + 0.5:
         errores.append("La seña no puede ser mayor que el efectivo cobrado: la seña ya está incluida en el efectivo.")
-    diferencia = round(precio - permuta_valor - efectivo, 2)
+    diferencia = round(precio - permuta_valor - credito - efectivo, 2)
     if precio > 0 and abs(diferencia) > 0.5:
         if diferencia > 0:
             errores.append(
-                f"Faltan {_pesos(diferencia)} para completar el precio (precio − permuta − efectivo cobrado). "
-                "Si ese saldo lo va a pagar en cuotas, cerrá la venta desde Financiación; "
+                f"Faltan {_pesos(diferencia)} para completar el precio (precio − permuta − crédito externo − efectivo cobrado). "
+                "Si ese saldo va con un crédito de un banco o financiera, tildá \"crédito externo\" y cargá de dónde viene y por cuánto; "
+                "si lo va a pagar en cuotas propias, cerrá la venta desde Financiación; "
                 "si hubo un descuento, bajá el precio de venta."
             )
         else:
             errores.append(
-                f"El efectivo cobrado + la permuta superan el precio de venta en {_pesos(-diferencia)}. Revisá los montos."
+                f"El efectivo cobrado + la permuta + el crédito superan el precio de venta en {_pesos(-diferencia)}. Revisá los montos."
             )
     if errores:
         for e in errores:
@@ -794,19 +849,20 @@ def vender(vehiculo_id):
         execute(
             """UPDATE ventas SET estado = 'cerrada', cliente_nombre = ?, cliente_telefono = ?,
                    precio_venta = ?, permuta_tasacion_id = ?, permuta_valor = ?, permuta_descripcion = ?,
-                   efectivo_cobrado = ?, fecha_venta = ? WHERE id = ?""",
+                   efectivo_cobrado = ?, fecha_venta = ?, credito_origen = ?, credito_monto = ? WHERE id = ?""",
             (cliente, telefono, precio, permuta_tasacion_id, permuta_valor or None, permuta_desc,
-             efectivo, fecha_venta, venta["id"]),
+             efectivo, fecha_venta, credito_origen, credito_monto, venta["id"]),
         )
     else:
         execute(
             """INSERT INTO ventas (agencia_id, vehiculo_id, estado, estado_previo, cliente_nombre,
                                    cliente_telefono, precio_venta, sena, fecha_sena, permuta_tasacion_id,
-                                   permuta_valor, permuta_descripcion, efectivo_cobrado, fecha_venta)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                                   permuta_valor, permuta_descripcion, efectivo_cobrado, fecha_venta,
+                                   credito_origen, credito_monto)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (session["agencia_id"], vehiculo_id, "cerrada", vehiculo["estado"], cliente, telefono,
              precio, sena or 0, fecha_venta if sena else None, permuta_tasacion_id,
-             permuta_valor or None, permuta_desc, efectivo, fecha_venta),
+             permuta_valor or None, permuta_desc, efectivo, fecha_venta, credito_origen, credito_monto),
         )
     if venta and not hay_permuta:
         execute(
@@ -822,6 +878,8 @@ def vender(vehiculo_id):
     mensaje = f"Venta cerrada — {_pesos(precio)}: {_pesos(efectivo)} en efectivo"
     if sena:
         mensaje += f" (con la seña de {_pesos(sena)} adentro)"
+    if credito_monto:
+        mensaje += f" + crédito de {credito_origen} por {_pesos(credito_monto)}"
     if permuta_valor:
         mensaje += f" + permuta por {_pesos(permuta_valor)}"
     flash(mensaje + ". El vehículo pasa a Vendido.", "success")

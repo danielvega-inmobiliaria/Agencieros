@@ -42,7 +42,7 @@
   <a class="card" href="{{ url_for('finanzas.index') }}">
     <div class="label">Ingresos del mes</div>
     <div class="value">${{ "{:,.0f}".format(ventas_mes.ingresos or 0).replace(",", ".") }}</div>
-    <div class="sub">{{ ventas_mes.c }} vehículo(s) vendido(s) · recibido al contado{% if ventas_mes.senas_retenidas %} · incluye ${{ "{:,.0f}".format(ventas_mes.senas_retenidas).replace(",", ".") }} de señas retenidas{% endif %}</div>
+    <div class="sub">{{ ventas_mes.c }} vehículo(s) vendido(s) · recibido al contado{% if ventas_mes.creditos_externos %} · incluye ${{ "{:,.0f}".format(ventas_mes.creditos_externos).replace(",", ".") }} de créditos externos{% endif %}{% if ventas_mes.senas_retenidas %} · incluye ${{ "{:,.0f}".format(ventas_mes.senas_retenidas).replace(",", ".") }} de señas retenidas{% endif %}</div>
   </a>
   {% if senas_pendientes %}
   <a class="card" href="{{ url_for('dashboard.senas') }}">

@@ -1,9 +1,10 @@
 import calendar
+import json
 from datetime import date, datetime, timedelta
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 
-from database import query, execute
+from database import query, execute, obtener_catalogo
 
 bp = Blueprint("financiacion", __name__, url_prefix="/financiacion")
 
@@ -267,6 +268,39 @@ def _tasaciones_disponibles(excluir_tasacion_id=None):
     return filas
 
 
+def _catalogo_json():
+    """Catálogo (Año/Marca/Modelo/Versión) para el autocompletar, listo para
+    incrustar dentro de un <script> sin que un "</script>" en un dato lo corte."""
+    return json.dumps(obtener_catalogo()).replace("</", "<\\/")
+
+
+def _leer_permuta_plan(f, excluir_tasacion_id=None):
+    """Permuta del formulario de un plan -> (datos, error). Misma regla que
+    la seña de Stock (19/09/2026): sin tildar "hay permuta" no hay permuta; con
+    una tasación ya hecha, Año/Marca/Modelo/Versión salen de ella; si no está
+    tasado hay que cargar como mínimo Año, Marca y Modelo (Versión y Km si se
+    saben) para poder cruzarlo con los pedidos. El precio de toma es editable
+    y puede quedar vacío mientras el plan está pendiente."""
+    from routes.stock import _leer_permuta_sena
+    return _leer_permuta_sena(f, _tasaciones_disponibles(excluir_tasacion_id=excluir_tasacion_id))
+
+
+def _aviso_matches_permuta(permuta):
+    """Flash con los compradores que ya buscan el vehículo de la permuta."""
+    if not permuta:
+        return
+    from flask import session
+    from routes.pedidos import _buscar_matches_permuta
+    propios, red = _buscar_matches_permuta(session["agencia_id"], permuta["marca"], permuta["modelo"])
+    partes = []
+    if propios:
+        partes.append(f"{len(propios)} pedido(s) propio(s)")
+    if red:
+        partes.append(f"{len(red)} publicación(es) de la Red")
+    if partes:
+        flash("⚡ La permuta ya tiene comprador: matchea con " + " y ".join(partes) + ".", "success")
+
+
 @bp.route("/simulador")
 def simulador():
     # 19/09/2026 (pedido de Daniel): el simulador dejó de tener un paso
@@ -288,6 +322,7 @@ def simulador():
         periodicidad_label=PERIODICIDAD_LABEL,
         vehiculos_disponibles=vehiculos_disponibles,
         tasaciones_disponibles=tasaciones_disponibles,
+        catalogo_json=_catalogo_json(),
     )
 
 
@@ -418,6 +453,7 @@ def detalle(financiacion_id):
         garantes=garantes,
         vehiculos_disponibles=vehiculos_disponibles,
         tasaciones_disponibles=tasaciones_disponibles,
+        catalogo_json=_catalogo_json(),
         estado_label=ESTADO_PLAN_LABEL,
         estado_badge=ESTADO_PLAN_BADGE,
         metodo_label=METODO_LABEL,
@@ -610,6 +646,13 @@ def guardar():
         flash("Cargá un monto a financiar y una cantidad de cuotas válidos.", "error")
         return redirect(url_for("financiacion.simulador"))
 
+    # Permuta (19/09/2026): se valida antes de tocar nada (el vehículo pasa a
+    # Señado más abajo). Ver `_leer_permuta_plan`.
+    permuta, error_permuta = _leer_permuta_plan(f)
+    if error_permuta:
+        flash(error_permuta, "error")
+        return redirect(url_for("financiacion.simulador"))
+
     metodo = f.get("metodo_interes") or "frances"
     periodicidad = f.get("periodicidad") or "mensual"
     cuota, cronograma = _generar_cronograma(monto, tasa, n, fecha_inicio, metodo, periodicidad)
@@ -639,21 +682,10 @@ def guardar():
                 (vehiculo_id,),
             )
 
-    # Permuta (19/09/2026): opcional -- viene de una Tasación ya hecha
-    # (precio de toma sugerido, editable/redondeable) o cargada a mano si
-    # todavía no se tasó ese vehículo. `permuta_valor` es siempre el
-    # número final que se cargó en el campo, tasación de por medio o no.
-    permuta_tasacion_id = f.get("permuta_tasacion_id") or None
-    permuta_tasacion_id = int(permuta_tasacion_id) if permuta_tasacion_id else None
-    try:
-        permuta_valor = float(f.get("permuta_valor")) if f.get("permuta_valor") else None
-    except ValueError:
-        permuta_valor = None
-    permuta_descripcion = (f.get("permuta_descripcion") or "").strip() or None
-    if permuta_tasacion_id and not permuta_descripcion:
-        tasacion = query("SELECT * FROM tasaciones WHERE id = ?", (permuta_tasacion_id,), one=True)
-        if tasacion:
-            permuta_descripcion = f"{tasacion['marca'] or ''} {tasacion['modelo'] or ''} {tasacion['anio'] or ''}".strip()
+    # `permuta_valor` es siempre el número final que se cargó en el campo
+    # (sugerido por la tasación, editable/redondeable), tasación de por
+    # medio o no; puede quedar vacío si todavía no se tasó.
+    p = permuta or {}
 
     try:
         precio_venta = float(f.get("precio_venta")) if f.get("precio_venta") else None
@@ -675,13 +707,15 @@ def guardar():
         """INSERT INTO financiaciones
            (cliente_nombre, cliente_telefono, vehiculo_id, precio_venta, anticipo,
             permuta_tasacion_id, permuta_valor, permuta_descripcion, entrega_contado,
+            permuta_marca, permuta_modelo, permuta_version, permuta_anio, permuta_km,
             monto_financiado, tasa_interes_mensual, tasa_interes_punitorio, metodo_interes,
             periodicidad, plazo_meses, cantidad_cuotas, valor_cuota, fecha_inicio, estado)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pendiente_firma')""",
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pendiente_firma')""",
         (
             f.get("cliente_nombre") or "", f.get("cliente_telefono") or None,
             vehiculo_id, precio_venta, anticipo,
-            permuta_tasacion_id, permuta_valor, permuta_descripcion, entrega_contado,
+            p.get("tasacion_id"), p.get("valor"), p.get("desc"), entrega_contado,
+            p.get("marca"), p.get("modelo"), p.get("version"), p.get("anio"), p.get("km"),
             monto, tasa, tasa_punitoria, metodo, periodicidad,
             n, len(cronograma), valor_cuota_final, str(fecha_inicio),
         ),
@@ -721,6 +755,7 @@ def guardar():
         f"Crédito guardado, pendiente de firma — {len(cronograma)} cuotas de ${valor_cuota_final:,.0f}.".replace(",", "."),
         "success",
     )
+    _aviso_matches_permuta(permuta)
     return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
 
 
@@ -740,6 +775,12 @@ def completar_datos(financiacion_id):
         return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
 
     f = request.form
+    # Permuta (19/09/2026): se valida antes de tocar el estado de los vehículos.
+    permuta, error_permuta = _leer_permuta_plan(f, excluir_tasacion_id=fin["permuta_tasacion_id"])
+    if error_permuta:
+        flash(error_permuta, "error")
+        return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+    p = permuta or {}
     nuevo_vehiculo_id = f.get("vehiculo_id") or None
     nuevo_vehiculo_id = int(nuevo_vehiculo_id) if nuevo_vehiculo_id else None
 
@@ -770,18 +811,7 @@ def completar_datos(financiacion_id):
 
     # Permuta + Entrega Contado (19/09/2026): se pueden corregir acá igual
     # que en el simulador -- valor siempre editable/redondeable, con o sin
-    # tasación elegida.
-    permuta_tasacion_id = f.get("permuta_tasacion_id") or None
-    permuta_tasacion_id = int(permuta_tasacion_id) if permuta_tasacion_id else None
-    try:
-        permuta_valor = float(f.get("permuta_valor")) if f.get("permuta_valor") else None
-    except ValueError:
-        permuta_valor = None
-    permuta_descripcion = (f.get("permuta_descripcion") or "").strip() or None
-    if permuta_tasacion_id and not permuta_descripcion:
-        tasacion = query("SELECT * FROM tasaciones WHERE id = ?", (permuta_tasacion_id,), one=True)
-        if tasacion:
-            permuta_descripcion = f"{tasacion['marca'] or ''} {tasacion['modelo'] or ''} {tasacion['anio'] or ''}".strip()
+    # tasación elegida (la permuta ya se leyó arriba).
     try:
         entrega_contado = float(f.get("entrega_contado")) if f.get("entrega_contado") else None
     except ValueError:
@@ -791,15 +821,19 @@ def completar_datos(financiacion_id):
         """UPDATE financiaciones SET cliente_nombre = ?, cliente_telefono = ?,
            vehiculo_id = ?, precio_venta = ?, anticipo = ?,
            permuta_tasacion_id = ?, permuta_valor = ?, permuta_descripcion = ?,
+           permuta_marca = ?, permuta_modelo = ?, permuta_version = ?, permuta_anio = ?, permuta_km = ?,
            entrega_contado = ? WHERE id = ?""",
         (
             f.get("cliente_nombre") or "", f.get("cliente_telefono") or None,
             nuevo_vehiculo_id, precio_venta, anticipo,
-            permuta_tasacion_id, permuta_valor, permuta_descripcion, entrega_contado,
+            p.get("tasacion_id"), p.get("valor"), p.get("desc"),
+            p.get("marca"), p.get("modelo"), p.get("version"), p.get("anio"), p.get("km"),
+            entrega_contado,
             financiacion_id,
         ),
     )
     flash("Datos guardados.", "success")
+    _aviso_matches_permuta(permuta)
     return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
 
 

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "financiacion/_permuta.html" as permuta_ui %}
 {% block title %}Plan de financiación — Agencieros{% endblock %}
 {% block header %}Plan de financiación — {{ fin.cliente_nombre or 'Cliente a cargar' }}{% endblock %}
 {% block content %}
@@ -75,43 +76,7 @@
         <input type="number" step="1" name="precio_venta" value="{{ fin.precio_venta or '' }}">
       </div>
     </div>
-    <div class="panel" style="background:var(--navy-card-2); margin:12px 0;">
-      <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
-        <input type="checkbox" id="permuta_hay_detalle" style="width:auto;" {{ 'checked' if fin.permuta_valor else '' }}>
-        Hay un vehículo en permuta
-      </label>
-      <div id="permuta-datos-detalle" {{ 'hidden' if not fin.permuta_valor else '' }} style="margin-top:12px;">
-        <div class="grid-2">
-          <div>
-            <label>Tasación de origen (opcional)</label>
-            <select id="permuta_tasacion_select_detalle" name="permuta_tasacion_id">
-              <option value="">-- Sin tasación / cargar valor a mano --</option>
-              {% for t in tasaciones_disponibles %}
-              <option value="{{ t.id }}"
-                      data-precio="{{ t.precio_max_recomendado or 0 }}"
-                      data-desc="{{ t.marca or '' }} {{ t.modelo or '' }} {{ t.anio or '' }}"
-                      {{ 'selected' if fin.permuta_tasacion_id == t.id else '' }}>
-                {{ t.marca }} {{ t.modelo }} {{ t.anio or '' }} — toma sugerida ${{ '%.0f'|format(t.precio_max_recomendado or 0) }}
-              </option>
-              {% endfor %}
-            </select>
-          </div>
-          <div>
-            <label>Descripción del vehículo en permuta</label>
-            <input type="text" name="permuta_descripcion" id="permuta_descripcion_detalle" value="{{ fin.permuta_descripcion or '' }}" placeholder="Marca, modelo, año...">
-          </div>
-        </div>
-        <div class="grid-2">
-          <div>
-            <label>Precio de toma</label>
-            <input type="number" step="1" name="permuta_valor" id="permuta_valor_detalle" value="{{ fin.permuta_valor or '' }}">
-            <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">
-              Se completa solo al elegir una tasación, pero lo podés redondear o cambiar acá sin problema.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+    {{ permuta_ui.bloque(tasaciones_disponibles, fin) }}
     <div class="grid-2">
       <div>
         <label>Seña ya recibida (parte de la entrega en contado)</label>
@@ -129,29 +94,46 @@
   </form>
   <script>
     (function () {
-      var chk = document.getElementById('permuta_hay_detalle');
-      var datos = document.getElementById('permuta-datos-detalle');
-      var select = document.getElementById('permuta_tasacion_select_detalle');
-      var descripcion = document.getElementById('permuta_descripcion_detalle');
-      var valor = document.getElementById('permuta_valor_detalle');
+      var chk = document.getElementById('permuta_hay');
       if (!chk) return;
+      var datos = document.getElementById('permuta-datos');
+      var manual = document.getElementById('permuta-manual');
+      var select = document.getElementById('permuta_tasacion_select');
+      var km = document.getElementById('permuta_km');
+      var valor = document.getElementById('permuta_valor');
+      var CAMPOS = ['permuta_anio', 'permuta_marca', 'permuta_modelo', 'permuta_version'];
+      // Año/Marca/Modelo obligatorios solo mientras se ven (hay permuta y sin tasación).
+      function sincronizarRequeridos() {
+        var pide = chk.checked && !select.value;
+        ['permuta_anio', 'permuta_marca', 'permuta_modelo'].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) el.required = pide;
+        });
+      }
       chk.addEventListener('change', function () {
         datos.hidden = !chk.checked;
         if (!chk.checked) {
           select.value = '';
-          descripcion.value = '';
+          manual.hidden = false;
           valor.value = '';
+          km.value = '';
+          CAMPOS.forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
         }
+        sincronizarRequeridos();
       });
       select.addEventListener('change', function () {
         var opt = select.options[select.selectedIndex];
-        if (opt && opt.value) {
-          descripcion.value = (opt.getAttribute('data-desc') || '').trim();
-          valor.value = Math.round(parseFloat(opt.getAttribute('data-precio')) || 0);
-        }
+        var conTasacion = !!(opt && opt.value);
+        manual.hidden = conTasacion;
+        if (conTasacion) valor.value = Math.round(parseFloat(opt.getAttribute('data-precio')) || 0) || '';
+        sincronizarRequeridos();
       });
+      // Estado inicial (plan con permuta ya guardada). catalogo.js convierte después
+      // Marca/Modelo/Versión en inputs y conserva el "required".
+      sincronizarRequeridos();
     })();
   </script>
+  {{ permuta_ui.scripts(catalogo_json, fin) }}
 
   <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--border);">
     <h3 style="margin:0 0 8px;">Garantes</h3>
@@ -214,9 +196,10 @@
     {% if vehiculo and vehiculo.fecha_venta %} · Fecha de venta: {{ vehiculo.fecha_venta }}{% endif %}
   </p>
   {% endif %}
-  {% if fin.permuta_valor %}
+  {% if fin.permuta_valor or fin.permuta_marca %}
   <p style="color:var(--text-dim); font-size:13px; margin:0 0 4px;">
-    <b style="color:var(--text);">Permuta:</b> {{ fin.permuta_descripcion or 'Vehículo en permuta' }} — ${{ "{:,.0f}".format(fin.permuta_valor).replace(",", ".") }}
+    <b style="color:var(--text);">Permuta:</b> {{ fin.permuta_descripcion or 'Vehículo en permuta' }}{% if fin.permuta_km %} · {{ "{:,.0f}".format(fin.permuta_km).replace(",", ".") }} km{% endif %}{% if fin.permuta_valor %} — ${{ "{:,.0f}".format(fin.permuta_valor).replace(",", ".") }}{% else %} — a tasar{% endif %}
+    {% if fin.estado == 'pendiente_firma' and fin.permuta_marca %}<span style="font-size:12px;"> · figura como "Posible entrega" en el buscador, en Pedidos y en Matches.</span>{% endif %}
   </p>
   {% endif %}
   {% if fin.entrega_contado or fin.anticipo %}

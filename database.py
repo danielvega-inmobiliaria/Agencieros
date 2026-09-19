@@ -997,6 +997,51 @@ def _migrar_ventas_permuta_datos(conn):
             conn.execute(f"ALTER TABLE ventas ADD COLUMN {columna} {tipo}")
 
 
+def _migrar_financiaciones_permuta_datos(conn):
+    """Datos estructurados de la permuta de una Financiación (19/09/2026,
+    pedido de Daniel): antes era solo texto libre (`permuta_descripcion`) y
+    no se podía cruzar con los pedidos. Ahora se guardan Año/Marca/Modelo/
+    Versión/Km con los mismos nombres de columna que la permuta de la seña,
+    así el buscador combinado la trata igual como "Posible entrega"
+    mientras el plan está pendiente de firma."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(financiaciones)")}
+    for columna, tipo in (
+        ("permuta_marca", "TEXT"), ("permuta_modelo", "TEXT"), ("permuta_version", "TEXT"),
+        ("permuta_anio", "INTEGER"), ("permuta_km", "INTEGER"),
+    ):
+        if columna not in cols:
+            conn.execute(f"ALTER TABLE financiaciones ADD COLUMN {columna} {tipo}")
+
+
+def _migrar_ventas_credito_externo(conn):
+    """Crédito externo en una venta directa de Stock (19/09/2026, pedido de
+    Daniel): el saldo puede ir todo en efectivo o una parte con un crédito
+    de un banco/financiera. Se guarda de dónde viene (`credito_origen`) y
+    por cuánto (`credito_monto`). Cuenta así: precio = permuta + efectivo
+    + crédito; el crédito lo desembolsa el prestamista al cierre, por eso
+    suma a los ingresos del mes igual que el efectivo."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(ventas)")}
+    if "credito_origen" not in cols:
+        conn.execute("ALTER TABLE ventas ADD COLUMN credito_origen TEXT")
+    if "credito_monto" not in cols:
+        conn.execute("ALTER TABLE ventas ADD COLUMN credito_monto REAL")
+
+
+def _migrar_permuta_destino(conn):
+    """Destino de la permuta una vez cerrada la operación (19/09/2026, pedido
+    de Daniel): al cerrar una venta con permuta el vehículo NO desaparece de
+    los matches -- sigue como "Posible entrega" hasta que se decida qué hacer:
+    ingresa a Stock (se completa la carga) o va a reparación (se arranca el
+    seguimiento con la Toma técnica). `permuta_destino` queda NULL mientras
+    está pendiente y pasa a 'stock' | 'reparacion' | 'no_ingresa';
+    `permuta_vehiculo_id` apunta al vehículo que se cargó."""
+    for tabla in ("ventas", "financiaciones"):
+        cols = {r[1] for r in conn.execute(f"PRAGMA table_info({tabla})")}
+        for columna, tipo in (("permuta_destino", "TEXT"), ("permuta_vehiculo_id", "INTEGER"), ("permuta_destino_fecha", "TEXT")):
+            if columna not in cols:
+                conn.execute(f"ALTER TABLE {tabla} ADD COLUMN {columna} {tipo}")
+
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
@@ -1027,6 +1072,9 @@ def init_db():
     _migrar_multi_tenant_columnas(conn)
     _migrar_senas_resolucion(conn)
     _migrar_ventas_permuta_datos(conn)
+    _migrar_financiaciones_permuta_datos(conn)
+    _migrar_ventas_credito_externo(conn)
+    _migrar_permuta_destino(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")
     if cur.fetchone()[0] == 0:
