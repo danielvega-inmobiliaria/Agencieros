@@ -127,9 +127,12 @@ def create_app():
     # Pedidos (Banco de pedidos) salió el 18/09/2026: ya filtra todo por
     # `agencia_id` (routes/pedidos.py), con "Red" a propósito sin filtrar
     # (mercado compartido), y quedó probado con una 2da agencia de prueba.
+    # Toma y tasación (tomas, inspeccion, tasacion) salió el 20/09/2026: la Toma
+    # y su Tasación guardan `agencia_id`, todas las rutas verifican que la Toma
+    # sea de la agencia logueada y las tasaciones ofrecidas como permuta también
+    # son solo las propias (routes/tomas.py, routes/stock.py, routes/financiacion.py).
     MODULOS_SOLO_AGENCIA_1 = {
-        "dashboard", "tomas", "inspeccion",
-        "tasacion", "finanzas", "financiacion", "matches", "plataforma",
+        "dashboard", "finanzas", "financiacion", "matches", "plataforma",
     }
 
     @app.before_request
@@ -140,7 +143,8 @@ def create_app():
         if blueprint in MODULOS_SOLO_AGENCIA_1 and session.get("agencia_id") != 1:
             flash(
                 "Este módulo todavía no está habilitado para agencias nuevas -- "
-                "por ahora podés usar Red de Agencieros, Consulta de precios y tu Admin.",
+                "por ahora podés usar Stock, Banco de pedidos, Toma y tasación, Red de Agencieros, "
+                "Consulta de precios y tu Admin.",
                 "error",
             )
             return redirect(url_for("red.index"))

@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 from urllib.parse import quote_plus
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, session
 
 from database import query, execute
 from routes.tasacion import FACTOR_MECANICO, FACTOR_ESTETICO, MARGEN_OBJETIVO
@@ -82,11 +82,34 @@ PESO_GRAVEDAD = {"leve": 0.4, "moderado": 0.8, "grave": 1.6}
 EXTENSIONES_PERMITIDAS = {"jpg", "jpeg", "png", "webp", "gif"}
 
 
+# Multi-tenant (20/09/2026): Toma, Inspección y Tasación ya son por agencia. Cada
+# Toma (y su Tasación) guarda la `agencia_id` de quien la carga; las fotos y los
+# marcadores de la Inspección cuelgan de la Toma, así que quedan protegidos apenas
+# se valida la Toma. Una Toma ajena se comporta igual que una inexistente.
+def _agencia_actual():
+    return session["agencia_id"]
+
+
 def _toma_o_none(toma_id):
-    toma = query("SELECT * FROM tomas_vehiculo WHERE id = ?", (toma_id,), one=True)
+    toma = query(
+        "SELECT * FROM tomas_vehiculo WHERE id = ? AND agencia_id = ?", (toma_id, _agencia_actual()), one=True
+    )
     if not toma:
         flash("Toma no encontrada.", "error")
     return toma
+
+
+def _vehiculo_propio_o_none(valor):
+    """Id de un vehículo de Stock de esta agencia (para una Toma que parte de un
+    auto ya cargado), o None si no hay o es de otra agencia."""
+    try:
+        vehiculo_id = int(valor)
+    except (TypeError, ValueError):
+        return None
+    fila = query(
+        "SELECT id FROM vehiculos WHERE id = ? AND agencia_id = ?", (vehiculo_id, _agencia_actual()), one=True
+    )
+    return fila["id"] if fila else None
 
 
 def _evaluadores():
@@ -94,7 +117,9 @@ def _evaluadores():
     el campo (mismo criterio que Marca/Modelo: se aprende de lo cargado,
     no hace falta un alta aparte de 'evaluadores')."""
     filas = query(
-        "SELECT DISTINCT evaluador FROM tomas_vehiculo WHERE evaluador IS NOT NULL AND TRIM(evaluador) != '' ORDER BY evaluador"
+        """SELECT DISTINCT evaluador FROM tomas_vehiculo
+           WHERE agencia_id = ? AND evaluador IS NOT NULL AND TRIM(evaluador) != '' ORDER BY evaluador""",
+        (_agencia_actual(),),
     )
     return [f["evaluador"] for f in filas]
 
@@ -274,7 +299,9 @@ def datos_alta_stock_de_toma(toma_id):
     ingresa a Stock (stock.permuta_destino) para no volver a tipear lo ya
     cargado en la Toma."""
     from urllib.parse import urlparse, parse_qsl
-    toma = query("SELECT * FROM tomas_vehiculo WHERE id = ?", (toma_id,), one=True)
+    toma = query(
+        "SELECT * FROM tomas_vehiculo WHERE id = ? AND agencia_id = ?", (toma_id, _agencia_actual()), one=True
+    )
     if not toma or toma["vehiculo_id"]:
         return None
     tasacion = _tasacion_con_extra(
@@ -371,7 +398,9 @@ def index():
     # queda una pestaña aparte ("En Stock") para consultarlas igual, mismo
     # criterio que ya se usa en Stock con la pestaña Vendido.
     vista = request.args.get("vista", "pendientes")
-    tomas = query("SELECT * FROM tomas_vehiculo ORDER BY created_at DESC")
+    tomas = query(
+        "SELECT * FROM tomas_vehiculo WHERE agencia_id = ? ORDER BY created_at DESC", (_agencia_actual(),)
+    )
     tomas_data = []
     for t in tomas:
         fotos_cargadas = query(
@@ -383,7 +412,9 @@ def index():
         )
         ya_en_stock = False
         if t["vehiculo_id"]:
-            ya_en_stock = query("SELECT 1 FROM vehiculos WHERE id = ?", (t["vehiculo_id"],), one=True) is not None
+            ya_en_stock = query(
+                "SELECT 1 FROM vehiculos WHERE id = ? AND agencia_id = ?", (t["vehiculo_id"], _agencia_actual()), one=True
+            ) is not None
         tomas_data.append({
             "toma": t, "fotos_cargadas": fotos_cargadas, "tasacion": tasacion, "ya_en_stock": ya_en_stock,
         })
@@ -408,7 +439,7 @@ def index():
 @bp.route("/nueva", methods=["GET", "POST"])
 def nueva():
     prefill = {
-        "vehiculo_id": request.args.get("vehiculo_id", ""),
+        "vehiculo_id": _vehiculo_propio_o_none(request.args.get("vehiculo_id")) or "",
         "marca": request.args.get("marca", ""),
         "modelo": request.args.get("modelo", ""),
         "version": request.args.get("version", ""),
@@ -416,6 +447,12 @@ def nueva():
     }
     if request.method == "POST":
         f = request.form
+        vehiculo_toma_id = None
+        if f.get("vehiculo_id"):
+            vehiculo_toma_id = _vehiculo_propio_o_none(f.get("vehiculo_id"))
+            if not vehiculo_toma_id:
+                flash("Ese vehículo no está en el Stock de tu agencia.", "error")
+                return redirect(url_for("tomas.index"))
 
         def _costo(codigo):
             valor = f.get(f"costo_{codigo}")
@@ -444,15 +481,15 @@ def nueva():
             f"""INSERT INTO tomas_vehiculo
                (vehiculo_id, marca, modelo, version, anio, evaluador,
                 tiene_codigo_falla, codigo_falla, tuvo_ultimo_service, ultimo_service,
-                observaciones, {columnas_base}, {columnas_costo}, {columnas_comentario})
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,{placeholders_base},{placeholders_costo},{placeholders_comentario})""",
+                observaciones, agencia_id, {columnas_base}, {columnas_costo}, {columnas_comentario})
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,{placeholders_base},{placeholders_costo},{placeholders_comentario})""",
             (
-                f.get("vehiculo_id") or None,
+                vehiculo_toma_id,
                 f.get("marca"), f.get("modelo"), f.get("version"), f.get("anio") or None,
                 f.get("evaluador"),
                 tiene_codigo_falla, (f.get("codigo_falla") or None) if tiene_codigo_falla == "Si" else None,
                 tuvo_ultimo_service, (f.get("ultimo_service") or None) if tuvo_ultimo_service == "Si" else None,
-                f.get("observaciones"),
+                f.get("observaciones"), _agencia_actual(),
                 *[f.get(codigo) or None for codigo, _ in PUNTOS],
                 *[_costo(codigo) for codigo, _ in PUNTOS],
                 *[(f.get(f"comentario_{codigo}") or "").strip() or None for codigo, _ in PUNTOS],
@@ -672,7 +709,12 @@ def eliminar_marcador(toma_id, marcador_id):
     toma = _toma_o_none(toma_id)
     if not toma:
         return redirect(url_for("tomas.index"))
-    execute("DELETE FROM inspeccion_marcadores WHERE id = ?", (marcador_id,))
+    # Solo si el marcador es de una foto de ESTA toma (no alcanza con que la toma sea propia).
+    execute(
+        """DELETE FROM inspeccion_marcadores WHERE id = ?
+           AND inspeccion_visual_id IN (SELECT id FROM inspeccion_visual WHERE toma_id = ?)""",
+        (marcador_id, toma_id),
+    )
     flash("Marcador eliminado.", "success")
     return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
 
@@ -739,12 +781,12 @@ def tasacion(toma_id):
         execute(
             """INSERT INTO tasaciones
                (toma_id, marca, modelo, version, anio, valor_referencia, estado_mecanico, estado_estetico,
-                gastos_estimados, precio_max_recomendado, riesgo, margen_esperado)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                gastos_estimados, precio_max_recomendado, riesgo, margen_esperado, agencia_id)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 toma_id, toma["marca"], toma["modelo"], toma["version"], toma["anio"],
                 valor_referencia, estado_mecanico, estado_estetico, gastos_estimados,
-                round(precio_max_recomendado), riesgo, round(margen_esperado),
+                round(precio_max_recomendado), riesgo, round(margen_esperado), toma["agencia_id"],
             ),
         )
         flash("Tasación registrada.", "success")

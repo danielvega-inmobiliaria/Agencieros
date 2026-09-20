@@ -283,11 +283,11 @@ def nuevo():
         # sin duplicar nada) -- pedido de Daniel 16/09/2026.
         if f.get("origen_carga") == "foto_titulo":
             toma_id = execute(
-                """INSERT INTO tomas_vehiculo (vehiculo_id, marca, modelo, version, anio, motor)
-                   VALUES (?,?,?,?,?,?)""",
+                """INSERT INTO tomas_vehiculo (vehiculo_id, marca, modelo, version, anio, motor, agencia_id)
+                   VALUES (?,?,?,?,?,?,?)""",
                 (
                     vehiculo_id, f.get("marca"), f.get("modelo"), f.get("version"),
-                    f.get("anio") or None, f.get("motor_detectado") or None,
+                    f.get("anio") or None, f.get("motor_detectado") or None, session["agencia_id"],
                 ),
             )
             flash(
@@ -303,8 +303,8 @@ def nuevo():
         # Daniel 17/09/2026).
         if f.get("toma_id_origen"):
             execute(
-                "UPDATE tomas_vehiculo SET vehiculo_id = ? WHERE id = ? AND vehiculo_id IS NULL",
-                (vehiculo_id, f.get("toma_id_origen")),
+                "UPDATE tomas_vehiculo SET vehiculo_id = ? WHERE id = ? AND vehiculo_id IS NULL AND agencia_id = ?",
+                (vehiculo_id, f.get("toma_id_origen"), session["agencia_id"]),
             )
 
         # Si el alta es la de una permuta (viene de "¿Qué hacemos con la permuta?"):

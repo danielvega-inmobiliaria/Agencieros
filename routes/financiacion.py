@@ -244,15 +244,19 @@ def index():
     )
 
 
-def _tasaciones_disponibles(excluir_tasacion_id=None):
+def _tasaciones_disponibles(excluir_tasacion_id=None, agencia_id=None):
     """Tasaciones que se pueden ofrecer como origen del valor de una
     Permuta (19/09/2026): cualquiera ya hecha en el módulo de Toma y
     tasación, salvo la que ya esté usada como permuta de otro crédito --
     `excluir_tasacion_id` deja pasar la que ya tenía elegida el propio
-    plan que se está editando, si la tuviera."""
+    plan que se está editando, si la tuviera. Solo las de la agencia de quien
+    mira (Toma y tasación ya es por agencia, 20/09/2026)."""
+    from flask import session
+    if agencia_id is None:
+        agencia_id = session["agencia_id"]
     filas = query(
         """SELECT * FROM tasaciones
-           WHERE (
+           WHERE COALESCE(agencia_id, 1) = ? AND ((
                id NOT IN (
                    SELECT permuta_tasacion_id FROM financiaciones
                    WHERE permuta_tasacion_id IS NOT NULL
@@ -261,9 +265,9 @@ def _tasaciones_disponibles(excluir_tasacion_id=None):
                    SELECT permuta_tasacion_id FROM ventas
                    WHERE permuta_tasacion_id IS NOT NULL AND estado IN ('senado', 'cerrada')
                )
-           ) OR id = ?
+           ) OR id = ?)
            ORDER BY created_at DESC""",
-        (excluir_tasacion_id or 0,),
+        (agencia_id, excluir_tasacion_id or 0),
     )
     return filas
 
