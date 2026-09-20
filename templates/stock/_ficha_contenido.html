@@ -1,0 +1,81 @@
+{% macro ficha(d, estado_label, volver_url=None, lazy=False) -%}
+{% set lazy_attr = ' loading="lazy"'|safe if lazy else '' %}
+<div class="ficha">
+  {% if volver_url %}<a class="btn-volver" href="{{ volver_url }}">‹ Volver</a>{% endif %}
+  <div class="carrusel-wrap">
+    <div class="carrusel">
+      {% if d.fotos %}
+        {% for foto in d.fotos %}<img src="{{ foto.url }}"{{ lazy_attr }} alt="Foto {{ loop.index }} de {{ d.vehiculo.marca }} {{ d.vehiculo.modelo }}">{% endfor %}
+      {% else %}
+        <img src="{{ d.foto_principal_url }}"{{ lazy_attr }} alt="{{ d.vehiculo.marca }} {{ d.vehiculo.modelo }}">
+      {% endif %}
+    </div>
+    {% if d.fotos and d.fotos|length > 1 %}
+    <div class="foto-contador">1/{{ d.fotos|length }}</div>
+    <button type="button" class="carrusel-flecha izq" aria-label="Foto anterior">‹</button>
+    <button type="button" class="carrusel-flecha der" aria-label="Foto siguiente">›</button>
+    <div class="dots">
+      {% for foto in d.fotos %}<span class="{{ 'activo' if loop.first else '' }}" data-idx="{{ loop.index0 }}"></span>{% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <span class="badge-pill {{ d.vehiculo.estado }}">{{ estado_label.get(d.vehiculo.estado, d.vehiculo.estado) }}</span>
+  <h1>{{ d.vehiculo.marca }} {{ d.vehiculo.modelo }} {{ d.vehiculo.version or '' }}</h1>
+  <div class="subtitulo">
+    {{ d.vehiculo.anio or 's/d' }}
+    {% if d.vehiculo.km %} | {{ "{:,.0f}".format(d.vehiculo.km).replace(",", ".") }} km{% endif %}
+    {% if d.vehiculo.combustible %} | {{ d.vehiculo.combustible }}{% endif %}
+    {% if d.vehiculo.caja %} | {{ 'Automática' if d.vehiculo.caja == 'Automatica' else d.vehiculo.caja }}{% endif %}
+  </div>
+
+  {% if d.vehiculo.valor_publicado %}
+  <div class="precio">$ {{ "{:,.0f}".format(d.vehiculo.valor_publicado).replace(",", ".") }}</div>
+  {% endif %}
+  {% if d.vehiculo.condiciones_pago %}<div class="condiciones">{{ d.vehiculo.condiciones_pago }}</div>{% endif %}
+
+  <div class="panel">
+    <h2>Información</h2>
+    <div class="info-grid">
+      <div><div class="etiqueta">Marca / Modelo</div><div class="valor">{{ d.vehiculo.marca }} {{ d.vehiculo.modelo }}</div></div>
+      <div><div class="etiqueta">Año</div><div class="valor">{{ d.vehiculo.anio or '-' }}</div></div>
+      <div><div class="etiqueta">Kilometraje</div><div class="valor">{{ "{:,.0f}".format(d.vehiculo.km).replace(",", ".") + " km" if d.vehiculo.km else '-' }}</div></div>
+      <div><div class="etiqueta">Combustible</div><div class="valor">{{ d.vehiculo.combustible or '-' }}</div></div>
+      <div><div class="etiqueta">Transmisión</div><div class="valor">{{ ('Automática' if d.vehiculo.caja == 'Automatica' else d.vehiculo.caja) or '-' }}</div></div>
+      {% if d.vehiculo.estado_general %}<div><div class="etiqueta">Estado general</div><div class="valor">{{ d.vehiculo.estado_general }}</div></div>{% endif %}
+      {% if d.vehiculo.color %}<div><div class="etiqueta">Color</div><div class="valor">{{ d.vehiculo.color }}</div></div>{% endif %}
+      {% if d.vehiculo.ubicacion %}<div class="dato-full"><div class="etiqueta">Ubicación</div><div class="valor">{{ d.vehiculo.ubicacion }}</div></div>{% endif %}
+    </div>
+  </div>
+
+  {% if d.equipamiento %}
+  <div class="panel">
+    <h2>Equipamiento destacado</h2>
+    <div class="chips">
+      {% for item in d.equipamiento %}<span class="chip">{{ item }}</span>{% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if d.whatsapp_link %}
+  <a class="btn-whatsapp" href="{{ d.whatsapp_link }}" target="_blank" rel="noopener">💬 Consultar por WhatsApp</a>
+  {% endif %}
+
+  {% if d.agencia and (d.agencia.nombre_agencia or d.agencia.logo_url or d.agencia.direccion or d.agencia.instagram or d.agencia.facebook or d.agencia.sitio_web) %}
+  <div class="agencia-footer">
+    {% if d.agencia.logo_url %}<img src="{{ d.agencia.logo_url }}" alt="Logo">{% endif %}
+    <div>
+      {% if d.agencia.nombre_agencia %}<div class="agencia-footer-nombre">{{ d.agencia.nombre_agencia }}</div>{% endif %}
+      {% if d.agencia.direccion %}<div class="agencia-footer-dato">📍 {{ d.agencia.direccion }}</div>{% endif %}
+      {% if d.agencia.instagram or d.agencia.facebook or d.agencia.sitio_web %}
+      <div class="agencia-footer-redes">
+        {% if d.agencia.instagram %}<a href="{{ d.agencia.instagram }}" target="_blank" rel="noopener">Instagram</a>{% endif %}
+        {% if d.agencia.facebook %}<a href="{{ d.agencia.facebook }}" target="_blank" rel="noopener">Facebook</a>{% endif %}
+        {% if d.agencia.sitio_web %}<a href="{{ d.agencia.sitio_web }}" target="_blank" rel="noopener">Web</a>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{%- endmacro %}

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Fichas — Agencieros</title>
+{% include "stock/_ficha_estilos.html" %}
+<style>
+  /* Visor: una ficha por pantalla, se cambia de vehículo deslizando de costado. */
+  body.modo-visor { display: block; padding: 0; min-height: 0; height: 100vh; height: 100dvh; overflow: hidden; }
+  .visor-barra {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10; height: 52px;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 12px;
+    background: rgba(11,20,32,.94); border-bottom: 1px solid var(--border);
+  }
+  .visor-barra a { color: var(--gold-light); font-size: 14px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+  .visor-nav { display: flex; align-items: center; gap: 10px; }
+  .visor-nav button {
+    width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border); cursor: pointer;
+    background: var(--navy-card); color: var(--text); font-size: 20px; line-height: 1;
+  }
+  .visor-contador { min-width: 46px; text-align: center; font-size: 13px; font-weight: 700; color: var(--text); }
+  .visor {
+    display: flex; overflow-x: auto; overflow-y: hidden; height: 100vh; height: 100dvh;
+    scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .visor::-webkit-scrollbar { display: none; }
+  .slide {
+    flex: 0 0 100%; width: 100%; height: 100vh; height: 100dvh; overflow-y: auto; overflow-x: hidden;
+    scroll-snap-align: start; scroll-snap-stop: always; padding: 64px 0 40px;
+    display: flex; justify-content: center; align-items: flex-start;
+  }
+  .modo-visor .carrusel { overflow-x: hidden; }
+  .modo-visor .carrusel img { cursor: pointer; }
+  .visor-vacio { padding: 90px 20px; text-align: center; color: var(--text-dim); font-size: 15px; }
+</style>
+</head>
+<body class="modo-visor">
+{% import "stock/_ficha_contenido.html" as fc %}
+<header class="visor-barra">
+  <a href="{{ volver_url }}" id="visorVolver">‹ Volver</a>
+  {% if fichas %}
+  <div class="visor-nav">
+    <button type="button" id="visorPrev" aria-label="Vehículo anterior">‹</button>
+    <span class="visor-contador" id="visorContador">1/{{ fichas|length }}</span>
+    <button type="button" id="visorNext" aria-label="Vehículo siguiente">›</button>
+  </div>
+  <a href="{{ url_for('stock.detalle', vehiculo_id=fichas[0].vehiculo.id) }}" id="visorInterna">Ficha interna</a>
+  {% endif %}
+</header>
+{% if fichas %}
+<main class="visor" id="visor">
+  {% for d in fichas %}
+  <section class="slide" data-detalle="{{ url_for('stock.detalle', vehiculo_id=d.vehiculo.id) }}">
+    {{ fc.ficha(d, estado_label, none, true) }}
+  </section>
+  {% endfor %}
+</main>
+{% else %}
+<div class="visor-vacio">No hay vehículos para mostrar con este filtro.</div>
+{% endif %}
+<script src="{{ url_for('static', filename='js/ficha_fotos.js') }}"></script>
+<script>
+  (function () {
+    var visor = document.getElementById('visor');
+    if (!visor) return;
+    var slides = visor.children;
+    var total = slides.length;
+    var contador = document.getElementById('visorContador');
+    var interna = document.getElementById('visorInterna');
+
+    function actual() {
+      var i = visor.clientWidth ? Math.round(visor.scrollLeft / visor.clientWidth) : 0;
+      return Math.max(0, Math.min(total - 1, i));
+    }
+    function actualizar() {
+      var i = actual();
+      contador.textContent = (i + 1) + '/' + total;
+      interna.href = slides[i].dataset.detalle;
+    }
+    function ir(i) {
+      i = Math.max(0, Math.min(total - 1, i));
+      visor.scrollTo({ left: i * visor.clientWidth, behavior: 'smooth' });
+    }
+    visor.addEventListener('scroll', actualizar);
+    document.getElementById('visorPrev').addEventListener('click', function () { ir(actual() - 1); });
+    document.getElementById('visorNext').addEventListener('click', function () { ir(actual() + 1); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowLeft') ir(actual() - 1);
+      if (e.key === 'ArrowRight') ir(actual() + 1);
+    });
+  })();
+</script>
+</body>
+</html>

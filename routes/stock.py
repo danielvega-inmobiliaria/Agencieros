@@ -77,6 +77,22 @@ def sincronizar():
     return redirect(url_for("stock.index"))
 
 
+def _vehiculos_de_pestana(agencia_id, estado_filtro):
+    """Los vehículos propios de una pestaña del listado (o "todos", que no
+    incluye Vendido -- pedido de Daniel 15/09/2026, continuación 19: solo se
+    ven entrando puntualmente a esa pestaña). Lo usan el listado y el visor
+    "Ver Fichas" para mostrar exactamente lo mismo."""
+    if estado_filtro in ESTADOS:
+        return query(
+            "SELECT * FROM vehiculos WHERE agencia_id = ? AND estado = ? ORDER BY created_at DESC",
+            (agencia_id, estado_filtro),
+        )
+    return query(
+        "SELECT * FROM vehiculos WHERE agencia_id = ? AND estado != 'vendido' ORDER BY created_at DESC",
+        (agencia_id,),
+    )
+
+
 @bp.route("/")
 def index():
     estado_filtro = request.args.get("estado", "todos")
@@ -94,19 +110,7 @@ def index():
         vehiculos = None
     else:
         resultados = None
-        if estado_filtro in ESTADOS:
-            vehiculos = query(
-                "SELECT * FROM vehiculos WHERE agencia_id = ? AND estado = ? ORDER BY created_at DESC",
-                (agencia_id, estado_filtro),
-            )
-        else:
-            # "Todos" no incluye Vendido — solo se ve entrando puntualmente a
-            # esa pestaña (pedido de Daniel 15/09/2026, continuación 19). El
-            # buscador combinado (buscar_combinado, arriba) ya lo excluía.
-            vehiculos = query(
-                "SELECT * FROM vehiculos WHERE agencia_id = ? AND estado != 'vendido' ORDER BY created_at DESC",
-                (agencia_id,),
-            )
+        vehiculos = _vehiculos_de_pestana(agencia_id, estado_filtro)
 
     conteos = {
         r["estado"]: r["c"]
@@ -1074,16 +1078,10 @@ def vender(vehiculo_id):
     return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
 
-@bp.route("/<int:vehiculo_id>/ficha")
-def ficha(vehiculo_id):
-    """Ficha comercial para compartir por WhatsApp o subir a una historia --
-    solo datos de cara al comprador (precio, financiación, equipamiento,
-    fotos), nunca costo/ganancia/consignante. Ruta pública (ver `_require_login`
-    en app.py): quien la recibe no tiene login en la app (pedido de Daniel
-    16/09/2026: "que se pueda compartir en historias o por WhatsApp")."""
-    vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (vehiculo_id,), one=True)
-    if not vehiculo:
-        abort(404)
+def _datos_ficha(vehiculo):
+    """Todo lo que necesita una ficha comercial (una sola en `ficha`, varias
+    en el visor `fichas`): fotos, WhatsApp de la agencia dueña, equipamiento."""
+    vehiculo_id = vehiculo["id"]
     fotos = query("SELECT * FROM vehiculo_fotos WHERE vehiculo_id = ? ORDER BY orden, id", (vehiculo_id,))
 
     # El teléfono sale primero de lo que Daniel cargó en Admin (Datos de la
@@ -1107,13 +1105,86 @@ def ficha(vehiculo_id):
         mensaje = f"Hola! Te escribo por el {titulo_vehiculo} ({vehiculo['anio'] or 's/d'}) que vi publicado."
         whatsapp_link = f"https://wa.me/{whatsapp_numero}?text={quote_plus(mensaje)}"
 
+    return {
+        "vehiculo": vehiculo,
+        "fotos": fotos,
+        "foto_principal_url": foto_principal(vehiculo_id),
+        "whatsapp_link": whatsapp_link,
+        "equipamiento": equipamiento_destacado(vehiculo["equipamiento"]),
+        "agencia": agencia,
+    }
+
+
+def _volver_seguro(destino, por_defecto):
+    """Solo rutas internas ("/algo"): evita que el parámetro `volver` sirva
+    para mandar a alguien a otro sitio."""
+    if destino and destino.startswith("/") and not destino.startswith("//") and "\\" not in destino:
+        return destino
+    return por_defecto
+
+
+@bp.route("/<int:vehiculo_id>/ficha")
+def ficha(vehiculo_id):
+    """Ficha comercial para compartir por WhatsApp o subir a una historia --
+    solo datos de cara al comprador (precio, financiación, equipamiento,
+    fotos), nunca costo/ganancia/consignante. Ruta pública (ver `_require_login`
+    en app.py): quien la recibe no tiene login en la app (pedido de Daniel
+    16/09/2026: "que se pueda compartir en historias o por WhatsApp").
+
+    El botón "Volver" aparece solo si quien mira tiene sesión (Daniel u otro
+    usuario de la app): vuelve a la ficha interna del vehículo (o a lo que
+    diga `?volver=`). Quien recibe el link por WhatsApp no lo ve (pedido de
+    Daniel 19/09/2026: desde el celular no había cómo volver)."""
+    vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (vehiculo_id,), one=True)
+    if not vehiculo:
+        abort(404)
+
+    volver_url = None
+    agencia_sesion = session.get("agencia_id")
+    if agencia_sesion:
+        propio = (vehiculo["agencia_id"] or 1) == agencia_sesion
+        por_defecto = url_for("stock.detalle", vehiculo_id=vehiculo_id) if propio else url_for("stock.index")
+        volver_url = _volver_seguro(request.args.get("volver"), por_defecto)
+
     return render_template(
         "stock/ficha.html",
         vehiculo=vehiculo,
-        fotos=fotos,
-        foto_principal_url=foto_principal(vehiculo_id),
-        whatsapp_link=whatsapp_link,
+        datos=_datos_ficha(vehiculo),
         estado_label=ESTADO_LABEL,
-        equipamiento=equipamiento_destacado(vehiculo["equipamiento"]),
-        agencia=agencia,
+        volver_url=volver_url,
+    )
+
+
+@bp.route("/fichas")
+def fichas():
+    """Visor "Ver Fichas": las fichas comerciales del listado una detrás de
+    otra, para pasarlas deslizando el dedo sin entrar a la ficha interna
+    (pedido de Daniel 19/09/2026). Muestra lo mismo que el listado: la
+    pestaña elegida o, con filtros del buscador, los vehículos propios que
+    encuentra (Disponible, Por ingresar y En reparación)."""
+    estado_filtro = request.args.get("estado", "todos")
+    filtros = parsear_filtros(request.args)
+    agencia_id = session["agencia_id"]
+    if filtros:
+        ids = [
+            r["id"] for r in buscar_combinado(filtros, agencia_id)
+            if r.get("id") and r.get("origen") in ESTADOS
+        ]
+        por_id = {
+            v["id"]: v for v in (
+                query(
+                    f"SELECT * FROM vehiculos WHERE agencia_id = ? AND id IN ({','.join('?' * len(ids))})",
+                    (agencia_id, *ids),
+                ) if ids else []
+            )
+        }
+        vehiculos = [por_id[i] for i in ids if i in por_id]
+    else:
+        vehiculos = _vehiculos_de_pestana(agencia_id, estado_filtro)
+
+    return render_template(
+        "stock/fichas.html",
+        fichas=[_datos_ficha(v) for v in vehiculos],
+        estado_label=ESTADO_LABEL,
+        volver_url=url_for("stock.index", estado=estado_filtro, **filtros),
     )

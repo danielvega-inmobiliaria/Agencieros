@@ -238,6 +238,7 @@ def buscar_combinado(filtros, agencia_id):
     for v in vehiculos:
         por_origen[v["estado"]].append({
             "origen": v["estado"],
+            "id": v["id"],
             "marca": v["marca"], "modelo": v["modelo"], "version": v["version"],
             "anio": v["anio"], "km": v["km"], "precio": v["valor_publicado"],
             "ver_url": url_for("stock.detalle", vehiculo_id=v["id"]),

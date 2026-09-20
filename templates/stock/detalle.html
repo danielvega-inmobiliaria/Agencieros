@@ -8,7 +8,7 @@
       Ficha del vehículo <span class="badge {{ vehiculo.estado }}">{{ estado_label.get(vehiculo.estado, vehiculo.estado) }}</span>
       {% if vehiculo.propiedad == 'consignacion' %}<span class="badge por_ingresar">Consignación</span>{% endif %}
     </h2>
-    <a class="btn btn-primary btn-sm" href="{{ url_for('stock.ficha', vehiculo_id=vehiculo.id) }}" target="_blank" style="display:inline-block; margin-bottom:16px;">📱 Ver ficha comercial (para compartir)</a>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('stock.ficha', vehiculo_id=vehiculo.id) }}" style="display:inline-block; margin-bottom:16px;">📱 Ver ficha comercial (para compartir)</a>
     <table>
       <tr><td>Kilómetros</td><td>{{ "{:,.0f}".format(vehiculo.km).replace(",", ".") if vehiculo.km else '-' }}</td></tr>
       <tr><td>Combustible</td><td>{{ vehiculo.combustible or '-' }}</td></tr>
