@@ -14,7 +14,8 @@
     — señado por <b>{{ venta_pre.cliente_nombre }}</b> con <b>${{ '{:,.0f}'.format(venta_pre.sena or 0).replace(',', '.') }}</b> en efectivo{% if venta_pre.fecha_sena %} ({{ venta_pre.fecha_sena }}){% endif %}.
     Armá el plan y apretá "Avanzar": el cliente, el precio, la seña y la permuta prevista ya vienen cargados.
     La seña pasa a ser parte de la entrega en contado del plan.
-    {% if venta_pre.credito_monto %}<br><span style="color:var(--gold-light);">Ojo: la seña tenía un crédito externo anotado ({{ venta_pre.credito_origen }}, ${{ '{:,.0f}'.format(venta_pre.credito_monto).replace(',', '.') }}); un plan propio no lo lleva, así que no se traslada.</span>{% endif %}
+    {% if venta_pre.credito_monto %}<br><span style="color:var(--gold-light);">La seña iba con un crédito externo ({{ venta_pre.credito_origen }}, ${{ '{:,.0f}'.format(venta_pre.credito_monto).replace(',', '.') }}). Si lo rechazaron, seguí: el plan financia todo el saldo y ese crédito queda sin efecto (queda anotado en observaciones del plan).</span>{% endif %}
+    {% if monto_pre %}<br>El <b>monto a financiar</b> viene con el saldo (precio − seña − permuta) = <b>${{ '{:,.0f}'.format(monto_pre).replace(',', '.') }}</b>; cambialo si el cliente va a pagar una parte en efectivo.{% endif %}
   </p>
   {% elif vehiculo_pre %}
   <p style="margin:0 0 12px; padding:10px 12px; border-left:3px solid var(--gold-light); background:var(--navy-card-2); font-size:13px;">
@@ -34,7 +35,7 @@
     <div class="grid-2">
       <div>
         <label>Monto a financiar</label>
-        <input type="number" step="1" name="monto_financiado" id="monto_financiado" required>
+        <input type="number" step="1" name="monto_financiado" id="monto_financiado" value="{{ monto_pre }}" required>
       </div>
       <div>
         <label>Tasa de interés mensual (%)</label>

@@ -346,6 +346,7 @@ def simulador():
     # seña y la permuta prevista llegan cargados desde la seña abierta.
     venta_pre = None
     datos_pre = None
+    monto_pre = ""
     pedido_venta = request.args.get("venta_id", type=int)
     if pedido_venta:
         venta_pre = _venta_para_plan(pedido_venta)
@@ -356,6 +357,12 @@ def simulador():
         vehiculos_disponibles = [vehiculo_pre] + list(vehiculos_disponibles)
         tasaciones_disponibles = _tasaciones_disponibles(excluir_tasacion_id=venta_pre["permuta_tasacion_id"])
         precio_pre = int(venta_pre["precio_venta"] or vehiculo_pre["valor_publicado"] or 0) or ""
+        # Monto a financiar sugerido = el saldo (precio - seña - permuta). Es el caso
+        # típico cuando el crédito externo que se esperaba fue rechazado: todo el saldo
+        # pasa al plan propio. Es solo un punto de partida, se puede cambiar.
+        if precio_pre:
+            saldo = precio_pre - (venta_pre["sena"] or 0) - (venta_pre["permuta_valor"] or 0)
+            monto_pre = int(saldo) if saldo > 0 else ""
         datos_pre = {
             "permuta_hay": bool(venta_pre["permuta_marca"] or venta_pre["permuta_valor"] or venta_pre["permuta_tasacion_id"]),
             "permuta_tasacion_id": venta_pre["permuta_tasacion_id"],
@@ -370,6 +377,7 @@ def simulador():
         venta_pre=venta_pre,
         datos_pre=datos_pre,
         precio_pre=precio_pre,
+        monto_pre=monto_pre,
         metodo_label=METODO_LABEL,
         periodicidad_label=PERIODICIDAD_LABEL,
         vehiculos_disponibles=vehiculos_disponibles,
@@ -835,7 +843,7 @@ def guardar():
         if venta_origen["credito_monto"]:
             nota += (
                 f". El crédito externo anotado en la seña ({venta_origen['credito_origen']}, "
-                f"${venta_origen['credito_monto']:,.0f}) no se traslada al plan.".replace(",", ".")
+                f"${venta_origen['credito_monto']:,.0f}) quedó sin efecto: el saldo se financia con este plan.".replace(",", ".")
             )
         if venta_origen["observaciones"]:
             nota += f". Obs. de la seña: {venta_origen['observaciones']}"

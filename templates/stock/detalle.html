@@ -101,7 +101,7 @@
       — figura como "Posible entrega" en el buscador, en Pedidos y en Matches.</p>
     {% endif %}
     {% if venta_abierta.credito_monto %}
-    <p style="color:var(--text-dim); font-size:13px; margin:0 0 8px;">Parte del saldo va con un <b style="color:var(--text);">crédito externo</b>: {{ venta_abierta.credito_origen }} por <b style="color:var(--text);">${{ m.format(venta_abierta.credito_monto).replace(",", ".") }}</b>. Se precarga al cerrar la venta.</p>
+    <p style="color:var(--text-dim); font-size:13px; margin:0 0 8px;">Parte del saldo va con un <b style="color:var(--text);">crédito externo</b>: {{ venta_abierta.credito_origen }} por <b style="color:var(--text);">${{ m.format(venta_abierta.credito_monto).replace(",", ".") }}</b>. Se precarga al cerrar la venta. Si el crédito lo rechazan, podés pasar el saldo a financiación propia con el botón de abajo.</p>
     {% endif %}
     {% if venta_abierta.observaciones %}<p style="color:var(--text-dim); font-size:13px;">{{ venta_abierta.observaciones }}</p>{% endif %}
     {% elif plan_pendiente %}
@@ -115,7 +115,7 @@
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
       <a class="btn btn-primary btn-sm" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id) }}">✅ Cerrar venta</a>
       {% if venta_abierta and puede_ver_todo %}
-      <a class="btn btn-primary btn-sm" href="{{ url_for('financiacion.simulador', venta_id=venta_abierta.id) }}">🏦 Pasar a financiación propia</a>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('financiacion.simulador', venta_id=venta_abierta.id) }}">🏦 {{ 'Crédito rechazado: pasar a financiación propia' if venta_abierta.credito_monto else 'Pasar a financiación propia' }}</a>
       {% endif %}
       {% if venta_abierta %}
       <form method="post" action="{{ url_for('stock.cancelar_sena', vehiculo_id=vehiculo.id) }}"
