@@ -188,7 +188,9 @@ CREATE TABLE IF NOT EXISTS garantes (
 CREATE TABLE IF NOT EXISTS ventas (
     -- Venta directa desde Stock, SIN financiación (19/09/2026). Una fila
     -- por operación: nace como 'senado' cuando se recibe una seña, pasa a
-    -- 'cerrada' al cerrar la venta, o a 'cancelada' si se cae. Una venta
+    -- 'cerrada' al cerrar la venta, a 'cancelada' si se cae, o a
+    -- 'convertida' si la seña se pasó a un plan de Financiación propia
+    -- (la seña sigue viviendo en el plan). Una venta
     -- de contado puede nacer directo 'cerrada' (sin seña previa).
     -- efectivo_cobrado = TODO el efectivo que entró (seña INCLUIDA): la
     -- seña es solo la parte que llegó antes, nunca se suma aparte.
@@ -1027,6 +1029,18 @@ def _migrar_ventas_credito_externo(conn):
         conn.execute("ALTER TABLE ventas ADD COLUMN credito_monto REAL")
 
 
+def _migrar_ventas_plan_origen(conn):
+    """Seña de Stock que se pasa a un plan de Financiación propia (20/09/2026,
+    pedido de Daniel): un vehículo Señado con una seña abierta puede terminar
+    financiado con un plan propio. La fila de `ventas` pasa a 'convertida' y
+    guarda en `financiacion_id` el plan al que se fue: desde ahí la seña vive
+    en el plan (`anticipo`) y no se cuenta dos veces. Si el plan se elimina
+    estando pendiente de firma, la seña vuelve a 'senado'."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(ventas)")}
+    if "financiacion_id" not in cols:
+        conn.execute("ALTER TABLE ventas ADD COLUMN financiacion_id INTEGER")
+
+
 def _migrar_permuta_destino(conn):
     """Destino de la permuta una vez cerrada la operación (19/09/2026, pedido
     de Daniel): al cerrar una venta con permuta el vehículo NO desaparece de
@@ -1074,6 +1088,7 @@ def init_db():
     _migrar_ventas_permuta_datos(conn)
     _migrar_financiaciones_permuta_datos(conn)
     _migrar_ventas_credito_externo(conn)
+    _migrar_ventas_plan_origen(conn)
     _migrar_permuta_destino(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")

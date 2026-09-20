@@ -114,6 +114,9 @@
     {% if not plan_pendiente %}
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
       <a class="btn btn-primary btn-sm" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id) }}">✅ Cerrar venta</a>
+      {% if venta_abierta and puede_ver_todo %}
+      <a class="btn btn-primary btn-sm" href="{{ url_for('financiacion.simulador', venta_id=venta_abierta.id) }}">🏦 Pasar a financiación propia</a>
+      {% endif %}
       {% if venta_abierta %}
       <form method="post" action="{{ url_for('stock.cancelar_sena', vehiculo_id=vehiculo.id) }}"
             onsubmit="return window.confirm('¿Cancelar la seña? El vehículo vuelve a estar a la venta y la seña queda anotada para que decidas si se devuelve.');">

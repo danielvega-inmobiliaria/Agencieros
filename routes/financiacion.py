@@ -301,6 +301,23 @@ def _aviso_matches_permuta(permuta):
         flash("⚡ La permuta ya tiene comprador: matchea con " + " y ".join(partes) + ".", "success")
 
 
+def _venta_para_plan(venta_id):
+    """Seña abierta de Stock (tabla `ventas`, estado 'senado') que se puede
+    pasar a un plan de Financiación propia -- de la agencia de quien mira, y
+    con el vehículo todavía Señado. None si ya no está abierta."""
+    from flask import session
+    venta = query(
+        "SELECT * FROM ventas WHERE id = ? AND agencia_id = ? AND estado = 'senado'",
+        (venta_id, session["agencia_id"]), one=True,
+    )
+    if not venta:
+        return None
+    vehiculo = query(
+        "SELECT id FROM vehiculos WHERE id = ? AND estado = 'senado'", (venta["vehiculo_id"],), one=True
+    )
+    return venta if vehiculo else None
+
+
 @bp.route("/simulador")
 def simulador():
     # 19/09/2026 (pedido de Daniel): el simulador dejó de tener un paso
@@ -322,10 +339,37 @@ def simulador():
     pedido = request.args.get("vehiculo_id", type=int)
     if pedido:
         vehiculo_pre = next((v for v in vehiculos_disponibles if v["id"] == pedido), None)
+    precio_pre = int(vehiculo_pre["valor_publicado"]) if vehiculo_pre and vehiculo_pre["valor_publicado"] else ""
+
+    # Viene de Stock -> vehículo Señado -> "Pasar a financiación propia"
+    # (?venta_id=N, 20/09/2026): el vehículo, el cliente, el precio acordado, la
+    # seña y la permuta prevista llegan cargados desde la seña abierta.
+    venta_pre = None
+    datos_pre = None
+    pedido_venta = request.args.get("venta_id", type=int)
+    if pedido_venta:
+        venta_pre = _venta_para_plan(pedido_venta)
+        if not venta_pre:
+            flash("Esa seña ya no está abierta (se cerró, se canceló o ya pasó a un plan).", "error")
+    if venta_pre:
+        vehiculo_pre = query("SELECT * FROM vehiculos WHERE id = ?", (venta_pre["vehiculo_id"],), one=True)
+        vehiculos_disponibles = [vehiculo_pre] + list(vehiculos_disponibles)
+        tasaciones_disponibles = _tasaciones_disponibles(excluir_tasacion_id=venta_pre["permuta_tasacion_id"])
+        precio_pre = int(venta_pre["precio_venta"] or vehiculo_pre["valor_publicado"] or 0) or ""
+        datos_pre = {
+            "permuta_hay": bool(venta_pre["permuta_marca"] or venta_pre["permuta_valor"] or venta_pre["permuta_tasacion_id"]),
+            "permuta_tasacion_id": venta_pre["permuta_tasacion_id"],
+            "permuta_marca": venta_pre["permuta_marca"], "permuta_modelo": venta_pre["permuta_modelo"],
+            "permuta_version": venta_pre["permuta_version"], "permuta_anio": venta_pre["permuta_anio"],
+            "permuta_km": venta_pre["permuta_km"], "permuta_valor": venta_pre["permuta_valor"],
+            "permuta_descripcion": venta_pre["permuta_descripcion"],
+        }
     return render_template(
         "financiacion/simulador.html",
         vehiculo_pre=vehiculo_pre,
-        precio_pre=int(vehiculo_pre["valor_publicado"]) if vehiculo_pre and vehiculo_pre["valor_publicado"] else "",
+        venta_pre=venta_pre,
+        datos_pre=datos_pre,
+        precio_pre=precio_pre,
         metodo_label=METODO_LABEL,
         periodicidad_label=PERIODICIDAD_LABEL,
         vehiculos_disponibles=vehiculos_disponibles,
@@ -654,9 +698,24 @@ def guardar():
         flash("Cargá un monto a financiar y una cantidad de cuotas válidos.", "error")
         return redirect(url_for("financiacion.simulador"))
 
+    # Seña de Stock que se pasa a este plan (20/09/2026): se valida antes de
+    # tocar nada. El vehículo y la seña salen de ella, no del formulario.
+    venta_origen = None
+    if f.get("venta_id"):
+        try:
+            venta_origen = _venta_para_plan(int(f.get("venta_id")))
+        except ValueError:
+            venta_origen = None
+        if not venta_origen:
+            flash("La seña que querías pasar a financiación propia ya no está abierta (se cerró, se canceló o ya pasó a un plan).", "error")
+            return redirect(url_for("financiacion.simulador"))
+
     # Permuta (19/09/2026): se valida antes de tocar nada (el vehículo pasa a
-    # Señado más abajo). Ver `_leer_permuta_plan`.
-    permuta, error_permuta = _leer_permuta_plan(f)
+    # Señado más abajo). Ver `_leer_permuta_plan`. Con una seña de origen, su
+    # tasación (ya "usada" por esa seña abierta) se puede volver a elegir.
+    permuta, error_permuta = _leer_permuta_plan(
+        f, excluir_tasacion_id=venta_origen["permuta_tasacion_id"] if venta_origen else None
+    )
     if error_permuta:
         flash(error_permuta, "error")
         return redirect(url_for("financiacion.simulador"))
@@ -682,6 +741,8 @@ def guardar():
     # espera la firma.
     vehiculo_id = f.get("vehiculo_id") or None
     vehiculo_id = int(vehiculo_id) if vehiculo_id else None
+    if venta_origen:
+        vehiculo_id = venta_origen["vehiculo_id"]  # ya está Señado por esa seña
     if vehiculo_id:
         vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (vehiculo_id,), one=True)
         if vehiculo and vehiculo["estado"] == "disponible":
@@ -707,6 +768,9 @@ def guardar():
         anticipo = float(f.get("anticipo") or 0)
     except ValueError:
         anticipo = 0
+    if venta_origen:
+        # La seña ya está cobrada: el plan hereda exactamente ese monto.
+        anticipo = float(venta_origen["sena"] or 0)
 
     # cliente_nombre es NOT NULL en la base -- si todavía no se cargó, se
     # guarda vacío ("") en vez de NULL, y se completa después en la ficha
@@ -720,7 +784,8 @@ def guardar():
             periodicidad, plazo_meses, cantidad_cuotas, valor_cuota, fecha_inicio, estado)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pendiente_firma')""",
         (
-            f.get("cliente_nombre") or "", f.get("cliente_telefono") or None,
+            f.get("cliente_nombre") or (venta_origen["cliente_nombre"] if venta_origen else None) or "",
+            f.get("cliente_telefono") or (venta_origen["cliente_telefono"] if venta_origen else None) or None,
             vehiculo_id, precio_venta, anticipo,
             p.get("tasacion_id"), p.get("valor"), p.get("desc"), entrega_contado,
             p.get("marca"), p.get("modelo"), p.get("version"), p.get("anio"), p.get("km"),
@@ -759,8 +824,31 @@ def guardar():
             ),
         )
 
+    mensaje_sena = ""
+    if venta_origen:
+        # La seña de Stock pasa a vivir en el plan (su `anticipo`): la fila de
+        # `ventas` queda 'convertida' y deja de contar como seña abierta.
+        nota = (
+            f"[Seña pasada desde Stock] ${anticipo:,.0f} recibidos el {venta_origen['fecha_sena'] or 's/d'}"
+            .replace(",", ".")
+        )
+        if venta_origen["credito_monto"]:
+            nota += (
+                f". El crédito externo anotado en la seña ({venta_origen['credito_origen']}, "
+                f"${venta_origen['credito_monto']:,.0f}) no se traslada al plan.".replace(",", ".")
+            )
+        if venta_origen["observaciones"]:
+            nota += f". Obs. de la seña: {venta_origen['observaciones']}"
+        execute("UPDATE financiaciones SET observaciones = ? WHERE id = ?", (nota, financiacion_id))
+        execute(
+            "UPDATE ventas SET estado = 'convertida', financiacion_id = ? WHERE id = ?",
+            (financiacion_id, venta_origen["id"]),
+        )
+        mensaje_sena = f" La seña de ${anticipo:,.0f} pasó al plan.".replace(",", ".")
+
     flash(
-        f"Crédito guardado, pendiente de firma — {len(cronograma)} cuotas de ${valor_cuota_final:,.0f}.".replace(",", "."),
+        f"Crédito guardado, pendiente de firma — {len(cronograma)} cuotas de ${valor_cuota_final:,.0f}.".replace(",", ".")
+        + mensaje_sena,
         "success",
     )
     _aviso_matches_permuta(permuta)
@@ -895,7 +983,15 @@ def eliminar(financiacion_id):
         flash("Solo se puede eliminar un plan que todavía está pendiente de firma.", "error")
         return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
 
-    if fin["vehiculo_id"]:
+    # Si el plan nació de una seña de Stock, esa seña vuelve a estar abierta y
+    # el vehículo sigue Señado por ella (la seña ya se cobró: no se pierde).
+    sena_origen = query(
+        "SELECT id FROM ventas WHERE financiacion_id = ? AND estado = 'convertida'",
+        (financiacion_id,), one=True,
+    )
+    if sena_origen:
+        execute("UPDATE ventas SET estado = 'senado', financiacion_id = NULL WHERE id = ?", (sena_origen["id"],))
+    elif fin["vehiculo_id"]:
         vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (fin["vehiculo_id"],), one=True)
         if vehiculo and vehiculo["estado"] == "senado":
             execute(
@@ -906,7 +1002,10 @@ def eliminar(financiacion_id):
     execute("DELETE FROM garantes WHERE financiacion_id = ?", (financiacion_id,))
     execute("DELETE FROM financiacion_cuotas WHERE financiacion_id = ?", (financiacion_id,))
     execute("DELETE FROM financiaciones WHERE id = ?", (financiacion_id,))
-    flash("Plan eliminado -- no queda ningún registro de esto.", "success")
+    if sena_origen:
+        flash("Plan eliminado -- la seña vuelve a estar abierta en Stock y el vehículo sigue Señado.", "success")
+    else:
+        flash("Plan eliminado -- no queda ningún registro de esto.", "success")
     return redirect(url_for("financiacion.index"))
 
 
