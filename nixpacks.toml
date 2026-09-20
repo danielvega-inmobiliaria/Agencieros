@@ -1,8 +1,0 @@
-# Config de build para Railway (Nixpacks). Agrega el binario de sistema
-# tesseract-ocr -- lo necesita ocr_titulo.py (pytesseract) para leer el
-# titulo del auto al cargarlo en Toma/Stock. El idioma español
-# (tessdata/spa.traineddata) ya viaja adentro del propio repo, apuntado a
-# mano desde ocr_titulo.py, así que no hace falta el paquete
-# tesseract-ocr-spa del sistema -- alcanza con el motor.
-[phases.setup]
-aptPkgs = ["tesseract-ocr"]

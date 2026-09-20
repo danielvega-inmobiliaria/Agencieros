@@ -9,7 +9,6 @@ from database import query, execute, foto_principal, obtener_catalogo, obtener_c
 from storage import uploads_dir
 from sync_stock import sync_stock
 from buscador import parsear_filtros, buscar_combinado
-from ocr_titulo import extraer_datos_titulo, TesseractNoDisponible
 from equipamiento_destacado import equipamiento_destacado
 
 bp = Blueprint("stock", __name__, url_prefix="/stock")
@@ -133,65 +132,6 @@ def index():
     )
 
 
-@bp.route("/nuevo-por-foto", methods=["GET", "POST"])
-def nuevo_por_foto():
-    """Carga rápida: se saca una foto del título del vehículo y se leen de
-    ahí los datos que trae (dominio, marca, modelo, año, motor, chasis) por
-    OCR local (ver ocr_titulo.py) para precargar el alta de Stock, en vez de
-    tipearlos a mano -- pedido de Daniel 16/09/2026. Kilómetros y color no
-    están en el título y se completan a mano en el mismo formulario, igual
-    que siempre. Ningún dato que no se pudo leer con confianza se completa
-    solo -- queda en blanco para que se cargue a mano."""
-    if request.method == "POST":
-        archivo = request.files.get("foto_titulo")
-        if not archivo or not archivo.filename:
-            flash("Subí una foto del título para continuar.", "error")
-            return redirect(url_for("stock.nuevo_por_foto"))
-        ext = archivo.filename.rsplit(".", 1)[-1].lower() if "." in archivo.filename else ""
-        if ext not in EXTENSIONES_PERMITIDAS:
-            flash("Formato no soportado -- usá JPG, PNG, WEBP o GIF.", "error")
-            return redirect(url_for("stock.nuevo_por_foto"))
-
-        try:
-            datos = extraer_datos_titulo(archivo.read(), catalogo=obtener_catalogo())
-        except TesseractNoDisponible as e:
-            flash(str(e), "error")
-            return redirect(url_for("stock.nuevo_por_foto"))
-
-        campos_clave = ["marca", "modelo", "anio", "dominio"]
-        faltantes = [c for c in campos_clave if not datos.get(c)]
-        if not datos["reconocidos"]:
-            flash(
-                "No se pudo leer ningún dato con confianza de esa foto (probá con más luz, "
-                "más cerca y sin reflejos) -- se abrió el formulario en blanco para cargar a mano.",
-                "error",
-            )
-        elif faltantes:
-            flash(
-                "Se completaron del título los datos que se pudieron leer con confianza. "
-                f"Revisalos y completá a mano: {', '.join(faltantes)}, Kilómetros y Color.",
-                "success",
-            )
-        else:
-            flash(
-                "Se completaron del título Marca, Modelo, Año y Dominio -- revisalos antes de "
-                "guardar, y completá Kilómetros y Color a mano (no están en el título).",
-                "success",
-            )
-
-        return redirect(url_for(
-            "stock.nuevo",
-            marca=datos.get("marca") or "",
-            modelo=datos.get("modelo") or "",
-            anio=datos.get("anio") or "",
-            dominio=datos.get("dominio") or "",
-            motor_detectado=datos.get("motor") or "",
-            origen_carga="foto_titulo",
-        ))
-
-    return render_template("stock/nuevo_por_foto.html")
-
-
 @bp.route("/nuevo", methods=["GET", "POST"])
 def nuevo():
     prefill = {
@@ -214,15 +154,9 @@ def nuevo():
         # técnica (pedido de Daniel 16/09/2026) -- ver _texto_equipamiento
         # en routes/tomas.py.
         "equipamiento": request.args.get("equipamiento", ""),
-        # Estos 5 solo llegan cargados desde "Cargar por foto del título"
-        # (ver nuevo_por_foto abajo) -- Km y Color nunca vienen de ahí (no
-        # están en el título) y quedan para completar a mano, igual que
-        # siempre (pedido de Daniel 16/09/2026).
         "dominio": request.args.get("dominio", ""),
         "color": request.args.get("color", ""),
         "km": request.args.get("km", ""),
-        "origen_carga": request.args.get("origen_carga", ""),
-        "motor_detectado": request.args.get("motor_detectado", ""),
         # Solo llega si el alta vino del botón "Agregar a Stock" de la
         # Tasación (ver _url_agregar_a_stock en routes/tomas.py) -- permite
         # linkear de vuelta esa Toma a este vehículo una vez creado.
@@ -277,25 +211,6 @@ def nuevo():
         else:
             flash("Vehículo cargado en stock.", "success")
 
-        # Si el alta vino de "Cargar por foto del título", se crea de una
-        # vez una Toma vinculada a este vehículo con el checklist de 44
-        # puntos ya armado (mismo checklist de Toma y Tasación de siempre,
-        # sin duplicar nada) -- pedido de Daniel 16/09/2026.
-        if f.get("origen_carga") == "foto_titulo":
-            toma_id = execute(
-                """INSERT INTO tomas_vehiculo (vehiculo_id, marca, modelo, version, anio, motor, agencia_id)
-                   VALUES (?,?,?,?,?,?,?)""",
-                (
-                    vehiculo_id, f.get("marca"), f.get("modelo"), f.get("version"),
-                    f.get("anio") or None, f.get("motor_detectado") or None, session["agencia_id"],
-                ),
-            )
-            flash(
-                f"Se creó la Toma técnica #{toma_id} vinculada a este vehículo -- "
-                "entrá a Toma y Tasación para completar el checklist de 44 puntos.",
-                "success",
-            )
-
         # Si el alta vino del botón "Agregar a Stock" de una Tasación (Toma
         # "suelta", sin vehículo todavía), se linkea esa Toma al vehículo
         # recién creado -- si no, quedaba huérfana para siempre y "Toma y
@@ -335,7 +250,7 @@ def detalle(vehiculo_id):
         flash("Vehículo no encontrado.", "error")
         return redirect(url_for("stock.index"))
     fotos = query("SELECT * FROM vehiculo_fotos WHERE vehiculo_id = ? ORDER BY orden, id", (vehiculo_id,))
-    # Si este vehículo ya tiene una Toma vinculada (por OCR, o porque nació
+    # Si este vehículo ya tiene una Toma vinculada (porque nació
     # de "Agregar a Stock" desde una Tasación), se muestra "Ver toma /
     # inspección" como referencia -- ya no se ofrece arrancar una Toma
     # nueva para un auto que ya está en Stock (pedido de Daniel 17/09/2026).

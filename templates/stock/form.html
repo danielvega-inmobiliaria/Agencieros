@@ -4,10 +4,6 @@
 {% block content %}
 <div class="panel">
   <form method="post">
-    {% if prefill and prefill.origen_carga %}
-    <input type="hidden" name="origen_carga" value="{{ prefill.origen_carga }}">
-    <input type="hidden" name="motor_detectado" value="{{ prefill.motor_detectado }}">
-    {% endif %}
     {% if prefill and prefill.toma_id_origen %}
     <input type="hidden" name="toma_id_origen" value="{{ prefill.toma_id_origen }}">
     {% endif %}
@@ -54,8 +50,7 @@
       <div><label>Color</label><input name="color" value="{{ vehiculo.color if vehiculo else (prefill.color if prefill else '') }}"></div>
     </div>
     <div class="form-row">
-      <div><label>Dominio</label><input name="dominio" value="{{ vehiculo.dominio if vehiculo else (prefill.dominio if prefill else '') }}">
-      {% if prefill and prefill.origen_carga == 'foto_titulo' %}<span style="color:var(--text-dim); font-size:11px;">Leído del título -- revisá antes de guardar</span>{% endif %}</div>
+      <div><label>Dominio</label><input name="dominio" value="{{ vehiculo.dominio if vehiculo else (prefill.dominio if prefill else '') }}"></div>
       <div>
         <label>Estado</label>
         <select name="estado" id="estado" onchange="actualizarPorIngresar()">

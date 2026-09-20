@@ -81,7 +81,7 @@ def enviar_codigo_email(email, nombre_agencia, codigo):
         import resend
 
         resend.api_key = api_key
-        remitente = os.environ.get("RESEND_FROM", "Agencieros <noreply@agencieros.com.ar>")
+        remitente = os.environ.get("RESEND_FROM", "Agencieros <noreply@agencieros.net.ar>")
         resend.Emails.send(
             {
                 "from": remitente,
