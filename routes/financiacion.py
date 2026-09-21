@@ -2,7 +2,7 @@ import calendar
 import json
 from datetime import date, datetime, timedelta
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 
 from database import query, execute, obtener_catalogo
 
@@ -26,6 +26,22 @@ ESTADO_PLAN_BADGE = {
 
 METODO_LABEL = {"frances": "Francés (interés compuesto)", "simple": "Interés simple/directo"}
 PERIODICIDAD_LABEL = {"mensual": "Mensual", "semanal": "Semanal"}
+
+
+def _plan_de_agencia(financiacion_id, agencia_id=None):
+    """Trae un plan de Financiación asegurando que sea de la agencia de
+    quien mira -- escalado a multi-tenant 21/09/2026, mismo criterio que
+    `_vehiculo_propio` en stock.py. COALESCE porque los planes cargados
+    antes del escalado pueden haber quedado con `agencia_id` NULL -- esos
+    cuentan como de la agencia 1. Devuelve None si no existe o es de otra
+    agencia (se usa en TODAS las rutas de un plan puntual para no dejar
+    ver ni tocar por URL un plan ajeno)."""
+    if agencia_id is None:
+        agencia_id = session["agencia_id"]
+    return query(
+        "SELECT * FROM financiaciones WHERE id = ? AND COALESCE(agencia_id, 1) = ?",
+        (financiacion_id, agencia_id), one=True,
+    )
 
 
 def _sumar_meses(fecha, meses):
@@ -221,9 +237,15 @@ def index():
     # Las reservas canceladas ("Cancelar reserva") ya no se muestran acá
     # (pedido de Daniel 19/09/2026): la seña, si la hubo, queda en "Señas
     # por resolver" del Dashboard.
+    # Escalado a multi-tenant 21/09/2026: antes no filtraba por agencia_id
+    # -- cualquier agencia nueva vería los planes de todas las demás.
     planes = [
         _con_resumen(f)
-        for f in query("SELECT * FROM financiaciones WHERE estado != 'cancelado_reserva' ORDER BY created_at DESC")
+        for f in query(
+            "SELECT * FROM financiaciones WHERE estado != 'cancelado_reserva' AND COALESCE(agencia_id, 1) = ? "
+            "ORDER BY created_at DESC",
+            (session["agencia_id"],),
+        )
     ]
     activos = [p for p in planes if p["estado"] == "activo"]
     resumen = {
@@ -334,7 +356,8 @@ def simulador():
     # /financiacion/guardar. Acá solo hace falta juntar las listas para
     # los dos <select> de esa segunda parte (vehículos y tasaciones).
     vehiculos_disponibles = query(
-        "SELECT * FROM vehiculos WHERE estado = 'disponible' ORDER BY created_at DESC"
+        "SELECT * FROM vehiculos WHERE estado = 'disponible' AND agencia_id = ? ORDER BY created_at DESC",
+        (session["agencia_id"],),
     )
     tasaciones_disponibles = _tasaciones_disponibles()
     # Viene de Stock -> "Vender con financiación propia" (?vehiculo_id=N): el
@@ -432,12 +455,12 @@ def nuevo():
 
     financiacion_id = execute(
         """INSERT INTO financiaciones
-           (vehiculo_id, cliente_nombre, cliente_telefono, precio_venta, anticipo,
+           (agencia_id, vehiculo_id, cliente_nombre, cliente_telefono, precio_venta, anticipo,
             monto_financiado, tasa_interes_mensual, tasa_interes_punitorio, metodo_interes,
             periodicidad, plazo_meses, cantidad_cuotas, valor_cuota, fecha_inicio, observaciones)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
-            vehiculo_id, f.get("cliente_nombre"), f.get("cliente_telefono") or None,
+            session["agencia_id"], vehiculo_id, f.get("cliente_nombre"), f.get("cliente_telefono") or None,
             float(f.get("precio_venta")) if f.get("precio_venta") else None,
             float(f.get("anticipo") or 0), monto, tasa, tasa_punitoria, metodo, periodicidad,
             n, len(cronograma), valor_cuota_final, str(fecha_inicio), f.get("observaciones") or None,
@@ -454,7 +477,9 @@ def nuevo():
     # financiación ES la venta — pasa a "Vendido" para que no se siga
     # ofreciendo a otro comprador.
     if vehiculo_id:
-        vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (vehiculo_id,), one=True)
+        vehiculo = query(
+            "SELECT * FROM vehiculos WHERE id = ? AND agencia_id = ?", (vehiculo_id, session["agencia_id"]), one=True
+        )
         if vehiculo and vehiculo["estado"] != "vendido":
             precio_venta = float(f.get("precio_venta")) if f.get("precio_venta") else vehiculo["valor_publicado"]
             fecha_venta = _parsear_fecha(f.get("fecha_venta"), default=date.today())
@@ -473,7 +498,7 @@ def nuevo():
 
 @bp.route("/<int:financiacion_id>")
 def detalle(financiacion_id):
-    fin = query("SELECT * FROM financiaciones WHERE id = ?", (financiacion_id,), one=True)
+    fin = _plan_de_agencia(financiacion_id)
     if not fin:
         flash("Plan de financiación no encontrado.", "error")
         return redirect(url_for("financiacion.index"))
@@ -498,8 +523,8 @@ def detalle(financiacion_id):
         "SELECT * FROM garantes WHERE financiacion_id = ? ORDER BY id", (financiacion_id,)
     ) if fin["estado"] == "pendiente_firma" else []
     vehiculos_disponibles = query(
-        "SELECT * FROM vehiculos WHERE estado = 'disponible' OR id = ? ORDER BY created_at DESC",
-        (fin["vehiculo_id"] or 0,),
+        "SELECT * FROM vehiculos WHERE (estado = 'disponible' OR id = ?) AND agencia_id = ? ORDER BY created_at DESC",
+        (fin["vehiculo_id"] or 0, session["agencia_id"]),
     ) if fin["estado"] == "pendiente_firma" else []
     # Tasaciones para corregir la Permuta desde esta misma ficha (19/09/2026):
     # deja pasar la que ya tenía elegida este plan, si la tuviera.
@@ -527,6 +552,9 @@ def detalle(financiacion_id):
 
 @bp.route("/<int:financiacion_id>/cuota/<int:cuota_id>/pagar", methods=["POST"])
 def pagar_cuota(financiacion_id, cuota_id):
+    if not _plan_de_agencia(financiacion_id):
+        flash("Plan de financiación no encontrado.", "error")
+        return redirect(url_for("financiacion.index"))
     cuota = query(
         "SELECT * FROM financiacion_cuotas WHERE id = ? AND financiacion_id = ?",
         (cuota_id, financiacion_id), one=True,
@@ -578,7 +606,7 @@ def corregir_fechas(financiacion_id):
     cargar un plan dejando la fecha sugerida por default en vez de la real).
     No toca número, monto, pagos ni estado de ninguna cuota -- solo corre
     de nuevo el cronograma de fechas con la misma periodicidad del plan."""
-    fin = query("SELECT * FROM financiaciones WHERE id = ?", (financiacion_id,), one=True)
+    fin = _plan_de_agencia(financiacion_id)
     if not fin:
         flash("Plan de financiación no encontrado.", "error")
         return redirect(url_for("financiacion.index"))
@@ -610,7 +638,7 @@ def actualizar_tasa_punitoria(financiacion_id):
     """Carga o corrige la tasa de interés por atraso de un plan ya creado
     (18/09/2026) -- por ejemplo, para planes cargados antes de que existiera
     este campo, como el de Laura Lezcano/Chevrolet CRUZE."""
-    fin = query("SELECT * FROM financiaciones WHERE id = ?", (financiacion_id,), one=True)
+    fin = _plan_de_agencia(financiacion_id)
     if not fin:
         flash("Plan de financiación no encontrado.", "error")
         return redirect(url_for("financiacion.index"))
@@ -632,7 +660,7 @@ def cancelar(financiacion_id):
     pendientes, que quedan todas marcadas como pagadas por ese monto (su
     `monto` se ajusta hacia abajo si hubo quita, para que no quede
     "adeudado" fantasma)."""
-    fin = query("SELECT * FROM financiaciones WHERE id = ?", (financiacion_id,), one=True)
+    fin = _plan_de_agencia(financiacion_id)
     if not fin:
         flash("Plan de financiación no encontrado.", "error")
         return redirect(url_for("financiacion.index"))
@@ -756,7 +784,9 @@ def guardar():
     if venta_origen:
         vehiculo_id = venta_origen["vehiculo_id"]  # ya está Señado por esa seña
     if vehiculo_id:
-        vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (vehiculo_id,), one=True)
+        vehiculo = query(
+            "SELECT * FROM vehiculos WHERE id = ? AND agencia_id = ?", (vehiculo_id, session["agencia_id"]), one=True
+        )
         if vehiculo and vehiculo["estado"] == "disponible":
             execute(
                 "UPDATE vehiculos SET estado = 'senado', updated_at = datetime('now') WHERE id = ?",
@@ -789,13 +819,14 @@ def guardar():
     # del plan (completar_datos).
     financiacion_id = execute(
         """INSERT INTO financiaciones
-           (cliente_nombre, cliente_telefono, vehiculo_id, precio_venta, anticipo,
+           (agencia_id, cliente_nombre, cliente_telefono, vehiculo_id, precio_venta, anticipo,
             permuta_tasacion_id, permuta_valor, permuta_descripcion, entrega_contado,
             permuta_marca, permuta_modelo, permuta_version, permuta_anio, permuta_km,
             monto_financiado, tasa_interes_mensual, tasa_interes_punitorio, metodo_interes,
             periodicidad, plazo_meses, cantidad_cuotas, valor_cuota, fecha_inicio, estado)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pendiente_firma')""",
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pendiente_firma')""",
         (
+            session["agencia_id"],
             f.get("cliente_nombre") or (venta_origen["cliente_nombre"] if venta_origen else None) or "",
             f.get("cliente_telefono") or (venta_origen["cliente_telefono"] if venta_origen else None) or None,
             vehiculo_id, precio_venta, anticipo,
@@ -874,7 +905,7 @@ def completar_datos(financiacion_id):
     juntando los datos (18/09/2026). Si se elige un vehículo Disponible,
     pasa a 'Señado' para dejar de ofrecerlo; si se cambia por otro, el
     anterior (si estaba señado por este mismo plan) vuelve a Disponible."""
-    fin = query("SELECT * FROM financiaciones WHERE id = ?", (financiacion_id,), one=True)
+    fin = _plan_de_agencia(financiacion_id)
     if not fin:
         flash("Plan de financiación no encontrado.", "error")
         return redirect(url_for("financiacion.index"))
@@ -947,7 +978,7 @@ def completar_datos(financiacion_id):
 
 @bp.route("/<int:financiacion_id>/garantes/agregar", methods=["POST"])
 def agregar_garante(financiacion_id):
-    fin = query("SELECT * FROM financiaciones WHERE id = ?", (financiacion_id,), one=True)
+    fin = _plan_de_agencia(financiacion_id)
     if not fin:
         flash("Plan de financiación no encontrado.", "error")
         return redirect(url_for("financiacion.index"))
@@ -971,6 +1002,9 @@ def agregar_garante(financiacion_id):
 
 @bp.route("/<int:financiacion_id>/garantes/<int:garante_id>/eliminar", methods=["POST"])
 def eliminar_garante(financiacion_id, garante_id):
+    if not _plan_de_agencia(financiacion_id):
+        flash("Plan de financiación no encontrado.", "error")
+        return redirect(url_for("financiacion.index"))
     execute("DELETE FROM garantes WHERE id = ? AND financiacion_id = ?", (garante_id, financiacion_id))
     flash("Garante eliminado.", "success")
     return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
@@ -987,7 +1021,7 @@ def eliminar(financiacion_id):
     historia real de cobros de por medio y "Cancelar reserva" es el
     camino correcto en su lugar. Si el vehículo estaba 'Señado' por este
     plan, vuelve a 'Disponible'."""
-    fin = query("SELECT * FROM financiaciones WHERE id = ?", (financiacion_id,), one=True)
+    fin = _plan_de_agencia(financiacion_id)
     if not fin:
         flash("Plan de financiación no encontrado.", "error")
         return redirect(url_for("financiacion.index"))
@@ -1027,7 +1061,7 @@ def confirmar_venta(financiacion_id):
     no se había marcado por algún motivo) a 'Vendido', y el plan pasa de
     'pendiente_firma' a 'activo' -- recién ahí empieza a poder cobrarse
     cuota a cuota, igual que un plan cargado por el camino de siempre."""
-    fin = query("SELECT * FROM financiaciones WHERE id = ?", (financiacion_id,), one=True)
+    fin = _plan_de_agencia(financiacion_id)
     if not fin:
         flash("Plan de financiación no encontrado.", "error")
         return redirect(url_for("financiacion.index"))
@@ -1064,7 +1098,7 @@ def cancelar_reserva(financiacion_id):
     estaba activo cobrándose). La seña recibida, si la hubo, queda anotada
     en observaciones para que Daniel decida a mano si corresponde
     devolverla o no."""
-    fin = query("SELECT * FROM financiaciones WHERE id = ?", (financiacion_id,), one=True)
+    fin = _plan_de_agencia(financiacion_id)
     if not fin:
         flash("Plan de financiación no encontrado.", "error")
         return redirect(url_for("financiacion.index"))

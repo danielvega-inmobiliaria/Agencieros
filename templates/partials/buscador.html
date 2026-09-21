@@ -1,11 +1,18 @@
-{# Buscador compartido por Marca/Modelo/Versión/Año/Km/Rango de precio — en
-   Stock busca en simultáneo Disponible + Por ingresar + En reparación + Red
-   de Agencieros (ver buscar_combinado en buscador.py); en Red de Agencieros
-   filtra solo esa tabla (pedido de Daniel 15/09/2026, continuaciones 17 y
-   18). Espera en el contexto: filtros (dict con los valores cargados),
-   mostrar_km (bool), filtro_tab_nombre/filtro_tab_valor (para no perder la
-   pestaña actual al buscar) y limpiar_url. Sin action: se envía por GET a
-   la misma URL. #}
+{# Buscador compartido por Marca/Modelo/Versión/Año — en Stock busca en
+   simultáneo Disponible + Por ingresar + En reparación + Red de Agencieros
+   (ver buscar_combinado en buscador.py); en Red de Agencieros filtra solo
+   esa tabla (pedido de Daniel 15/09/2026, continuaciones 17 y 18). Espera
+   en el contexto: filtros (dict con los valores cargados),
+   filtro_tab_nombre/filtro_tab_valor (para no perder la pestaña actual al
+   buscar) y limpiar_url. Sin action: se envía por GET a la misma URL.
+
+   Rediseño 21/09/2026 (pedido de Daniel): Año matchea exacto o ±1 (ya no es
+   un piso). Precio y Km salieron del buscador -- dejaron de ser criterio de
+   matching en Stock/Pedidos/Red, se siguen viendo en cada resultado pero ya
+   no filtran. Versión queda afuera del matching salvo que se tilde
+   "Versión exacta" (checkbox `version_exacta`): ahí exige coincidencia
+   exacta, no parcial -- así un vehículo cargado con versión específica se
+   puede encontrar a propósito sin angostar las demás búsquedas. #}
 <form method="get" class="buscador">
   {% if filtro_tab_nombre %}<input type="hidden" name="{{ filtro_tab_nombre }}" value="{{ filtro_tab_valor }}">{% endif %}
   <div class="buscador-grid">
@@ -20,24 +27,14 @@
     <div class="campo">
       <label for="buscador-version">Versión</label>
       <input id="buscador-version" type="text" name="version" value="{{ filtros.get('version', '') }}" placeholder="ej. 4x4 SRV">
+      <label style="display:flex; align-items:center; gap:6px; font-weight:400; font-size:11.5px; margin-top:4px; color:var(--text-dim);">
+        <input type="checkbox" name="version_exacta" value="1" style="width:auto;" {{ 'checked' if filtros.get('version_exacta') else '' }}>
+        Versión exacta (sí o sí)
+      </label>
     </div>
     <div class="campo campo-chica">
-      <label for="buscador-anio">Año desde</label>
+      <label for="buscador-anio">Año (exacto o ±1)</label>
       <input id="buscador-anio" type="number" name="anio" value="{{ filtros.get('anio', '') }}" placeholder="2020">
-    </div>
-    {% if mostrar_km %}
-    <div class="campo campo-chica">
-      <label for="buscador-km">Km (hasta)</label>
-      <input id="buscador-km" type="number" name="km_max" value="{{ filtros.get('km_max', '') }}" placeholder="80.000">
-    </div>
-    {% endif %}
-    <div class="campo campo-chica">
-      <label for="buscador-precio-min">Precio desde</label>
-      <input id="buscador-precio-min" type="number" name="precio_min" value="{{ filtros.get('precio_min', '') }}" placeholder="$">
-    </div>
-    <div class="campo campo-chica">
-      <label for="buscador-precio-max">Precio hasta</label>
-      <input id="buscador-precio-max" type="number" name="precio_max" value="{{ filtros.get('precio_max', '') }}" placeholder="$">
     </div>
   </div>
   <div class="buscador-acciones">

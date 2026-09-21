@@ -6,10 +6,23 @@ antes era `agencia_nombre`)."""
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, abort
 
-from database import query, execute
+from database import query, execute, obtener_config_agencia
 from buscador import parsear_filtros, condiciones_sql
 
 bp = Blueprint("red", __name__, url_prefix="/red")
+
+
+def _telefono_contacto(agencia_id):
+    """Teléfono de contacto para publicar en la Red -- ya no se tipea a
+    mano (21/09/2026, pedido de Daniel: "Nombre Contacto y Teléfono se
+    cargan solos"): usa el WhatsApp comercial cargado en Admin
+    (`agencia_config.telefono`) si está cargado; si no, el teléfono de
+    registro de la cuenta (`agencias.telefono`)."""
+    config = obtener_config_agencia(agencia_id)
+    if config.get("telefono"):
+        return config["telefono"]
+    fila = query("SELECT telefono FROM agencias WHERE id = ?", (agencia_id,), one=True)
+    return fila["telefono"] if fila else None
 
 
 @bp.route("/")
@@ -38,6 +51,11 @@ def index():
 
 @bp.route("/nueva", methods=["GET", "POST"])
 def nueva():
+    agencia_id = session.get("agencia_id")
+    # Contacto (21/09/2026): ya no se tipea a mano -- sale solo del
+    # teléfono cargado en Admin/registro (ver `_telefono_contacto`), igual
+    # que el nombre de agencia ya salía de la cuenta logueada.
+    contacto = _telefono_contacto(agencia_id)
     if request.method == "POST":
         f = request.form
         # El nombre de agencia ya no se tipea a mano -- se toma de la
@@ -49,15 +67,15 @@ def nueva():
                (agencia_id, agencia_nombre, tipo, marca, modelo, version, anio, km, precio, descripcion, contacto)
                VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
             (
-                session.get("agencia_id"), agencia_nombre, f.get("tipo"), f.get("marca"), f.get("modelo"),
+                agencia_id, agencia_nombre, f.get("tipo"), f.get("marca"), f.get("modelo"),
                 f.get("version"), f.get("anio") or None, f.get("km") or None,
                 float(f.get("precio") or 0) or None,
-                f.get("descripcion"), f.get("contacto"),
+                f.get("descripcion"), contacto,
             ),
         )
         flash("Publicación creada en la Red de Agencieros.", "success")
         return redirect(url_for("red.index"))
-    return render_template("red/form.html")
+    return render_template("red/form.html", contacto=contacto)
 
 
 @bp.route("/<int:pub_id>/cerrar")

@@ -92,13 +92,9 @@ def create_app():
         # se ve desde cualquier pantalla que hay algo nuevo, sin depender de
         # entrar pedido por pedido (pedido de Daniel 15/09/2026, continuación
         # 27: "se me pasó por alto").
-        # Multi-tenant (18/09/2026): Matches todavía no filtra por
-        # agencia_id (está en MODULOS_SOLO_AGENCIA_1), así que este
-        # contador solo se calcula para la agencia 1 -- para cualquier
-        # otra agencia queda en 0 en vez de mostrar un número calculado
-        # sobre pedidos que capaz no son suyos.
-        if session.get("agencia_id") != 1:
-            return {"matches_pendientes": 0}
+        # Multi-tenant (21/09/2026): Matches ya filtra por agencia_id
+        # (contar_matches usa session["agencia_id"] internamente), así que
+        # el badge se calcula igual para cualquier agencia.
         from routes.matches import contar_matches
         try:
             return {"matches_pendientes": contar_matches()}
@@ -168,8 +164,12 @@ def create_app():
     # (routes/dashboard.py). Las tarjetas que llevan a Financiación/Finanzas
     # (todavía bloqueadas) se ocultan o quedan sin link para las demás
     # agencias (templates/dashboard.html).
+    # Finanzas, Financiación y Matches se escalaron a multi-tenant el
+    # 21/09/2026 (agencia_id filtrado en cada query, planes de Financiación
+    # ya nacen con agencia_id propio) -- solo "plataforma" (Panel de
+    # Agencias) sigue siendo exclusivo de la agencia 1 a propósito.
     MODULOS_SOLO_AGENCIA_1 = {
-        "finanzas", "financiacion", "matches", "plataforma",
+        "plataforma",
     }
 
     @app.before_request

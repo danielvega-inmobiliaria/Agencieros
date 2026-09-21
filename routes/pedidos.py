@@ -56,7 +56,11 @@ def _buscar_oferta_para_pedido(marca, modelo, anio_desde=None, precio_maximo=Non
     mismo buscador combinado que Stock, para tener en cuenta la máxima
     cantidad de fuentes posibles (pedido de Daniel 15/09/2026, continuación
     26). "Red · Busca" queda afuera a propósito: es demanda de otra
-    agencia, no algo que se le pueda ofrecer a este cliente."""
+    agencia, no algo que se le pueda ofrecer a este cliente.
+
+    `precio_maximo` se recibe pero ya no se usa para filtrar (21/09/2026,
+    Precio dejó de ser criterio de matching) -- queda en la firma para no
+    romper a quien ya lo pasa (pedidos.py, matches.py)."""
     if not marca:
         return []
     filtros = {"marca": marca}
@@ -64,8 +68,6 @@ def _buscar_oferta_para_pedido(marca, modelo, anio_desde=None, precio_maximo=Non
         filtros["modelo"] = modelo
     if anio_desde:
         filtros["anio"] = anio_desde
-    if precio_maximo:
-        filtros["precio_max"] = precio_maximo
     return [r for r in buscar_combinado(filtros, session["agencia_id"]) if r["origen"] != "red_busca"]
 
 

@@ -1,23 +1,32 @@
-"""Buscador compartido por Marca / Modelo / Versión / Año / Km / Rango de
-precio — mismo criterio y mismos nombres de campo en Stock (Disponible, Por
-ingresar, En reparación) y en Red de Agencieros (pedido de Daniel
-15/09/2026, continuación 17).
+"""Buscador compartido por Marca / Modelo / Versión / Año — mismo criterio
+y mismos nombres de campo en Stock (Disponible, Por ingresar, En
+reparación), Pedidos y Red de Agencieros (pedido de Daniel 15/09/2026,
+continuación 17).
 
 Continuación 18: además de filtrar dentro de una sola pestaña/tabla, el
 buscador de Stock ahora puede buscar en simultáneo en Disponible + Por
 ingresar + En reparación + Red de Agencieros y devolver todo junto en una
 sola lista ordenada por origen (ver `buscar_combinado`), para no tener que
-repetir la misma búsqueda pestaña por pestaña. Año pasó a ser un piso ("Año
-desde") en vez de una coincidencia exacta.
+repetir la misma búsqueda pestaña por pestaña.
 
 Continuación 26: se suma una quinta fuente, "Posible entrega" — el
 vehículo que un cliente ya ofreció como parte de pago (permuta) en otro
 pedido activo, todavía sin llegar físicamente al stock. Así, tanto el
 buscador de Stock como el chequeo automático al cargar un pedido nuevo
 tienen en cuenta la máxima cantidad de fuentes posibles: Disponible, Por
-ingresar, En reparación, Red · Ofrece y Posible entrega."""
+ingresar, En reparación, Red · Ofrece y Posible entrega.
 
-CAMPOS_BASE = ["marca", "modelo", "version", "anio", "km_max", "precio_min", "precio_max"]
+Rediseño 21/09/2026 (pedido de Daniel, escalado de Finanzas/Financiación/
+Matches): Año dejó de ser un piso ("Año desde") -- ahora matchea el año
+exacto o ±1, para tener una opción más amplia. Versión salió del criterio
+por defecto: solo se exige (y de forma exacta, no parcial) si se tilda el
+checkbox "versión exacta" en el buscador -- así un vehículo cargado con
+versión específica se puede encontrar después a propósito, sin que la
+versión angoste todas las demás búsquedas. Precio y Km dejaron de ser
+criterio de matching en cualquiera de estos lugares (Stock, Pedidos, Red):
+se siguen mostrando en los resultados, pero ya no filtran nada."""
+
+CAMPOS_BASE = ["marca", "modelo", "version", "anio"]
 
 # Orden y etiquetas de origen para la búsqueda combinada — el orden de esta
 # lista es el orden en el que se listan los resultados.
@@ -48,17 +57,24 @@ ORIGEN_BADGE = {
 def parsear_filtros(args):
     """Lee los parámetros de búsqueda desde `request.args` (o cualquier
     dict tipo `args.get`) una sola vez, y devuelve solo los campos con
-    valor cargado y válido — año/km/precio que no convierten a número se
-    descartan acá (antes de armar cualquier condición SQL), así nunca se
-    arma una condición sin su parámetro correspondiente."""
+    valor cargado y válido — año que no convierte a número se descarta acá
+    (antes de armar cualquier condición SQL), así nunca se arma una
+    condición sin su parámetro correspondiente.
+
+    Km y Precio dejaron de ser filtros de búsqueda (21/09/2026, pedido de
+    Daniel): ya no se leen. `version_exacta` es el checkbox "sí o sí" --
+    si no está tildado, Versión no entra en `filtros` aunque el campo de
+    texto tenga algo cargado (queda solo para mostrar/reusar el valor en el
+    form, nunca para filtrar)."""
     filtros = {c: (args.get(c) or "").strip() for c in CAMPOS_BASE}
     filtros = {k: v for k, v in filtros.items() if v}
-    for campo, conv in (("anio", int), ("km_max", int), ("precio_min", float), ("precio_max", float)):
-        if campo in filtros:
-            try:
-                filtros[campo] = conv(filtros[campo])
-            except ValueError:
-                filtros.pop(campo, None)
+    if "anio" in filtros:
+        try:
+            filtros["anio"] = int(filtros["anio"])
+        except ValueError:
+            filtros.pop("anio", None)
+    if str(args.get("version_exacta") or "").lower() in ("on", "1", "true", "si", "sí"):
+        filtros["version_exacta"] = True
     return filtros
 
 
@@ -67,15 +83,22 @@ def condiciones_sql(filtros, campo_precio="valor_publicado", campo_km="km",
                      campo_version="version", campo_anio="anio"):
     """A partir de un dict de filtros ya parseado (`parsear_filtros`), arma
     condiciones + params para un WHERE armado a mano (`" AND
-    ".join(condiciones)`). `campo_precio`/`campo_km` existen porque Stock usa
-    `valor_publicado`/`km` y Red usa `precio`/`km`; `campo_marca` y el resto
-    de los `campo_*` existen para poder reutilizar este mismo armador contra
-    una tabla con nombres de columna distintos, como `pedidos_clientes`
+    ".join(condiciones)`). `campo_marca`/`campo_modelo`/`campo_version`/
+    `campo_anio` existen para poder reutilizar este mismo armador contra una
+    tabla con nombres de columna distintos, como `pedidos_clientes`
     filtrando por su vehículo de permuta (`permuta_marca`, etc. — pedido de
-    Daniel 15/09/2026, continuación 26). Marca/Modelo/Versión son
-    coincidencia parcial (LIKE), Año es un piso ("Año desde": `anio >= ?`,
-    no exacto), Km es un techo ("Km hasta") y el precio es un rango con
-    mínimo y/o máximo opcionales."""
+    Daniel 15/09/2026, continuación 26). `campo_precio`/`campo_km` quedan en
+    la firma solo por compatibilidad con quien ya los pasa -- no se usan.
+
+    Criterio de matching redefinido 21/09/2026 (pedido de Daniel: mismo
+    criterio para Stock/Por ingresar/En reparación, Pedidos y Red, es un
+    solo buscador compartido): Marca y Modelo son coincidencia parcial
+    (LIKE), igual que antes. Año ya no es un piso -- matchea el año exacto
+    o ±1, para tener una opción más amplia. Versión queda AFUERA del
+    matching salvo que venga `version_exacta` (el checkbox "sí o sí" del
+    buscador): ahí sí exige coincidencia exacta, no parcial. Precio y Km
+    dejaron de ser criterio en cualquiera de estas búsquedas -- se siguen
+    mostrando en los resultados, pero ya no filtran ni excluyen nada."""
     condiciones, params = [], []
     if filtros.get("marca"):
         condiciones.append(f"{campo_marca} LIKE ?")
@@ -83,21 +106,13 @@ def condiciones_sql(filtros, campo_precio="valor_publicado", campo_km="km",
     if filtros.get("modelo"):
         condiciones.append(f"{campo_modelo} LIKE ?")
         params.append(f"%{filtros['modelo']}%")
-    if filtros.get("version"):
-        condiciones.append(f"{campo_version} LIKE ?")
-        params.append(f"%{filtros['version']}%")
+    if filtros.get("version_exacta") and filtros.get("version"):
+        condiciones.append(f"LOWER({campo_version}) = LOWER(?)")
+        params.append(filtros["version"])
     if "anio" in filtros:
-        condiciones.append(f"{campo_anio} >= ?")
-        params.append(filtros["anio"])
-    if "km_max" in filtros:
-        condiciones.append(f"{campo_km} <= ?")
-        params.append(filtros["km_max"])
-    if "precio_min" in filtros:
-        condiciones.append(f"{campo_precio} >= ?")
-        params.append(filtros["precio_min"])
-    if "precio_max" in filtros:
-        condiciones.append(f"{campo_precio} <= ?")
-        params.append(filtros["precio_max"])
+        condiciones.append(f"{campo_anio} BETWEEN ? AND ?")
+        params.append(filtros["anio"] - 1)
+        params.append(filtros["anio"] + 1)
     return condiciones, params
 
 
@@ -117,7 +132,10 @@ def _buscar_posible_entrega(filtros, agencia_id):
     agencia."""
     from database import query
 
-    filtros_sin_precio = {k: v for k, v in filtros.items() if k not in ("precio_min", "precio_max")}
+    # Precio ya no es criterio de matching (21/09/2026) -- condiciones_sql
+    # ni siquiera lo mira, pero se mantiene el nombre de la variable para no
+    # tocar el resto de la función.
+    filtros_sin_precio = filtros
     condiciones, params = condiciones_sql(
         filtros_sin_precio,
         campo_marca="permuta_marca", campo_modelo="permuta_modelo",
@@ -147,7 +165,10 @@ def _buscar_posible_entrega_senas(filtros, agencia_id):
     cargue. Si la seña se cancela, deja de serlo."""
     from database import query
 
-    filtros_sin_precio = {k: v for k, v in filtros.items() if k not in ("precio_min", "precio_max")}
+    # Precio ya no es criterio de matching (21/09/2026) -- condiciones_sql
+    # ni siquiera lo mira, pero se mantiene el nombre de la variable para no
+    # tocar el resto de la función.
+    filtros_sin_precio = filtros
     condiciones, params = condiciones_sql(
         filtros_sin_precio,
         campo_marca="permuta_marca", campo_modelo="permuta_modelo",
@@ -175,7 +196,10 @@ def _buscar_posible_entrega_planes(filtros, agencia_id):
     entra."""
     from database import query
 
-    filtros_sin_precio = {k: v for k, v in filtros.items() if k not in ("precio_min", "precio_max")}
+    # Precio ya no es criterio de matching (21/09/2026) -- condiciones_sql
+    # ni siquiera lo mira, pero se mantiene el nombre de la variable para no
+    # tocar el resto de la función.
+    filtros_sin_precio = filtros
     condiciones, params = condiciones_sql(
         filtros_sin_precio,
         campo_marca="permuta_marca", campo_modelo="permuta_modelo",

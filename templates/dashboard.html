@@ -24,14 +24,11 @@
     <div class="label">Pedidos activos</div>
     <div class="value">{{ pedidos_activos }}</div>
   </a>
-  {# Financiación todavía es solo de la agencia 1: para las demás no se muestra la tarjeta ni la torta de cuotas. #}
-  {% if puede_ver_todo %}
   <a class="card" href="{{ url_for('financiacion.index') }}">
     <div class="label">Cuotas por cobrar</div>
     <div class="value">${{ "{:,.0f}".format(cuotas_por_cobrar or 0).replace(",", ".") }}</div>
     <div class="sub" style="color:var(--gold-light);">Financiación · planes activos</div>
   </a>
-  {% endif %}
   <a class="card" href="{{ url_for('stock.index', estado='vendido') }}">
     <div class="label">Vendidos este mes</div>
     <div class="value">{{ ventas_mes.c }}</div>
@@ -42,12 +39,11 @@
     <div class="value">${{ "{:,.0f}".format(gastos_en_reparacion or 0).replace(",", ".") }}</div>
     <div class="sub">Stock en estado "En reparación"</div>
   </a>
-  {# Finanzas todavía es solo de la agencia 1: para las demás la tarjeta queda sin link. #}
-  <{{ 'a' if puede_ver_todo else 'div' }} class="card" {% if puede_ver_todo %}href="{{ url_for('finanzas.index') }}"{% endif %}>
+  <a class="card" href="{{ url_for('finanzas.index') }}">
     <div class="label">Ingresos del mes</div>
     <div class="value">${{ "{:,.0f}".format(ventas_mes.ingresos or 0).replace(",", ".") }}</div>
     <div class="sub">{{ ventas_mes.c }} vehículo(s) vendido(s) · recibido al contado{% if ventas_mes.creditos_externos %} · incluye ${{ "{:,.0f}".format(ventas_mes.creditos_externos).replace(",", ".") }} de créditos externos{% endif %}{% if ventas_mes.senas_retenidas %} · incluye ${{ "{:,.0f}".format(ventas_mes.senas_retenidas).replace(",", ".") }} de señas retenidas{% endif %}</div>
-  </{{ 'a' if puede_ver_todo else 'div' }}>
+  </a>
   {% if senas_pendientes %}
   <a class="card" href="{{ url_for('dashboard.senas') }}">
     <div class="label">Señas por resolver</div>
@@ -77,7 +73,6 @@
     </ul>
     {% if grafico_stock.total == 0 %}<p style="color:var(--text-dim); font-size:12px; margin-top:8px;">Sin vehículos en stock todavía.</p>{% endif %}
   </div>
-  {% if puede_ver_todo %}
   <div class="panel chart-panel">
     <h2>Cuotas de financiación (planes activos)</h2>
     <div class="donut-wrap">
@@ -90,6 +85,5 @@
     </ul>
     {% if grafico_cobros.total == 0 %}<p style="color:var(--text-dim); font-size:12px; margin-top:8px;">No hay planes de financiación activos todavía.</p>{% endif %}
   </div>
-  {% endif %}
 </div>
 {% endblock %}

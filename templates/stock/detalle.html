@@ -114,7 +114,7 @@
     {% if not plan_pendiente %}
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
       <a class="btn btn-primary btn-sm" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id) }}">✅ Cerrar venta</a>
-      {% if venta_abierta and puede_ver_todo %}
+      {% if venta_abierta %}
       <a class="btn btn-primary btn-sm" href="{{ url_for('financiacion.simulador', venta_id=venta_abierta.id) }}">🏦 {{ 'Crédito rechazado: pasar a financiación propia' if venta_abierta.credito_monto else 'Pasar a financiación propia' }}</a>
       {% endif %}
       {% if venta_abierta %}
@@ -129,14 +129,12 @@
   {% else %}
     <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
       <b>Vender:</b> el comprador paga hoy, en efectivo, con un vehículo en permuta y/o con un crédito externo (banco o financiera).
-      {% if puede_ver_todo %}<b>Vender con financiación propia:</b> el saldo lo paga en cuotas con tu plan (te lleva al simulador con este vehículo ya elegido).{% endif %}
+      <b>Vender con financiación propia:</b> el saldo lo paga en cuotas con tu plan (te lleva al simulador con este vehículo ya elegido).
       También podés recibir una seña.
     </p>
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <a class="btn btn-primary btn-sm" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id) }}">✅ Vender</a>
-      {% if puede_ver_todo %}
       <a class="btn btn-primary btn-sm" href="{{ url_for('financiacion.simulador', vehiculo_id=vehiculo.id) }}">🏦 Vender con financiación propia</a>
-      {% endif %}
     </div>
     <details style="margin-top:14px;">
       <summary style="cursor:pointer; color:var(--gold-light); font-size:13px;">🤝 Recibir una seña</summary>
