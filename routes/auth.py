@@ -61,16 +61,16 @@ def registro():
         direccion = request.form.get("direccion", "").strip()
         ciudad = request.form.get("ciudad", "").strip()
         provincia = request.form.get("provincia", "").strip()
-        contacto_referencia = request.form.get("contacto_referencia", "").strip() or None
+        contacto_referencia = request.form.get("contacto_referencia", "").strip()
         password = request.form.get("password", "")
         password2 = request.form.get("password2", "")
 
         # Obligatorios (Daniel 21/09/2026): nombre de la agencia, teléfono,
-        # dirección, ciudad y provincia -- así el Panel de Agencias y la Red
+        # dirección, ciudad, provincia y contacto de referencia -- así el Panel de Agencias y la Red
         # tienen siempre dónde ubicar y cómo contactar a cada agencia.
-        if not nombre_agencia or not telefono or not direccion or not ciudad or not provincia or not email or not password:
+        if not nombre_agencia or not telefono or not direccion or not ciudad or not provincia or not contacto_referencia or not email or not password:
             flash(
-                "Completá nombre de la agencia, teléfono, dirección, ciudad, provincia, email y contraseña.",
+                "Completá nombre de la agencia, teléfono, dirección, ciudad, provincia, contacto de referencia, email y contraseña.",
                 "error",
             )
             return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR)

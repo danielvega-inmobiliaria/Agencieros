@@ -34,8 +34,8 @@
           <option value="{{ p }}" {{ "selected" if prev.get('provincia') == p else "" }}>{{ p }}</option>
           {% endfor %}
         </select>
-        <label>Contacto de referencia (opcional)</label>
-        <input type="text" name="contacto_referencia" value="{{ prev.get('contacto_referencia', '') }}" placeholder="Nombre y cargo, ej: Juan Pérez (dueño)">
+        <label>Contacto de referencia</label>
+        <input type="text" name="contacto_referencia" required value="{{ prev.get('contacto_referencia', '') }}" placeholder="Nombre y cargo, ej: Juan Pérez (dueño)">
         <label>Contraseña (mínimo 6 caracteres)</label>
         <input type="password" name="password" required>
         <label>Repetir contraseña</label>
