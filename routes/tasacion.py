@@ -8,7 +8,13 @@ bp = Blueprint("tasacion", __name__, url_prefix="/tasacion")
 # quien corre la Tasación como Paso 3 del flujo unificado "Toma y tasación".
 FACTOR_MECANICO = {"Excelente": 1.00, "Bueno": 0.95, "Regular": 0.85, "Malo": 0.70}
 FACTOR_ESTETICO = {"Excelente": 1.00, "Bueno": 0.97, "Regular": 0.90, "Malo": 0.80}
-MARGEN_OBJETIVO = 0.15  # 15% de ganancia esperada sobre el valor de referencia
+# % de ganancia esperada sobre el valor de referencia -- hasta el
+# 21/09/2026 era un valor fijo para todas las tasaciones de todas las
+# agencias. Ahora es solo el DEFAULT: cada agencia puede configurar el
+# suyo en Admin (`agencia_config.margen_objetivo_pct`) y además se puede
+# pisar por toma puntual, evaluando ese negocio en particular (ver
+# `_margen_objetivo_para` en routes/tomas.py).
+MARGEN_OBJETIVO_DEFAULT = 0.15
 
 
 @bp.route("/", methods=["GET", "POST"])

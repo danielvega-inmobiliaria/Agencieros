@@ -5,8 +5,8 @@ from urllib.parse import quote_plus
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, session
 
-from database import query, execute
-from routes.tasacion import FACTOR_MECANICO, FACTOR_ESTETICO, MARGEN_OBJETIVO
+from database import query, execute, obtener_config_agencia
+from routes.tasacion import FACTOR_MECANICO, FACTOR_ESTETICO, MARGEN_OBJETIVO_DEFAULT
 from storage import uploads_dir
 
 bp = Blueprint("tomas", __name__, url_prefix="/tomas")
@@ -318,12 +318,27 @@ def datos_alta_stock_de_toma(toma_id):
     return dict(parse_qsl(urlparse(url).query))
 
 
+def _margen_objetivo_agencia(agencia_id):
+    """% de ganancia esperada default de la agencia (21/09/2026, pedido de
+    Daniel, configurable desde Admin) -- como fracción (0.15), igual
+    formato que MARGEN_OBJETIVO_DEFAULT. Si la agencia todavía no cargó
+    nada en Admin, sigue el 15% de siempre."""
+    config = obtener_config_agencia(agencia_id)
+    valor = config.get("margen_objetivo_pct")
+    return valor if valor is not None else MARGEN_OBJETIVO_DEFAULT
+
+
 def _tasacion_con_extra(tasacion_row):
     """Agrega a una fila de `tasaciones` el % de beneficio (margen esperado
     sobre el precio de toma) y la fecha ya formateada, para no repetir esta
     cuenta en los templates. `riesgo` se sigue guardando en la tabla pero ya
     no se calcula ni se muestra en ningún lado (se sacó del panel de
-    Resultado a pedido de Daniel)."""
+    Resultado a pedido de Daniel).
+
+    `margen_objetivo_pct_num` (21/09/2026) es el % objetivo que se usó de
+    verdad en ESTA tasación puntual, como número (15, no 0.15) -- para
+    tasaciones viejas (antes de este cambio) queda en el 15% default,
+    porque en su momento no había otra cosa."""
     if not tasacion_row:
         return None
     t = dict(tasacion_row)
@@ -331,6 +346,8 @@ def _tasacion_con_extra(tasacion_row):
     margen = t.get("margen_esperado") or 0
     t["porcentaje_beneficio"] = round((margen / precio) * 100, 1) if precio else 0
     t["fecha_fmt"] = _formatear_fecha(t.get("created_at"))
+    margen_objetivo = t.get("margen_objetivo_pct")
+    t["margen_objetivo_pct_num"] = round((margen_objetivo if margen_objetivo is not None else MARGEN_OBJETIVO_DEFAULT) * 100, 1)
     return t
 
 
@@ -747,6 +764,12 @@ def tasacion(toma_id):
     links_comparables = _links_comparables(toma["marca"], toma["modelo"], toma["version"], toma["anio"])
     puntos_a_reparar = _puntos_a_reparar(toma)
     danios_por_vista = _agrupar_danios_por_vista([m for m in marcadores if m["costo_reparacion"]])
+    # % de ganancia esperada (21/09/2026, pedido de Daniel): sugerido = el
+    # default configurado en Admin para esta agencia (o 15% si no cargó
+    # nada), pero se puede pisar acá mismo evaluando el negocio de esta
+    # toma en particular -- lo que se cargue queda guardado en la propia
+    # tasación, no cambia el default de la agencia.
+    margen_objetivo_sugerido_pct = round(_margen_objetivo_agencia(toma["agencia_id"]) * 100, 1)
 
     es_nueva = False
 
@@ -761,9 +784,14 @@ def tasacion(toma_id):
         # desglosada en el panel "Qué hay que reparar".
         gastos_estimados = gastos_estimados_sugerido
 
+        try:
+            margen_objetivo_pct = float(f.get("margen_objetivo_pct")) / 100
+        except (TypeError, ValueError):
+            margen_objetivo_pct = _margen_objetivo_agencia(toma["agencia_id"])
+
         factor = FACTOR_MECANICO[estado_mecanico] * FACTOR_ESTETICO[estado_estetico]
         valor_ajustado = valor_referencia * factor
-        precio_max_recomendado = valor_ajustado - gastos_estimados - (valor_referencia * MARGEN_OBJETIVO)
+        precio_max_recomendado = valor_ajustado - gastos_estimados - (valor_referencia * margen_objetivo_pct)
         margen_esperado = valor_ajustado - precio_max_recomendado - gastos_estimados
 
         # `riesgo` se sigue calculando y guardando (por si sirve a futuro para
@@ -781,12 +809,12 @@ def tasacion(toma_id):
         execute(
             """INSERT INTO tasaciones
                (toma_id, marca, modelo, version, anio, valor_referencia, estado_mecanico, estado_estetico,
-                gastos_estimados, precio_max_recomendado, riesgo, margen_esperado, agencia_id)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                gastos_estimados, precio_max_recomendado, riesgo, margen_esperado, margen_objetivo_pct, agencia_id)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 toma_id, toma["marca"], toma["modelo"], toma["version"], toma["anio"],
                 valor_referencia, estado_mecanico, estado_estetico, gastos_estimados,
-                round(precio_max_recomendado), riesgo, round(margen_esperado), toma["agencia_id"],
+                round(precio_max_recomendado), riesgo, round(margen_esperado), margen_objetivo_pct, toma["agencia_id"],
             ),
         )
         flash("Tasación registrada.", "success")
@@ -822,6 +850,7 @@ def tasacion(toma_id):
         estado_estetico_sugerido=estado_estetico_sugerido,
         valor_referencia_sugerido=valor_referencia_sugerido,
         gastos_estimados_sugerido=gastos_estimados_sugerido,
+        margen_objetivo_sugerido_pct=margen_objetivo_sugerido_pct,
         costo_puntos_tecnicos=costo_puntos_tecnicos,
         costo_danios_visuales=costo_danios_visuales,
         links_comparables=links_comparables,

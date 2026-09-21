@@ -924,6 +924,32 @@ def _migrar_financiaciones_permuta(conn):
             conn.execute(f"ALTER TABLE financiaciones ADD COLUMN {columna} {tipo}")
 
 
+def _migrar_agencia_config_contacto_margen(conn):
+    """Dos campos nuevos en Admin (21/09/2026, pedido de Daniel):
+    `nombre_contacto` (la persona a la que llamar, separado del nombre
+    comercial de la agencia -- se usa al publicar en la Red, antes faltaba
+    del todo) y `margen_objetivo_pct` (el % de ganancia esperada default
+    para la Tasación, configurable por agencia en vez de quedar fijo en el
+    15% hardcodeado de MARGEN_OBJETIVO -- se puede seguir pisando por toma
+    puntual, ver `_migrar_tasaciones_margen_objetivo`)."""
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(agencia_config)")]
+    if "nombre_contacto" not in cols:
+        conn.execute("ALTER TABLE agencia_config ADD COLUMN nombre_contacto TEXT")
+    if "margen_objetivo_pct" not in cols:
+        conn.execute("ALTER TABLE agencia_config ADD COLUMN margen_objetivo_pct REAL")
+
+
+def _migrar_tasaciones_margen_objetivo(conn):
+    """Guarda qué % de ganancia esperada se usó en cada Tasación puntual
+    (21/09/2026) -- antes era siempre el mismo 15% hardcodeado y no quedaba
+    registrado en ningún lado; ahora se puede pisar por toma (evaluando el
+    negocio caso a caso) y conviene que quede en la fila, no solo el
+    resultado ya convertido a pesos (`margen_esperado`)."""
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(tasaciones)")]
+    if "margen_objetivo_pct" not in cols:
+        conn.execute("ALTER TABLE tasaciones ADD COLUMN margen_objetivo_pct REAL")
+
+
 def _migrar_agencia_config_ciudad_provincia(conn):
     """Ubicación estructurada (18/09/2026, Panel de Agencias): Ciudad y
     Provincia como columnas separadas de `agencia_config`, además de la
@@ -1080,6 +1106,8 @@ def init_db():
     _migrar_multi_tenant_agencias(conn)
     _migrar_agencia_config_multi_tenant(conn)
     _migrar_agencia_config_ciudad_provincia(conn)
+    _migrar_agencia_config_contacto_margen(conn)
+    _migrar_tasaciones_margen_objetivo(conn)
     _migrar_agencias_ultima_actividad(conn)
     _migrar_agencias_contacto_referencia(conn)
     _migrar_financiaciones_permuta(conn)
@@ -1158,6 +1186,14 @@ _CONFIG_AGENCIA_DEFAULT = {
     "instagram": None,
     "facebook": None,
     "sitio_web": None,
+    # Nuevos 21/09/2026: nombre_contacto (persona a la que llamar, separado
+    # del nombre comercial -- se usa al publicar en la Red) y
+    # margen_objetivo_pct (% de ganancia esperada default para la Tasación,
+    # se puede seguir pisando por toma puntual). None = todavía no
+    # configurado -- MARGEN_OBJETIVO_DEFAULT en routes/tasacion.py es el
+    # 15% de siempre.
+    "nombre_contacto": None,
+    "margen_objetivo_pct": None,
 }
 
 
