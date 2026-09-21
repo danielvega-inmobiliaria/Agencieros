@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 21/09/2026 — 03:35 ART (Dashboard multi-tenant + campos obligatorios en el registro)_
+_Última actualización: 21/09/2026 — 08:26 ART (video de presentación en Ingresar y Registro)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -107,6 +107,16 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 21/09/2026 (mañana) — Video de presentación en Ingresar y en Registro
+
+- **Qué se hizo:** el video que subió Daniel (`VIDEO PRESENTACION.mp4`: 10 s, 832×464, H.264 + AAC, ~1,9 MB, sin texto ni logo — dos autos en una ruta de montaña) se muestra en `templates/auth/login.html` y `templates/auth/registro.html` mediante el parcial nuevo `templates/auth/_video.html`. Verificar código (`verificar.html`) no lleva video.
+- **Archivos nuevos:** `static/video/presentacion.mp4` (remuxado con `faststart`, sin recodificar: arranca sin esperar la descarga completa), `static/video/presentacion_poster.jpg` (cuadro que se ve mientras carga) y el parcial. El CSS quedó al final de `static/css/style.css` (clases `.auth-wrap`, `.auth-brand`, `.auth-video`, `.auth-panel`).
+- **Comportamiento:** arranca solo, **sin sonido** (los navegadores no dejan iniciar con audio), en loop y con controles para pausar/activar el sonido/pantalla completa; `playsinline` evita que el iPhone lo abra a pantalla completa; si el sistema tiene activado "reducir movimiento" no arranca solo. Los archivos de `static/` son públicos, así que se ve sin haber iniciado sesión.
+- **Diseño:** en celu, una sola columna (marca → video → formulario). En compu (≥ 900 px) el video queda a la izquierda y la marca + formulario a la derecha; en Registro, que es largo, el video queda fijo (sticky) mientras se scrollea. Revisado con capturas en 1280×800 y 390×844, sin scroll horizontal.
+- **Probado:** `test_client()` (200 en ambas pantallas sin sesión, el video y el póster se sirven sin login, soporta `Range`/206 que necesita Safari/iPhone, el resto de la app sigue pidiendo login) y las 42 pruebas de la sesión anterior siguen verdes. **No probado** en un iPhone/Android real ni con la conexión de Railway.
+- **Ojo:** en la raíz del repo quedó una copia suelta `VIDEO PRESENTACION.mp4` (sin trackear, ~2 MB): no hace falta commitearla, se puede borrar o guardar fuera del repo. Para cambiar el video más adelante basta reemplazar `static/video/presentacion.mp4` (los navegadores pueden mostrar el viejo por caché un rato).
+- **Cluster:** sin archivo HUB en la raíz de `03_AUTOMOTOR`; no afecta a otros proyectos.
 
 ### Sesión 21/09/2026 (madrugada) — Registro con datos obligatorios y Dashboard multi-tenant
 

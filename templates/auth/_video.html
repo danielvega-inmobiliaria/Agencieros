@@ -1,0 +1,22 @@
+{# Video de presentación de AGENCIEROS (21/09/2026): se muestra en Ingresar y en Registro.
+   Autoplay silenciado + loop + controles (el navegador no deja arrancar con sonido; con
+   los controles se activa). `playsinline` evita que el iPhone lo abra a pantalla completa. #}
+<div class="auth-video">
+  <video autoplay muted loop playsinline controls preload="auto"
+         poster="{{ url_for('static', filename='video/presentacion_poster.jpg') }}"
+         aria-label="Video de presentación de AGENCIEROS">
+    <source src="{{ url_for('static', filename='video/presentacion.mp4') }}" type="video/mp4">
+  </video>
+</div>
+<script>
+  // Si la persona pidió menos movimiento en su sistema, el video no arranca solo.
+  (function () {
+    try {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        var v = document.querySelector(".auth-video video");
+        v.removeAttribute("autoplay");
+        v.pause();
+      }
+    } catch (e) {}
+  })();
+</script>
