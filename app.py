@@ -14,6 +14,14 @@ LANDING_HOSTS = {"agencieros.net.ar", "www.agencieros.net.ar"}
 APP_URL = os.environ.get("APP_URL", "https://app.agencieros.net.ar").rstrip("/")
 LANDING_URL = os.environ.get("LANDING_URL", "https://agencieros.net.ar").rstrip("/")
 
+# Meta Pixel (21/09/2026) -- ver 05_MARKETING/META_ADS/CAMPANA_AGENCIEROS.md.
+# Sin META_PIXEL_ID cargada en el entorno, el Pixel simplemente no se
+# imprime en ningun template (ver templates/partials/meta_pixel.html):
+# se puede pushear este codigo ya mismo y activar el Pixel despues nomas
+# cargando la variable en Railway, sin otro deploy.
+META_PIXEL_ID = os.environ.get("META_PIXEL_ID", "").strip()
+META_DOMAIN_VERIFICATION = os.environ.get("META_DOMAIN_VERIFICATION", "").strip()
+
 
 def _es_host_landing():
     host = (request.host or "").split(":")[0].lower()
@@ -84,6 +92,20 @@ def create_app():
     @app.context_processor
     def _inject_puede_ver_todo():
         return {"puede_ver_todo": session.get("agencia_id") == 1}
+
+    @app.context_processor
+    def _inject_meta_pixel():
+        return {"meta_pixel_id": META_PIXEL_ID, "meta_domain_verification": META_DOMAIN_VERIFICATION}
+
+    @app.context_processor
+    def _inject_fb_eventos():
+        # Eventos de conversion del Pixel pendientes de disparar (ver
+        # routes/auth.py::verificar y routes/stock.py::nuevo), mostrados
+        # una sola vez en la primera pagina que renderiza despues de la
+        # accion real (nunca por un parametro de URL, que se pierde o se
+        # puede repetir con solo recargar) -- misma logica que resolvio el
+        # problema de PresupuestoPRO con CompleteRegistration.
+        return {"fb_eventos_pendientes": session.pop("fb_eventos_pendientes", [])}
 
     @app.context_processor
     def _inject_matches_pendientes():

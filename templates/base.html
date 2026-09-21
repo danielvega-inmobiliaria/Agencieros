@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Agencieros{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% include "partials/meta_pixel.html" %}
 </head>
 <body>
   <div class="mobile-topbar">
@@ -116,5 +117,8 @@
       });
     })();
   </script>
+{% for evento in fb_eventos_pendientes %}
+<script>if (window.fbq) { fbq('track', '{{ evento }}'); }</script>
+{% endfor %}
 </body>
 </html>

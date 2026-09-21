@@ -172,6 +172,12 @@ def nuevo():
         propiedad = f.get("propiedad", "propio")
         es_consignacion = propiedad == "consignacion"
         agencia_id = session["agencia_id"]
+        # Meta Pixel (21/09/2026): si esta agencia todavia no tenia ningun
+        # vehiculo cargado, este alta es su "primer vehiculo" -- se chequea
+        # ANTES del insert de abajo para no contarlo a el mismo.
+        es_primer_vehiculo = not query(
+            "SELECT 1 FROM vehiculos WHERE agencia_id = ? LIMIT 1", (agencia_id,), one=True
+        )
         vehiculo_id = execute(
             """INSERT INTO vehiculos
                (marca, modelo, version, anio, km, combustible, caja, color, dominio, estado,
@@ -193,6 +199,13 @@ def nuevo():
                 agencia_id,
             ),
         )
+
+        if es_primer_vehiculo:
+            # Evento personalizado de activacion (mas relevante para Meta
+            # Ads que el registro solo, ver CAMPANA_AGENCIEROS.md) -- se
+            # muestra en la primera pagina que carga despues (normalmente
+            # stock.detalle, mas abajo).
+            session["fb_eventos_pendientes"] = session.get("fb_eventos_pendientes", []) + ["PrimerVehiculo"]
 
         # Módulo 3: aviso automático si hay un pedido de cliente que matchea
         # -- escopeado a la propia agencia (18/09/2026): Pedidos todavía no

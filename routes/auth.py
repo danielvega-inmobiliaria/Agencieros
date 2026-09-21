@@ -138,6 +138,13 @@ def verificar():
             session.pop("agencia_pendiente_id", None)
             agencia = query("SELECT * FROM agencias WHERE id = ?", (agencia_id,), one=True)
             _loguear(agencia)
+            # Meta Pixel (21/09/2026): CompleteRegistration se dispara recién
+            # acá, con el mail ya validado -- no por un parametro de URL como
+            # paso en PresupuestoPRO (se perdia al tocar la validacion). La
+            # bandera en sesion la consume el context processor
+            # _inject_fb_eventos de app.py y se muestra una sola vez en la
+            # primera pagina que carga despues (precios.index).
+            session["fb_eventos_pendientes"] = ["CompleteRegistration"]
             flash("Cuenta verificada -- ¡bienvenido a AGENCIEROS!", "success")
             return redirect(url_for("precios.index"))
         flash("Código incorrecto o vencido.", "error")
