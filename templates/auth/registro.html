@@ -20,8 +20,19 @@
         <input type="text" name="nombre_agencia" value="{{ prev.get('nombre_agencia', '') }}" required autofocus>
         <label>Email</label>
         <input type="email" name="email" value="{{ prev.get('email', '') }}" required>
-        <label>Teléfono / WhatsApp (opcional)</label>
-        <input type="text" name="telefono" value="{{ prev.get('telefono', '') }}" placeholder="Solo números, ej: 3413017371">
+        <label>Teléfono / WhatsApp</label>
+        <input type="text" name="telefono" value="{{ prev.get('telefono', '') }}" placeholder="Con código de área, ej: 3413017371" inputmode="tel" required>
+        <label>Dirección</label>
+        <input type="text" name="direccion" value="{{ prev.get('direccion', '') }}" placeholder="Ej: Av. San Martín 1234" required>
+        <label>Ciudad</label>
+        <input type="text" name="ciudad" value="{{ prev.get('ciudad', '') }}" placeholder="Ej: Roldán" required>
+        <label>Provincia</label>
+        <select name="provincia" required>
+          <option value="">Elegí tu provincia</option>
+          {% for p in provincias %}
+          <option value="{{ p }}" {{ "selected" if prev.get('provincia') == p else "" }}>{{ p }}</option>
+          {% endfor %}
+        </select>
         <label>Contacto de referencia (opcional)</label>
         <input type="text" name="contacto_referencia" value="{{ prev.get('contacto_referencia', '') }}" placeholder="Nombre y cargo, ej: Juan Pérez (dueño)">
         <label>Contraseña (mínimo 6 caracteres)</label>

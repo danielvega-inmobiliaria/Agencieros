@@ -146,12 +146,22 @@ def efectivo_de_venta(r):
 
 @bp.route("/")
 def index():
+    # Multi-tenant (21/09/2026): TODO lo que se calcula acá sale solo de la
+    # agencia logueada. Vehículos y pedidos filtran por su `agencia_id`; las
+    # ventas, señas y cuotas llegan siempre a través de un vehículo propio o
+    # con su propio filtro (los planes de Financiación todavía pueden tener
+    # agencia_id NULL = agencia 1, de ahí el COALESCE).
+    agencia_id = session["agencia_id"]
     stock_counts = {
         row["estado"]: row["c"]
-        for row in query("SELECT estado, COUNT(*) c FROM vehiculos GROUP BY estado")
+        for row in query(
+            "SELECT estado, COUNT(*) c FROM vehiculos WHERE agencia_id = ? GROUP BY estado",
+            (agencia_id,),
+        )
     }
     pedidos_activos = query(
-        "SELECT COUNT(*) c FROM pedidos_clientes WHERE estado = 'buscando'", one=True
+        "SELECT COUNT(*) c FROM pedidos_clientes WHERE estado = 'buscando' AND agencia_id = ?",
+        (agencia_id,), one=True,
     )["c"]
     # "Ingresos del mes" = efectivo que realmente entró por las ventas de
     # este mes (ver efectivo_de_venta). Cada vehículo cuenta UNA sola vez:
@@ -175,7 +185,9 @@ def index():
            LEFT JOIN ventas vt ON vt.id = (
                SELECT MAX(v2.id) FROM ventas v2
                WHERE v2.vehiculo_id = v.id AND v2.estado = 'cerrada')
-           WHERE v.estado = 'vendido' AND strftime('%Y-%m', v.fecha_venta) = strftime('%Y-%m', 'now')"""
+           WHERE v.estado = 'vendido' AND v.agencia_id = ?
+             AND strftime('%Y-%m', v.fecha_venta) = strftime('%Y-%m', 'now')""",
+        (agencia_id,),
     )
     ventas_mes = {
         "c": len(ventas_mes_detalle),
@@ -195,7 +207,6 @@ def index():
     # Señas retenidas este mes (19/09/2026): cuando se cae una operación y
     # la agencia se queda con la seña, ese efectivo es un ingreso del mes en
     # que se decide retenerla. Las devueltas no cambian nada.
-    agencia_id = session["agencia_id"]
     ventas_mes["senas_retenidas"] = round(
         query(
             """SELECT COALESCE(SUM(m), 0) t FROM (
@@ -218,7 +229,8 @@ def index():
     from routes.stock import _permutas_pendientes
     permutas_pendientes = _permutas_pendientes(agencia_id)
     gastos_en_reparacion = query(
-        "SELECT COALESCE(SUM(gastos), 0) c FROM vehiculos WHERE estado = 'en_reparacion'", one=True
+        "SELECT COALESCE(SUM(gastos), 0) c FROM vehiculos WHERE estado = 'en_reparacion' AND agencia_id = ?",
+        (agencia_id,), one=True,
     )["c"]
     # Mismo universo que el resumen de Financiación (solo planes activos),
     # pero acá se separa lo pendiente en 2: "Por cobrar" (cuota que todavía
@@ -227,7 +239,8 @@ def index():
     cuotas_activas = query(
         """SELECT fc.monto, fc.monto_pagado, fc.fecha_vencimiento, fc.estado
            FROM financiacion_cuotas fc JOIN financiaciones f ON f.id = fc.financiacion_id
-           WHERE f.estado = 'activo'"""
+           WHERE f.estado = 'activo' AND COALESCE(f.agencia_id, 1) = ?""",
+        (agencia_id,),
     )
     hoy = str(date.today())
     cobrado = sum(c["monto_pagado"] or 0 for c in cuotas_activas)

@@ -131,8 +131,14 @@ def create_app():
     # y su Tasación guardan `agencia_id`, todas las rutas verifican que la Toma
     # sea de la agencia logueada y las tasaciones ofrecidas como permuta también
     # son solo las propias (routes/tomas.py, routes/stock.py, routes/financiacion.py).
+    # Dashboard salió el 21/09/2026: todos sus números (stock por estado,
+    # pedidos activos, ventas/ingresos/ganancia del mes, señas y permutas por
+    # resolver, gastos en reparación, cuotas) filtran por la agencia logueada
+    # (routes/dashboard.py). Las tarjetas que llevan a Financiación/Finanzas
+    # (todavía bloqueadas) se ocultan o quedan sin link para las demás
+    # agencias (templates/dashboard.html).
     MODULOS_SOLO_AGENCIA_1 = {
-        "dashboard", "finanzas", "financiacion", "matches", "plataforma",
+        "finanzas", "financiacion", "matches", "plataforma",
     }
 
     @app.before_request
@@ -143,8 +149,8 @@ def create_app():
         if blueprint in MODULOS_SOLO_AGENCIA_1 and session.get("agencia_id") != 1:
             flash(
                 "Este módulo todavía no está habilitado para agencias nuevas -- "
-                "por ahora podés usar Stock, Banco de pedidos, Toma y tasación, Red de Agencieros, "
-                "Consulta de precios y tu Admin.",
+                "por ahora podés usar Dashboard, Stock, Banco de pedidos, Toma y tasación, "
+                "Red de Agencieros, Consulta de precios y tu Admin.",
                 "error",
             )
             return redirect(url_for("red.index"))
