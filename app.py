@@ -13,9 +13,6 @@ from storage import uploads_dir
 LANDING_HOSTS = {"agencieros.net.ar", "www.agencieros.net.ar"}
 APP_URL = os.environ.get("APP_URL", "https://app.agencieros.net.ar").rstrip("/")
 LANDING_URL = os.environ.get("LANDING_URL", "https://agencieros.net.ar").rstrip("/")
-# Número de WhatsApp comercial que se muestra en el pie de la landing (solo
-# dígitos, con 549). Si no está definido, el botón de WhatsApp no se muestra.
-LANDING_WHATSAPP = "".join(ch for ch in os.environ.get("LANDING_WHATSAPP", "") if ch.isdigit())
 
 
 def _es_host_landing():
@@ -198,7 +195,6 @@ def create_app():
             "landing.html",
             app_url=APP_URL if en_landing else "",
             landing_url=LANDING_URL,
-            whatsapp_numero=LANDING_WHATSAPP,
         )
 
     @app.route("/")
