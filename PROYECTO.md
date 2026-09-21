@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 21/09/2026 — 08:26 ART (video de presentación en Ingresar y Registro)_
+_Última actualización: 21/09/2026 — 08:37 ART (video de presentación en Ingresar y Registro + fix de zoom en iPhone)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -115,6 +115,7 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - **Comportamiento:** arranca solo, **sin sonido** (los navegadores no dejan iniciar con audio), en loop y con controles para pausar/activar el sonido/pantalla completa; `playsinline` evita que el iPhone lo abra a pantalla completa; si el sistema tiene activado "reducir movimiento" no arranca solo. Los archivos de `static/` son públicos, así que se ve sin haber iniciado sesión.
 - **Diseño:** en celu, una sola columna (marca → video → formulario). En compu (≥ 900 px) el video queda a la izquierda y la marca + formulario a la derecha; en Registro, que es largo, el video queda fijo (sticky) mientras se scrollea. Revisado con capturas en 1280×800 y 390×844, sin scroll horizontal.
 - **Probado:** `test_client()` (200 en ambas pantallas sin sesión, el video y el póster se sirven sin login, soporta `Range`/206 que necesita Safari/iPhone, el resto de la app sigue pidiendo login) y las 42 pruebas de la sesión anterior siguen verdes. **No probado** en un iPhone/Android real ni con la conexión de Railway.
+- **Fix iPhone (mismo día, tras probar Daniel en Safari):** al tocar Email/Contraseña el iPhone hacía zoom automático (los campos tenían letra de 14 px; iOS agranda todo si es menor a 16 px), y la pantalla quedaba agrandada, cortada a los costados y con la marca AGENCIEROS tapada por la barra de direcciones. En celu (≤ 700 px) los campos de `.auth-panel` pasan a 16 px. La barra de arriba y los botones de abajo (atrás/compartir/recargar) son del propio Safari, no de la app. **Pendiente opcional:** el resto de los formularios de la app tienen el mismo problema en iPhone (`form input` = 14 px); se puede aplicar 16 px solo en iOS con `@supports (-webkit-touch-callout: none)`.
 - **Ojo:** en la raíz del repo quedó una copia suelta `VIDEO PRESENTACION.mp4` (sin trackear, ~2 MB): no hace falta commitearla, se puede borrar o guardar fuera del repo. Para cambiar el video más adelante basta reemplazar `static/video/presentacion.mp4` (los navegadores pueden mostrar el viejo por caché un rato).
 - **Cluster:** sin archivo HUB en la raíz de `03_AUTOMOTOR`; no afecta a otros proyectos.
 

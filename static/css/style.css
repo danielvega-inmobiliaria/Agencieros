@@ -577,3 +577,10 @@ form textarea { min-height: 80px; }
   .auth-brand { align-self: end; }
   .auth-panel { align-self: start; }
 }
+
+/* iPhone (Safari) hace zoom automático al tocar un campo con letra menor a 16px y la
+   pantalla queda agrandada, cortada a los costados y con la marca tapada por la barra
+   del navegador (visto 21/09/2026 en Ingresar). Con 16px en celu el zoom no se dispara. */
+@media (max-width: 700px) {
+  .auth-panel input, .auth-panel select, .auth-panel textarea { font-size: 16px; }
+}
