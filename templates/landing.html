@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AGENCIEROS — La plataforma para agencias de autos</title>
+  <meta name="description" content="Consultá precios de referencia, cargá tu stock, tasá tomas con inspección de 44 puntos, armá fichas para WhatsApp y trabajá en red con otras agencias. Todo desde el celular.">
+  <meta name="theme-color" content="#0b1420">
+  <link rel="canonical" href="{{ landing_url }}/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="AGENCIEROS">
+  <meta property="og:title" content="AGENCIEROS — La plataforma para agencias de autos">
+  <meta property="og:description" content="Precios, stock, toma y tasación, fichas para WhatsApp y una red de agencias. Consultá, tasá, comprá, vendé.">
+  <meta property="og:url" content="{{ landing_url }}/">
+  <meta property="og:image" content="{{ landing_url }}/static/landing/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <style>
+    :root {
+      --bg: #0b1420;
+      --bg-2: #0e192a;
+      --card: #131e2e;
+      --card-2: #1a2740;
+      --gold: #d9a441;
+      --gold-light: #f0c76b;
+      --text: #eef2f7;
+      --dim: #9aa7bb;
+      --green: #3ecf8e;
+      --border: #22314a;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+    img, video { max-width: 100%; }
+    .wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+
+    /* ---------- Botones ---------- */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 13px 24px; border-radius: 12px; font-weight: 700; font-size: 1rem;
+      border: 1px solid transparent; cursor: pointer; transition: transform .15s, background .15s, border-color .15s;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-gold { background: var(--gold); color: #1a1205; }
+    .btn-gold:hover { background: var(--gold-light); }
+    .btn-ghost { background: transparent; color: var(--text); border-color: #34476a; }
+    .btn-ghost:hover { border-color: var(--gold); color: var(--gold-light); }
+    .btn-sm { padding: 9px 16px; font-size: .92rem; border-radius: 10px; }
+
+    /* ---------- Header ---------- */
+    header.top {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(11, 20, 32, .88);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+    .top .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 12px; }
+    .logo { font-weight: 800; letter-spacing: .06em; color: var(--gold-light); font-size: 1.2rem; }
+    .top nav { display: flex; align-items: center; gap: 22px; }
+    .top nav a.link { color: var(--dim); font-size: .95rem; }
+    .top nav a.link:hover { color: var(--text); }
+    .top .actions { display: flex; gap: 10px; }
+
+    /* ---------- Hero ---------- */
+    .hero { padding: 56px 0 24px; position: relative; }
+    .hero::before {
+      content: ""; position: absolute; inset: -10% 0 auto 0; height: 520px; z-index: -1;
+      background: radial-gradient(60% 60% at 70% 20%, rgba(217,164,65,.16), transparent 70%),
+                  radial-gradient(50% 60% at 10% 10%, rgba(62,120,207,.12), transparent 70%);
+    }
+    .hero-grid { display: grid; gap: 36px; align-items: center; }
+    .eyebrow {
+      display: inline-block; font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--gold-light); background: rgba(217,164,65,.12); border: 1px solid rgba(217,164,65,.35);
+      padding: 6px 12px; border-radius: 999px; margin-bottom: 18px;
+    }
+    h1 { font-size: clamp(2.1rem, 6.4vw, 3.6rem); line-height: 1.08; margin: 0 0 18px; letter-spacing: -.02em; }
+    h1 em { font-style: normal; color: var(--gold-light); }
+    .lead { color: var(--dim); font-size: clamp(1.02rem, 2.6vw, 1.2rem); margin: 0 0 28px; max-width: 34em; }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 12px; }
+    .hero-note { margin-top: 14px; color: var(--dim); font-size: .88rem; }
+    .video-frame {
+      border-radius: 18px; overflow: hidden; background: #000; border: 1px solid #2b3d5c;
+      box-shadow: 0 30px 80px rgba(0,0,0,.55), 0 0 0 6px rgba(255,255,255,.03);
+      aspect-ratio: 832 / 464;
+    }
+    .video-frame video { width: 100%; height: 100%; display: block; object-fit: cover; }
+
+    /* ---------- Celulares ---------- */
+    .phone {
+      position: relative; margin: 0; border-radius: 36px; padding: 26px 8px 10px;
+      background: linear-gradient(160deg, #2b3c59, #0d1522);
+      box-shadow: 0 26px 60px rgba(0,0,0,.55), inset 0 0 0 1px #3a4e73;
+    }
+    .phone::before {
+      content: ""; position: absolute; top: 9px; left: 50%; transform: translateX(-50%);
+      width: 30%; height: 10px; border-radius: 8px; background: #05080e;
+    }
+    .phone img { display: block; width: 100%; height: auto; border-radius: 22px; background: var(--bg); }
+
+    .showcase { padding: 40px 0 8px; }
+    .showcase-track {
+      display: flex; gap: 20px; overflow-x: auto; scroll-snap-type: x mandatory;
+      padding: 30px 20px 26px; margin: 0 -20px; scrollbar-width: none;
+    }
+    .showcase-track::-webkit-scrollbar { display: none; }
+    .showcase-item { flex: 0 0 62%; max-width: 260px; scroll-snap-align: center; text-align: center; }
+    .showcase-item .cap { margin-top: 18px; font-weight: 700; }
+    .showcase-item .sub { color: var(--dim); font-size: .88rem; margin-top: 2px; }
+    .hint { text-align: center; color: var(--dim); font-size: .82rem; margin-top: -6px; }
+
+    /* ---------- Tira de funciones ---------- */
+    .strip { background: var(--bg-2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-top: 34px; }
+    .strip-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; }
+    .chip { padding: 22px 12px; text-align: center; border-bottom: 1px solid var(--border); }
+    .chip:nth-child(odd) { border-right: 1px solid var(--border); }
+    .chip:last-child:nth-child(odd) { grid-column: 1 / -1; border-right: 0; }
+    .chip .ico { font-size: 1.7rem; line-height: 1; margin-bottom: 8px; }
+    .chip b { display: block; font-size: .98rem; }
+    .chip span { color: var(--dim); font-size: .84rem; display: block; margin-top: 2px; }
+
+    /* ---------- Secciones ---------- */
+    section.block { padding: 64px 0; }
+    .sec-title { font-size: clamp(1.6rem, 4.6vw, 2.4rem); line-height: 1.15; margin: 0 0 12px; letter-spacing: -.01em; }
+    .sec-lead { color: var(--dim); margin: 0 0 30px; max-width: 38em; }
+    .center { text-align: center; }
+    .center .sec-lead { margin-left: auto; margin-right: auto; }
+
+    .split { display: grid; gap: 34px; align-items: center; }
+    .split .phone { width: min(72vw, 270px); margin: 0 auto; }
+    .ticks { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 10px; }
+    .ticks li { position: relative; padding-left: 28px; color: #d3dbe8; }
+    .ticks li::before {
+      content: "✓"; position: absolute; left: 0; top: 1px; width: 20px; height: 20px; border-radius: 50%;
+      background: rgba(62,207,142,.15); color: var(--green); font-size: .8rem; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .tag {
+      display: inline-block; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+      padding: 3px 9px; border-radius: 999px; vertical-align: middle;
+    }
+    .tag-soon { background: rgba(155,140,240,.15); color: #b9adff; border: 1px solid rgba(155,140,240,.4); }
+    .tag-live { background: rgba(62,207,142,.12); color: var(--green); border: 1px solid rgba(62,207,142,.35); }
+
+    /* ---------- Pasos ---------- */
+    .steps { display: grid; gap: 16px; counter-reset: paso; }
+    .step { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; position: relative; }
+    .step::before {
+      counter-increment: paso; content: counter(paso);
+      display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%;
+      background: var(--gold); color: #1a1205; font-weight: 800; margin-bottom: 14px;
+    }
+    .step h3 { margin: 0 0 6px; font-size: 1.15rem; }
+    .step p { margin: 0; color: var(--dim); }
+
+    /* ---------- Módulos ---------- */
+    .mods { display: grid; gap: 14px; grid-template-columns: 1fr; }
+    .mod { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 22px; }
+    .mod .ico { font-size: 1.6rem; margin-bottom: 8px; }
+    .mod h3 { margin: 0 0 6px; font-size: 1.08rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .mod p { margin: 0; color: var(--dim); font-size: .95rem; }
+
+    /* ---------- CTA final ---------- */
+    .final {
+      margin: 20px 0 64px; border-radius: 24px; padding: 44px 24px; text-align: center;
+      background: radial-gradient(80% 120% at 50% 0%, rgba(217,164,65,.22), transparent 70%), var(--card);
+      border: 1px solid #34476a;
+    }
+    .final h2 { margin: 0 0 10px; font-size: clamp(1.6rem, 4.6vw, 2.3rem); line-height: 1.15; }
+    .final p { color: var(--dim); margin: 0 auto 26px; max-width: 32em; }
+    .final .cta-row { justify-content: center; }
+
+    footer { border-top: 1px solid var(--border); padding: 28px 0 40px; color: var(--dim); font-size: .9rem; }
+    footer .wrap { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: center; justify-content: space-between; }
+    footer a:hover { color: var(--gold-light); }
+    footer .flinks { display: flex; gap: 20px; flex-wrap: wrap; }
+
+    /* ---------- Compu ---------- */
+    @media (min-width: 720px) {
+      .strip-grid { grid-template-columns: repeat(5, 1fr); }
+      .chip { border-bottom: 0; border-right: 1px solid var(--border); }
+      .chip:nth-child(odd) { border-right: 1px solid var(--border); }
+      .chip:last-child { border-right: 0; }
+      .steps { grid-template-columns: repeat(3, 1fr); }
+      .mods { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (min-width: 960px) {
+      .hero { padding: 84px 0 36px; }
+      .hero-grid { grid-template-columns: 1.02fr 1fr; gap: 56px; }
+      .split { grid-template-columns: 1fr 1fr; gap: 72px; }
+      .split.rev .split-media { order: -1; }
+      .split .phone { width: 280px; }
+      .mods { grid-template-columns: repeat(3, 1fr); }
+      .showcase-track { justify-content: center; overflow: visible; padding-top: 40px; gap: 26px; }
+      .showcase-item { flex: 1 1 0; max-width: 214px; }
+      .showcase-item:nth-child(2), .showcase-item:nth-child(4) { transform: translateY(-18px); }
+      .showcase-item:nth-child(3) { transform: translateY(-38px); }
+      .showcase-item:nth-child(3) .phone { box-shadow: 0 34px 80px rgba(0,0,0,.6), 0 0 0 2px rgba(217,164,65,.55), inset 0 0 0 1px #3a4e73; }
+      .hint { display: none; }
+    }
+    @media (max-width: 520px) {
+      .top nav a.link { display: none; }
+      .top .actions .btn-ghost { display: none; }
+      .cta-row .btn { flex: 1 1 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .btn { transition: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="top">
+    <div class="wrap">
+      <a class="logo" href="#inicio">AGENCIEROS</a>
+      <nav>
+        <a class="link" href="#funciones">Funciones</a>
+        <a class="link" href="#como-funciona">Cómo funciona</a>
+        <a class="link" href="#modulos">Módulos</a>
+        <div class="actions">
+          <a class="btn btn-ghost btn-sm" href="{{ app_url }}{{ url_for('auth.login') }}">Ingresar</a>
+          <a class="btn btn-gold btn-sm" href="{{ app_url }}{{ url_for('auth.registro') }}">Registrá tu agencia</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main id="inicio">
+
+    <!-- ===== Hero ===== -->
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <span class="eyebrow">Para agencias de autos usados</span>
+          <h1>Todo el negocio de tu agencia, <em>en el celular.</em></h1>
+          <p class="lead">Consultá el precio de referencia, cargá tu stock, tasá cada toma con inspección de 44 puntos, compartí fichas por WhatsApp y trabajá en red con otras agencias. Consultá, tasá, comprá, vendé.</p>
+          <div class="cta-row">
+            <a class="btn btn-gold" href="{{ app_url }}{{ url_for('auth.registro') }}">Registrá tu agencia</a>
+            <a class="btn btn-ghost" href="{{ app_url }}{{ url_for('auth.login') }}">Ya tengo cuenta</a>
+          </div>
+          <p class="hero-note">Se usa desde el celular o la compu, sin instalar nada.</p>
+        </div>
+        <div class="video-frame">
+          <video autoplay muted loop playsinline controls preload="metadata"
+                 poster="{{ url_for('static', filename='video/presentacion_poster.jpg') }}">
+            <source src="{{ url_for('static', filename='video/presentacion.mp4') }}" type="video/mp4">
+          </video>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Celulares ===== -->
+    <section class="showcase" id="funciones" aria-label="Pantallas de la app">
+      <div class="wrap">
+        <div class="showcase-track">
+          <div class="showcase-item">
+            <figure class="phone"><img src="{{ url_for('static', filename='landing/m-precios.webp') }}" width="540" height="1169" alt="Consulta de precios: resultado y historial de valores de referencia"></figure>
+            <div class="cap">Precios al instante</div>
+            <div class="sub">Valor de referencia e historial por año</div>
+          </div>
+          <div class="showcase-item">
+            <figure class="phone"><img src="{{ url_for('static', filename='landing/m-stock.webp') }}" width="540" height="1169" alt="Listado de stock de vehículos con foto, precio y estado" loading="lazy"></figure>
+            <div class="cap">Stock ordenado</div>
+            <div class="sub">Fotos, estados y filtros</div>
+          </div>
+          <div class="showcase-item">
+            <figure class="phone"><img src="{{ url_for('static', filename='landing/m-tasacion.webp') }}" width="540" height="1169" alt="Tasación de una toma con qué hay que reparar y resultado" loading="lazy"></figure>
+            <div class="cap">Toma y tasación</div>
+            <div class="sub">Inspección de 44 puntos</div>
+          </div>
+          <div class="showcase-item">
+            <figure class="phone"><img src="{{ url_for('static', filename='landing/m-ficha.webp') }}" width="540" height="1169" alt="Ficha comercial de un vehículo con fotos, datos y equipamiento" loading="lazy"></figure>
+            <div class="cap">Ficha para WhatsApp</div>
+            <div class="sub">Un link, sin que el cliente se registre</div>
+          </div>
+          <div class="showcase-item">
+            <figure class="phone"><img src="{{ url_for('static', filename='landing/m-red.webp') }}" width="540" height="1169" alt="Red de Agencieros: ofertas y búsquedas de otras agencias" loading="lazy"></figure>
+            <div class="cap">Red de Agencieros</div>
+            <div class="sub">Ofrecé y buscá entre colegas</div>
+          </div>
+        </div>
+        <p class="hint">Deslizá para ver más →</p>
+      </div>
+    </section>
+
+    <!-- ===== Tira ===== -->
+    <div class="strip">
+      <div class="wrap strip-grid">
+        <div class="chip"><div class="ico">💲</div><b>Consulta de precios</b><span>Referencia en segundos</span></div>
+        <div class="chip"><div class="ico">🚗</div><b>Stock y ventas</b><span>Con seña y permuta</span></div>
+        <div class="chip"><div class="ico">🔍</div><b>Toma y tasación</b><span>Inspección de 44 puntos</span></div>
+        <div class="chip"><div class="ico">💬</div><b>Fichas por WhatsApp</b><span>Listas para compartir</span></div>
+        <div class="chip"><div class="ico">🤝</div><b>Red de agencias</b><span>Pedidos y ofertas</span></div>
+      </div>
+    </div>
+
+    <!-- ===== Tasación ===== -->
+    <section class="block">
+      <div class="wrap split">
+        <div>
+          <h2 class="sec-title">Tomá el auto sabiendo cuánto vale y qué le falta.</h2>
+          <p class="sec-lead">Cuando un cliente te trae su auto, la app te guía por toda la toma y te devuelve un número para negociar con respaldo.</p>
+          <ul class="ticks">
+            <li>Datos del vehículo, service y códigos de falla en un solo lugar.</li>
+            <li>Fotos de cada vista del auto, con los golpes y rayones marcados sobre la imagen.</li>
+            <li>Inspección de 44 puntos: cada punto en bueno, regular o malo, con su costo estimado.</li>
+            <li>Tasación con el precio de referencia, los gastos de reparación y el margen que querés ganar.</li>
+            <li>Con un toque, la toma pasa a tu stock.</li>
+          </ul>
+        </div>
+        <div class="split-media">
+          <figure class="phone"><img src="{{ url_for('static', filename='landing/m-tasacion.webp') }}" width="540" height="1169" alt="Pantalla de tasación con resultado" loading="lazy"></figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Financiación ===== -->
+    <section class="block" style="background: var(--bg-2); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+      <div class="wrap split rev">
+        <div>
+          <span class="tag tag-soon">Próximamente para agencias nuevas</span>
+          <h2 class="sec-title" style="margin-top:14px;">Financiación propia, con el simulador a mano.</h2>
+          <p class="sec-lead">Armá el plan de cuotas con tu cliente en el momento: monto, cantidad de cuotas, periodicidad y tasa. La app calcula la cuota, el total y el interés.</p>
+          <ul class="ticks">
+            <li>Cuota calculada y cuota aplicada redondeada.</li>
+            <li>Cobro mensual o semanal, con la fecha de la primera cuota.</li>
+            <li>Seguimiento de cuotas cobradas, por cobrar y vencidas.</li>
+          </ul>
+        </div>
+        <div class="split-media">
+          <figure class="phone"><img src="{{ url_for('static', filename='landing/m-fin.webp') }}" width="540" height="1169" alt="Simulador de financiación propia con cuota calculada" loading="lazy"></figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Dashboard ===== -->
+    <section class="block">
+      <div class="wrap split">
+        <div>
+          <h2 class="sec-title">Tu agencia de un vistazo.</h2>
+          <p class="sec-lead">Un tablero con lo que importa cada día, sin planillas ni cuentas a mano.</p>
+          <ul class="ticks">
+            <li>Stock por estado: disponible, por ingresar, en reparación, señado.</li>
+            <li>Pedidos activos y ventas del mes.</li>
+            <li>Gastos en reparación y ganancia del mes.</li>
+          </ul>
+        </div>
+        <div class="split-media">
+          <figure class="phone"><img src="{{ url_for('static', filename='landing/m-dashboard.webp') }}" width="540" height="900" alt="Dashboard con stock por estado, ventas y gastos" loading="lazy"></figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Cómo funciona ===== -->
+    <section class="block" id="como-funciona" style="background: var(--bg-2); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+      <div class="wrap">
+        <div class="center">
+          <h2 class="sec-title">Empezá en tres pasos.</h2>
+          <p class="sec-lead">Sin instalar nada y sin cargar todo de golpe.</p>
+        </div>
+        <div class="steps">
+          <div class="step"><h3>Registrá tu agencia</h3><p>Nombre, teléfono, dirección y un email. Te mandamos un código para verificarlo.</p></div>
+          <div class="step"><h3>Cargá tu stock</h3><p>Sumá tus vehículos con fotos y precio. Tu ficha y tu WhatsApp quedan listos para compartir.</p></div>
+          <div class="step"><h3>Tasá, vendé y conectate</h3><p>Hacé tomas con inspección, seguí tus ventas y publicá lo que ofrecés o buscás en la Red.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Módulos ===== -->
+    <section class="block" id="modulos">
+      <div class="wrap">
+        <div class="center">
+          <h2 class="sec-title">Lo que trae AGENCIEROS.</h2>
+          <p class="sec-lead">Un sistema hecho por y para agencieros. Los módulos se van habilitando para cada agencia nueva a medida que se prueban.</p>
+        </div>
+        <div class="mods">
+          <div class="mod"><div class="ico">💲</div><h3>Consulta de precios <span class="tag tag-live">Disponible</span></h3><p>Valor de referencia e historial de variación por año, con el dato de fuente y fecha.</p></div>
+          <div class="mod"><div class="ico">🚗</div><h3>Stock <span class="tag tag-live">Disponible</span></h3><p>Tus vehículos con fotos, estado y precio. Ventas con seña y permuta.</p></div>
+          <div class="mod"><div class="ico">🔍</div><h3>Toma, inspección y tasación <span class="tag tag-live">Disponible</span></h3><p>Inspección de 44 puntos y tasación con gastos y margen.</p></div>
+          <div class="mod"><div class="ico">💬</div><h3>Ficha comercial <span class="tag tag-live">Disponible</span></h3><p>Página pública de cada auto para mandar por WhatsApp o compartir en historias.</p></div>
+          <div class="mod"><div class="ico">📋</div><h3>Banco de pedidos <span class="tag tag-live">Disponible</span></h3><p>Anotá lo que busca cada cliente, con marca, modelo y presupuesto, y no se te pierde ningún pedido.</p></div>
+          <div class="mod"><div class="ico">🤝</div><h3>Red de Agencieros <span class="tag tag-live">Disponible</span></h3><p>Ofertas y búsquedas entre agencias para mover más autos, con contacto directo.</p></div>
+          <div class="mod"><div class="ico">📊</div><h3>Dashboard <span class="tag tag-live">Disponible</span></h3><p>Stock, pedidos, ventas, gastos y ganancia del mes en una sola pantalla.</p></div>
+          <div class="mod"><div class="ico">🏦</div><h3>Financiación propia <span class="tag tag-soon">Próximamente</span></h3><p>Simulador de cuotas y seguimiento de cobros de tus planes.</p></div>
+          <div class="mod"><div class="ico">🎯</div><h3>Matches <span class="tag tag-soon">Próximamente</span></h3><p>Cruce automático entre lo que buscan tus clientes y lo que hay en stock.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CTA final ===== -->
+    <div class="wrap">
+      <div class="final">
+        <h2>Probá AGENCIEROS con tu agencia.</h2>
+        <p>Registrate en un minuto y empezá a cargar tu stock hoy.</p>
+        <div class="cta-row">
+          <a class="btn btn-gold" href="{{ app_url }}{{ url_for('auth.registro') }}">Registrá tu agencia</a>
+          <a class="btn btn-ghost" href="{{ app_url }}{{ url_for('auth.login') }}">Ingresar</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div><b style="color:var(--gold-light); letter-spacing:.06em;">AGENCIEROS</b> · Consultá, tasá, comprá, vendé.</div>
+      <div class="flinks">
+        <a href="{{ app_url }}{{ url_for('auth.login') }}">Ingresar</a>
+        <a href="{{ app_url }}{{ url_for('auth.registro') }}">Registrarse</a>
+        {% if whatsapp_numero %}<a href="https://wa.me/{{ whatsapp_numero }}?text=Hola!%20Quiero%20conocer%20AGENCIEROS">Escribinos por WhatsApp</a>{% endif %}
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

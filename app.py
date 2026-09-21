@@ -1,9 +1,26 @@
 import json
 import os
-from flask import Flask, redirect, url_for, session, flash, send_from_directory
+from flask import Flask, redirect, url_for, session, flash, send_from_directory, request, render_template, Response
 
 from database import init_db, close_db, obtener_catalogo
 from storage import uploads_dir
+
+# Landing pública (21/09/2026): agencieros.net.ar y www.agencieros.net.ar
+# apuntan a esta misma app (mismo Railway, mismo patrón que PresupuestoPRO) y
+# muestran la presentación del producto; la app en sí vive en
+# app.agencieros.net.ar (variable APP_URL). Cualquier otra ruta pedida en el
+# dominio raíz (/auth/login, /stock, etc.) se redirige a la app.
+LANDING_HOSTS = {"agencieros.net.ar", "www.agencieros.net.ar"}
+APP_URL = os.environ.get("APP_URL", "https://app.agencieros.net.ar").rstrip("/")
+LANDING_URL = os.environ.get("LANDING_URL", "https://agencieros.net.ar").rstrip("/")
+# Número de WhatsApp comercial que se muestra en el pie de la landing (solo
+# dígitos, con 549). Si no está definido, el botón de WhatsApp no se muestra.
+LANDING_WHATSAPP = "".join(ch for ch in os.environ.get("LANDING_WHATSAPP", "") if ch.isdigit())
+
+
+def _es_host_landing():
+    host = (request.host or "").split(":")[0].lower()
+    return host in LANDING_HOSTS
 
 
 def create_app():
@@ -44,6 +61,19 @@ def create_app():
     app.register_blueprint(matches_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(plataforma_bp)
+
+    @app.before_request
+    def _landing_host():
+        # En el dominio raíz solo se sirven la landing, robots.txt y los
+        # estáticos; el resto se manda a la app (mismo path y query).
+        if not _es_host_landing():
+            return None
+        if request.endpoint in {"index", "inicio", "robots_txt", "static"}:
+            return None
+        destino = APP_URL + request.full_path
+        if destino.endswith("?"):
+            destino = destino[:-1]
+        return redirect(destino, code=302)
 
     @app.context_processor
     def _inject_catalogo():
@@ -88,6 +118,10 @@ def create_app():
         publicas = {
             "auth.login", "auth.registro", "auth.verificar", "auth.reenviar_codigo",
             "static", "stock.ficha",
+            # Landing pública (21/09/2026): "index" decide solo según el host
+            # (landing en agencieros.net.ar, login en la app) e "inicio" es
+            # la misma landing para poder verla desde la app.
+            "index", "inicio", "robots_txt",
         }
         if request.endpoint and request.endpoint not in publicas and "agencia_id" not in session:
             return redirect(url_for("auth.login"))
@@ -155,10 +189,37 @@ def create_app():
             )
             return redirect(url_for("red.index"))
 
+    def _render_landing():
+        # En el dominio raíz los botones apuntan a la app (URL absoluta); si
+        # se ve la landing desde la propia app (/inicio) alcanzan los links
+        # relativos.
+        en_landing = _es_host_landing()
+        return render_template(
+            "landing.html",
+            app_url=APP_URL if en_landing else "",
+            landing_url=LANDING_URL,
+            whatsapp_numero=LANDING_WHATSAPP,
+        )
+
     @app.route("/")
     def index():
-        # La Consulta de precios es la pantalla principal del producto.
+        if _es_host_landing():
+            return _render_landing()
+        # En la app, la Consulta de precios es la pantalla principal.
         return redirect(url_for("precios.index"))
+
+    @app.route("/inicio")
+    def inicio():
+        return _render_landing()
+
+    @app.route("/robots.txt")
+    def robots_txt():
+        if _es_host_landing():
+            cuerpo = "User-agent: *\nAllow: /\n"
+        else:
+            # La app (y las fichas compartidas por WhatsApp) no se indexan.
+            cuerpo = "User-agent: *\nDisallow: /\n"
+        return Response(cuerpo, mimetype="text/plain")
 
     # Intercepta /static/uploads/... para servir las fotos desde el volumen
     # persistente de Railway (storage.uploads_dir()) en vez de la carpeta

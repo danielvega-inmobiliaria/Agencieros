@@ -993,6 +993,29 @@ def vender(vehiculo_id):
     return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
 
+
+def _whatsapp_ar(numero):
+    """Normaliza un teléfono argentino al formato de wa.me (549 + área + número).
+
+    El registro (routes/auth.py) guarda el teléfono como lo tipea la agencia
+    ("3413017371", "0341 301-7371", "+54 9 341 301 7371"...) pero wa.me
+    necesita el número completo, con 549 adelante y sin 0 ni signos. Si ya
+    viene con 549 se deja igual; si viene con 54 pero sin el 9 se lo agrega.
+    Devuelve "" si no hay dígitos.
+    """
+    d = "".join(ch for ch in str(numero or "") if ch.isdigit())
+    if not d:
+        return ""
+    if d.startswith("00"):
+        d = d[2:]
+    if d.startswith("549") and len(d) >= 12:
+        return d
+    if d.startswith("54"):
+        resto = d[2:]
+        return d if resto.startswith("9") else "549" + resto.lstrip("0")
+    return "549" + d.lstrip("0")
+
+
 def _datos_ficha(vehiculo):
     """Todo lo que necesita una ficha comercial (una sola en `ficha`, varias
     en el visor `fichas`): fotos, WhatsApp de la agencia dueña, equipamiento."""
@@ -1008,7 +1031,7 @@ def _datos_ficha(vehiculo):
     # agencia todavía no cargó nada en Admin, cae al default fijo de
     # siempre (pisable con WHATSAPP_COMERCIAL).
     agencia = obtener_config_agencia(vehiculo["agencia_id"] or 1)
-    whatsapp_numero = (
+    whatsapp_numero = _whatsapp_ar(
         agencia.get("telefono")
         or os.environ.get("WHATSAPP_COMERCIAL", "5493413017371").strip()
     )
