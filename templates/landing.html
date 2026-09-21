@@ -137,6 +137,9 @@
 
     .split { display: grid; gap: 44px; align-items: center; }
     .split .phone { width: min(70vw, 268px); margin: 0 auto; }
+    .duo { display: flex; gap: 14px; justify-content: center; align-items: flex-start; }
+    .duo .phone { width: auto; flex: 1 1 0; max-width: 232px; margin: 0; }
+    .duo .phone:nth-child(2) { margin-top: 34px; }
     .ticks { list-style: none; margin: 22px 0 0; padding: 0; display: grid; gap: 10px; }
     .ticks li { position: relative; padding-left: 28px; color: #d3dbe8; }
     .ticks li::before {
@@ -199,6 +202,8 @@
       .split.rev .split-media { order: -1; }
       .mods { grid-template-columns: repeat(3, 1fr); column-gap: 44px; }
       .split .phone { width: 276px; }
+      .duo { gap: 22px; }
+      .split .duo .phone { width: auto; }
       .showcase-track { justify-content: center; overflow: visible; padding-top: 44px; gap: 26px; }
       .showcase-item { flex: 1 1 0; max-width: 212px; }
       .showcase-item:nth-child(2), .showcase-item:nth-child(4) { transform: translateY(-16px); }
@@ -280,7 +285,7 @@
             <div class="sub">Valor de referencia e historial por año</div>
           </div>
           <div class="showcase-item">
-            <figure class="phone"><img src="{{ url_for('static', filename='landing/m-pedidos.webp') }}" width="540" height="1168" alt="Banco de pedidos: lo que busca cada cliente" loading="lazy"></figure>
+            <figure class="phone"><img src="{{ url_for('static', filename='landing/m-pedidos.webp') }}" width="540" height="1169" alt="Banco de pedidos: lo que busca cada cliente" loading="lazy"></figure>
             <div class="cap">Banco de pedidos</div>
             <div class="sub">Lo que busca cada cliente</div>
           </div>
@@ -295,7 +300,7 @@
             <div class="sub">Tu agencia de un vistazo</div>
           </div>
           <div class="showcase-item">
-            <figure class="phone"><img src="{{ url_for('static', filename='landing/m-red.webp') }}" width="540" height="1168" alt="Red de Agencieros: ofertas y búsquedas de otras agencias" loading="lazy"></figure>
+            <figure class="phone"><img src="{{ url_for('static', filename='landing/m-red.webp') }}" width="540" height="1169" alt="Red de Agencieros: ofertas y búsquedas de otras agencias" loading="lazy"></figure>
             <div class="cap">Red de Agencieros</div>
             <div class="sub">Ofrecé y buscá entre colegas</div>
           </div>
@@ -336,11 +341,34 @@
       </div>
     </section>
 
-    <!-- ===== Financiación ===== -->
+    <!-- ===== Stock y ficha ===== -->
     <section class="block alt">
       <div class="wrap split rev">
         <div>
-          <div class="eyebrow">02 &nbsp;Financiación propia</div>
+          <div class="eyebrow">02 &nbsp;Stock y ficha comercial</div>
+          <h2 class="sec-title">Tu stock, listo para mostrar y vender.</h2>
+          <p class="sec-lead">Cargá cada vehículo con sus fotos y su precio. Cada uno tiene su ficha pública para mandar por WhatsApp.</p>
+          <ul class="ticks">
+            <li>Fotos, precio, kilometraje y equipamiento de cada vehículo.</li>
+            <li>Estado de cada unidad: disponible, por ingresar, en reparación, señado o vendido.</li>
+            <li>Ventas con seña y permuta, registradas desde el mismo stock.</li>
+            <li>Ficha comercial con botón de WhatsApp para compartir con el cliente.</li>
+          </ul>
+        </div>
+        <div class="split-media">
+          <div class="duo">
+            <figure class="phone"><img src="{{ url_for('static', filename='landing/m-stock.webp') }}" width="540" height="1169" alt="Stock de vehículos con fotos, precio y estado" loading="lazy"></figure>
+            <figure class="phone"><img src="{{ url_for('static', filename='landing/m-ficha.webp') }}" width="540" height="1169" alt="Ficha comercial de una Toyota Hilux con foto, precio y equipamiento" loading="lazy"></figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Financiación ===== -->
+    <section class="block">
+      <div class="wrap split">
+        <div>
+          <div class="eyebrow">03 &nbsp;Financiación propia</div>
           <h2 class="sec-title">El simulador de cuotas, a mano en el momento de la venta.</h2>
           <p class="sec-lead">Armá el plan con tu cliente: monto, cantidad de cuotas, periodicidad y tasa. La app calcula la cuota, el total y el interés.</p>
           <ul class="ticks">
@@ -358,9 +386,9 @@
 
     <!-- ===== Dashboard ===== -->
     <section class="block">
-      <div class="wrap split">
+      <div class="wrap split rev">
         <div>
-          <div class="eyebrow">03 &nbsp;Dashboard</div>
+          <div class="eyebrow">04 &nbsp;Dashboard</div>
           <h2 class="sec-title">Tu agencia de un vistazo.</h2>
           <p class="sec-lead">Un tablero con lo que importa cada día, sin planillas ni cuentas a mano.</p>
           <ul class="ticks">

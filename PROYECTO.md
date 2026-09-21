@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 21/09/2026 — 15:09 ART (landing rediseñada + revisión de Meta Ads de PresupuestoPRO y plan para Agencieros)_
+_Última actualización: 21/09/2026 — 16:00 ART (landing con fotos y precios nuevos; sección Stock y ficha; plan de Meta Ads)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -107,6 +107,13 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 21/09/2026 (tarde) — Landing rearmada con las fotos y precios de Daniel (Msg 11)
+- Daniel aportó 5 fotos (Hilux 2021 $44.000.000, Ónix LTZ 2020 $16.700.000, Amarok V6 Highline 2021 $38.700.000, Focus SE 2018 $18.500.000, Duster Privilege 2021 $23.400.000). La agencia demo se re-sembró con esas 5 unidades (Focus en reparación para el Dashboard) y los precios de referencia de la demo se alinearon a esos valores. Red y Pedidos se ajustaron a ese nivel de precios. Todo en la base demo (cloud), NO en la app real.
+- Capturas nuevas: Precios (Hilux 4x4 SRV 2021 $44.000.000), Stock, Ficha, Pedidos, Red y Dashboard. `og.jpg` regenerada. La captura de Tasación y la de Financiación no cambiaron.
+- `landing.html`: sección nueva "02 Stock y ficha comercial" con dos celulares (Stock + Ficha); Financiación pasa a 03 y Dashboard a 04.
+- Las fotos de la Amarok (patente "X CROSS Automotores") y del Duster (cartel "STRONG") traían marcas de otras agencias; Daniel las tapó él mismo y se reemplazaron en la captura de Stock (`m-stock.webp`) y en `og.jpg`.
+- Pendiente: Railway (dominios raíz y `www`) + Cloudflare; test de registro completo en producción; Pixel de Meta.
 
 ### Sesión 21/09/2026 (tarde) — Revisión de Meta Ads de PresupuestoPRO y plan para Agencieros (Msg 10)
 - Se leyó `05_MARKETING/META_ADS/` (PROYECTO.md, CAMPANA_PRESUPUESTOPRO, CAMPANA_RETARGETING_PURCHASE, CAMPANA_SEGMENTACION_PERFILES). Resumen: adquisición barata (~$690–1.060 por registro, $3.000/día) pero post-registro casi sin pagos (~234 registros, 2 pagos por llamada); Pixel roto 3 semanas por un parámetro de URL perdido al activar la validación; retargeting a `Purchase` gastó $23.641 con 0 compras porque el evento nunca disparó; campañas desactivadas el 25/08.
