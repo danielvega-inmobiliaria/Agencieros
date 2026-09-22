@@ -6,3 +6,4 @@ venv/
 desktop.ini
 *.db-journal
 static/uploads/
+data/prueba_actividad/
