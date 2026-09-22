@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 21/09/2026 — 20:55 ART (fix nombre de contacto en Red; % de ganancia objetivo configurable; código del Pixel de Meta listo, falta crear el Pixel real en Business Manager)_
+_Última actualización: 22/09/2026 — 13:15 ART (Pixel de Meta creado, dominio verificado y probado en vivo -- funcionando de punta a punta)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -118,6 +118,14 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - **Probado con un script de extremo a extremo** (agencia de prueba nueva sobre una copia de la base, nunca la real): Finanzas/Financiación/Matches devuelven 200 para una agencia distinta de la 1; el simulador de Financiación solo lista vehículos propios; un plan creado por la agencia de prueba queda con su propio `agencia_id`; la agencia 1 NO puede ver ni pagar una cuota del plan de la otra agencia (redirige con "no encontrado"); el buscador matchea año ±1, ignora versión salvo que se tilde "exacta", y ya no usa precio/km.
 - Quedó un archivo de prueba descartable en `.tmp_no/agencieros_test.tar.gz` (una copia de los .py/templates usada para las pruebas, no es parte del código) -- se puede borrar cuando quieras.
 - Pendiente: probar Financiación/Finanzas/Matches con Daniel en producción con una 2da agencia real (no solo la copia de prueba); revisar si Precio/Km deberían seguir sirviendo como filtro visual aunque no matcheen (hoy se sacaron del todo del buscador).
+
+### Sesión 22/09/2026 — Pixel de Meta creado y verificado en Business Manager (Msg 5-20)
+- **Se identificó el Business Manager correcto** ("Presupuestopro", `business_id=1980861642548355`) confirmando dos datos que ya tenía anotados: la cuenta publicitaria `10201021481453334` (aparece como "Daniel Vega", con 6 conjuntos de anuncios -- la real, con fondos) y el Pixel de PresupuestoPRO (`1189868074213923`, "Propiedad de Presupuestopro"). De paso se detectó que hay una segunda cuenta publicitaria vacía ("PresupuestoPRO", `1001936439356177`) sin usar -- queda para cuando Daniel quiera ordenar sus cuentas de Meta.
+- **Pixel "AGENCIEROS Pixel" creado** en Events Manager de ese mismo negocio, conectado a la cuenta publicitaria `10201021481453334`. **ID: `1802434191113191`.**
+- **Dominio `agencieros.net.ar` verificado** en Seguridad de la marca → Dominios (metaetiqueta, código `smuuopzh1ojqv0vllj0bixnitqwr7r`).
+- **Variables cargadas en Railway** (`META_PIXEL_ID=1802434191113191`, `META_DOMAIN_VERIFICATION=smuuopzh1ojqv0vllj0bixnitqwr7r`) y confirmado en el código fuente real de `agencieros.net.ar` que la metaetiqueta y el snippet del Pixel están imprimiéndose bien.
+- **Probado en vivo con "Probar eventos" de Events Manager:** el Pixel está recibiendo actividad de `app.agencieros.net.ar` y `agencieros.net.ar`, con varios `PageView` "Procesado" en tiempo real. También apareció un evento `Subscribe` detectado automáticamente por Meta (no es algo que programamos -- es la detección automática de eventos de Meta sobre el contenido de la página; no hace falta tocar nada, es informativo).
+- **Con esto, el Pixel de Meta quedó 100% operativo de punta a punta** (checklist completo en `05_MARKETING/META_ADS/CAMPANA_AGENCIEROS.md`). Lo que sigue para pautar de verdad: definir presupuesto de arranque con Daniel y armar la campaña en Ads Manager (estructura ya propuesta en ese mismo archivo) -- eso se hace en el chat "META Ads — AGENCIEROS", no en este.
 
 ### Sesión 21/09/2026 (noche, continuación 3) — Código del Pixel de Meta (Msg 4)
 - **Se implementó todo el código de los prerrequisitos técnicos** del plan `05_MARKETING/META_ADS/CAMPANA_AGENCIEROS.md` (ver ese archivo, checklist actualizado). Nada de esto necesita otro deploy para activarse -- alcanza con cargar las variables de entorno en Railway cuando Daniel tenga los datos reales de Meta.
