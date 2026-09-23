@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify
 
 from database import query
+from comparables import links_comparables
 
 bp = Blueprint("precios", __name__, url_prefix="/precios")
 
@@ -121,6 +122,13 @@ def buscar():
            WHERE marca = ? AND modelo = ? AND version = ? ORDER BY anio""",
         (marca, modelo, version),
     )
+    # Mientras el listado de InfoAuto no está resuelto, un vehículo que no
+    # aparece en precios_base se queda sin ningún valor de referencia -- se
+    # ofrecen los mismos links de búsqueda directa (MercadoLibre,
+    # RosarioGarage, Facebook Marketplace) que ya se usan en la Tasación de
+    # la Toma, para que el agenciero pueda cotejar precios reales a ojo
+    # (pedido de Daniel 22/09/2026).
+    links_comparables_busqueda = None if resultado else links_comparables(marca, modelo, version, anio)
     return render_template(
         "precios/resultado.html",
         resultado=resultado,
@@ -129,4 +137,5 @@ def buscar():
         modelo=modelo,
         version=version,
         anio=anio,
+        links_comparables=links_comparables_busqueda,
     )

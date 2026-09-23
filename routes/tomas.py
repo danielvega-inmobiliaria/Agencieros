@@ -1,12 +1,12 @@
 import os
 import time
 from datetime import datetime
-from urllib.parse import quote_plus
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, session
 
 from database import query, execute, obtener_config_agencia, TIPOS_CARROCERIA
 from routes.tasacion import FACTOR_MECANICO, FACTOR_ESTETICO, MARGEN_OBJETIVO_DEFAULT
+from comparables import links_comparables
 from storage import uploads_dir
 
 bp = Blueprint("tomas", __name__, url_prefix="/tomas")
@@ -374,34 +374,6 @@ def _agrupar_danios_por_vista(danios_a_reparar):
             })
     return grupos
 
-
-def _links_comparables(marca, modelo, version, anio):
-    """Búsquedas rápidas de precios de referencia en la web (MercadoLibre,
-    RosarioGarage, Facebook Marketplace) para el vehículo de la toma. No
-    hacemos scraping automático (es frágil y varios sitios lo bloquean) —
-    generamos el link de búsqueda directa a cada sitio (nada de pasar por
-    Google) y lo abre el agenciero en una pestaña nueva, para cotejar a ojo
-    contra el 'valor de tabla'.
-
-    RosarioGarage no tiene un buscador de texto libre documentado en la UI,
-    pero su motor interno sí lo acepta por query string
-    (?action=finder/search&itmModelDesc=<texto>) y devuelve resultados reales
-    del sitio combinando marca+modelo (probado a mano: "ford focus" -> 6
-    avisos de Ford Focus). Facebook Marketplace tiene su propio buscador en
-    /marketplace/search/?query=<texto> — como el agenciero ya suele estar
-    logueado en su Facebook, entra directo a los resultados en vez de pasar
-    por una búsqueda de Google que muchas veces trae resultados viejos o
-    de otra ciudad."""
-    partes = [p for p in [marca, modelo, version, str(anio) if anio else ""] if p]
-    consulta = " ".join(partes).strip()
-    if not consulta:
-        return []
-    slug_ml = quote_plus(consulta).replace("+", "-")
-    return [
-        {"label": "MercadoLibre", "url": f"https://listado.mercadolibre.com.ar/{slug_ml}"},
-        {"label": "RosarioGarage", "url": f"https://www.rosariogarage.com/index.php?action=finder/search&itmModelDesc={quote_plus(consulta)}"},
-        {"label": "Facebook Marketplace", "url": f"https://www.facebook.com/marketplace/search/?query={quote_plus(consulta)}"},
-    ]
 
 
 # ---------------------------------------------------------------------------
@@ -782,7 +754,7 @@ def tasacion(toma_id):
     costo_puntos_tecnicos = _costo_puntos_tecnicos(toma)
     costo_danios_visuales = _costo_reparacion_sugerido(marcadores)
     gastos_estimados_sugerido = costo_puntos_tecnicos + costo_danios_visuales
-    links_comparables = _links_comparables(toma["marca"], toma["modelo"], toma["version"], toma["anio"])
+    links_comparables_toma = links_comparables(toma["marca"], toma["modelo"], toma["version"], toma["anio"])
     puntos_a_reparar = _puntos_a_reparar(toma)
     danios_por_vista = _agrupar_danios_por_vista([m for m in marcadores if m["costo_reparacion"]])
     # % de ganancia esperada (21/09/2026, pedido de Daniel): sugerido = el
@@ -893,7 +865,7 @@ def tasacion(toma_id):
         margen_objetivo_sugerido_pct=margen_objetivo_sugerido_pct,
         costo_puntos_tecnicos=costo_puntos_tecnicos,
         costo_danios_visuales=costo_danios_visuales,
-        links_comparables=links_comparables,
+        links_comparables=links_comparables_toma,
         puntos_a_reparar=puntos_a_reparar,
         danios_por_vista=danios_por_vista,
         vistas_label=dict(VISTAS),

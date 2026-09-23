@@ -14,7 +14,20 @@
     </div>
   </div>
   {% else %}
-  <p>No encontramos ese vehículo en la base de precios todavía. Podés cargarlo igual directo en el stock.</p>
+  <p>No encontramos ese vehículo en la base de precios todavía.</p>
+
+  {% if links_comparables %}
+  <p style="color:var(--text-dim); font-size:13px; margin-bottom:6px;">
+    Mientras tanto, podés cotejar el valor buscando publicaciones reales de ese vehículo:
+  </p>
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+    {% for l in links_comparables %}
+    <a class="btn btn-secondary btn-sm" href="{{ l.url }}" target="_blank" rel="noopener">Ver en {{ l.label }} ↗</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <p>Podés cargarlo igual directo en el stock.</p>
   <div class="actions-row">
     <a class="btn btn-secondary" href="{{ url_for('stock.nuevo', marca=marca, modelo=modelo, version=version, anio=anio) }}">Cargar en stock</a>
     <a class="btn btn-secondary" href="{{ url_for('precios.index') }}">Volver a consultar</a>
