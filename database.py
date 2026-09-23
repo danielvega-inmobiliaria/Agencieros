@@ -8,6 +8,21 @@ from storage import db_path
 
 DB_PATH = db_path()
 
+# Tipos de carrocería para la silueta de la Inspección visual (Paso 2 de
+# Toma y tasación) y para el alta en Stock -- son los 6 tipos que tienen
+# silueta dibujada; el agenciero elige a mano la más parecida (pedido de
+# Daniel 22/09/2026: "que muestre la silueta de la versión del vehículo a
+# inspeccionar"). Compartida acá (en vez de en routes/tomas.py) para que
+# routes/stock.py la pueda importar sin depender de routes/tomas.py.
+TIPOS_CARROCERIA = [
+    ("hatchback", "Hatchback"),
+    ("sedan", "Sedán"),
+    ("suv", "SUV / Crossover"),
+    ("pickup", "Pickup (doble cabina)"),
+    ("furgon_kangoo", "Furgón/utilitario chico (tipo Kangoo, Partner, Berlingo)"),
+    ("furgon_trafic", "Furgón grande (tipo Trafic, Master, Sprinter)"),
+]
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS usuarios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -343,6 +358,9 @@ def _migrar_vehiculos(conn):
         "propiedad": "TEXT DEFAULT 'propio'",
         "consignante_nombre": "TEXT",
         "consignante_telefono": "TEXT",
+        # Tipo de carrocería (silueta que se usa en la Inspección visual de
+        # la Toma) -- ver TIPOS_CARROCERIA más arriba.
+        "tipo_carroceria": "TEXT",
     }
     for columna, tipo in nuevas_columnas.items():
         if columna not in columnas_actuales:
@@ -418,6 +436,17 @@ def _migrar_inspeccion_marcadores(conn):
     columnas_actuales = {row[1] for row in conn.execute("PRAGMA table_info(inspeccion_marcadores)")}
     if "costo_reparacion" not in columnas_actuales:
         conn.execute("ALTER TABLE inspeccion_marcadores ADD COLUMN costo_reparacion REAL")
+
+
+def _migrar_tomas_tipo_carroceria(conn):
+    """Agrega a `tomas_vehiculo` el tipo de carrocería (Hatchback/Sedán/SUV/
+    Pickup/Furgón chico/Furgón grande), elegido a mano por el agenciero en
+    el Paso 1 -- se usa para mostrar la silueta correcta en la Inspección
+    visual del Paso 2, en vez de exigir subir una foto de cada vista antes
+    de poder marcar daños (pedido de Daniel 22/09/2026)."""
+    columnas_actuales = {row[1] for row in conn.execute("PRAGMA table_info(tomas_vehiculo)")}
+    if "tipo_carroceria" not in columnas_actuales:
+        conn.execute("ALTER TABLE tomas_vehiculo ADD COLUMN tipo_carroceria TEXT")
 
 
 def _migrar_financiaciones(conn):
@@ -1093,6 +1122,7 @@ def init_db():
     _migrar_tomas_checklist_ampliado(conn)
     _migrar_tomas_falla_service_si_no(conn)
     _migrar_inspeccion_marcadores(conn)
+    _migrar_tomas_tipo_carroceria(conn)
     _migrar_tasaciones(conn)
     _migrar_financiaciones(conn)
     _migrar_red_publicaciones(conn)

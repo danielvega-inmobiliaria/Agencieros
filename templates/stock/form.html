@@ -21,6 +21,16 @@
       <div><label>Marca</label><select id="marca" name="marca" data-placeholder-libre="Marca nueva" required></select></div>
       <div><label>Modelo</label><select id="modelo" name="modelo" data-placeholder-libre="Modelo nuevo" required></select></div>
       <div><label>Versión</label><select id="version" name="version" data-placeholder-libre="Versión nueva"></select></div>
+      <div>
+        <label>Tipo de carrocería</label>
+        <select name="tipo_carroceria">
+          <option value="">Sin definir</option>
+          {% set actual = (vehiculo.tipo_carroceria if vehiculo else (prefill.tipo_carroceria if prefill else '')) %}
+          {% for cod, lab in tipos_carroceria %}
+          <option value="{{ cod }}" {{ 'selected' if actual == cod else '' }}>{{ lab }}</option>
+          {% endfor %}
+        </select>
+      </div>
     </div>
     <div class="form-row">
       <div><label>Kilómetros</label><input type="number" name="km" value="{{ vehiculo.km if vehiculo else (prefill.km if prefill else '') }}"></div>

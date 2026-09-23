@@ -5,7 +5,7 @@ from datetime import date
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort, session
 from urllib.parse import quote_plus
 
-from database import query, execute, foto_principal, obtener_catalogo, obtener_config_agencia
+from database import query, execute, foto_principal, obtener_catalogo, obtener_config_agencia, TIPOS_CARROCERIA
 from storage import uploads_dir
 from sync_stock import sync_stock
 from buscador import parsear_filtros, buscar_combinado
@@ -139,6 +139,7 @@ def nuevo():
         "modelo": request.args.get("modelo", ""),
         "version": request.args.get("version", ""),
         "anio": request.args.get("anio", ""),
+        "tipo_carroceria": request.args.get("tipo_carroceria", ""),
         "valor_publicado": request.args.get("precio_referencia", ""),
         # Los 3 de acá abajo solo llegan cargados desde el botón "Agregar a
         # Stock" de la Tasación (ver routes/tomas.py _url_agregar_a_stock):
@@ -183,8 +184,8 @@ def nuevo():
                (marca, modelo, version, anio, km, combustible, caja, color, dominio, estado,
                 equipamiento, observaciones, documentacion, valor_compra, gastos, valor_publicado,
                 fecha_ingreso, entrega_quien, fecha_ingreso_estimada,
-                propiedad, consignante_nombre, consignante_telefono, agencia_id)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                propiedad, consignante_nombre, consignante_telefono, tipo_carroceria, agencia_id)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 f.get("marca"), f.get("modelo"), f.get("version"), f.get("anio") or None,
                 f.get("km") or None, f.get("combustible"), f.get("caja"), f.get("color"),
@@ -196,6 +197,7 @@ def nuevo():
                 propiedad,
                 f.get("consignante_nombre") if es_consignacion else None,
                 f.get("consignante_telefono") if es_consignacion else None,
+                f.get("tipo_carroceria") or None,
                 agencia_id,
             ),
         )
@@ -250,7 +252,7 @@ def nuevo():
     origen, item_id = _parse_permuta_origen(prefill["permuta_origen"])
     return render_template(
         "stock/form.html", vehiculo=None, prefill=prefill, estados=ESTADOS, estado_label=ESTADO_LABEL,
-        permuta_op=_permuta_operacion(origen, item_id) if origen else None,
+        permuta_op=_permuta_operacion(origen, item_id) if origen else None, tipos_carroceria=TIPOS_CARROCERIA,
     )
 
 
@@ -410,7 +412,7 @@ def editar(vehiculo_id):
                color=?, dominio=?, estado=?, equipamiento=?, observaciones=?, documentacion=?,
                valor_compra=?, gastos=?, valor_publicado=?, valor_vendido=?, fecha_venta=?,
                entrega_quien=?, fecha_ingreso_estimada=?,
-               propiedad=?, consignante_nombre=?, consignante_telefono=?,
+               propiedad=?, consignante_nombre=?, consignante_telefono=?, tipo_carroceria=?,
                updated_at=datetime('now')
                WHERE id=?""",
             (
@@ -425,13 +427,14 @@ def editar(vehiculo_id):
                 propiedad,
                 f.get("consignante_nombre") if es_consignacion else None,
                 f.get("consignante_telefono") if es_consignacion else None,
+                f.get("tipo_carroceria") or None,
                 vehiculo_id,
             ),
         )
         flash("Vehículo actualizado.", "success")
         return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
-    return render_template("stock/form.html", vehiculo=vehiculo, prefill=None, estados=ESTADOS, estado_label=ESTADO_LABEL)
+    return render_template("stock/form.html", vehiculo=vehiculo, prefill=None, estados=ESTADOS, estado_label=ESTADO_LABEL, tipos_carroceria=TIPOS_CARROCERIA)
 
 
 # ---------------------------------------------------------------------

@@ -5,7 +5,7 @@ from urllib.parse import quote_plus
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, session
 
-from database import query, execute, obtener_config_agencia
+from database import query, execute, obtener_config_agencia, TIPOS_CARROCERIA
 from routes.tasacion import FACTOR_MECANICO, FACTOR_ESTETICO, MARGEN_OBJETIVO_DEFAULT
 from storage import uploads_dir
 
@@ -279,6 +279,7 @@ def _url_agregar_a_stock(toma, tasacion_previa, puntos_a_reparar, danios_por_vis
         modelo=toma["modelo"] or "",
         version=toma["version"] or "",
         anio=toma["anio"] or "",
+        tipo_carroceria=toma["tipo_carroceria"] or "",
         precio_referencia=tasacion_previa.get("valor_referencia") or "",
         valor_compra=tasacion_previa.get("precio_max_recomendado") or "",
         gastos=tasacion_previa.get("gastos_estimados") or "",
@@ -461,6 +462,7 @@ def nueva():
         "modelo": request.args.get("modelo", ""),
         "version": request.args.get("version", ""),
         "anio": request.args.get("anio", ""),
+        "tipo_carroceria": request.args.get("tipo_carroceria", ""),
     }
     if request.method == "POST":
         f = request.form
@@ -496,14 +498,14 @@ def nueva():
 
         toma_id = execute(
             f"""INSERT INTO tomas_vehiculo
-               (vehiculo_id, marca, modelo, version, anio, evaluador,
+               (vehiculo_id, marca, modelo, version, anio, evaluador, tipo_carroceria,
                 tiene_codigo_falla, codigo_falla, tuvo_ultimo_service, ultimo_service,
                 observaciones, agencia_id, {columnas_base}, {columnas_costo}, {columnas_comentario})
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,{placeholders_base},{placeholders_costo},{placeholders_comentario})""",
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,{placeholders_base},{placeholders_costo},{placeholders_comentario})""",
             (
                 vehiculo_toma_id,
                 f.get("marca"), f.get("modelo"), f.get("version"), f.get("anio") or None,
-                f.get("evaluador"),
+                f.get("evaluador"), f.get("tipo_carroceria") or None,
                 tiene_codigo_falla, (f.get("codigo_falla") or None) if tiene_codigo_falla == "Si" else None,
                 tuvo_ultimo_service, (f.get("ultimo_service") or None) if tuvo_ultimo_service == "Si" else None,
                 f.get("observaciones"), _agencia_actual(),
@@ -516,7 +518,7 @@ def nueva():
         return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
     return render_template(
         "tomas/form.html", grupos_puntos=GRUPOS_PUNTOS, calificaciones_punto=CALIFICACIONES_PUNTO, prefill=prefill,
-        evaluadores=_evaluadores(),
+        evaluadores=_evaluadores(), tipos_carroceria=TIPOS_CARROCERIA,
     )
 
 
@@ -613,6 +615,13 @@ def inspeccion(toma_id):
     if not toma:
         return redirect(url_for("tomas.index"))
 
+    # La silueta a mostrar es la del tipo de carrocería cargado en el Paso 1
+    # (elegido a mano por el agenciero de entre los 6 que tienen dibujo --
+    # ver TIPOS_CARROCERIA). Si la Toma es de antes de que existiera este
+    # campo, se cae a "hatchback" como silueta genérica de respaldo, para
+    # no dejar la Inspección sin imagen (pedido de Daniel 22/09/2026).
+    tipo_carroceria = toma["tipo_carroceria"] or "hatchback"
+
     vistas_data = []
     for codigo, label in VISTAS:
         vista_row = query(
@@ -627,7 +636,7 @@ def inspeccion(toma_id):
         vistas_data.append({
             "codigo": codigo,
             "label": label,
-            "imagen_url": vista_row["imagen_url"] if vista_row else None,
+            "imagen_url": url_for("static", filename=f"img/carrocerias/{tipo_carroceria}/{codigo}.png"),
             "marcadores": marcadores,
             "costo_total": sum(m["costo_reparacion"] or 0 for m in marcadores),
         })
@@ -640,6 +649,8 @@ def inspeccion(toma_id):
         gravedades=GRAVEDADES,
         tipos_label=dict(TIPOS_DANIO),
         gravedades_label=dict(GRAVEDADES),
+        tipo_carroceria_label=dict(TIPOS_CARROCERIA).get(tipo_carroceria, tipo_carroceria),
+        tipo_carroceria_sin_definir=not toma["tipo_carroceria"],
     )
 
 
@@ -688,12 +699,22 @@ def agregar_marcador(toma_id, vista):
     if not toma:
         return redirect(url_for("tomas.index"))
 
+    if vista not in dict(VISTAS):
+        flash("Vista inválida.", "error")
+        return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
+
     vista_row = query(
         "SELECT * FROM inspeccion_visual WHERE toma_id = ? AND vista = ?", (toma_id, vista), one=True
     )
     if not vista_row:
-        flash("Subí una foto de esa vista antes de marcar daños.", "error")
-        return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
+        # El marcado es directo sobre la silueta (no hace falta foto antes)
+        # -- se crea la fila de inspeccion_visual recién al primer marcador
+        # de esa vista (pedido de Daniel 22/09/2026).
+        nuevo_id = execute(
+            "INSERT INTO inspeccion_visual (toma_id, vista) VALUES (?, ?)",
+            (toma_id, vista),
+        )
+        vista_row = {"id": nuevo_id}
 
     f = request.form
     try:
@@ -784,41 +805,60 @@ def tasacion(toma_id):
         # desglosada en el panel "Qué hay que reparar".
         gastos_estimados = gastos_estimados_sugerido
 
+        # % de ganancia esperada: validado (22/09/2026, a pedido de Daniel
+        # tras un caso real donde un 1500 tipeado por error -- en vez de 15 --
+        # dio un "Valor de toma" negativo sin ningún aviso). Fuera de 0-90%
+        # no se guarda nada: se flashea el error y se re-muestra el
+        # formulario con lo tipeado (mismo patrón que stock.vender/senar).
+        margen_input_raw = f.get("margen_objetivo_pct")
         try:
-            margen_objetivo_pct = float(f.get("margen_objetivo_pct")) / 100
-        except (TypeError, ValueError):
-            margen_objetivo_pct = _margen_objetivo_agencia(toma["agencia_id"])
+            margen_input = float(margen_input_raw) if margen_input_raw not in (None, "") else None
+        except ValueError:
+            margen_input = None
 
-        factor = FACTOR_MECANICO[estado_mecanico] * FACTOR_ESTETICO[estado_estetico]
-        valor_ajustado = valor_referencia * factor
-        precio_max_recomendado = valor_ajustado - gastos_estimados - (valor_referencia * margen_objetivo_pct)
-        margen_esperado = valor_ajustado - precio_max_recomendado - gastos_estimados
-
-        # `riesgo` se sigue calculando y guardando (por si sirve a futuro para
-        # el algoritmo de valuación), pero ya no se muestra en el panel de
-        # Resultado — Daniel pidió sacarlo de la vista.
-        malos = [estado_mecanico, estado_estetico].count("Malo")
-        regulares = [estado_mecanico, estado_estetico].count("Regular")
-        if malos >= 1 or gastos_estimados > valor_referencia * 0.25:
-            riesgo = "Alto"
-        elif regulares >= 1:
-            riesgo = "Medio"
+        if margen_input_raw not in (None, "") and margen_input is None:
+            flash("El % de ganancia esperada no es un número válido -- no se guardó la tasación.", "error")
+        elif margen_input is not None and not (0 <= margen_input <= 90):
+            flash(
+                f"El % de ganancia esperada tiene que estar entre 0 y 90 (cargaste {margen_input:g}) -- "
+                "revisá si te confundiste, por ejemplo cargando 1500 en vez de 15. No se guardó la tasación.",
+                "error",
+            )
         else:
-            riesgo = "Bajo"
+            margen_objetivo_pct = (
+                margen_input / 100 if margen_input is not None else _margen_objetivo_agencia(toma["agencia_id"])
+            )
 
-        execute(
-            """INSERT INTO tasaciones
-               (toma_id, marca, modelo, version, anio, valor_referencia, estado_mecanico, estado_estetico,
-                gastos_estimados, precio_max_recomendado, riesgo, margen_esperado, margen_objetivo_pct, agencia_id)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (
-                toma_id, toma["marca"], toma["modelo"], toma["version"], toma["anio"],
-                valor_referencia, estado_mecanico, estado_estetico, gastos_estimados,
-                round(precio_max_recomendado), riesgo, round(margen_esperado), margen_objetivo_pct, toma["agencia_id"],
-            ),
-        )
-        flash("Tasación registrada.", "success")
-        es_nueva = True
+            factor = FACTOR_MECANICO[estado_mecanico] * FACTOR_ESTETICO[estado_estetico]
+            valor_ajustado = valor_referencia * factor
+            precio_max_recomendado = valor_ajustado - gastos_estimados - (valor_referencia * margen_objetivo_pct)
+            margen_esperado = valor_ajustado - precio_max_recomendado - gastos_estimados
+
+            # `riesgo` se sigue calculando y guardando (por si sirve a futuro
+            # para el algoritmo de valuación), pero ya no se muestra en el
+            # panel de Resultado — Daniel pidió sacarlo de la vista.
+            malos = [estado_mecanico, estado_estetico].count("Malo")
+            regulares = [estado_mecanico, estado_estetico].count("Regular")
+            if malos >= 1 or gastos_estimados > valor_referencia * 0.25:
+                riesgo = "Alto"
+            elif regulares >= 1:
+                riesgo = "Medio"
+            else:
+                riesgo = "Bajo"
+
+            execute(
+                """INSERT INTO tasaciones
+                   (toma_id, marca, modelo, version, anio, valor_referencia, estado_mecanico, estado_estetico,
+                    gastos_estimados, precio_max_recomendado, riesgo, margen_esperado, margen_objetivo_pct, agencia_id)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    toma_id, toma["marca"], toma["modelo"], toma["version"], toma["anio"],
+                    valor_referencia, estado_mecanico, estado_estetico, gastos_estimados,
+                    round(precio_max_recomendado), riesgo, round(margen_esperado), margen_objetivo_pct, toma["agencia_id"],
+                ),
+            )
+            flash("Tasación registrada.", "success")
+            es_nueva = True
 
     tasacion_previa = _tasacion_con_extra(
         query("SELECT * FROM tasaciones WHERE toma_id = ? ORDER BY id DESC LIMIT 1", (toma_id,), one=True)

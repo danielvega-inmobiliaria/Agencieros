@@ -8,16 +8,20 @@
   <a class="btn btn-primary btn-sm" style="margin-left:auto;" href="{{ url_for('tomas.tasacion', toma_id=toma.id) }}">Continuar a Tasación →</a>
 </div>
 
-<p style="color:var(--text-dim); font-size:13px; margin-bottom:18px;">
-  Subí una foto de cada vista y hacé clic sobre la imagen donde haya un golpe, rayón u otro daño para marcarlo.
+<p style="color:var(--text-dim); font-size:13px; margin-bottom:6px;">
+  Hacé clic sobre la silueta donde haya un golpe, rayón u otro daño para marcarlo. Silueta: <strong>{{ tipo_carroceria_label }}</strong>.
 </p>
+{% if tipo_carroceria_sin_definir %}
+<p class="stub-box" style="padding:10px 14px; font-size:13px; margin-bottom:14px;">
+  Esta Toma no tiene "Tipo de carrocería" cargado (es de antes de sumar ese campo) -- se está mostrando la silueta de Hatchback por defecto.
+</p>
+{% endif %}
 
 <div class="cards" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start;">
   {% for v in vistas_data %}
   <div class="panel vista-card">
     <h2>{{ v.label }}</h2>
 
-    {% if v.imagen_url %}
     <div class="vista-imgwrap" id="wrap-{{ v.codigo }}">
       <img src="{{ v.imagen_url }}" alt="{{ v.label }}">
       {% for m in v.marcadores %}
@@ -67,21 +71,6 @@
       Subtotal reparación de esta vista: ${{ "{:,.0f}".format(v.costo_total).replace(",", ".") }}
     </p>
     {% endif %}
-    {% endif %}
-
-    <form method="post" action="{{ url_for('tomas.subir_foto', toma_id=toma.id, vista=v.codigo) }}" enctype="multipart/form-data" class="reemplazar-foto">
-      <input type="file" name="foto" accept="image/*" required>
-      <button type="submit" class="btn btn-secondary btn-sm">Reemplazar foto</button>
-    </form>
-
-    {% else %}
-    <div class="stub-box" style="padding:24px;">
-      <p style="margin-top:0;">Todavía no hay foto de esta vista.</p>
-      <form method="post" action="{{ url_for('tomas.subir_foto', toma_id=toma.id, vista=v.codigo) }}" enctype="multipart/form-data" class="subir-foto-form">
-        <input type="file" name="foto" accept="image/*" required>
-        <button type="submit" class="btn btn-primary btn-sm">Subir foto</button>
-      </form>
-    </div>
     {% endif %}
   </div>
   {% endfor %}
