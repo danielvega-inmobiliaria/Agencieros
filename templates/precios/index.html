@@ -84,7 +84,21 @@ async function cargarVersiones(marca, modelo, anio) {
   const data = await res.json();
   resetSelect(versionSel, 'Versión');
   data.forEach(v => versionSel.innerHTML += `<option value="${v}">${v}</option>`);
-  versionSel.disabled = false;
+  if (data.length === 0) {
+    // Todavía no hay ninguna versión cargada en la base de precios para
+    // este Marca+Modelo+Año (pasa seguido mientras no está resuelto el
+    // listado de InfoAuto) -- en vez de dejar la búsqueda trabada para
+    // siempre (el botón nunca se habilitaba porque dependía de elegir una
+    // versión que no existía), se deja buscar igual sin versión puntual:
+    // el resultado va a mostrar el aviso de "no encontramos este
+    // vehículo" con los links de búsqueda directa en MercadoLibre,
+    // RosarioGarage y Facebook Marketplace (pedido de Daniel 22/09/2026).
+    versionSel.innerHTML = '<option value="">(sin versiones cargadas)</option>';
+    versionSel.disabled = true;
+    btn.disabled = false;
+  } else {
+    versionSel.disabled = false;
+  }
 }
 
 async function revalidarModelo() {
