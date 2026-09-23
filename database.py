@@ -21,6 +21,11 @@ TIPOS_CARROCERIA = [
     ("pickup", "Pickup (doble cabina)"),
     ("furgon_kangoo", "Furgón/utilitario chico (tipo Kangoo, Partner, Berlingo)"),
     ("furgon_trafic", "Furgón grande (tipo Trafic, Master, Sprinter)"),
+    # Sumados 22/09/2026 a pedido de Daniel, con siluetas propias (no son
+    # una aproximación con otro tipo).
+    ("coupe", "Coupé (2 puertas deportivo)"),
+    ("pickup_simple", "Pickup cabina simple"),
+    ("minivan", "Minivan / Monovolumen"),
 ]
 
 SCHEMA = """
