@@ -5,7 +5,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, session
 
 from database import query, execute, obtener_config_agencia, TIPOS_CARROCERIA
-from routes.tasacion import FACTOR_MECANICO, FACTOR_ESTETICO, MARGEN_OBJETIVO_DEFAULT
+from routes.tasacion import MARGEN_OBJETIVO_DEFAULT
 from comparables import links_comparables
 from storage import uploads_dir
 
@@ -801,10 +801,18 @@ def tasacion(toma_id):
                 margen_input / 100 if margen_input is not None else _margen_objetivo_agencia(toma["agencia_id"])
             )
 
-            factor = FACTOR_MECANICO[estado_mecanico] * FACTOR_ESTETICO[estado_estetico]
-            valor_ajustado = valor_referencia * factor
-            precio_max_recomendado = valor_ajustado - gastos_estimados - (valor_referencia * margen_objetivo_pct)
-            margen_esperado = valor_ajustado - precio_max_recomendado - gastos_estimados
+            # El valor de toma sale directo del precio de tabla, menos el
+            # margen objetivo y menos los gastos de reparación YA
+            # valorizados punto por punto (Paso 1 y Paso 2) -- Estado
+            # mecánico/estético quedan como dato informativo (y para
+            # `riesgo`, más abajo) pero ya no aplican un descuento aparte:
+            # hacerlo además del gasto ya cargado era descontar el mismo
+            # daño dos veces (pedido de Daniel 22/09/2026, caso real de un
+            # Kwid que con daños mayormente moderados/leves saturaba el
+            # algoritmo a "Malo" y el valor de toma salía muy por debajo
+            # de lo esperado).
+            precio_max_recomendado = valor_referencia - gastos_estimados - (valor_referencia * margen_objetivo_pct)
+            margen_esperado = valor_referencia * margen_objetivo_pct
 
             # `riesgo` se sigue calculando y guardando (por si sirve a futuro
             # para el algoritmo de valuación), pero ya no se muestra en el
