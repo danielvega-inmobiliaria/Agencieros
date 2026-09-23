@@ -66,10 +66,20 @@ def index():
         margen_objetivo_pct = None
         if margen_objetivo_form:
             try:
-                margen_objetivo_pct = round(float(margen_objetivo_form) / 100, 4)
+                margen_num = float(margen_objetivo_form)
             except ValueError:
                 flash("El % de ganancia esperada tiene que ser un número (ej: 15).", "error")
                 return redirect(url_for("admin.index"))
+            # Mismo rango que valida la Tasación (0-90%, 23/09/2026): evita
+            # que un 1500 tipeado por error quede como default de la agencia.
+            if not (0 <= margen_num <= 90):
+                flash(
+                    f"El % de ganancia esperada tiene que estar entre 0 y 90 (cargaste {margen_num:g}) -- "
+                    "revisá si te confundiste, por ejemplo cargando 1500 en vez de 15. No se guardaron los cambios.",
+                    "error",
+                )
+                return redirect(url_for("admin.index"))
+            margen_objetivo_pct = round(margen_num / 100, 4)
 
         config_actual = obtener_config_agencia(agencia_id)
         logo_url = config_actual.get("logo_url")
