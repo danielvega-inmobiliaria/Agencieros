@@ -602,3 +602,8 @@ form textarea { min-height: 80px; }
 .bp-resultado .amount { font-size: 40px; font-weight: 800; color: var(--gold-light); margin: 4px 0; }
 .bp-resultado .meta { color: var(--text-dim); font-size: 14px; }
 @media (max-width: 600px) { .buscador-precio .bp-campo { flex: 1 1 100%; } .bp-resultado .amount { font-size: 32px; } }
+/* Precio a la derecha de cada opción del desplegable (Consulta de precios, 24/09/2026) */
+.autocomplete-item { display: flex; justify-content: space-between; gap: 12px; }
+.autocomplete-detalle { color: var(--gold-light); font-weight: 600; white-space: nowrap; }
+.bp-comparables { margin-top: 18px; }
+.bp-links { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }

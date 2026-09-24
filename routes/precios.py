@@ -47,6 +47,14 @@ def api_opciones():
     ])
 
 
+@bp.route("/api/comparables")
+def api_comparables():
+    """Links de comparables (MercadoLibre/RosarioGarage/Facebook) para el
+    vehículo elegido en el buscador, sin salir de la pantalla (24/09/2026)."""
+    a = request.args
+    return jsonify(links_comparables(a.get("marca", ""), a.get("modelo", ""), a.get("version", ""), a.get("anio", "")))
+
+
 @bp.route("/api/marcas")
 def api_marcas():
     """Marcas para el datalist. Con Año ya elegido, solo las marcas que

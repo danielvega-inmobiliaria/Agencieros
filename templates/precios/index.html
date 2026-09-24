@@ -35,6 +35,10 @@
       <a class="btn btn-secondary" id="btnStock" href="#">Guardar en stock</a>
       <a class="btn btn-secondary" id="btnDetalle" href="#">Ver historial por año</a>
     </div>
+    <div class="bp-comparables">
+      <div class="meta">Compará con publicaciones reales de este vehículo:</div>
+      <div class="bp-links" id="linksComparables"></div>
+    </div>
   </div>
 
   <div class="bp-resultado" id="noEncontrado" style="display:none;">
@@ -70,7 +74,9 @@ function ocultarResultados() {
   panelNo.style.display = 'none';
 }
 
-attachAutocomplete(vehInput, () => opciones.map(o => o.label));
+attachAutocomplete(vehInput, () => opciones.map(o => o.label), null, {
+  detalle: label => porLabel[label] ? pesos(porLabel[label].precio) : ''
+});
 
 anioSel.addEventListener('change', async () => {
   ocultarResultados();
@@ -112,7 +118,24 @@ function mostrarPrecio(o) {
   document.getElementById('btnToma').href = `{{ url_for('tomas.nueva') }}?${new URLSearchParams(base)}`;
   document.getElementById('btnStock').href = `{{ url_for('stock.nuevo') }}?${new URLSearchParams({ ...base, precio_referencia: o.precio })}`;
   document.getElementById('btnDetalle').href = `{{ url_for('precios.buscar') }}?${new URLSearchParams(base)}`;
+  cargarComparables(base, document.getElementById('linksComparables'));
   panelRes.style.display = '';
+}
+
+// Links de búsqueda en MercadoLibre / RosarioGarage / Facebook Marketplace
+// para el vehículo elegido, en la misma pantalla (24/09/2026, pedido de
+// Daniel) -- los arma comparables.py, igual que en la Tasación.
+async function cargarComparables(params, contenedor) {
+  contenedor.innerHTML = '';
+  const res = await fetch(`{{ url_for('precios.api_comparables') }}?${new URLSearchParams(params)}`);
+  const links = await res.json();
+  links.forEach(l => {
+    const a = document.createElement('a');
+    a.className = 'btn btn-secondary btn-sm';
+    a.href = l.url; a.target = '_blank'; a.rel = 'noopener';
+    a.textContent = `Ver en ${l.label} ↗`;
+    contenedor.appendChild(a);
+  });
 }
 
 document.getElementById('btnBuscarIgual').addEventListener('click', () => {

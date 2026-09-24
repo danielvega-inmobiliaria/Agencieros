@@ -25,7 +25,11 @@
  *   ya se dispara sobre el campo (así el resto del código reacciona igual
  *   que si lo hubiera tipeado).
  */
-function attachAutocomplete(input, obtenerValores, onSeleccionar) {
+function attachAutocomplete(input, obtenerValores, onSeleccionar, opciones) {
+  // `opciones.detalle(valor)` (opcional, 24/09/2026): texto chico que se
+  // muestra a la derecha de cada ítem sin formar parte del valor elegido
+  // -- ej. el precio de cada versión en Consulta de precios.
+  var detalle = opciones && opciones.detalle;
   var wrap = document.createElement("div");
   wrap.className = "autocomplete-wrap";
   input.parentNode.insertBefore(wrap, input);
@@ -82,7 +86,20 @@ function attachAutocomplete(input, obtenerValores, onSeleccionar) {
     filtradas.forEach(function (valor) {
       var item = document.createElement("div");
       item.className = "autocomplete-item";
-      item.textContent = valor;
+      item.setAttribute("data-valor", valor);
+      var extra = detalle ? detalle(valor) : "";
+      if (extra) {
+        var txt = document.createElement("span");
+        txt.className = "autocomplete-texto";
+        txt.textContent = valor;
+        var det = document.createElement("span");
+        det.className = "autocomplete-detalle";
+        det.textContent = extra;
+        item.appendChild(txt);
+        item.appendChild(det);
+      } else {
+        item.textContent = valor;
+      }
       // mousedown (no click): dispara antes que el blur del input, así el
       // toque en el ítem no se pierde cuando el campo pierde el foco.
       item.addEventListener("mousedown", function (e) {
@@ -112,7 +129,7 @@ function attachAutocomplete(input, obtenerValores, onSeleccionar) {
       activo = Math.max(activo - 1, 0);
       marcarActivo(items);
     } else if (e.key === "Enter") {
-      if (activo >= 0) { e.preventDefault(); seleccionar(items[activo].textContent); }
+      if (activo >= 0) { e.preventDefault(); seleccionar(items[activo].getAttribute("data-valor")); }
     } else if (e.key === "Escape") {
       cerrar();
     }
