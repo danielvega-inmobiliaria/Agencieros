@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 22/09/2026 — 23:40 ART (Inspección visual con siluetas automáticas por tipo de carrocería -- 9 tipos --, fix de doble descuento en Tasación y comparables de mercado también en Consulta de precios)_
+_Última actualización: 24/09/2026 — 16:17 ART (Rango de precios de mercado con la API oficial de MercadoLibre: código listo y probado con API simulada, falta deploy + conectar la cuenta de ML en producción)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -95,7 +95,7 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - [x] ~~`financiaciones.agencia_id` puede quedar NULL~~ → **Resuelto 21/09/2026:** `nuevo()` y `guardar()` en `routes/financiacion.py` ahora setean `agencia_id` de la sesión al crear el plan. Las queries siguen usando `COALESCE(agencia_id, 1)` para no dejar huérfanos los planes viejos.
 
 ### 🟢 IDEAS FUTURAS
-- [ ] **Comparables de mercado — integración real:** hoy son links de búsqueda manuales. Daniel preguntó 14/09/2026 cómo se implementaría — propuesta técnica:
+- [ ] **Comparables de mercado — integración real:** **MercadoLibre implementado 24/09/2026 (tarde)** -- ver "Cambios recientes"; falta deploy y prueba contra la API real. Texto original: Daniel preguntó 14/09/2026 cómo se implementaría — propuesta técnica:
   - **MercadoLibre: sí es viable.** Tiene una API pública oficial y gratuita (`api.mercadolibre.com/sites/MLA/search?q=...`), sin necesidad de aprobación para búsquedas básicas, devuelve JSON con precio/título/link/miniatura de cada aviso. Se podría traer los N avisos más relevantes de marca+modelo+versión+año y mostrar un rango (mín/promedio/máx) al lado del valor de tabla en Tasación, en vez de solo el link de búsqueda — sin scraping, 100% dentro de sus términos de uso.
   - **RosarioGarage y Facebook Marketplace: no conviene.** Ninguno tiene una API pública real para esto (Facebook Marketplace requiere acuerdo comercial con Meta, fuera de alcance para una app chica) — scrapearlos sería exactamente lo que decidimos evitar desde el principio (frágil, pisa ToS). Recomendación: dejarlos como link de búsqueda manual como están hoy, e invertir el esfuerzo de integración solo en MercadoLibre.
   - Detalles a resolver si se encara: cachear resultados (no pegarle a la API en cada tecleo), límites de uso de la API gratuita, y qué mostrar cuando no hay resultados para ese modelo/año exacto.
@@ -108,6 +108,14 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 24/09/2026 (tarde) — Rango de precios de mercado con la API de MercadoLibre (Msg 1)
+- **Nuevo `mercado_ml.py`:** busca en la API oficial (`/sites/MLA/search`, categoría Autos y Camionetas `MLA1744`, filtro `VEHICLE_YEAR=año-año`, 50 avisos). Primero marca+modelo+versión; si hay menos de 5 avisos, amplía a todas las versiones del modelo (se indica en pantalla). Calcula mínimo, **rango típico (percentil 25–75)**, mediana, promedio, máximo y km promedio. Solo avisos en **pesos** (los de dólares se cuentan aparte, no se convierten); descarta outliers fuera de 0,5×–2× la mediana (anticipos, "cuotas"). Con menos de 3 avisos no muestra rango. **Cache 24 h** en tabla `ml_cache`. Sin `ML_CLIENT_ID`/`ML_CLIENT_SECRET` no muestra nada. Solo librería estándar (sin dependencias nuevas).
+- **Token:** 1) token de usuario (Authorization Code + refresh automático, tabla `ml_tokens`) si se conectó la cuenta; 2) si no, Client Credentials (token de la app). Motivo: ML devuelve 403 al buscador sin token y no está claro si acepta el token de app solo -- por eso existe la opción de conectar la cuenta.
+- **Nuevas rutas `routes/ml.py` (solo agencia 1):** `/ml/` (estado + "Probar búsqueda Toyota Etios 2018"), `/ml/conectar`, `/ml/callback` (con `state` anti-CSRF; coincide con el redirect registrado en ML), `/ml/desconectar`. Acceso desde **Admin → "Abrir conexión con MercadoLibre"**.
+- **UI:** bloque "Precio de mercado · MercadoLibre" (`static/js/mercado.js` + CSS `.rango-mercado`) en **Consulta de precios** (al elegir la versión, compara contra el valor de tabla: "X% por encima/debajo de la mediana de ML"), en el **resultado** (con y sin precio de tabla) y en la **Tasación (Paso 3)**. Endpoint `/precios/api/mercado`. Se ven hasta 5 avisos cercanos a la mediana con link.
+- **Probado** con `test_client` sobre una base temporal y la API de ML simulada: sin credenciales, cálculo del rango/outliers/dólares/otro año, cache, error 403, pantallas (200), conectar/callback/state, bloqueo para agencia ≠ 1. **No se probó contra la API real** (la compu de Daniel no tiene salida a api.mercadolibre.com desde el entorno de Claude).
+- **Próximos pasos:** deploy (bloque Git del chat) → en `app.agencieros.net.ar/ml/` apretar "Probar búsqueda". Si da 403 → "Conectar cuenta de MercadoLibre" (autorizar con la cuenta de Daniel) y probar de nuevo. Revisar que los números tengan sentido contra un par de búsquedas a mano en ML.
 
 ### Sesión 23-24/09/2026 — Consulta de precios estilo Decreditos + precios InfoAuto Sep-2026 + comparables arreglados + "registro gratis" en landing/registro (Msg 1-17)
 - **Datos vacíos al entrar (23/09):** no era pérdida de datos: el navegador tenía la sesión de "Rodar Automotores", agencia de prueba que solo existe en `data/agencieros_prueba_actividad.db` / `data/prueba_actividad/agencieros.db`. La base real (`data/agencieros.db`) solo tiene Italia Automotores (4 disponibles + 2 vendidos). Para ver las agencias de prueba: `RAILWAY_VOLUME_MOUNT_PATH="$(pwd)/data/prueba_actividad" python app.py`. Daniel decidió NO agregar un chequeo de "agencia de la sesión inexistente".

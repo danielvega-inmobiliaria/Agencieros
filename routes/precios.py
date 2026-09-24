@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, jsonify
 
 from database import query
 from comparables import links_comparables
+import mercado_ml
 
 bp = Blueprint("precios", __name__, url_prefix="/precios")
 
@@ -53,6 +54,16 @@ def api_comparables():
     vehículo elegido en el buscador, sin salir de la pantalla (24/09/2026)."""
     a = request.args
     return jsonify(links_comparables(a.get("marca", ""), a.get("modelo", ""), a.get("version", ""), a.get("anio", "")))
+
+
+@bp.route("/api/mercado")
+def api_mercado():
+    """Rango de precios de mercado de MercadoLibre (API oficial, cache 24 h)
+    para el vehículo elegido -- ver mercado_ml.py. Sin credenciales de ML
+    devuelve {"disponible": false} y la pantalla no muestra nada."""
+    a = request.args
+    return jsonify(mercado_ml.rango_mercado(a.get("marca", ""), a.get("modelo", ""),
+                                            a.get("version", ""), a.get("anio", "")))
 
 
 @bp.route("/api/marcas")

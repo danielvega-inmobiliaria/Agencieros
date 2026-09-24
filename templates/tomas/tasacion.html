@@ -17,6 +17,8 @@
       <label>Valor de referencia <span style="color:var(--text-dim); font-weight:400;">(valor de tabla{% if valor_referencia_sugerido %}: ${{ "{:,.0f}".format(valor_referencia_sugerido).replace(",", ".") }}{% endif %})</span></label>
       <input type="number" step="0.01" name="valor_referencia" value="{{ form.get('valor_referencia', valor_referencia_sugerido) }}" required>
 
+      <div data-rango-mercado data-marca="{{ toma.marca }}" data-modelo="{{ toma.modelo }}" data-version="{{ toma.version or '' }}" data-anio="{{ toma.anio or '' }}"{% if valor_referencia_sugerido %} data-valor-tabla="{{ valor_referencia_sugerido }}"{% endif %}></div>
+
       {% if links_comparables %}
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
         {% for l in links_comparables %}
@@ -158,4 +160,5 @@
     {% endif %}
   </div>
 </div>
+<script src="{{ url_for('static', filename='js/mercado.js') }}"></script>
 {% endblock %}

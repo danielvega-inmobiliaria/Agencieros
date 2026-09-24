@@ -35,6 +35,7 @@
       <a class="btn btn-secondary" id="btnStock" href="#">Guardar en stock</a>
       <a class="btn btn-secondary" id="btnDetalle" href="#">Ver historial por año</a>
     </div>
+    <div id="rangoMercado"></div>
     <div class="bp-comparables">
       <div class="meta">Compará con publicaciones reales de este vehículo:</div>
       <div class="bp-links" id="linksComparables"></div>
@@ -57,6 +58,7 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/autocomplete.js') }}"></script>
+<script src="{{ url_for('static', filename='js/mercado.js') }}"></script>
 <script>
 const anioSel = document.getElementById('anio');
 const vehInput = document.getElementById('vehiculo');
@@ -143,6 +145,7 @@ function mostrarPrecio(o) {
   document.getElementById('btnStock').href = `{{ url_for('stock.nuevo') }}?${new URLSearchParams({ ...base, precio_referencia: o.precio })}`;
   document.getElementById('btnDetalle').href = `{{ url_for('precios.buscar') }}?${new URLSearchParams(base)}`;
   cargarComparables(base, document.getElementById('linksComparables'));
+  cargarRangoMercado(base, document.getElementById('rangoMercado'), o.precio);
   panelRes.style.display = '';
 }
 

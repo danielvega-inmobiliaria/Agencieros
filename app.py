@@ -51,6 +51,7 @@ def create_app():
     from routes.matches import bp as matches_bp
     from routes.admin import bp as admin_bp
     from routes.plataforma import bp as plataforma_bp
+    from routes.ml import bp as ml_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -66,6 +67,7 @@ def create_app():
     app.register_blueprint(matches_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(plataforma_bp)
+    app.register_blueprint(ml_bp)
 
     @app.before_request
     def _landing_host():

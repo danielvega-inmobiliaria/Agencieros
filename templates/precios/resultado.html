@@ -8,6 +8,7 @@
     <div class="meta">{{ marca }} {{ modelo }} {{ version }} · {{ anio }}</div>
     <div class="amount">${{ "{:,.0f}".format(resultado.precio_referencia).replace(",", ".") }}</div>
     <div class="meta">Valor de referencia (fuente: {{ resultado.fuente }}, actualizado {{ resultado.fecha_actualizacion }})</div>
+    <div data-rango-mercado data-marca="{{ marca }}" data-modelo="{{ modelo }}" data-version="{{ version }}" data-anio="{{ anio }}" data-valor-tabla="{{ resultado.precio_referencia }}"></div>
     <div class="actions-row">
       <a class="btn btn-primary" href="{{ url_for('tomas.nueva', marca=marca, modelo=modelo, version=version, anio=anio) }}">Iniciar toma del vehículo</a>
       <a class="btn btn-secondary" href="{{ url_for('stock.nuevo', marca=marca, modelo=modelo, version=version, anio=anio, precio_referencia=resultado.precio_referencia) }}">Guardar en stock</a>
@@ -15,6 +16,7 @@
   </div>
   {% else %}
   <p>No encontramos ese vehículo en la base de precios todavía.</p>
+  <div data-rango-mercado data-marca="{{ marca }}" data-modelo="{{ modelo }}" data-version="{{ version }}" data-anio="{{ anio }}" style="margin-bottom:14px;"></div>
 
   {% if links_comparables %}
   <p style="color:var(--text-dim); font-size:13px; margin-bottom:6px;">
@@ -50,4 +52,5 @@
   </table>
 </div>
 {% endif %}
+<script src="{{ url_for('static', filename='js/mercado.js') }}"></script>
 {% endblock %}

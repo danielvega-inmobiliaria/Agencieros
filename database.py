@@ -1201,6 +1201,8 @@ def init_db():
     _migrar_ventas_credito_externo(conn)
     _migrar_ventas_plan_origen(conn)
     _migrar_permuta_destino(conn)
+    import mercado_ml
+    mercado_ml.asegurar_tablas(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")
     if cur.fetchone()[0] == 0:

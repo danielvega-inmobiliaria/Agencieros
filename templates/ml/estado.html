@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}MercadoLibre — Agencieros{% endblock %}
+{% block header %}MercadoLibre{% endblock %}
+{% block content %}
+<div class="panel">
+  <h2>Conexión con MercadoLibre</h2>
+  <p style="color:var(--text-dim); font-size:13px;">
+    Se usa para el <strong>rango de precios de mercado</strong> (avisos reales de ML) en Consulta de precios y en la Tasación.
+    Es una sola conexión para toda la plataforma: todas las agencias ven el rango.
+  </p>
+  <table>
+    <tr><td>Credenciales en Railway (<code>ML_CLIENT_ID</code> / <code>ML_CLIENT_SECRET</code>)</td>
+        <td>{{ '✔ cargadas' if estado.credenciales else '✘ faltan' }}</td></tr>
+    <tr><td>Cuenta de MercadoLibre conectada</td>
+        <td>{% if estado.usuario_conectado %}✔ usuario {{ estado.user_id }} (desde {{ estado.actualizado }}){% else %}— no (se usa el token de la app){% endif %}</td></tr>
+    <tr><td>Redirect URI que se manda a ML</td><td><code>{{ redirect_uri }}</code></td></tr>
+  </table>
+  <div class="actions-row" style="margin-top:14px;">
+    {% if estado.credenciales %}
+    <a class="btn btn-primary" href="{{ url_for('ml.conectar') }}">{{ 'Reconectar' if estado.usuario_conectado else 'Conectar cuenta de MercadoLibre' }}</a>
+    <a class="btn btn-secondary" href="{{ url_for('ml.estado', probar=1) }}">Probar búsqueda (Toyota Etios 2018)</a>
+    {% endif %}
+    {% if estado.usuario_conectado %}
+    <form method="post" action="{{ url_for('ml.desconectar') }}" style="display:inline;">
+      <button class="btn btn-secondary" type="submit">Desconectar</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% if prueba %}
+<div class="panel">
+  <h2>Resultado de la prueba</h2>
+  {% if prueba.ok %}
+  <p>✔ Funciona ({{ 'token de usuario' if prueba.token == 'usuario' else 'token de la app' }}{{ ', desde cache' if prueba.cache }}):
+     {{ prueba.n }} avisos en pesos, rango típico ${{ "{:,.0f}".format(prueba.p25).replace(",", ".") }} – ${{ "{:,.0f}".format(prueba.p75).replace(",", ".") }},
+     mediana ${{ "{:,.0f}".format(prueba.mediana).replace(",", ".") }}.</p>
+  {% else %}
+  <p>✘ {{ prueba.motivo }}</p>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}
