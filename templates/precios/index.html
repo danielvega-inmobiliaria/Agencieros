@@ -3,7 +3,7 @@
 {% block header %}Consulta de precios{% endblock %}
 {% block content %}
 {# Buscador rediseñado 24/09/2026 a pedido de Daniel, igual que el simulador
-   de Decreditos (conectado a InfoAuto): 1) Año, 2) un solo campo
+   de Decreditos: 1) Año, 2) un solo campo
    "Marca / Modelo" con todas las versiones de ese año en una línea
    ("TOYOTA - ETIOS 1.5 4 PTAS PLATINUM"), buscable por cualquier palabra,
    3) el valor aparece apenas se elige, sin cambiar de pantalla. #}
@@ -66,7 +66,7 @@ const ayuda = document.getElementById('ayuda');
 const panelRes = document.getElementById('resultado');
 const panelNo = document.getElementById('noEncontrado');
 
-let opciones = [];          // [{label, marca, modelo, version, precio, fuente}]
+let opciones = [];          // [{label, marca, modelo, version, precio, etiqueta}]
 let porLabel = {};
 
 function pesos(n) { return '$ ' + Math.round(n).toLocaleString('es-AR'); }
@@ -139,7 +139,7 @@ function mostrarPrecio(o) {
   const anio = anioSel.value;
   document.getElementById('resTitulo').textContent = `${o.label} · ${anio}`;
   document.getElementById('resPrecio').textContent = pesos(o.precio);
-  document.getElementById('resFuente').textContent = `Valor de referencia (${o.fuente || 'InfoAuto'})`;
+  document.getElementById('resFuente').textContent = o.etiqueta || 'Valor de referencia';
   const base = { marca: o.marca, modelo: o.modelo, version: o.version, anio };
   document.getElementById('btnToma').href = `{{ url_for('tomas.nueva') }}?${new URLSearchParams(base)}`;
   document.getElementById('btnStock').href = `{{ url_for('stock.nuevo') }}?${new URLSearchParams({ ...base, precio_referencia: o.precio })}`;

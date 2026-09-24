@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS precios_base (
     version TEXT NOT NULL,
     anio INTEGER NOT NULL,
     precio_referencia REAL NOT NULL,
-    fuente TEXT DEFAULT 'InfoAuto',
+    fuente TEXT DEFAULT 'Lista',
     fecha_actualizacion TEXT DEFAULT (date('now'))
 );
 
@@ -1138,10 +1138,15 @@ def _importar_precios_infoauto(conn):
     import glob
     import re
 
+    # 24/09/2026: sin acuerdo con el proveedor de la guía, el nombre de la
+    # fuente guardado en la base es neutro ("Lista Sep-2026"); se renombran
+    # las filas viejas para que ningún dato nombre al proveedor. Lo que ve
+    # el usuario lo arma routes/precios.py::etiqueta_referencia.
+    conn.execute("UPDATE precios_base SET fuente = REPLACE(fuente, 'InfoAuto', 'Lista') WHERE fuente LIKE '%InfoAuto%'")
     carpeta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seed", "precios_infoauto")
     for ruta in sorted(glob.glob(os.path.join(carpeta, "precios_infoauto_*.csv"))):
         m = re.search(r"(\d{4})_(\d{2})\.csv$", ruta)
-        fuente = f"InfoAuto {_MESES_ABREV[int(m.group(2))]}-{m.group(1)}" if m else "InfoAuto"
+        fuente = f"Lista {_MESES_ABREV[int(m.group(2))]}-{m.group(1)}" if m else "Lista"
         with open(ruta, encoding="utf-8", newline="") as f:
             filas = [
                 (r["marca"].strip(), r["modelo"].strip(), r["version"].strip(), int(r["anio"]), float(r["precio"]))

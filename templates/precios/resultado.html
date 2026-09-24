@@ -7,7 +7,7 @@
   <div class="price-result">
     <div class="meta">{{ marca }} {{ modelo }} {{ version }} · {{ anio }}</div>
     <div class="amount">${{ "{:,.0f}".format(resultado.precio_referencia).replace(",", ".") }}</div>
-    <div class="meta">Valor de referencia (fuente: {{ resultado.fuente }}, actualizado {{ resultado.fecha_actualizacion }})</div>
+    <div class="meta">{{ etiqueta_ref }}</div>
     <div data-rango-mercado data-marca="{{ marca }}" data-modelo="{{ modelo }}" data-version="{{ version }}" data-anio="{{ anio }}" data-valor-tabla="{{ resultado.precio_referencia }}"></div>
     <div class="actions-row">
       <a class="btn btn-primary" href="{{ url_for('tomas.nueva', marca=marca, modelo=modelo, version=version, anio=anio) }}">Iniciar toma del vehículo</a>

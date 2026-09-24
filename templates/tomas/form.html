@@ -105,7 +105,7 @@
   const evaluadoresCache = {{ evaluadores | tojson }};
   attachAutocomplete(document.getElementById('evaluador'), () => evaluadoresCache);
 
-  // Precio de guía (InfoAuto) apenas hay Marca+Modelo: no hace falta
+  // Precio de guía apenas hay Marca+Modelo: no hace falta
   // esperar a la Tasación (Paso 3) para saber si el vehículo tiene precio
   // de referencia cargado.
   const anioEl = document.getElementById('anio');

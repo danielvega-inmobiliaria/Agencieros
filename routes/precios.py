@@ -18,6 +18,26 @@ def index():
 
 
 
+_MESES = {"ene": 1, "feb": 2, "mar": 3, "abr": 4, "may": 5, "jun": 6,
+          "jul": 7, "ago": 8, "sep": 9, "oct": 10, "nov": 11, "dic": 12}
+
+
+def etiqueta_referencia(fuente, fecha_actualizacion=None):
+    """Texto que ve el usuario al lado del precio (24/09/2026): sin nombrar
+    la fuente -- no hay acuerdo con ningún proveedor de guías de precios --,
+    solo el mes del dato: "Valor de referencia · actualizado 09/2026".
+    El mes sale del nombre interno de la fuente ("... Sep-2026"); si no lo
+    tiene, de la fecha de carga (AAAA-MM-DD)."""
+    import re
+    m = re.search(r"([A-Za-z]{3})-(\d{4})", fuente or "")
+    if m and m.group(1).lower() in _MESES:
+        return f"Valor de referencia · actualizado {_MESES[m.group(1).lower()]:02d}/{m.group(2)}"
+    f = str(fecha_actualizacion or "")
+    if re.match(r"\d{4}-\d{2}", f):
+        return f"Valor de referencia · actualizado {f[5:7]}/{f[:4]}"
+    return "Valor de referencia"
+
+
 def etiqueta_vehiculo(marca, modelo, version):
     """Texto de cada opción del buscador, igual que lo muestra Decreditos
     (conectado a InfoAuto): "TOYOTA - ETIOS 1.5 4 PTAS PLATINUM"."""
@@ -34,7 +54,7 @@ def api_opciones():
     if not anio:
         return jsonify([])
     rows = query(
-        """SELECT marca, modelo, version, precio_referencia, fuente FROM precios_base
+        """SELECT marca, modelo, version, precio_referencia, fuente, fecha_actualizacion FROM precios_base
            WHERE anio = ? ORDER BY UPPER(marca), modelo, version""",
         (anio,),
     )
@@ -42,7 +62,8 @@ def api_opciones():
         {
             "label": etiqueta_vehiculo(r["marca"], r["modelo"], r["version"]),
             "marca": r["marca"], "modelo": r["modelo"], "version": r["version"],
-            "precio": r["precio_referencia"], "fuente": r["fuente"],
+            "precio": r["precio_referencia"],
+            "etiqueta": etiqueta_referencia(r["fuente"], r["fecha_actualizacion"]),
         }
         for r in rows
     ])
@@ -194,4 +215,5 @@ def buscar():
         version=version,
         anio=anio,
         links_comparables=links_comparables_busqueda,
+        etiqueta_ref=etiqueta_referencia(resultado["fuente"], resultado["fecha_actualizacion"]) if resultado else None,
     )

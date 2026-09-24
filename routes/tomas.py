@@ -743,11 +743,14 @@ def tasacion(toma_id):
     estado_mecanico_sugerido = _calcular_estado_mecanico(toma)
     estado_estetico_sugerido = _calcular_estado_estetico(marcadores)
 
+    # Primero el precio del MISMO año de la toma (24/09/2026: antes tomaba
+    # siempre el año más nuevo -- un Onix 2020 mostraba el valor de 2023);
+    # si ese año no está cargado, cae al más cercano.
     precio_base = query(
         """SELECT precio_referencia FROM precios_base
            WHERE marca = ? AND modelo = ? AND (version = ? OR ? IS NULL OR ? = '')
-           ORDER BY anio DESC LIMIT 1""",
-        (toma["marca"], toma["modelo"], toma["version"], toma["version"], toma["version"]),
+           ORDER BY ABS(anio - COALESCE(?, anio)), anio DESC LIMIT 1""",
+        (toma["marca"], toma["modelo"], toma["version"], toma["version"], toma["version"], toma["anio"]),
         one=True,
     )
     valor_referencia_sugerido = precio_base["precio_referencia"] if precio_base else ""
