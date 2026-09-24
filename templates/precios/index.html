@@ -78,7 +78,7 @@ attachAutocomplete(vehInput, () => opciones.map(o => o.label), null, {
   detalle: label => porLabel[label] ? pesos(porLabel[label].precio) : ''
 });
 
-anioSel.addEventListener('change', async () => {
+async function cargarAnio() {
   ocultarResultados();
   vehInput.value = '';
   opciones = []; porLabel = {};
@@ -94,13 +94,37 @@ anioSel.addEventListener('change', async () => {
   vehInput.disabled = false;
   vehInput.placeholder = 'Ej: Toyota Etios, Corolla XEI, Jimny...';
   ayuda.textContent = `${opciones.length} versiones con precio en ${anioSel.value}`;
+}
+
+anioSel.addEventListener('change', async () => {
+  await cargarAnio();
+  guardarEnUrl();
   vehInput.focus();
 });
+
+// La consulta queda anotada en la dirección de la página (?anio=&v=), así al
+// volver con "atrás" desde RosarioGarage (que se abre en la misma pestaña)
+// o al recargar, aparece otra vez el mismo vehículo con su precio.
+function guardarEnUrl() {
+  const p = new URLSearchParams();
+  if (anioSel.value) p.set('anio', anioSel.value);
+  if (porLabel[vehInput.value]) p.set('v', vehInput.value);
+  history.replaceState(null, '', p.toString() ? `?${p}` : location.pathname);
+}
+
+(async () => {
+  const p = new URLSearchParams(location.search);
+  if (!p.get('anio') || ![...anioSel.options].some(o => o.value === p.get('anio'))) return;
+  anioSel.value = p.get('anio');
+  await cargarAnio();
+  const o = porLabel[p.get('v') || ''];
+  if (o) { vehInput.value = o.label; mostrarPrecio(o); }
+})();
 
 vehInput.addEventListener('input', () => {
   const o = porLabel[vehInput.value];
   ocultarResultados();
-  if (o) { mostrarPrecio(o); return; }
+  if (o) { mostrarPrecio(o); guardarEnUrl(); return; }
   const texto = vehInput.value.trim();
   if (texto.length >= 3) {
     const palabras = texto.toLowerCase().split(/\s+/);
@@ -132,7 +156,8 @@ async function cargarComparables(params, contenedor) {
   links.forEach(l => {
     const a = document.createElement('a');
     a.className = 'btn btn-secondary btn-sm';
-    a.href = l.url; a.target = '_blank'; a.rel = 'noopener';
+    a.href = l.url;
+    if (!l.misma_pestana) { a.target = '_blank'; a.rel = 'noopener'; }
     a.textContent = `Ver en ${l.label} ↗`;
     contenedor.appendChild(a);
   });

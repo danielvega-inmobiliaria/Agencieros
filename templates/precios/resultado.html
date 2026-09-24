@@ -22,7 +22,7 @@
   </p>
   <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
     {% for l in links_comparables %}
-    <a class="btn btn-secondary btn-sm" href="{{ l.url }}" target="_blank" rel="noopener">Ver en {{ l.label }} ↗</a>
+    <a class="btn btn-secondary btn-sm" href="{{ l.url }}"{% if not l.misma_pestana %} target="_blank" rel="noopener"{% endif %}>Ver en {{ l.label }} ↗</a>
     {% endfor %}
   </div>
   {% endif %}

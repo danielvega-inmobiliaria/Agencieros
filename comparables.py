@@ -70,8 +70,17 @@ def links_comparables(marca, modelo, version, anio):
     if not consulta:
         return []
     slug_ml = quote_plus(consulta).replace("+", "-")
+    consulta_fb = " ".join(p for p in [marca, modelo, str(anio) if anio else ""] if p).strip()
     return [
         {"label": "MercadoLibre", "url": f"https://listado.mercadolibre.com.ar/{slug_ml}"},
-        {"label": "RosarioGarage", "url": _url_rosariogarage(marca, modelo, anio)},
-        {"label": "Facebook Marketplace", "url": f"https://www.facebook.com/marketplace/search/?query={quote_plus(consulta)}"},
+        # RosarioGarage se abre en la MISMA pestaña (24/09/2026): en el
+        # celu, MercadoLibre y Facebook abren su propia app y iOS muestra
+        # "◀ Chrome" para volver, pero RosarioGarage no tiene app y quedaba
+        # en una pestaña nueva, obligando a buscar la app entre las
+        # pestañas abiertas. En la misma pestaña, la flecha "atrás" vuelve.
+        {"label": "RosarioGarage", "url": _url_rosariogarage(marca, modelo, anio), "misma_pestana": True},
+        # Facebook: marca + modelo + año, sin versión (24/09/2026, pedido de
+        # Daniel) -- los particulares casi nunca escriben la versión exacta
+        # de InfoAuto y con ella la búsqueda traía muy pocos avisos.
+        {"label": "Facebook Marketplace", "url": f"https://www.facebook.com/marketplace/search/?query={quote_plus(consulta_fb)}"},
     ]
