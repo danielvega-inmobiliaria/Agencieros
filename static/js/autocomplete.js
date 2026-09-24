@@ -63,7 +63,17 @@ function attachAutocomplete(input, obtenerValores, onSeleccionar) {
   function mostrar() {
     var texto = input.value.trim().toLowerCase();
     var todas = obtenerValores() || [];
-    var filtradas = texto ? todas.filter(function (v) { return String(v).toLowerCase().indexOf(texto) !== -1; }) : todas;
+    // Cada palabra tipeada tiene que aparecer en la opción, en cualquier
+    // orden (24/09/2026, buscador estilo Decreditos): "etios plat" encuentra
+    // "TOYOTA - ETIOS 1.5 4 PTAS PLATINUM". Con una sola palabra es igual
+    // que antes (contiene el texto).
+    var palabras = texto.split(/\s+/).filter(Boolean);
+    var filtradas = palabras.length
+      ? todas.filter(function (v) {
+          var s = String(v).toLowerCase();
+          return palabras.every(function (p) { return s.indexOf(p) !== -1; });
+        })
+      : todas;
 
     dd.innerHTML = "";
     activo = -1;

@@ -1116,6 +1116,54 @@ def _migrar_permuta_destino(conn):
                 conn.execute(f"ALTER TABLE {tabla} ADD COLUMN {columna} {tipo}")
 
 
+
+_MESES_ABREV = {1: "Ene", 2: "Feb", 3: "Mar", 4: "Abr", 5: "May", 6: "Jun",
+                7: "Jul", 8: "Ago", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dic"}
+
+
+def _importar_precios_infoauto(conn):
+    """Carga en `precios_base` los listados de InfoAuto que Daniel va
+    transcribiendo a Excel (24/09/2026: primera tanda, Toyota/Suzuki/Tank de
+    la revista de Septiembre 2026). Cada listado vive como CSV en
+    `seed/precios_infoauto/precios_infoauto_AAAA_MM.csv` (columnas
+    marca,modelo,version,anio,precio -- precio ya en pesos, no en miles), así
+    viaja con el código y se carga igual en local y en Railway.
+
+    Idempotente: si ya están cargadas exactamente las mismas filas de ese
+    CSV no hace nada; si el CSV cambió (Daniel sumó marcas o corrigió
+    valores) reemplaza todo lo de esa fuente. Antes de insertar borra
+    cualquier fila de otra fuente con el mismo Marca+Modelo+Versión+Año,
+    para que nunca haya dos precios distintos para el mismo vehículo."""
+    import csv
+    import glob
+    import re
+
+    carpeta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seed", "precios_infoauto")
+    for ruta in sorted(glob.glob(os.path.join(carpeta, "precios_infoauto_*.csv"))):
+        m = re.search(r"(\d{4})_(\d{2})\.csv$", ruta)
+        fuente = f"InfoAuto {_MESES_ABREV[int(m.group(2))]}-{m.group(1)}" if m else "InfoAuto"
+        with open(ruta, encoding="utf-8", newline="") as f:
+            filas = [
+                (r["marca"].strip(), r["modelo"].strip(), r["version"].strip(), int(r["anio"]), float(r["precio"]))
+                for r in csv.DictReader(f)
+            ]
+        ya_cargadas = conn.execute(
+            "SELECT marca, modelo, version, anio, precio_referencia FROM precios_base WHERE fuente = ?", (fuente,)
+        ).fetchall()
+        if sorted(tuple(x) for x in ya_cargadas) == sorted(filas):
+            continue
+        conn.execute("DELETE FROM precios_base WHERE fuente = ?", (fuente,))
+        conn.executemany(
+            "DELETE FROM precios_base WHERE marca = ? AND modelo = ? AND version = ? AND anio = ?",
+            [fila[:4] for fila in filas],
+        )
+        conn.executemany(
+            """INSERT INTO precios_base (marca, modelo, version, anio, precio_referencia, fuente, fecha_actualizacion)
+               VALUES (?, ?, ?, ?, ?, ?, date('now'))""",
+            [fila + (fuente,) for fila in filas],
+        )
+
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
@@ -1161,6 +1209,7 @@ def init_db():
                VALUES (?, ?, ?, ?, ?)""",
             _SEED_PRECIOS,
         )
+    _importar_precios_infoauto(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM usuarios")
     if cur.fetchone()[0] == 0:

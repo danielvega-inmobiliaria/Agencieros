@@ -16,6 +16,37 @@ def index():
     return render_template("precios/index.html", anios=anios)
 
 
+
+def etiqueta_vehiculo(marca, modelo, version):
+    """Texto de cada opción del buscador, igual que lo muestra Decreditos
+    (conectado a InfoAuto): "TOYOTA - ETIOS 1.5 4 PTAS PLATINUM"."""
+    return f"{(marca or '').upper()} - {' '.join(p for p in [modelo, version] if p)}".strip()
+
+
+@bp.route("/api/opciones")
+def api_opciones():
+    """Buscador estilo Decreditos (24/09/2026, pedido de Daniel): elegido el
+    Año, un solo campo "Marca / Modelo" con todas las versiones que tienen
+    precio ESE año, en una sola línea (marca - modelo versión) y con el
+    valor ya incluido para mostrarlo apenas se elige, sin otra consulta."""
+    anio = request.args.get("anio", "")
+    if not anio:
+        return jsonify([])
+    rows = query(
+        """SELECT marca, modelo, version, precio_referencia, fuente FROM precios_base
+           WHERE anio = ? ORDER BY UPPER(marca), modelo, version""",
+        (anio,),
+    )
+    return jsonify([
+        {
+            "label": etiqueta_vehiculo(r["marca"], r["modelo"], r["version"]),
+            "marca": r["marca"], "modelo": r["modelo"], "version": r["version"],
+            "precio": r["precio_referencia"], "fuente": r["fuente"],
+        }
+        for r in rows
+    ])
+
+
 @bp.route("/api/marcas")
 def api_marcas():
     """Marcas para el datalist. Con Año ya elegido, solo las marcas que
@@ -110,6 +141,12 @@ def buscar():
     modelo = request.args.get("modelo", "")
     version = request.args.get("version", "")
     anio = request.args.get("anio", "")
+    # Texto libre del buscador cuando el vehículo no está en la lista (no
+    # hay Marca/Modelo/Versión separados): se usa tal cual como "modelo"
+    # para los links de comparables y para precargar Toma/Stock.
+    texto_libre = request.args.get("q", "").strip()
+    if texto_libre and not (marca or modelo):
+        modelo = texto_libre
 
     resultado = query(
         """SELECT * FROM precios_base

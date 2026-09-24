@@ -2,19 +2,44 @@
 {% block title %}Consulta de precios — Agencieros{% endblock %}
 {% block header %}Consulta de precios{% endblock %}
 {% block content %}
+{# Buscador rediseñado 24/09/2026 a pedido de Daniel, igual que el simulador
+   de Decreditos (conectado a InfoAuto): 1) Año, 2) un solo campo
+   "Marca / Modelo" con todas las versiones de ese año en una línea
+   ("TOYOTA - ETIOS 1.5 4 PTAS PLATINUM"), buscable por cualquier palabra,
+   3) el valor aparece apenas se elige, sin cambiar de pantalla. #}
 <div class="hero-search">
   <h1>¿Qué vehículo querés consultar?</h1>
-  <p>Arrancá por el Año: así Marca, Modelo y Versión te sugieren solo lo que corresponde a ese año.</p>
-  <div class="select-row">
-    <input type="text" id="anio" placeholder="Año" autocomplete="off">
-    <input type="text" id="marca" placeholder="Marca (opcional)" autocomplete="off">
-    <input type="text" id="modelo" placeholder="Modelo" autocomplete="off">
+  <p>Elegí el año y después buscá la marca, el modelo o la versión: podés escribir cualquier parte (ej. "etios plat").</p>
 
-    <select id="marcaDisambiguar" style="display:none;"><option value="">¿Cuál marca?</option></select>
+  <div class="buscador-precio">
+    <div class="bp-campo">
+      <label for="anio">Año del vehículo</label>
+      <select id="anio">
+        <option value="">Elegí el año</option>
+        {% for a in anios %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="bp-campo bp-ancho">
+      <label for="vehiculo">Marca / Modelo</label>
+      <input type="text" id="vehiculo" placeholder="Primero elegí el año" autocomplete="off" disabled>
+      <div class="bp-ayuda" id="ayuda"></div>
+    </div>
+  </div>
 
-    <select id="version" disabled><option value="">Versión</option></select>
-    <select id="anioDisambiguar" style="display:none;"><option value="">¿Qué año?</option></select>
-    <button class="btn btn-primary" id="btnBuscar" disabled>Ver precio</button>
+  <div class="bp-resultado" id="resultado" style="display:none;">
+    <div class="meta" id="resTitulo"></div>
+    <div class="amount" id="resPrecio"></div>
+    <div class="meta" id="resFuente"></div>
+    <div class="actions-row">
+      <a class="btn btn-primary" id="btnToma" href="#">Iniciar toma del vehículo</a>
+      <a class="btn btn-secondary" id="btnStock" href="#">Guardar en stock</a>
+      <a class="btn btn-secondary" id="btnDetalle" href="#">Ver historial por año</a>
+    </div>
+  </div>
+
+  <div class="bp-resultado" id="noEncontrado" style="display:none;">
+    <p style="margin:0 0 10px;">No está en la lista de precios cargada para ese año.</p>
+    <button class="btn btn-secondary" id="btnBuscarIgual">Buscar igual (comparables de mercado)</button>
   </div>
 </div>
 
@@ -29,163 +54,70 @@
 
 <script src="{{ url_for('static', filename='js/autocomplete.js') }}"></script>
 <script>
-const anioInput = document.getElementById('anio');
-const marcaInput = document.getElementById('marca');
-const modeloInput = document.getElementById('modelo');
-const marcaDisambiguar = document.getElementById('marcaDisambiguar');
-const anioDisambiguar = document.getElementById('anioDisambiguar');
-const versionSel = document.getElementById('version');
-const btn = document.getElementById('btnBuscar');
+const anioSel = document.getElementById('anio');
+const vehInput = document.getElementById('vehiculo');
+const ayuda = document.getElementById('ayuda');
+const panelRes = document.getElementById('resultado');
+const panelNo = document.getElementById('noEncontrado');
 
-// Los desplegables de Año/Marca/Modelo se arman a mano (ver autocomplete.js)
-// en vez de <input list>+<datalist>: en el celular (iOS Safari sobre todo)
-// el datalist nativo aparece arriba del teclado, mezclado con las
-// sugerencias de palabras, y confunde (charla 13-14/09/2026).
-let aniosCache = {{ anios | tojson }};
-let marcasCache = [];
-let modelosCache = [];
+let opciones = [];          // [{label, marca, modelo, version, precio, fuente}]
+let porLabel = {};
 
-attachAutocomplete(anioInput, () => aniosCache);
-attachAutocomplete(marcaInput, () => marcasCache);
-attachAutocomplete(modeloInput, () => modelosCache);
+function pesos(n) { return '$ ' + Math.round(n).toLocaleString('es-AR'); }
 
-function resetSelect(sel, placeholder) {
-  sel.innerHTML = `<option value="">${placeholder}</option>`;
-  sel.disabled = true;
+function ocultarResultados() {
+  panelRes.style.display = 'none';
+  panelNo.style.display = 'none';
 }
 
-function resetDesdeCambio() {
-  resetSelect(versionSel, 'Versión');
-  btn.disabled = true;
-  marcaDisambiguar.style.display = 'none';
-  marcaDisambiguar.innerHTML = '<option value="">¿Cuál marca?</option>';
-  anioDisambiguar.style.display = 'none';
-  anioDisambiguar.innerHTML = '<option value="">¿Qué año?</option>';
-}
+attachAutocomplete(vehInput, () => opciones.map(o => o.label));
 
-async function cargarMarcas(anio) {
-  const url = anio ? `/precios/api/marcas?anio=${encodeURIComponent(anio)}` : '/precios/api/marcas';
-  const res = await fetch(url);
-  marcasCache = await res.json();
-}
-
-async function cargarModelos(marca, anio) {
-  const params = new URLSearchParams();
-  if (marca) params.set('marca', marca);
-  if (anio) params.set('anio', anio);
-  const res = await fetch(`/precios/api/modelos?${params.toString()}`);
-  modelosCache = await res.json();
-}
-
-async function cargarVersiones(marca, modelo, anio) {
-  const params = new URLSearchParams({ marca, modelo });
-  if (anio) params.set('anio', anio);
-  const res = await fetch(`/precios/api/versiones?${params.toString()}`);
-  const data = await res.json();
-  resetSelect(versionSel, 'Versión');
-  data.forEach(v => versionSel.innerHTML += `<option value="${v}">${v}</option>`);
-  if (data.length === 0) {
-    // Todavía no hay ninguna versión cargada en la base de precios para
-    // este Marca+Modelo+Año (pasa seguido mientras no está resuelto el
-    // listado de InfoAuto) -- en vez de dejar la búsqueda trabada para
-    // siempre (el botón nunca se habilitaba porque dependía de elegir una
-    // versión que no existía), se deja buscar igual sin versión puntual:
-    // el resultado va a mostrar el aviso de "no encontramos este
-    // vehículo" con los links de búsqueda directa en MercadoLibre,
-    // RosarioGarage y Facebook Marketplace (pedido de Daniel 22/09/2026).
-    versionSel.innerHTML = '<option value="">(sin versiones cargadas)</option>';
-    versionSel.disabled = true;
-    btn.disabled = false;
-  } else {
-    versionSel.disabled = false;
+anioSel.addEventListener('change', async () => {
+  ocultarResultados();
+  vehInput.value = '';
+  opciones = []; porLabel = {};
+  if (!anioSel.value) {
+    vehInput.disabled = true;
+    vehInput.placeholder = 'Primero elegí el año';
+    ayuda.textContent = '';
+    return;
   }
-}
-
-async function revalidarModelo() {
-  resetDesdeCambio();
-  const modelo = modeloInput.value.trim();
-  if (!modelo) return;
-
-  const anio = anioInput.value.trim();
-  let marca = marcaInput.value.trim();
-  if (!marca) {
-    // Búsqueda directa por modelo, sin marca elegida todavía.
-    const params = new URLSearchParams({ modelo });
-    if (anio) params.set('anio', anio);
-    const res = await fetch(`/precios/api/marcas_por_modelo?${params.toString()}`);
-    const marcas = await res.json();
-    if (marcas.length === 1) {
-      marca = marcas[0];
-      marcaInput.value = marca;
-    } else if (marcas.length > 1) {
-      // Varias marcas comparten ese modelo (en ese año): selector chico
-      // solo con esas opciones, nunca el desplegable completo de marcas.
-      marcas.forEach(m => marcaDisambiguar.innerHTML += `<option value="${m}">${m}</option>`);
-      marcaDisambiguar.style.display = '';
-      return;
-    } else {
-      return; // modelo no encontrado (en ese año, si estaba elegido)
-    }
-  }
-  await cargarVersiones(marca, modelo, anio);
-}
-
-// Al arrancar, sin Año todavía elegido: universo completo de marcas y
-// modelos (se van acotando apenas se completa algún campo).
-cargarMarcas('');
-cargarModelos('', '');
-
-anioInput.addEventListener('input', () => {
-  resetDesdeCambio();
-  const anio = anioInput.value.trim();
-  cargarMarcas(anio);
-  cargarModelos(marcaInput.value.trim(), anio);
-  if (modeloInput.value.trim()) revalidarModelo();
+  const res = await fetch(`/precios/api/opciones?anio=${encodeURIComponent(anioSel.value)}`);
+  opciones = await res.json();
+  opciones.forEach(o => { porLabel[o.label] = o; });
+  vehInput.disabled = false;
+  vehInput.placeholder = 'Ej: Toyota Etios, Corolla XEI, Jimny...';
+  ayuda.textContent = `${opciones.length} versiones con precio en ${anioSel.value}`;
+  vehInput.focus();
 });
 
-marcaInput.addEventListener('input', () => {
-  resetDesdeCambio();
-  cargarModelos(marcaInput.value.trim(), anioInput.value.trim());
-  if (modeloInput.value.trim()) revalidarModelo();
-});
-
-modeloInput.addEventListener('input', revalidarModelo);
-
-marcaDisambiguar.addEventListener('change', async () => {
-  if (!marcaDisambiguar.value) return;
-  marcaInput.value = marcaDisambiguar.value;
-  marcaDisambiguar.style.display = 'none';
-  await cargarVersiones(marcaDisambiguar.value, modeloInput.value.trim(), anioInput.value.trim());
-});
-
-versionSel.addEventListener('change', async () => {
-  btn.disabled = true;
-  anioDisambiguar.style.display = 'none';
-  if (!versionSel.value) return;
-  if (anioInput.value.trim()) { btn.disabled = false; return; }
-  // No se puso Año todavía (se puede buscar sin seguir el orden
-  // recomendado): lo resolvemos acá para no trabar la búsqueda.
-  const res = await fetch(`/precios/api/anios?marca=${encodeURIComponent(marcaInput.value)}&modelo=${encodeURIComponent(modeloInput.value)}&version=${encodeURIComponent(versionSel.value)}`);
-  const anios = await res.json();
-  if (anios.length === 1) {
-    anioInput.value = anios[0];
-    btn.disabled = false;
-  } else if (anios.length > 1) {
-    anios.forEach(a => anioDisambiguar.innerHTML += `<option value="${a}">${a}</option>`);
-    anioDisambiguar.style.display = '';
+vehInput.addEventListener('input', () => {
+  const o = porLabel[vehInput.value];
+  ocultarResultados();
+  if (o) { mostrarPrecio(o); return; }
+  const texto = vehInput.value.trim();
+  if (texto.length >= 3) {
+    const palabras = texto.toLowerCase().split(/\s+/);
+    const hay = opciones.some(op => palabras.every(p => op.label.toLowerCase().includes(p)));
+    if (!hay) panelNo.style.display = '';
   }
 });
 
-anioDisambiguar.addEventListener('change', () => {
-  if (!anioDisambiguar.value) return;
-  anioInput.value = anioDisambiguar.value;
-  anioDisambiguar.style.display = 'none';
-  btn.disabled = false;
-});
+function mostrarPrecio(o) {
+  const anio = anioSel.value;
+  document.getElementById('resTitulo').textContent = `${o.label} · ${anio}`;
+  document.getElementById('resPrecio').textContent = pesos(o.precio);
+  document.getElementById('resFuente').textContent = `Valor de referencia (${o.fuente || 'InfoAuto'})`;
+  const base = { marca: o.marca, modelo: o.modelo, version: o.version, anio };
+  document.getElementById('btnToma').href = `{{ url_for('tomas.nueva') }}?${new URLSearchParams(base)}`;
+  document.getElementById('btnStock').href = `{{ url_for('stock.nuevo') }}?${new URLSearchParams({ ...base, precio_referencia: o.precio })}`;
+  document.getElementById('btnDetalle').href = `{{ url_for('precios.buscar') }}?${new URLSearchParams(base)}`;
+  panelRes.style.display = '';
+}
 
-btn.addEventListener('click', () => {
-  const params = new URLSearchParams({ marca: marcaInput.value, modelo: modeloInput.value, version: versionSel.value, anio: anioInput.value });
-  window.location.href = `/precios/buscar?${params.toString()}`;
+document.getElementById('btnBuscarIgual').addEventListener('click', () => {
+  const params = new URLSearchParams({ q: vehInput.value.trim(), anio: anioSel.value });
+  window.location.href = `{{ url_for('precios.buscar') }}?${params}`;
 });
 </script>
 {% endblock %}

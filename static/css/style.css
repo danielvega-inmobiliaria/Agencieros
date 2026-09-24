@@ -584,3 +584,21 @@ form textarea { min-height: 80px; }
 @media (max-width: 700px) {
   .auth-panel input, .auth-panel select, .auth-panel textarea { font-size: 16px; }
 }
+
+/* --- Consulta de precios estilo Decreditos (24/09/2026): Año + un solo
+   campo "Marca / Modelo" y el valor debajo, sin cambiar de pantalla. --- */
+.buscador-precio { display: flex; gap: 14px; margin: 20px auto 0; max-width: 760px; flex-wrap: wrap; text-align: left; }
+.buscador-precio .bp-campo { display: flex; flex-direction: column; gap: 6px; flex: 0 0 160px; }
+.buscador-precio .bp-ancho { flex: 1 1 320px; }
+.buscador-precio label { font-size: 13px; color: var(--gold-light); font-weight: 600; }
+.buscador-precio select, .buscador-precio input[type="text"] {
+  width: 100%; padding: 11px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--navy-bg); color: var(--text); font-size: 15px; box-sizing: border-box;
+}
+.buscador-precio input[type="text"]:disabled { opacity: .55; }
+.buscador-precio .autocomplete-wrap { width: 100%; }
+.bp-ayuda { font-size: 12px; color: var(--text-dim); min-height: 16px; }
+.bp-resultado { margin: 22px auto 0; max-width: 760px; padding: 18px; border-top: 1px solid var(--border); }
+.bp-resultado .amount { font-size: 40px; font-weight: 800; color: var(--gold-light); margin: 4px 0; }
+.bp-resultado .meta { color: var(--text-dim); font-size: 14px; }
+@media (max-width: 600px) { .buscador-precio .bp-campo { flex: 1 1 100%; } .bp-resultado .amount { font-size: 32px; } }
