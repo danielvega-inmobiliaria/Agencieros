@@ -328,3 +328,33 @@ def rango_mercado(marca, modelo, version="", anio=""):
     motivo = ("MercadoLibre rechazó la búsqueda (403). Conectá la cuenta de ML desde Admin → MercadoLibre."
               if ultimo_error in (401, 403) else f"MercadoLibre no respondió (HTTP {ultimo_error}).")
     return {"disponible": True, "ok": False, "motivo": motivo, "http": ultimo_error}
+
+
+def diagnostico():
+    """Pruebas contra la API real para ver QUÉ rechaza ML y por qué (24/09/2026:
+    /sites/MLA/search dio 403 con token de app y también con token de usuario).
+    Devuelve [(descripcion, tipo_token, http, mensaje)] -- sin tokens ni secretos."""
+    out = []
+    pruebas = [
+        ("Buscar 'toyota etios' en Autos (categoría + año)", f"{API}/sites/MLA/search?" + urlencode({"category": CATEGORIA_AUTOS, "q": "toyota etios", "VEHICLE_YEAR": "2018-2018", "limit": 1})),
+        ("Buscar 'toyota etios' sin categoría", f"{API}/sites/MLA/search?" + urlencode({"q": "toyota etios", "limit": 1})),
+        ("Listar categoría Autos (sin texto)", f"{API}/sites/MLA/search?" + urlencode({"category": CATEGORIA_AUTOS, "limit": 1})),
+        ("Datos de la categoría Autos (no es búsqueda)", f"{API}/categories/{CATEGORIA_AUTOS}"),
+        ("Mi usuario (/users/me)", f"{API}/users/me"),
+    ]
+    tokens = tokens_disponibles() or [("sin token", None)]
+    for tipo, token in tokens:
+        for desc, url in pruebas:
+            st, j = _http(url, token=token)
+            msg = ""
+            if isinstance(j, dict):
+                if st == 200:
+                    if "results" in j:
+                        msg = f"OK: {(j.get('paging') or {}).get('total')} avisos en total"
+                    else:
+                        msg = "OK"
+                else:
+                    msg = " / ".join(str(j.get(k)) for k in ("message", "error", "blocked_by", "code") if j.get(k))
+            out.append((desc, tipo, st, msg))
+    return out
+

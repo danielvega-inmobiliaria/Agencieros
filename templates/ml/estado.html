@@ -19,6 +19,7 @@
     {% if estado.credenciales %}
     <a class="btn btn-primary" href="{{ url_for('ml.conectar') }}">{{ 'Reconectar' if estado.usuario_conectado else 'Conectar cuenta de MercadoLibre' }}</a>
     <a class="btn btn-secondary" href="{{ url_for('ml.estado', probar=1) }}">Probar búsqueda (Toyota Etios 2018)</a>
+    <a class="btn btn-secondary" href="{{ url_for('ml.estado', diagnostico=1) }}">Diagnóstico detallado</a>
     {% endif %}
     {% if estado.usuario_conectado %}
     <form method="post" action="{{ url_for('ml.desconectar') }}" style="display:inline;">
@@ -27,6 +28,18 @@
     {% endif %}
   </div>
 </div>
+
+{% if diag %}
+<div class="panel">
+  <h2>Diagnóstico de la API de MercadoLibre</h2>
+  <table>
+    <tr><th>Prueba</th><th>Token</th><th>HTTP</th><th>Respuesta de ML</th></tr>
+    {% for d, t, st, m in diag %}
+    <tr><td>{{ d }}</td><td>{{ t }}</td><td>{{ st }}</td><td>{{ m }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
 
 {% if prueba %}
 <div class="panel">
