@@ -119,6 +119,7 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - **Capturas nuevas** en `static/landing/`: m-precios, m-stock, m-ficha, m-tasacion, m-pedidos, m-red (540×1169), m-dashboard (540×1003) y og.jpg (1200×630). m-fin.webp no se tocó. Scripts y fotos para regenerarlas: `03_AUTOMOTOR/Claude outputs/demo_capturas/` (`seed_demo.py`, `shots.py`, `og.py`, `fotos/`) — corren en el entorno de Claude (Playwright).
 - **VW en la lista de precios:** el CSV con las 296 filas de Volkswagen (Msg 6-7) no estaba commiteado — va en este commit.
 - **Observación de Daniel:** la lista y el mercado difieren bastante (Corolla Cross XLi 2025: lista $39.800.000 vs aviso ML $49.500.000; Fox 2008: lista $9.070.000 vs aviso $8.650.000). Refuerza el valor del rango de mercado (bloqueado por el 403 de ML).
+- **Msg 12:** la landing (grilla de módulos) decía "con el dato de fuente y fecha" → ahora "con la fecha de actualización del dato" (`templates/landing.html`).
 - **Pendiente:** ubicar `HUB.md` (no está en 03_AUTOMOTOR, 05_MARKETING ni _COMUN) y actualizar la fila de Agencieros; licencia de datos de precios (InfoAuto/CCA/ACARA) sigue abierta.
 
 ### Sesión 24/09/2026 (tarde) — Rango de precios de mercado con la API de MercadoLibre (Msg 1)
