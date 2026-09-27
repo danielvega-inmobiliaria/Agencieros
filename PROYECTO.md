@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 27/09/2026 — 11:32 ART (chat "Revista págs. 157-164": VW completo + VW Camiones iniciado)_
+_Última actualización: 27/09/2026 — 14:33 ART (chat revista: págs. 80-83 DS/Ferrari/Fiat cargadas)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -115,11 +115,19 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 ## Cambios recientes
 
+### Sesión 27/09/2026 (chat revista, Msg 6) — Precios págs. 80 a 83: DS Automobiles, Ferrari y Fiat (hasta Palio)
+- **252 versiones / 881 precios**: DS Automobiles (13/45), Ferrari (16/73), Fiat 500 → Palio (223/763). Transcripción en `INFOAUTO/transcripcion/datos_080_083.py`. Fiat sigue en la pág. 84.
+- **Excel:** como son marcas anteriores a Suzuki en la revista, se insertaron ARRIBA (filas 2–256, títulos DS AUTOMOBILES / FERRARI / FIAT en 2, 16 y 33); todo lo anterior bajó 255 filas (Suzuki ahora en la 257, sin cambios en su contenido). ORIGEN = 1.159 registros; autofiltro A1:A1258.
+- **CSV:** +881 filas (4.049 en total, sin duplicados). Marcas "DS Automobiles", "Ferrari", "Fiat". Modelos de dos palabras: GRAND SIENA, F 12. Ferrari de una palabra (430, FF, California…) con versión vacía.
+- Controles: 0 diferencias Excel/CSV vs transcripción; revisión visual de las 252 filas; 18 diferencias de OCR miradas a mano (todas errores del OCR). Años vacíos en medio de fila (500 Abarth 595, 500 Lounge Cabriolet, 500 Sport, Fiorino 1.4 Evo, Grand Siena 1.4 Attractive Top Seg) cargados tal cual (criterio de Daniel).
+- App probada: 2026 Cronos L/26 1.3 Precision CVT $42.170.000; 2013 Ferrari 430 Scuderia $609.000.000; 2022 DS7 2.0 HDI Grand Chic $45.000.000.
+
 ### Sesión 27/09/2026 (chat revista, Msg 2) — Precios págs. 161 a 164 (fin de VW + inicio de VW Camiones)
 - **Volkswagen terminado** (Suran → Voyage) + **Volkswagen Camiones** arrancado en la pág. 164 (10.150 a 17.220; sigue en la 165 si la revista continúa). **296 versiones / 1.045 precios**: 161 (71/232), 162 (71/292), 163 (71/253), 164 (23+30 / 84+184). Transcripción en `INFOAUTO/transcripcion/datos_161_164.py`.
 - **Controles:** precios decrecientes y años contiguos (excepciones impresas así y cargadas tal cual: The Beetle Cabrio 2.0 T Sport DSG sin '16; 13.180 EIII 43 D/C y 48 D/C sin '11/'10); sin nombres repetidos; grilla + tinta + OCR (las 51 diferencias del OCR miradas a mano: todas errores del OCR); revisión visual de las 283 filas. Excel y CSV releídos: 0 diferencias; CSV sin duplicados (3.168 filas).
 - **Excel:** filas 737–972 (VW, línea media al final de la marca), fila 973 título **VOLKSWAGEN CAMIONES** (mismo formato que VOLKSWAGEN), filas 974–1003 camiones; ORIGEN = 907 registros; autofiltro A1:A1003.
 - **CSV:** +1.045 filas. Marca de camiones = "Volkswagen Camiones". "THE BEETLE" como modelo (igual que "NEW BEETLE"). Camiones sin versión (13.180/43, 13.190/48, 15.190/43, 17.210/xx…) quedan con versión vacía, como Tank 300. Corregido CONFORTLINE→COMFORTLINE (Vento 1.4 TSI BM Tech DSG).
+- **Años vacíos en medio de una fila** (Sharan, The Beetle Cabrio, 13.180 D/C): Daniel confirmó (Msg 4) que son correctos; criterio fijo, se cargan tal cual.
 - App probada: 2026 Taos 1.4 250 TSI Highline AT L/26 Bitono $68.322.000; 2012 Voyage 1.6 Highline $11.500.000; 2007 VW Camiones 17.210/48 $49.955.000.
 
 ### Sesión 27/09/2026 (chat revista, Msg 1) — Precios VW págs. 157 a 160 (Gol Country → Suran)
