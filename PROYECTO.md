@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 27/09/2026 — 14:47 ART (chat revista: págs. 84-87 Fiat completo + Ford iniciado)_
+_Última actualización: 27/09/2026 — 15:01 ART (chat revista: págs. 88-91 Ford hasta Mondeo)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -114,6 +114,13 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 27/09/2026 (chat revista, Msg 8) — Precios págs. 88 a 91: Ford (Eco Sport a Mondeo)
+- **253 versiones / 997 precios** de Ford: Eco Sport, Everest, F-100, F-150, Fiesta, Focus, Ka, Kuga, Maverick, Mondeo. Transcripción en `INFOAUTO/transcripcion/datos_088_091.py`. Ford sigue en la pág. 92 (las 92-99 ya están en la carpeta).
+- **Excel:** filas 528–780 (a continuación de Ford Courier); Suzuki ahora en la 781 (contenido anterior sin cambios, verificado). ORIGEN = 1.682 registros; autofiltro A1:A1782.
+- **CSV:** +997 filas (5.906 en total, sin duplicados). "ECO SPORT" como modelo de dos palabras.
+- Controles: 0 diferencias Excel/CSV vs transcripción; revisión visual de las 253 filas; 36 diferencias de OCR miradas a mano (todas errores del OCR). Dudas menores anotadas en PAGINAS_CARGADAS.md (nombres borrosos en la pág. 90 y un salto de precio impreso en Focus L/14 2.0 4P SE Plus).
+- App probada: 2026 F-150 3.5 Raptor L/24 $154.350.000; 2019 Eco Sport 1.5 Titanium L/18 $21.200.000; 2015 Mondeo 2.3 Ghia Aut $15.780.000.
 
 ### Sesión 27/09/2026 (chat revista, Msg 7) — Precios págs. 84 a 87: fin de Fiat + inicio de Ford
 - **270 versiones / 860 precios**: Fiat Palio 1.7 → Uno (262/832, Fiat completo) + Ford Bronco y Courier (8/28). Transcripción en `INFOAUTO/transcripcion/datos_084_087.py`. Ford sigue en la pág. 88 (las 88-89 ya están en la carpeta).
