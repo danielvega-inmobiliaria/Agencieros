@@ -115,6 +115,14 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 ## Cambios recientes
 
+### Sesión 27/09/2026 (Msg 15-16) — Precios VW págs. 155 y 156 (Fox, CrossFox, Gol, Gol Trend)
+- Transcriptas las págs. 155 y 156 de la revista Sep-2026 (`INFOAUTO/INFO 155|156 09-26.pdf`): **125 versiones / 441 precios** (Fox 1.6/1.9, CrossFox, Gol 1.4/1.6/1.9, Gol Trend L/13 y L/17). Transcripción en `INFOAUTO/transcripcion/datos_155_156.py`.
+- **Controles:** precios decrecientes por antigüedad y años contiguos en todas las filas; sin nombres repetidos; grilla detectada sobre el escaneo + tinta/valor por celda + OCR por celda como segunda opinión; y revisión visual de las 125 filas con la transcripción dibujada debajo de cada franja escaneada. Excel y CSV releídos y comparados contra la transcripción: 0 diferencias. En la app: consulta 2012 muestra CrossFox Highline L/10 CU $12.700.000 y Gol Trend 5P L/13 PK 1 $11.050.000.
+- **Excel:** como `INFOAUTO_PRECIOS_2026_09.xlsx` estaba abierto, el resultado quedó en **`INFOAUTO_PRECIOS_2026_09_nuevo.xlsx`** (filas 359–483, mismo estilo, línea gruesa FOX→GOL, línea media al final, se sacó la línea media que cerraba VW en el Fox viejo; ORIGEN = 388 registros). Pendiente: Daniel cierra Excel y se reemplaza el original por el nuevo.
+- **CSV:** +441 filas (1.161 en total, sin duplicados). Modelo = primera palabra: CrossFox queda como modelo FOX ("CROSSFOX 1.6 …") y Gol Trend como GOL ("TREND 1.6 …"), mismo criterio que Corolla Cross.
+- Nombres tal como están impresos (incluye "STARTLIINE" y "TRENDLIN" de la revista).
+- **Instrucción reutilizable** para las próximas hojas: `INFOAUTO/transcripcion/INSTRUCCION_TRANSCRIPCION.md`.
+
 ### Sesión 24/09/2026 (tarde, Msg 8-9) — Sin "InfoAuto" visible + agencia demo y capturas nuevas para Meta Ads
 - **Pedido (bloqueante de `05_MARKETING/META_ADS/CAMPANA_AGENCIEROS.md`):** no hay acuerdo con InfoAuto → la app y la landing no pueden nombrarlo; capturas nuevas con valores vigentes.
 - **Hecho:** al lado del precio ahora dice **"Valor de referencia · actualizado 09/2026"** (`routes/precios.py::etiqueta_referencia`, usado en `precios/index.html` y `precios/resultado.html`); `/precios/api/opciones` ya no manda el campo `fuente`; en la base la fuente se guarda neutra (`Lista Sep-2026`, migración en `_importar_precios_infoauto` que renombra las filas viejas; default de columna `'Lista'`). Comentario JS de `tomas/form.html` y comentario Jinja de `precios/index.html` limpiados. **Verificado:** 59 páginas GET de la app + landing (host raíz) + robots renderizadas con `test_client`: 0 menciones; `grep -rni 'info *auto' templates static/js static/css` = 0. (Quedan menciones solo en comentarios/docstrings de Python y en nombres de archivo/carpeta `seed/precios_infoauto/`, que no se ven.)
