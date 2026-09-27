@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 27/09/2026 — 14:33 ART (chat revista: págs. 80-83 DS/Ferrari/Fiat cargadas)_
+_Última actualización: 27/09/2026 — 14:47 ART (chat revista: págs. 84-87 Fiat completo + Ford iniciado)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -114,6 +114,13 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 27/09/2026 (chat revista, Msg 7) — Precios págs. 84 a 87: fin de Fiat + inicio de Ford
+- **270 versiones / 860 precios**: Fiat Palio 1.7 → Uno (262/832, Fiat completo) + Ford Bronco y Courier (8/28). Transcripción en `INFOAUTO/transcripcion/datos_084_087.py`. Ford sigue en la pág. 88 (las 88-89 ya están en la carpeta).
+- **Excel:** insertado entre Fiat y Suzuki: Fiat filas 257–518, título FORD fila 519, Ford 520–527; Suzuki ahora en la 528 (contenido anterior sin cambios, verificado). ORIGEN = 1.429 registros; autofiltro A1:A1529.
+- **CSV:** +860 filas (4.909 en total, sin duplicados). Marca "Ford" nueva.
+- Controles: 0 diferencias Excel/CSV vs transcripción; revisión visual de las 270 filas; 21 diferencias de OCR miradas a mano (todas errores del OCR). Años vacíos en medio de fila (Strada 1.3 Trekking JTD, Strada Adventure 1.6 DC L/14 Xtre) cargados tal cual.
+- App probada: 2026 Titano 2.2 TD 4X4 Ranch AT8 $72.220.000; 2025 Ford Bronco 2.7T V6 Badlands L/25 $102.500.000; 2010 Palio WE Adventure 1.6 $11.750.000.
 
 ### Sesión 27/09/2026 (chat revista, Msg 6) — Precios págs. 80 a 83: DS Automobiles, Ferrari y Fiat (hasta Palio)
 - **252 versiones / 881 precios**: DS Automobiles (13/45), Ferrari (16/73), Fiat 500 → Palio (223/763). Transcripción en `INFOAUTO/transcripcion/datos_080_083.py`. Fiat sigue en la pág. 84.
