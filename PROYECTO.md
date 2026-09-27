@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 24/09/2026 — 18:05 ART (sin menciones a InfoAuto en app/landing, agencia demo y capturas de la landing rehechas con precios Sep-2026, VW en la lista de precios, rango de ML bloqueado por 403)_
+_Última actualización: 27/09/2026 — 11:32 ART (chat "Revista págs. 157-164": VW completo + VW Camiones iniciado)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -114,6 +114,27 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 27/09/2026 (chat revista, Msg 2) — Precios págs. 161 a 164 (fin de VW + inicio de VW Camiones)
+- **Volkswagen terminado** (Suran → Voyage) + **Volkswagen Camiones** arrancado en la pág. 164 (10.150 a 17.220; sigue en la 165 si la revista continúa). **296 versiones / 1.045 precios**: 161 (71/232), 162 (71/292), 163 (71/253), 164 (23+30 / 84+184). Transcripción en `INFOAUTO/transcripcion/datos_161_164.py`.
+- **Controles:** precios decrecientes y años contiguos (excepciones impresas así y cargadas tal cual: The Beetle Cabrio 2.0 T Sport DSG sin '16; 13.180 EIII 43 D/C y 48 D/C sin '11/'10); sin nombres repetidos; grilla + tinta + OCR (las 51 diferencias del OCR miradas a mano: todas errores del OCR); revisión visual de las 283 filas. Excel y CSV releídos: 0 diferencias; CSV sin duplicados (3.168 filas).
+- **Excel:** filas 737–972 (VW, línea media al final de la marca), fila 973 título **VOLKSWAGEN CAMIONES** (mismo formato que VOLKSWAGEN), filas 974–1003 camiones; ORIGEN = 907 registros; autofiltro A1:A1003.
+- **CSV:** +1.045 filas. Marca de camiones = "Volkswagen Camiones". "THE BEETLE" como modelo (igual que "NEW BEETLE"). Camiones sin versión (13.180/43, 13.190/48, 15.190/43, 17.210/xx…) quedan con versión vacía, como Tank 300. Corregido CONFORTLINE→COMFORTLINE (Vento 1.4 TSI BM Tech DSG).
+- App probada: 2026 Taos 1.4 250 TSI Highline AT L/26 Bitono $68.322.000; 2012 Voyage 1.6 Highline $11.500.000; 2007 VW Camiones 17.210/48 $49.955.000.
+
+### Sesión 27/09/2026 (chat revista, Msg 1) — Precios VW págs. 157 a 160 (Gol Country → Suran)
+- Daniel dejó las págs. 157-164; por el límite de 4 por chat se cargaron **157-160**. Quedan **161-164** para el próximo chat.
+- **253 versiones / 962 precios** VW: Gol Trend L/19, Gol Country, Golf (1.6, 1.8T GTI, 1.9 TDI, 2.0, 2.0T GTI, VII), Multivan, New Beetle y Cabrio, Nivus (incl. 0KM L/25), Passat (1.8 TSI, 2.0 FSI/T FSI/TDI/TSI, 3.2 V6, CC), Polo (incl. 0KM), Santana, Saveiro (incl. 0KM L/24), Scirocco, Sharan, Suran. Transcripción en `INFOAUTO/transcripcion/datos_157_160.py`.
+- **Controles:** precios decrecientes y años contiguos (única excepción impresa así: Sharan 1.9 TDI Trendline Tip con '10 y '07); sin nombres repetidos; grilla + tinta por celda + OCR (todas las diferencias del OCR miradas a mano: eran errores del OCR); revisión visual de las 253 filas. Excel y CSV releídos: 0 diferencias; CSV sin duplicados (2.123 filas).
+- **Excel:** filas 484–736 (157: 484–537, 158: 538–608, 159: 609–665, 160: 666–736), línea gruesa en cada cambio de modelo (GOLF, MULTIVAN, NEW BEETLE, NIVUS, PASSAT, POLO, SANTANA, SAVEIRO, SCIROCCO, SHARAN, SURAN), línea media al final (VW sigue en 161); ORIGEN = 641 registros; autofiltro A1:A736.
+- **CSV:** +962 filas. Modelo = primera palabra (Gol Country→GOL, Golf VII→GOLF, Passat CC→PASSAT), salvo **New Beetle → modelo "NEW BEETLE"** (la primera palabra sola, "NEW", no sirve).
+- App probada con base temporal: 2026 Nivus 200 TSI Outfit AT L/25 $55.661.000; 2020 Golf VII 2.0 GTI $44.000.000; 2007 Sharan 1.9 TDI Trendline Tip $9.400.000.
+- Herramientas v2 en `INFOAUTO/transcripcion/herramientas/` (grid2/check3/inter2: páginas cortadas por publicidad y escaneos inclinados).
+
+### Cierre del chat 24–27/09/2026 (Msg 1-20) — estado y próximos pasos
+- **Hecho:** rango de mercado de MercadoLibre programado (bloqueado por 403 de ML); app y landing sin "InfoAuto"; agencia demo y capturas nuevas de la landing; VW págs. 154-156 en Excel y CSV (Amarok, Bora, Caddy, Fox, CrossFox, Gol, Gol Trend); pendientes de producto anotados (sucursales, multiusuario, check Red en Stock, modelo de la Red).
+- **Msg 19-20:** se armó el skill **`transcribir-revista-precios`** (propuesto para guardar) + registro `INFOAUTO/transcripcion/PAGINAS_CARGADAS.md` + herramientas de control en `INFOAUTO/transcripcion/herramientas/`. Flujo: Daniel deja los PDF `INFO NNN 09-26.pdf` en `INFOAUTO/` y avisa "ya están las páginas X a Y"; Claude toma hasta 4 por chat, verifica en el registro cuáles faltan, transcribe, controla y anexa.
+- **Próximos pasos:** (1) seguir transcribiendo la revista (≈117 páginas) con el skill; (2) sumar Hilux/SW4/Yaris/RAV4 (faltan en la lista); (3) rango de mercado: decidir fuente (ML certificación/acceso vs. otra); (4) licencia de datos de precios; (5) planes de suscripción + modelo de la Red; (6) cuenta de servicio de ML; (7) borrar `INFOAUTO_PRECIOS_2026_09_nuevo.xlsx` (copia sobrante idéntica); (8) ubicar HUB.md (no está en 03_AUTOMOTOR, 05_MARKETING ni _COMUN).
 
 ### Sesión 27/09/2026 (Msg 15-16) — Precios VW págs. 155 y 156 (Fox, CrossFox, Gol, Gol Trend)
 - Transcriptas las págs. 155 y 156 de la revista Sep-2026 (`INFOAUTO/INFO 155|156 09-26.pdf`): **125 versiones / 441 precios** (Fox 1.6/1.9, CrossFox, Gol 1.4/1.6/1.9, Gol Trend L/13 y L/17). Transcripción en `INFOAUTO/transcripcion/datos_155_156.py`.
