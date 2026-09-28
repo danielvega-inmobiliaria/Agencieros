@@ -196,28 +196,60 @@ def detalle(agencia_id):
 
 @bp.route("/mensajes")
 def mensajes():
-    """Bandeja de consultas y avisos de las agencias (28/09/2026). Al abrirla
-    quedan todos como leídos (el "Nuevo" se ve solo esta vez)."""
+    """Bandeja de consultas de las agencias, agrupadas en una conversación por
+    agencia (28/09/2026). Arriba las que esperan respuesta (la última palabra
+    es de la agencia), ordenadas por el último mensaje; abajo, plegadas, las
+    ya respondidas. Si una agencia vuelve a escribir, su conversación sube
+    sola a "Por responder". Al abrir la bandeja todo queda leído."""
     from routes.mensajes import TIPO_LABEL
     filas = query(
         """SELECT m.*, a.nombre_agencia, a.email, a.telefono
            FROM mensajes_admin m LEFT JOIN agencias a ON a.id = m.agencia_id
-           ORDER BY m.created_at DESC LIMIT 200"""
+           ORDER BY m.created_at, m.id"""
     )
-    mensajes = []
+    convs = {}
     for m in filas:
+        c = convs.setdefault(m["agencia_id"], {
+            "agencia_id": m["agencia_id"], "nombre": m["nombre_agencia"] or "Agencia borrada",
+            "email": m["email"], "telefono": m["telefono"], "mensajes": [], "nuevos": 0,
+        })
         d = dict(m)
-        d["nuevo"] = not m["leido"]
         d["fecha_fmt"] = _formatear_fecha(m["created_at"])
-        mensajes.append(d)
+        d["tipo_label"] = TIPO_LABEL.get(m["tipo"], m["tipo"])
+        c["mensajes"].append(d)
+        if (m["autor"] or "agencia") == "agencia" and not m["leido"]:
+            c["nuevos"] += 1
+    for c in convs.values():
+        ultimo = c["mensajes"][-1]
+        c["ultimo"] = ultimo["created_at"]
+        c["ultimo_fmt"] = ultimo["fecha_fmt"]
+        c["pendiente"] = (ultimo["autor"] or "agencia") == "agencia" and not ultimo["respondida"]
+    pendientes = sorted([c for c in convs.values() if c["pendiente"]], key=lambda c: c["ultimo"], reverse=True)
+    respondidas = sorted([c for c in convs.values() if not c["pendiente"]], key=lambda c: c["ultimo"], reverse=True)
     execute("UPDATE mensajes_admin SET leido = 1 WHERE leido = 0")
-    return render_template("plataforma/mensajes.html", mensajes=mensajes, tipo_label=TIPO_LABEL)
+    return render_template("plataforma/mensajes.html", pendientes=pendientes, respondidas=respondidas)
 
 
-@bp.route("/mensajes/<int:mid>/respondido", methods=["POST"])
-def mensaje_respondido(mid):
-    fila = query("SELECT respondida FROM mensajes_admin WHERE id = ?", (mid,), one=True)
-    if fila is None:
+@bp.route("/mensajes/<int:agencia_id>/responder", methods=["POST"])
+def responder_mensaje(agencia_id):
+    """Respuesta del admin dentro de la app: queda en la conversación, cierra
+    lo pendiente de esa agencia y le avisa por mail."""
+    from utils.notificaciones import avisar_agencia
+    texto = (request.form.get("respuesta") or "").strip()[:2000]
+    agencia = query("SELECT nombre_agencia, email FROM agencias WHERE id = ?", (agencia_id,), one=True)
+    if agencia is None:
         abort(404)
-    execute("UPDATE mensajes_admin SET respondida = ? WHERE id = ?", (0 if fila["respondida"] else 1, mid))
+    if texto:
+        execute(
+            """INSERT INTO mensajes_admin (agencia_id, tipo, mensaje, autor, leido, respondida, leido_agencia)
+               VALUES (?, 'respuesta', ?, 'admin', 1, 1, 0)""",
+            (agencia_id, texto),
+        )
+        avisar_agencia(
+            agencia["email"],
+            "Respuesta de AGENCIEROS a tu consulta",
+            f"Hola {agencia['nombre_agencia']},\n\n{texto}\n\nPodés seguir la conversación desde \"Consultas y avisos\".",
+            ruta="/mensajes/",
+        )
+    execute("UPDATE mensajes_admin SET respondida = 1, leido = 1 WHERE agencia_id = ? AND respondida = 0", (agencia_id,))
     return redirect(url_for("plataforma.mensajes"))

@@ -107,10 +107,18 @@ def create_app():
 
     @app.context_processor
     def _inject_mensajes_nuevos():
-        # Badge de mensajes sin leer de las agencias (solo para el admin).
+        # Badge de mensajes sin leer: para el admin, los de las agencias; para
+        # una agencia, las respuestas del admin que todavía no vio.
+        from database import query
+        if session.get("agencia_id"):
+            try:
+                fila = query("SELECT COUNT(*) AS c FROM mensajes_admin WHERE agencia_id = ? AND leido_agencia = 0",
+                             (session["agencia_id"],), one=True)
+                return {"respuestas_nuevas": fila["c"]}
+            except Exception:
+                return {"respuestas_nuevas": 0}
         if not session.get("superadmin_id"):
             return {}
-        from database import query
         try:
             fila = query("SELECT COUNT(*) AS c FROM mensajes_admin WHERE leido = 0", one=True)
             return {"mensajes_nuevos": fila["c"]}

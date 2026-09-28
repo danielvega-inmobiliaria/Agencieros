@@ -1238,6 +1238,17 @@ def crear_o_actualizar_superadmin(conn, email, password, nombre="Admin AGENCIERO
     return f"Admin de la plataforma creado: {email}."
 
 
+def _migrar_mensajes_conversacion(conn):
+    """28/09/2026: los mensajes al admin pasan a ser una conversación por
+    agencia. `autor` = 'agencia' o 'admin' (respuesta); `leido_agencia` = 0
+    cuando hay una respuesta del admin que la agencia todavía no vio."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(mensajes_admin)")}
+    if "autor" not in cols:
+        conn.execute("ALTER TABLE mensajes_admin ADD COLUMN autor TEXT DEFAULT 'agencia'")
+    if "leido_agencia" not in cols:
+        conn.execute("ALTER TABLE mensajes_admin ADD COLUMN leido_agencia INTEGER DEFAULT 1")
+
+
 def _crear_superadmin_desde_env(conn):
     """En Railway: si están SUPERADMIN_EMAIL y SUPERADMIN_PASSWORD y todavía
     no hay ningún admin de plataforma, lo crea. Si ya hay uno no toca nada
@@ -1448,6 +1459,7 @@ def init_db():
     _italia_email_propio(conn)
     _importar_italia_real(conn)
     _borrar_agencias_prueba(conn)
+    _migrar_mensajes_conversacion(conn)
     _crear_superadmin_desde_env(conn)
     import mercado_ml
     mercado_ml.asegurar_tablas(conn)

@@ -17,9 +17,9 @@ import urllib.request
 APP_URL = os.environ.get("APP_URL", "https://app.agencieros.net.ar").rstrip("/")
 
 
-def _mail(asunto, texto, responder_a=None):
+def _mail(asunto, texto, responder_a=None, destino=None):
     api_key = os.environ.get("RESEND_API_KEY")
-    destino = os.environ.get("ADMIN_EMAIL", "danve61@gmail.com")
+    destino = destino or os.environ.get("ADMIN_EMAIL", "danve61@gmail.com")
     if not api_key:
         print(f"[notificaciones] Sin RESEND_API_KEY -- {asunto}: {texto}")
         return False
@@ -68,3 +68,12 @@ def notificar_admin(asunto, texto, ruta=None, responder_a=None):
     texto_mail = texto + (f"\n\nVer en la app:\n{url}" if url else "")
     _mail(asunto, texto_mail, responder_a)
     _push(asunto, texto, url)
+
+
+def avisar_agencia(email, asunto, texto, ruta=None):
+    """Mail a una agencia (ej. la respuesta del admin a su consulta)."""
+    if not email:
+        return False
+    url = APP_URL + ruta if ruta else None
+    return _mail(asunto, texto + (f"\n\nVer en la app:\n{url}" if url else ""), destino=email,
+                 responder_a=os.environ.get("ADMIN_EMAIL", "danve61@gmail.com"))

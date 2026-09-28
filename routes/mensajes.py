@@ -52,13 +52,20 @@ def index():
         flash("¡Gracias! Tu mensaje le llegó al administrador de AGENCIEROS.", "success")
         return redirect(url_for("mensajes.index"))
 
-    mios = query(
-        "SELECT * FROM mensajes_admin WHERE agencia_id = ? ORDER BY created_at DESC LIMIT 50",
+    from routes.plataforma import _formatear_fecha
+    hilo = []
+    for m in query(
+        "SELECT * FROM mensajes_admin WHERE agencia_id = ? ORDER BY created_at, id",
         (agencia_id,),
-    )
+    ):
+        d = dict(m)
+        d["fecha_fmt"] = _formatear_fecha(m["created_at"])
+        hilo.append(d)
+    # Al abrir la pantalla, las respuestas del admin quedan vistas.
+    execute("UPDATE mensajes_admin SET leido_agencia = 1 WHERE agencia_id = ? AND leido_agencia = 0", (agencia_id,))
     return render_template(
         "mensajes/index.html",
-        mios=mios, tipos=TIPOS, tipo_label=TIPO_LABEL,
+        hilo=hilo, tipos=TIPOS, tipo_label=TIPO_LABEL,
         pre={"tipo": request.args.get("tipo", "consulta"), "anio": request.args.get("anio", ""),
              "vehiculo": request.args.get("vehiculo", "")},
     )

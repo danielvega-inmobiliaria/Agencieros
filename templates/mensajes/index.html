@@ -2,11 +2,27 @@
 {% block title %}Consultas y avisos — Agencieros{% endblock %}
 {% block header %}Consultas y avisos{% endblock %}
 {% block content %}
+{% if hilo %}
 <div class="panel">
+  <h2>Tu conversación con AGENCIEROS</h2>
+  <div class="conv-hilo">
+    {% for m in hilo %}
+    <div class="burbuja {{ 'de-agencia' if m.autor == 'admin' else 'de-admin' }}">
+      <div class="burbuja-meta">{% if m.autor == 'admin' %}AGENCIEROS{% else %}{{ tipo_label.get(m.tipo, m.tipo) }}{% if m.vehiculo or m.anio %} · {{ m.vehiculo or "" }} {{ m.anio or "" }}{% endif %}{% endif %}</div>
+      <div class="burbuja-texto">{{ m.mensaje }}</div>
+      <div class="burbuja-fecha">{{ m.fecha_fmt }}{% if m.autor != 'admin' %} · {{ "Respondido" if m.respondida else "Enviado" }}{% endif %}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="panel">
+  <h2>{{ "Escribir de nuevo" if hilo else "Escribinos" }}</h2>
   <p style="color:var(--text-dim); font-size:14px; margin-top:0;">
     Los precios se cargan y actualizan constantemente. Si no encontrás un vehículo, ves un valor
     que no cierra o tenés cualquier consulta o sugerencia, escribinos acá: le llega directo al
-    administrador de AGENCIEROS.
+    administrador de AGENCIEROS y la respuesta te aparece en esta misma pantalla.
   </p>
   <form method="post">
     <div class="form-row">
@@ -26,22 +42,4 @@
     <button class="btn btn-primary" style="margin-top:16px;" type="submit">Enviar</button>
   </form>
 </div>
-
-{% if mios %}
-<div class="panel">
-  <h2>Tus mensajes anteriores</h2>
-  <table class="tabla-responsive">
-    <tr class="fila-header"><th>Fecha</th><th>Motivo</th><th>Vehículo</th><th>Mensaje</th><th>Estado</th></tr>
-    {% for m in mios %}
-    <tr>
-      <td data-label="Fecha">{{ m.created_at[:10] }}</td>
-      <td data-label="Motivo">{{ tipo_label.get(m.tipo, m.tipo) }}</td>
-      <td data-label="Vehículo">{{ m.vehiculo or "" }} {{ m.anio or "" }}</td>
-      <td data-label="Mensaje">{{ m.mensaje }}</td>
-      <td data-label="Estado">{% if m.respondida %}<span class="badge disponible">Respondido</span>{% else %}<span class="badge por_ingresar">Enviado</span>{% endif %}</td>
-    </tr>
-    {% endfor %}
-  </table>
-</div>
-{% endif %}
 {% endblock %}

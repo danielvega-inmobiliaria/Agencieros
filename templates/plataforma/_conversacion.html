@@ -1,0 +1,30 @@
+<div class="conv">
+  <div class="conv-cab">
+    <div>
+      <a href="{{ url_for('plataforma.detalle', agencia_id=c.agencia_id) }}" class="conv-nombre">{{ c.nombre }}</a>
+      {% if c.nuevos %}<span class="badge por_ingresar">{{ c.nuevos }} nuevo{{ 's' if c.nuevos != 1 else '' }}</span>{% endif %}
+      <div class="conv-datos">{{ c.email or "" }}{% if c.telefono %} · {{ c.telefono }}{% endif %}</div>
+    </div>
+    <div class="conv-datos">{{ c.ultimo_fmt }}</div>
+  </div>
+  <div class="conv-hilo">
+    {% for m in c.mensajes %}
+    <div class="burbuja {{ 'de-admin' if m.autor == 'admin' else 'de-agencia' }}">
+      {% if m.autor != 'admin' %}
+      <div class="burbuja-meta">{{ m.tipo_label }}{% if m.vehiculo or m.anio %} · {{ m.vehiculo or "" }} {{ m.anio or "" }}{% endif %}</div>
+      {% else %}
+      <div class="burbuja-meta">Tu respuesta</div>
+      {% endif %}
+      <div class="burbuja-texto">{{ m.mensaje }}</div>
+      <div class="burbuja-fecha">{{ m.fecha_fmt }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  <form method="post" action="{{ url_for('plataforma.responder_mensaje', agencia_id=c.agencia_id) }}" class="conv-form">
+    <textarea name="respuesta" rows="2" maxlength="2000" placeholder="Escribí tu respuesta..."></textarea>
+    <div class="conv-botones">
+      <button class="btn btn-primary btn-sm" type="submit">Responder</button>
+      {% if c.pendiente %}<button class="btn btn-secondary btn-sm" type="submit" name="solo_cerrar" value="1" formnovalidate onclick="this.form.respuesta.value='';">Marcar respondido sin escribir</button>{% endif %}
+    </div>
+  </form>
+</div>

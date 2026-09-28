@@ -627,3 +627,20 @@ form textarea { min-height: 80px; }
 /* Aviso de precios en actualización (Consulta de precios, 28/09/2026) */
 .bp-aviso { max-width: 760px; margin: 14px auto 0; font-size: 13px; color: var(--text-dim); }
 .bp-aviso a, .bp-resultado .meta a { color: var(--gold-light); }
+
+/* Conversaciones de Consultas y avisos (28/09/2026) */
+.conv { border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-top: 14px; background: var(--navy-bg); }
+.conv-cab { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; margin-bottom: 10px; }
+.conv-nombre { color: var(--gold-light); font-weight: 700; text-decoration: none; margin-right: 6px; }
+.conv-datos { color: var(--text-dim); font-size: 12px; }
+.conv-hilo { display: flex; flex-direction: column; gap: 8px; }
+.burbuja { max-width: 85%; padding: 9px 12px; border-radius: 12px; font-size: 14px; }
+.burbuja.de-agencia { align-self: flex-start; background: var(--navy-card-2); border-bottom-left-radius: 3px; }
+.burbuja.de-admin { align-self: flex-end; background: rgba(217,164,65,.16); border-bottom-right-radius: 3px; }
+.burbuja-meta { font-size: 11px; color: var(--gold-light); margin-bottom: 3px; }
+.burbuja-texto { white-space: pre-wrap; color: var(--text); }
+.burbuja-fecha { font-size: 11px; color: var(--text-dim); margin-top: 4px; text-align: right; }
+.conv-form { margin-top: 10px; }
+.conv-form textarea { width: 100%; box-sizing: border-box; }
+.conv-botones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.conv-resumen { cursor: pointer; color: var(--gold-light); font-weight: 600; }

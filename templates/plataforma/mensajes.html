@@ -3,26 +3,17 @@
 {% block header %}Mensajes de las agencias{% endblock %}
 {% block content %}
 <div class="panel">
-  {% if not mensajes %}
-  <p style="color:var(--text-dim);">Todavía no llegó ningún mensaje.</p>
-  {% else %}
-  <table class="tabla-responsive">
-    <tr class="fila-header"><th>Fecha</th><th>Agencia</th><th>Motivo</th><th>Vehículo</th><th>Mensaje</th><th></th></tr>
-    {% for m in mensajes %}
-    <tr>
-      <td data-label="Fecha">{{ m.fecha_fmt }}{% if m.nuevo %} <span class="badge por_ingresar">Nuevo</span>{% endif %}</td>
-      <td data-label="Agencia"><a href="{{ url_for('plataforma.detalle', agencia_id=m.agencia_id) }}">{{ m.nombre_agencia or "Agencia borrada" }}</a>{% if m.email %}<div style="color:var(--text-dim); font-size:12px;">{{ m.email }}{% if m.telefono %} · {{ m.telefono }}{% endif %}</div>{% endif %}</td>
-      <td data-label="Motivo">{{ tipo_label.get(m.tipo, m.tipo) }}</td>
-      <td data-label="Vehículo">{{ m.vehiculo or "" }} {{ m.anio or "" }}</td>
-      <td data-label="Mensaje">{{ m.mensaje }}</td>
-      <td data-label="">
-        <form method="post" action="{{ url_for('plataforma.mensaje_respondido', mid=m.id) }}">
-          <button class="btn btn-sm {{ 'btn-secondary' if m.respondida else 'btn-primary' }}" type="submit">{{ "✓ Respondido" if m.respondida else "Marcar respondido" }}</button>
-        </form>
-      </td>
-    </tr>
-    {% endfor %}
-  </table>
-  {% endif %}
+  <h2>Por responder ({{ pendientes|length }})</h2>
+  {% if not pendientes %}<p style="color:var(--text-dim);">No hay nada pendiente.</p>{% endif %}
+  {% for c in pendientes %}{% include "plataforma/_conversacion.html" %}{% endfor %}
 </div>
+
+{% if respondidas %}
+<div class="panel">
+  <details>
+    <summary class="conv-resumen">Respondidas ({{ respondidas|length }}) — historial</summary>
+    {% for c in respondidas %}{% include "plataforma/_conversacion.html" %}{% endfor %}
+  </details>
+</div>
+{% endif %}
 {% endblock %}
