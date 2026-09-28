@@ -18,7 +18,7 @@ Acceso: gateado en app.py (SOLO_SUPERADMIN) -- solo el admin de la
 plataforma; ninguna agencia (tampoco Italia Automotores) entra acá.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Blueprint, abort, render_template, request
 
@@ -36,6 +36,7 @@ _CLAVES_ORDEN = {
     "stock":     lambda f: f["stock_total"],
     "ventas":    lambda f: f["ventas_totales"],
     "creditos":  lambda f: f["creditos_monto"],
+    "consultas": lambda f: (f["consultas_mes"], f["consultas_total"]),
 }
 ORDEN_OPCIONES = [
     ("nombre", "Nombre"),
@@ -43,6 +44,7 @@ ORDEN_OPCIONES = [
     ("stock", "Stock total"),
     ("ventas", "Ventas totales"),
     ("creditos", "Créditos (monto)"),
+    ("consultas", "Consultas de precios"),
 ]
 
 
@@ -51,7 +53,8 @@ def _formatear_fecha(iso_str):
     if not iso_str:
         return None
     try:
-        return datetime.strptime(iso_str, "%Y-%m-%d %H:%M:%S").strftime("%d/%m/%Y %H:%M")
+        # SQLite guarda en UTC: se muestra en hora de Argentina (UTC-3, sin horario de verano).
+        return (datetime.strptime(iso_str, "%Y-%m-%d %H:%M:%S") - timedelta(hours=3)).strftime("%d/%m/%Y %H:%M")
     except ValueError:
         return iso_str
 
@@ -91,10 +94,23 @@ def _armar_filas():
     )
     credito_por_agencia = {r["agencia_id"]: r for r in credito_rows}
 
+    # Consultas de precios (28/09/2026): para medir si cada agencia usa la consulta.
+    consulta_rows = query(
+        """SELECT agencia_id,
+                  COUNT(*) AS total,
+                  SUM(CASE WHEN created_at >= datetime('now', '-7 days') THEN 1 ELSE 0 END) AS semana,
+                  SUM(CASE WHEN strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now') THEN 1 ELSE 0 END) AS mes,
+                  MAX(created_at) AS ultima
+           FROM consultas_precios
+           GROUP BY agencia_id"""
+    )
+    consulta_por_agencia = {r["agencia_id"]: r for r in consulta_rows}
+
     filas = []
     for a in agencias_rows:
         s = stock_por_agencia.get(a["id"])
         c = credito_por_agencia.get(a["id"])
+        cp = consulta_por_agencia.get(a["id"])
         disponibles = (s["disponibles"] if s else 0) or 0
         por_ingresar = (s["por_ingresar"] if s else 0) or 0
         en_reparacion = (s["en_reparacion"] if s else 0) or 0
@@ -121,6 +137,10 @@ def _armar_filas():
             "ventas_totales": (s["ventas_totales"] if s else 0) or 0,
             "creditos_cantidad": (c["cantidad"] if c else 0) or 0,
             "creditos_monto": (c["monto_total"] if c else 0) or 0,
+            "consultas_semana": (cp["semana"] if cp else 0) or 0,
+            "consultas_mes": (cp["mes"] if cp else 0) or 0,
+            "consultas_total": (cp["total"] if cp else 0) or 0,
+            "ultima_consulta_fmt": _formatear_fecha(cp["ultima"]) if cp else None,
         })
     return filas
 
@@ -145,6 +165,8 @@ def agencias():
         "verificadas": sum(1 for f in todas if f["verificada"]),
         "ventas_mes_total": sum(f["ventas_mes"] for f in todas),
         "creditos_monto_total": sum(f["creditos_monto"] for f in todas),
+        "consultas_mes_total": sum(f["consultas_mes"] for f in todas),
+        "consultas_semana_total": sum(f["consultas_semana"] for f in todas),
     }
 
     filas = todas

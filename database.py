@@ -301,6 +301,22 @@ CREATE TABLE IF NOT EXISTS plataforma_admins (
     created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Registro de consultas de precios por agencia (28/09/2026): para medir
+-- desde el Panel de Agencias si cada agencia usa la consulta.
+-- encontrado = 1 si eligió una versión de la lista, 0 si buscó un vehículo
+-- que no está en la lista ("Buscar igual").
+CREATE TABLE IF NOT EXISTS consultas_precios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agencia_id INTEGER NOT NULL,
+    anio TEXT,
+    marca TEXT,
+    modelo TEXT,
+    version TEXT,
+    encontrado INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_consultas_precios_agencia ON consultas_precios (agencia_id, created_at);
+
 CREATE TABLE IF NOT EXISTS verificacion_codigos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     agencia_id INTEGER NOT NULL,

@@ -1,6 +1,6 @@
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, session
 
-from database import query
+from database import query, execute
 from comparables import links_comparables
 import mercado_ml
 
@@ -69,11 +69,40 @@ def api_opciones():
     ])
 
 
+def registrar_consulta(marca, modelo, version, anio, encontrado=True):
+    """Anota la consulta para el contador del Panel de Agencias (28/09/2026).
+    No cuenta al admin de la plataforma, y si la misma agencia vuelve a ver
+    el mismo vehículo dentro de los 10 minutos (ej. al volver con "atrás"
+    desde RosarioGarage) no se cuenta de nuevo."""
+    agencia_id = session.get("agencia_id")
+    if not agencia_id:
+        return
+    try:
+        repetida = query(
+            """SELECT 1 FROM consultas_precios
+               WHERE agencia_id = ? AND COALESCE(marca,'') = ? AND COALESCE(modelo,'') = ?
+                 AND COALESCE(version,'') = ? AND COALESCE(anio,'') = ?
+                 AND created_at >= datetime('now', '-10 minutes')""",
+            (agencia_id, marca or "", modelo or "", version or "", str(anio or "")),
+            one=True,
+        )
+        if not repetida:
+            execute(
+                """INSERT INTO consultas_precios (agencia_id, anio, marca, modelo, version, encontrado)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (agencia_id, str(anio or ""), marca, modelo, version, 1 if encontrado else 0),
+            )
+    except Exception:
+        pass
+
+
 @bp.route("/api/comparables")
 def api_comparables():
     """Links de comparables (MercadoLibre/RosarioGarage/Facebook) para el
-    vehículo elegido en el buscador, sin salir de la pantalla (24/09/2026)."""
+    vehículo elegido en el buscador, sin salir de la pantalla (24/09/2026).
+    Se llama una vez por cada versión elegida: ahí se cuenta la consulta."""
     a = request.args
+    registrar_consulta(a.get("marca", ""), a.get("modelo", ""), a.get("version", ""), a.get("anio", ""))
     return jsonify(links_comparables(a.get("marca", ""), a.get("modelo", ""), a.get("version", ""), a.get("anio", "")))
 
 
@@ -187,6 +216,8 @@ def buscar():
     texto_libre = request.args.get("q", "").strip()
     if texto_libre and not (marca or modelo):
         modelo = texto_libre
+        # "Buscar igual": vehículo que no está en la lista (también cuenta).
+        registrar_consulta("", texto_libre, "", anio, encontrado=False)
 
     resultado = query(
         """SELECT * FROM precios_base

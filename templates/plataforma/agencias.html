@@ -13,6 +13,11 @@
     <div class="value">{{ resumen.ventas_mes_total }}</div>
   </div>
   <div class="card">
+    <div class="label">Consultas de precios del mes</div>
+    <div class="value">{{ resumen.consultas_mes_total }}</div>
+    <div class="sub">{{ resumen.consultas_semana_total }} en los últimos 7 días</div>
+  </div>
+  <div class="card">
     <div class="label">Créditos otorgados (monto total)</div>
     <div class="value">${{ "{:,.0f}".format(resumen.creditos_monto_total).replace(",", ".") }}</div>
   </div>
@@ -55,6 +60,7 @@
       <th>Stock (Disp. / Por ingresar / En rep.)</th>
       <th>Ventas (mes / total)</th>
       <th>Créditos otorgados</th>
+      <th>Consultas (7 días / mes / total)</th>
       <th>Última actividad</th>
       <th>Alta</th>
       <th>Estado</th>
@@ -67,6 +73,7 @@
           {% if f.ciudad or f.provincia %}{{ f.ciudad or "" }}{% if f.ciudad and f.provincia %}, {% endif %}{{ f.provincia or "" }}{% else %}Sin ubicación cargada{% endif %}
         </div>
         <div class="fila-agencia-linea">Stock {{ f.disponibles }}/{{ f.por_ingresar }}/{{ f.en_reparacion }} · Ventas {{ f.ventas_mes }}/{{ f.ventas_totales }} · Créditos {{ f.creditos_cantidad }} (${{ "{:,.0f}".format(f.creditos_monto).replace(",", ".") }})</div>
+        <div class="fila-agencia-linea">Consultas de precios: {{ f.consultas_semana }} en 7 días · {{ f.consultas_mes }} en el mes · {{ f.consultas_total }} en total</div>
         <div class="fila-agencia-linea">
           Act.: {{ f.ultima_actividad_fmt or "nunca" }} · Alta: {{ f.alta.split(" ")[0] if f.alta else "" }}
           {% if f.verificada %}<span class="badge disponible">Verificada</span>{% else %}<span class="badge por_ingresar">Pendiente</span>{% endif %}
@@ -80,6 +87,7 @@
       <td data-label="Stock">{{ f.disponibles }} / {{ f.por_ingresar }} / {{ f.en_reparacion }}</td>
       <td data-label="Ventas">{{ f.ventas_mes }} / {{ f.ventas_totales }}</td>
       <td data-label="Créditos">{{ f.creditos_cantidad }} (${{ "{:,.0f}".format(f.creditos_monto).replace(",", ".") }})</td>
+      <td data-label="Consultas">{{ f.consultas_semana }} / {{ f.consultas_mes }} / {{ f.consultas_total }}</td>
       <td data-label="Última actividad">{{ f.ultima_actividad_fmt or "Nunca" }}</td>
       <td data-label="Alta">{{ f.alta.split(" ")[0] if f.alta else "" }}</td>
       <td data-label="Estado">
@@ -88,7 +96,7 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="8">No hay agencias que coincidan con la búsqueda.</td></tr>
+    <tr><td colspan="9">No hay agencias que coincidan con la búsqueda.</td></tr>
     {% endfor %}
   </table>
 </div>

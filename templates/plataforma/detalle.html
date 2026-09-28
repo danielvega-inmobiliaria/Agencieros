@@ -32,6 +32,8 @@
       <tr><td>Ventas este mes</td><td>{{ f.ventas_mes }}</td></tr>
       <tr><td>Ventas totales</td><td>{{ f.ventas_totales }}</td></tr>
       <tr><td>Créditos otorgados (cantidad)</td><td>{{ f.creditos_cantidad }}</td></tr>
+      <tr><td>Consultas de precios (7 días / mes / total)</td><td>{{ f.consultas_semana }} / {{ f.consultas_mes }} / {{ f.consultas_total }}</td></tr>
+      <tr><td>Última consulta de precios</td><td>{{ f.ultima_consulta_fmt or "Nunca" }}</td></tr>
       <tr><td>Créditos otorgados (monto)</td><td>${{ "{:,.0f}".format(f.creditos_monto).replace(",", ".") }}</td></tr>
     </table>
   </div>

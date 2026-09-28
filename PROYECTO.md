@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 28/09/2026 — 10:20 ART (chat "Cuentas y Red", Msg 5: admin separado, Italia con datos reales, agencias de prueba borradas, buscador de precios en celu)_
+_Última actualización: 28/09/2026 — 10:33 ART (chat "Cuentas y Red", Msg 6: admin separado, Italia con datos reales, agencias de prueba borradas, buscador de precios en celu, contador de consultas por agencia)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -135,6 +135,7 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - **Msg 3 — agencias de prueba borradas en la web:** migración `_borrar_agencias_prueba` (una vez) elimina por nombre exacto **Autos Independencia, Dangui Automotores, Rodar Automotores y Roldan Automotores** con todos sus datos (nueva función `_borrar_datos_agencia`, también usada por la importación de Italia). Se conserva **Automotores Don Franco** (Villa Lynch, alta 27/09: primer inscripto real por la campaña de Meta). Probado sobre una base armada con el código anterior.
 - **Msg 5 — pusheado (commit `af101a6`).** Italia entra con **itaaut03@gmail.com** y la misma contraseña que tenía con admin@agencieros.com (no hay todavía pantalla para cambiar contraseñas).
 - **Msg 5 — Consulta de precios en celu:** al elegir el año ya no se despliega la lista entera; aparece recién con 2 letras. Al mostrar la lista la pantalla sube sola (campo arriba, debajo de la barra) y la lista pasa a ocupar lugar en la página (hasta 65% de la pantalla). Al guardar el teclado la lista **queda abierta** y se puede scrollear; se cierra al elegir una versión o al tocar fuera. Opciones nuevas en `static/js/autocomplete.js` (`minCaracteres`, `mantenerAbierto`, `subirAlMostrar`, `enLinea`) usadas solo en `templates/precios/index.html`; los demás autocompletar (Toma, Stock, Pedidos, Red) siguen igual. CSS `.autocomplete-dropdown.en-linea`; `?v=20260928` en style.css y autocomplete.js para que Safari no use la versión vieja. Probado con Playwright emulando iPhone 13.
+- **Msg 6 — contador de consultas de precios por agencia en el Panel de Agencias:** tabla nueva `consultas_precios` (agencia_id, año, marca, modelo, versión, encontrado, fecha). Se cuenta una consulta cada vez que la agencia elige una versión en Consulta de precios (`/precios/api/comparables`) y cada "Buscar igual" de un vehículo que no está en la lista (encontrado = 0). No cuenta al admin de la plataforma ni "Ver historial", y el mismo vehículo repetido dentro de 10 minutos no suma (ej. al volver con "atrás"). En el panel: tarjeta "Consultas de precios del mes" (+ últimos 7 días), columna/línea "7 días / mes / total" por agencia, orden "Consultas de precios", y en la ficha de cada agencia también la última consulta. Fechas del panel pasadas a hora de Argentina (antes salían en UTC, 3 h adelantadas). Probado con test_client.
 - **Paso 4 (check Red) — criterio nuevo de Daniel:** al señar la unidad queda publicada como "Señado"; solo se da de baja al vender.
 
 ### Cierre del chat 27–28/09/2026 (Msg 1-17) — carga de la revista, estado y próximos pasos
