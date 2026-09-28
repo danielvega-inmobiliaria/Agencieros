@@ -57,7 +57,7 @@
   </p>
 </div>
 
-<script src="{{ url_for('static', filename='js/autocomplete.js') }}"></script>
+<script src="{{ url_for('static', filename='js/autocomplete.js') }}?v=20260928"></script>
 <script src="{{ url_for('static', filename='js/mercado.js') }}"></script>
 <script>
 const anioSel = document.getElementById('anio');
@@ -77,7 +77,8 @@ function ocultarResultados() {
 }
 
 attachAutocomplete(vehInput, () => opciones.map(o => o.label), null, {
-  detalle: label => porLabel[label] ? pesos(porLabel[label].precio) : ''
+  detalle: label => porLabel[label] ? pesos(porLabel[label].precio) : '',
+  minCaracteres: 2, mantenerAbierto: true, subirAlMostrar: true, enLinea: true
 });
 
 async function cargarAnio() {

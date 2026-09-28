@@ -30,13 +30,27 @@ function attachAutocomplete(input, obtenerValores, onSeleccionar, opciones) {
   // muestra a la derecha de cada ítem sin formar parte del valor elegido
   // -- ej. el precio de cada versión en Consulta de precios.
   var detalle = opciones && opciones.detalle;
+  // Opciones de Consulta de precios (28/09/2026, pedido de Daniel):
+  // - minCaracteres: no mostrar nada hasta que se tipeen N letras (antes, al
+  //   elegir el año aparecía la lista entera de versiones).
+  // - mantenerAbierto: la lista NO se cierra al bajar el teclado (blur); se
+  //   cierra al elegir una opción o al tocar fuera del buscador, así se
+  //   puede scrollear la lista con el teclado guardado.
+  // - subirAlMostrar: en celu, sube la pantalla para que el campo quede
+  //   arriba y la lista tenga más lugar.
+  // - enLinea: la lista ocupa lugar en la página (no flota) y es más alta.
+  var minCaracteres = (opciones && opciones.minCaracteres) || 0;
+  var mantenerAbierto = !!(opciones && opciones.mantenerAbierto);
+  var subirAlMostrar = !!(opciones && opciones.subirAlMostrar);
+  var enLinea = !!(opciones && opciones.enLinea);
+  var yaSubio = false;
   var wrap = document.createElement("div");
   wrap.className = "autocomplete-wrap";
   input.parentNode.insertBefore(wrap, input);
   wrap.appendChild(input);
 
   var dd = document.createElement("div");
-  dd.className = "autocomplete-dropdown";
+  dd.className = "autocomplete-dropdown" + (enLinea ? " en-linea" : "");
   dd.style.display = "none";
   wrap.appendChild(dd);
 
@@ -57,6 +71,17 @@ function attachAutocomplete(input, obtenerValores, onSeleccionar, opciones) {
   function cerrar() {
     dd.style.display = "none";
     activo = -1;
+    yaSubio = false;
+  }
+
+  function subir() {
+    if (!subirAlMostrar || yaSubio || window.innerWidth > 700) return;
+    yaSubio = true;
+    var barra = document.querySelector(".mobile-topbar");
+    var margen = (barra ? barra.offsetHeight : 0) + 8;
+    var etiqueta = input.closest(".bp-campo") || wrap;
+    var y = etiqueta.getBoundingClientRect().top + window.pageYOffset - margen;
+    setTimeout(function () { window.scrollTo({ top: y, behavior: "smooth" }); }, 50);
   }
 
   function marcarActivo(items) {
@@ -81,6 +106,7 @@ function attachAutocomplete(input, obtenerValores, onSeleccionar, opciones) {
 
     dd.innerHTML = "";
     activo = -1;
+    if (texto.length < minCaracteres) { dd.style.display = "none"; return; }
     if (!filtradas.length) { dd.style.display = "none"; return; }
 
     filtradas.forEach(function (valor) {
@@ -108,14 +134,21 @@ function attachAutocomplete(input, obtenerValores, onSeleccionar, opciones) {
       });
       dd.appendChild(item);
     });
+    dd.scrollTop = 0;
     dd.style.display = "block";
+    subir();
   }
 
   input.addEventListener("focus", mostrar);
   input.addEventListener("input", mostrar);
   input.addEventListener("blur", function () {
-    setTimeout(cerrar, 120);
+    if (!mantenerAbierto) setTimeout(cerrar, 120);
   });
+  if (mantenerAbierto) {
+    document.addEventListener("pointerdown", function (e) {
+      if (!wrap.contains(e.target)) cerrar();
+    });
+  }
   input.addEventListener("keydown", function (e) {
     if (dd.style.display === "none") return;
     var items = dd.querySelectorAll(".autocomplete-item");

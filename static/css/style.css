@@ -605,6 +605,9 @@ form textarea { min-height: 80px; }
 /* Precio a la derecha de cada opción del desplegable (Consulta de precios, 24/09/2026) */
 .autocomplete-item { display: flex; justify-content: space-between; gap: 12px; }
 .autocomplete-detalle { color: var(--gold-light); font-weight: 600; white-space: nowrap; }
+/* Consulta de precios (28/09/2026): la lista ocupa lugar en la página y es
+   más alta, así se puede scrollear con el teclado guardado. */
+.autocomplete-dropdown.en-linea { position: static; max-height: 65vh; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 .bp-comparables { margin-top: 18px; }
 .bp-links { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
 /* Rango de precios de mercado (MercadoLibre API, 24/09/2026) */
