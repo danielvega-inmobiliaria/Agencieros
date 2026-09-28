@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 28/09/2026 — 07:49 ART (chat revista: págs. 123-126 Nissan fin + Peugeot)_
+_Última actualización: 28/09/2026 — 08:32 ART (cierre del chat "Revista págs. 157-164 y 80-126": carga de precios en pausa; próximo: reorganizar cuentas y Red)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -121,6 +121,14 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Cierre del chat 27–28/09/2026 (Msg 1-17) — carga de la revista, estado y próximos pasos
+- **Hecho:** revista Sep-2026 cargada en Excel y CSV: págs. **80-102, 104-107, 123-126 y 154-164** (~3.000 versiones, 11.006 precios en el CSV). Marcas: DS, Ferrari, Fiat, Ford, Ford Camiones, Forthing, Foton, GAC, Geely, Great Wall, Haval, Hino, Honda, Hyundai, Isuzu, Iveco, JAC, Jaguar, Jetour, JMC, JMEV, Kaiyi, Kama, Nissan (fin), Peugeot (hasta 408), Suzuki/Tank/Toyota, Volkswagen y VW Camiones. Detalle por página en `INFOAUTO/transcripcion/PAGINAS_CARGADAS.md`.
+- Los Excel que armó Daniel (págs. 96-97, 100-101, 98-99) se controlaron contra el escaneo: 7 errores corregidos en 96-101; el de 98-99 venía sin nombres y se rehízo.
+- Arreglado el Excel maestro: paneles inmovilizados en B2 y columnas más anchas (los precios de 6 cifras salían como 6E+05).
+- Criterio fijo (Daniel): años vacíos en medio de una fila se cargan tal cual. Skill `transcribir-revista-precios` actualizado (propuesta enviada).
+- **Pendientes de la revista:** pág. **103** (re-escanear, columna '07 negra); págs. **108-122** (van entre KAMA y el título NISSAN, fila 1819); pág. **127 en adelante** (sigue Peugeot); las 8 celdas de la mancha de la pág. 124 ya las completó Daniel (28/09) y están en el CSV; Hummer Techo Duro (pág. 99) ilegible.
+- **Próximo chat:** reorganizar cuentas y Red (ver pendiente "PRÓXIMO CHAT" en 🟡): separar Admin de Italia Automotores, usuarios por agencia, sucursales, check Red en Stock, control de operaciones de la Red.
 
 ### Sesión 28/09/2026 (chat revista, Msg 15) — Págs. 123 a 126: Nissan (fin) y Peugeot
 - **282 versiones / 966 precios**: Nissan X-Trail 2.5, 350 Z, 370 Z (11) + Peugeot 2008 → 408 (271). Transcripción en `INFOAUTO/transcripcion/datos_123_126.py`. Peugeot sigue en la 127.
