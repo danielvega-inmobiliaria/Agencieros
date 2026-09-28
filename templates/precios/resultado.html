@@ -11,7 +11,6 @@
     <div data-rango-mercado data-marca="{{ marca }}" data-modelo="{{ modelo }}" data-version="{{ version }}" data-anio="{{ anio }}" data-valor-tabla="{{ resultado.precio_referencia }}"></div>
     <div class="actions-row">
       <a class="btn btn-primary" href="{{ url_for('tomas.nueva', marca=marca, modelo=modelo, version=version, anio=anio) }}">Iniciar toma del vehículo</a>
-      <a class="btn btn-secondary" href="{{ url_for('stock.nuevo', marca=marca, modelo=modelo, version=version, anio=anio, precio_referencia=resultado.precio_referencia) }}">Guardar en stock</a>
     </div>
   </div>
   {% else %}
@@ -29,10 +28,9 @@
   </div>
   {% endif %}
 
-  <p>Sin precio de tabla, mejor pasarlo por Toma y tasación (revisión de 44 puntos + inspección visual) antes de definir un valor -- o cargarlo directo en el stock si ya sabés lo que vale.</p>
+  <p>Sin precio de tabla, mejor pasarlo por Toma y tasación (revisión de 44 puntos + inspección visual) antes de definir un valor; al terminar la tasación lo pasás a tu stock.</p>
   <div class="actions-row">
     <a class="btn btn-primary" href="{{ url_for('tomas.nueva', marca=marca, modelo=modelo, version=version, anio=anio) }}">Iniciar toma del vehículo</a>
-    <a class="btn btn-secondary" href="{{ url_for('stock.nuevo', marca=marca, modelo=modelo, version=version, anio=anio) }}">Cargar directo en stock</a>
     <a class="btn btn-secondary" href="{{ url_for('precios.index') }}">Volver a consultar</a>
   </div>
   {% endif %}

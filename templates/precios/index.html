@@ -32,7 +32,6 @@
     <div class="meta" id="resFuente"></div>
     <div class="actions-row">
       <a class="btn btn-primary" id="btnToma" href="#">Iniciar toma del vehículo</a>
-      <a class="btn btn-secondary" id="btnStock" href="#">Guardar en stock</a>
       <a class="btn btn-secondary" id="btnDetalle" href="#">Ver historial por año</a>
     </div>
     <div id="rangoMercado"></div>
@@ -51,9 +50,9 @@
 <div class="panel">
   <h2>Cómo funciona</h2>
   <p style="color:var(--text-dim); font-size:14px;">
-    Este es el gancho de Agencieros: la misma consulta que hoy pagás en una guía de precios,
-    pero con toda la gestión de tu agencia incluida. Desde el resultado podés iniciar la
-    toma del vehículo o guardarlo directo en tu stock.
+    Una guía de precios actualizada, más toda la gestión de tu agencia.
+    Con el resultado podés iniciar la toma del vehículo y, al terminar la tasación,
+    pasarlo a tu stock.
   </p>
 </div>
 
@@ -143,7 +142,6 @@ function mostrarPrecio(o) {
   document.getElementById('resFuente').textContent = o.etiqueta || 'Valor de referencia';
   const base = { marca: o.marca, modelo: o.modelo, version: o.version, anio };
   document.getElementById('btnToma').href = `{{ url_for('tomas.nueva') }}?${new URLSearchParams(base)}`;
-  document.getElementById('btnStock').href = `{{ url_for('stock.nuevo') }}?${new URLSearchParams({ ...base, precio_referencia: o.precio })}`;
   document.getElementById('btnDetalle').href = `{{ url_for('precios.buscar') }}?${new URLSearchParams(base)}`;
   cargarComparables(base, document.getElementById('linksComparables'));
   cargarRangoMercado(base, document.getElementById('rangoMercado'), o.precio);
