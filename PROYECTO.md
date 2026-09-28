@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 27/09/2026 — 23:03 ART (chat revista: págs. 98-99 y 102 cargadas; 103 pendiente de re-escaneo)_
+_Última actualización: 28/09/2026 — 07:30 ART (chat revista: págs. 104-107, Iveco a Kama; pág. 103 pendiente)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -114,6 +114,13 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 28/09/2026 (chat revista, Msg 14) — Págs. 104 a 107: Iveco (fin), JAC, Jaguar, Jetour, JMC, JMEV, Kaiyi, Kama
+- **277 versiones / 1.182 precios**. Transcripción en `INFOAUTO/transcripcion/datos_104_107.py`. Marcas nuevas con título: JAC MOTORS, JAGUAR, JETOUR, JMC, JMEV, KAIYI, KAMA.
+- **Excel:** Iveco sigue desde la fila 1535 (hueco de la pág. 103 antes de esa fila); marcas nuevas hasta la 1818; Suzuki ahora en la 1819. Orden previo verificado sin cambios. ORIGEN = 2.701 registros.
+- **CSV:** +1.182 filas (10.040 en total, sin duplicados). Modelos de dos palabras: GRAND AVENUE (JMC), S-WAY (Iveco).
+- Controles: revisión visual de todas las filas con la grilla; 0 diferencias Excel/CSV vs transcripción.
+- App probada: 2026 Iveco S-Way GNC 460 $317.525.000; 2020 Jaguar F-Pace 3.0 R-Sport $81.000.000; 2026 Jetour T2 2.0T 4WD $86.445.000.
 
 ### Sesión 27/09/2026 (chat revista, Msg 13) — Págs. 98-99 y 102 (Hino, Honda, Hyundai, Isuzu, Iveco)
 - **200 versiones / 849 precios**: Haval Ora 5, Hino (marca nueva), Honda (marca nueva), Hyundai Atos→Grand Santa Fe 2.2 (págs. 99) y Veracruz 3.8 (102), Isuzu (nueva), Iveco hasta Daily 55C 16 (nueva). Transcripción en `INFOAUTO/transcripcion/datos_098_099.py` y `datos_102.py`.
