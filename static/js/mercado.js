@@ -7,18 +7,15 @@
 
   window.cargarRangoMercado = async function (params, contenedor, valorTabla) {
     if (!contenedor) return;
-    contenedor.innerHTML = '<div class="rm-cargando">Buscando precios de mercado en MercadoLibre…</div>';
+    contenedor.innerHTML = '<div class="rm-cargando">Buscando publicaciones reales…</div>';
     let d;
     try {
       const r = await fetch('/precios/api/mercado?' + new URLSearchParams(params));
       d = await r.json();
-    } catch (e) { contenedor.innerHTML = ''; return; }
-    if (!d.disponible) { contenedor.innerHTML = ''; return; }
-    if (!d.ok) {
-      contenedor.innerHTML = `<div class="rango-mercado"><div class="rm-titulo">Precio de mercado (MercadoLibre)</div>
-        <div class="rm-nota">${esc(d.motivo || 'Sin datos.')}</div></div>`;
-      return;
-    }
+    } catch (e) { d = { ok: false }; }
+    // 28/09/2026: si MercadoLibre no da datos (hoy bloquea su buscador) no
+    // se muestra ningún error: se prueba con publicaciones de RosarioGarage.
+    if (!d.disponible || !d.ok) { await cargarPublicacionesRG(params, contenedor, valorTabla); return; }
     let comparacion = '';
     if (valorTabla) {
       const dif = (valorTabla - d.mediana) / d.mediana * 100;
@@ -50,6 +47,31 @@
         ${muestras ? `<details class="rm-muestras"><summary>Ver avisos cercanos a la mediana</summary>${muestras}</details>` : ''}
       </div>`;
   };
+
+  async function cargarPublicacionesRG(params, contenedor, valorTabla) {
+    let d;
+    try {
+      const q = new URLSearchParams({ ...params, valor_tabla: valorTabla || '' });
+      const r = await fetch('/precios/api/publicaciones?' + q);
+      d = await r.json();
+    } catch (e) { contenedor.innerHTML = ''; return; }
+    if (!d.ok || !d.avisos || !d.avisos.length) { contenedor.innerHTML = ''; return; }
+    const tarjetas = d.avisos.map(a => `
+      <a class="pub-rg" href="${esc(a.url)}">
+        ${a.foto ? `<img src="${esc(a.foto)}" alt="" loading="lazy">` : '<div class="pub-rg-sinfoto"></div>'}
+        <div class="pub-rg-info">
+          <div class="pub-rg-tit">${esc(a.titulo)}</div>
+          <div class="pub-rg-det">${esc(a.detalle)}</div>
+          <div class="pub-rg-precio">${pesos(a.precio)}</div>
+        </div>
+      </a>`).join('');
+    contenedor.innerHTML = `
+      <div class="rango-mercado">
+        <div class="rm-titulo">Publicaciones reales · RosarioGarage</div>
+        ${tarjetas}
+        <div class="rm-nota">Precios publicados (pedidos), no de venta cerrada. <a href="${esc(d.url_busqueda)}">Ver todas</a></div>
+      </div>`;
+  }
 
   // Auto-carga para elementos server-side: <div data-rango-mercado data-marca=.. data-modelo=.. data-version=.. data-anio=.. data-valor-tabla=..>
   document.addEventListener('DOMContentLoaded', () => {

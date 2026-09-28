@@ -116,6 +116,16 @@ def api_mercado():
                                             a.get("version", ""), a.get("anio", "")))
 
 
+@bp.route("/api/publicaciones")
+def api_publicaciones():
+    """3 publicaciones reales en pesos de RosarioGarage (28/09/2026) -- ver
+    publicaciones_rg.py. Se usa cuando MercadoLibre no da datos."""
+    import publicaciones_rg
+    a = request.args
+    return jsonify(publicaciones_rg.publicaciones(a.get("marca", ""), a.get("modelo", ""), a.get("version", ""),
+                                                  a.get("anio", ""), a.get("valor_tabla")))
+
+
 @bp.route("/api/marcas")
 def api_marcas():
     """Marcas para el datalist. Con Año ya elegido, solo las marcas que

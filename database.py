@@ -1463,6 +1463,8 @@ def init_db():
     _crear_superadmin_desde_env(conn)
     import mercado_ml
     mercado_ml.asegurar_tablas(conn)
+    import publicaciones_rg
+    publicaciones_rg.asegurar_tabla(conn)
 
     cur = conn.execute("SELECT COUNT(*) FROM precios_base")
     if cur.fetchone()[0] == 0:
