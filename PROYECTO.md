@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 27/09/2026 — 15:01 ART (chat revista: págs. 88-91 Ford hasta Mondeo)_
+_Última actualización: 27/09/2026 — 22:18 ART (chat revista: págs. 92-95 Ford completo + Ford Camiones)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -114,6 +114,13 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 27/09/2026 (chat revista, Msg 11) — Precios págs. 92 a 95: fin de Ford + Ford Camiones
+- **274 versiones / 1.081 precios**: Ford Mondeo (fin), Mustang, Ranger, S-Max, Territory, Transit (175/595, Ford completo) + Ford Camiones Cargo, F-14000, F-4000 (99/486). Transcripción en `INFOAUTO/transcripcion/datos_092_095.py`. Ford Camiones sigue en la 96 (96-99 ya en la carpeta).
+- **Excel:** Ford filas 781–955, título FORD CAMIONES fila 956, camiones 957–1055; Suzuki ahora en la 1056. Paneles inmovilizados en B2 (arreglado en Msg 9-10: la tanda anterior los había dejado mal). ORIGEN = 1.956 registros.
+- **CSV:** +1.081 filas (6.987 en total, sin duplicados). Marca nueva "Ford Camiones". Ranger Raptor queda como modelo RANGER.
+- Controles: 0 diferencias Excel/CSV vs transcripción; revisión visual de las 274 filas (corregido CARGO 1517/36 E, mal leído como 1517/35 E); 62 diferencias de OCR miradas a mano (todas errores del OCR). Rarezas impresas cargadas tal cual: Mustang GT Performance L/24 y Transit E (0KM vs '25).
+- App probada: 2026 Ranger 3.0 TDI DC 4X4 L/23 LTD+ V6 $83.355.000; 2021 Cargo 1723/37 EV 4X2 AUT $86.810.000; 2007 F-4000 TDI $33.635.000.
 
 ### Sesión 27/09/2026 (chat revista, Msg 8) — Precios págs. 88 a 91: Ford (Eco Sport a Mondeo)
 - **253 versiones / 997 precios** de Ford: Eco Sport, Everest, F-100, F-150, Fiesta, Focus, Ka, Kuga, Maverick, Mondeo. Transcripción en `INFOAUTO/transcripcion/datos_088_091.py`. Ford sigue en la pág. 92 (las 92-99 ya están en la carpeta).
