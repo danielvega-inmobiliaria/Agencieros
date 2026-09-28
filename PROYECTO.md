@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 27/09/2026 — 22:18 ART (chat revista: págs. 92-95 Ford completo + Ford Camiones)_
+_Última actualización: 27/09/2026 — 22:39 ART (chat revista: págs. 96-97 y 100-101 desde Excel de Daniel, controladas)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -114,6 +114,13 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 27/09/2026 (chat revista, Msg 12) — Págs. 96-97 y 100-101 a partir de los Excel de Daniel
+- Daniel transcribió él mismo las págs. 96-97 y 100-101 en dos Excel. Claude las controló igual que las propias (grilla + revisión visual de las 268 filas + OCR) y encontró **7 errores** (3 valores y 4 filas corridas/mezcladas en Tunland y Tucson), corregidos y anotados en `PAGINAS_CARGADAS.md`.
+- **268 versiones / 1.022 precios**: Ford Camiones (fin), Forthing, Foton, GAC, Geely, Great Wall, Haval, Hyundai (hasta Veracruz; sigue en la 102). Marcas nuevas con título en el Excel.
+- **Excel:** filas 1056–1330; Suzuki ahora en la 1331. **Faltan las págs. 98-99** (entre Haval y Hyundai): cuando lleguen se insertan antes de la fila 1198. ORIGEN = 2.224 registros; paneles en B2.
+- **CSV:** +1.022 filas (8.009 en total, sin duplicados). Modelos de dos palabras: SANTA FE, GRAND SANTA FE, I 10, I 30, HD 65/72/78, H100 TRUCK.
+- App probada: 2026 Tucson 1.6 4X4 Ultimate Hybrid AT $100.980.000; 2020 Tucson 2.0 4X2 Style Aut L/16 $32.500.000; 2025 Haval H6 4WD GT $44.500.000.
 
 ### Sesión 27/09/2026 (chat revista, Msg 11) — Precios págs. 92 a 95: fin de Ford + Ford Camiones
 - **274 versiones / 1.081 precios**: Ford Mondeo (fin), Mustang, Ranger, S-Max, Territory, Transit (175/595, Ford completo) + Ford Camiones Cargo, F-14000, F-4000 (99/486). Transcripción en `INFOAUTO/transcripcion/datos_092_095.py`. Ford Camiones sigue en la 96 (96-99 ya en la carpeta).
