@@ -23,8 +23,8 @@ class _NoEsPlataforma(Exception):
 
 def _solo_plataforma():
     # La cuenta de ML es una sola para toda la plataforma (la usan todas las
-    # agencias para el rango de mercado): la conecta/administra la agencia 1.
-    if session.get("agencia_id") != 1:
+    # agencias para el rango de mercado): la conecta/administra el admin de la plataforma.
+    if not session.get("superadmin_id"):
         raise _NoEsPlataforma()
 
 
@@ -33,11 +33,11 @@ def _aviso_no_plataforma(e):
     # En vez del "Forbidden" pelado (24/09/2026): decir con qué agencia está
     # abierta la sesión, que es casi siempre el motivo.
     flash(
-        f"La conexión con MercadoLibre la administra solo Italia Automotores. Ahora estás con la sesión de "
-        f"\"{session.get('agencia_nombre') or 'otra agencia'}\" -- salí y volvé a entrar con la cuenta de Italia Automotores.",
+        "La conexión con MercadoLibre la administra solo la cuenta de administración de AGENCIEROS -- "
+        "salí y volvé a entrar con esa cuenta.",
         "error",
     )
-    return redirect(url_for("admin.index"))
+    return redirect(url_for("precios.index"))
 
 
 @bp.route("/")

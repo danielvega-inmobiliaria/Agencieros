@@ -54,7 +54,7 @@ def sincronizar():
     # no sea la agencia 1 (mismo bloqueo puntual que ya usa app.py para
     # módulos enteros, acá aplicado a una sola ruta dentro de Stock, que
     # para el resto ya es multi-tenant).
-    if session.get("agencia_id") != 1:
+    if session.get("agencia_id") != int(os.environ.get("STOCK_SYNC_AGENCIA_ID", "1")):
         abort(404)
     resultado = sync_stock()
     if resultado["error"]:

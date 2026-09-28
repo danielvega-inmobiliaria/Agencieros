@@ -287,6 +287,20 @@ CREATE TABLE IF NOT EXISTS agencias (
     created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Administradores de la plataforma AGENCIEROS (28/09/2026): separados de
+-- las agencias. No tienen stock ni datos de negocio propios; solo entran al
+-- Panel de Agencias, la conexión con MercadoLibre, la Consulta de precios y
+-- la moderación de la Red. Se crean desde variables de entorno
+-- (SUPERADMIN_EMAIL / SUPERADMIN_PASSWORD) o con `python crear_superadmin.py`.
+CREATE TABLE IF NOT EXISTS plataforma_admins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    nombre TEXT,
+    activo INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS verificacion_codigos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     agencia_id INTEGER NOT NULL,
@@ -1169,6 +1183,200 @@ def _importar_precios_infoauto(conn):
         )
 
 
+def crear_o_actualizar_superadmin(conn, email, password, nombre="Admin AGENCIEROS"):
+    """Crea el administrador de la plataforma (o le cambia la contraseña si
+    ya existe). Devuelve un texto con el resultado. No se permite usar el
+    mismo mail que una agencia: el login busca primero acá y la agencia
+    quedaría inaccesible."""
+    email = (email or "").strip().lower()
+    if not email or not password:
+        return "Falta mail o contraseña."
+    if conn.execute("SELECT 1 FROM agencias WHERE lower(email) = ?", (email,)).fetchone():
+        return f"{email} ya es el mail de una agencia: usá otro para el admin de la plataforma."
+    existe = conn.execute("SELECT id FROM plataforma_admins WHERE email = ?", (email,)).fetchone()
+    if existe:
+        conn.execute(
+            "UPDATE plataforma_admins SET password_hash = ?, activo = 1 WHERE email = ?",
+            (generate_password_hash(password), email),
+        )
+        return f"Contraseña actualizada para {email}."
+    conn.execute(
+        "INSERT INTO plataforma_admins (email, password_hash, nombre) VALUES (?, ?, ?)",
+        (email, generate_password_hash(password), nombre),
+    )
+    return f"Admin de la plataforma creado: {email}."
+
+
+def _crear_superadmin_desde_env(conn):
+    """En Railway: si están SUPERADMIN_EMAIL y SUPERADMIN_PASSWORD y todavía
+    no hay ningún admin de plataforma, lo crea. Si ya hay uno no toca nada
+    (para cambiar la contraseña, usar crear_superadmin.py)."""
+    email = os.environ.get("SUPERADMIN_EMAIL")
+    password = os.environ.get("SUPERADMIN_PASSWORD")
+    if not email or not password:
+        return
+    if conn.execute("SELECT COUNT(*) FROM plataforma_admins").fetchone()[0] > 0:
+        return
+    print("[superadmin]", crear_o_actualizar_superadmin(conn, email, password))
+
+
+ITALIA_EMAIL = "itaaut03@gmail.com"
+
+
+def _borrar_datos_agencia(conn, agencia_id):
+    """Borra todos los datos de negocio de una agencia (autos, fotos,
+    pedidos, tomas, tasaciones, financiaciones, ventas, Red). Para la
+    agencia 1 también toma las filas viejas con agencia_id NULL (son suyas).
+    No borra la fila de `agencias` ni su `agencia_config`."""
+    cond = "COALESCE(agencia_id,1) = ?" if agencia_id == 1 else "agencia_id = ?"
+    vids = [r[0] for r in conn.execute(f"SELECT id FROM vehiculos WHERE {cond}", (agencia_id,))]
+    tids = [r[0] for r in conn.execute(f"SELECT id FROM tomas_vehiculo WHERE {cond}", (agencia_id,))]
+    fids = [r[0] for r in conn.execute(f"SELECT id FROM financiaciones WHERE {cond}", (agencia_id,))]
+    for i in tids:
+        conn.execute("DELETE FROM inspeccion_marcadores WHERE inspeccion_visual_id IN (SELECT id FROM inspeccion_visual WHERE toma_id = ?)", (i,))
+        conn.execute("DELETE FROM inspeccion_visual WHERE toma_id = ?", (i,))
+    for i in fids:
+        conn.execute("DELETE FROM financiacion_cuotas WHERE financiacion_id = ?", (i,))
+        conn.execute("DELETE FROM garantes WHERE financiacion_id = ?", (i,))
+    for i in vids:
+        conn.execute("DELETE FROM vehiculo_fotos WHERE vehiculo_id = ?", (i,))
+    for t in ("financiaciones", "ventas", "tasaciones", "tomas_vehiculo", "pedidos_clientes", "vehiculos", "red_publicaciones"):
+        cols = [r[1] for r in conn.execute(f"PRAGMA table_info({t})")]
+        if "agencia_id" in cols:
+            conn.execute(f"DELETE FROM {t} WHERE {cond}", (agencia_id,))
+
+
+AGENCIAS_PRUEBA_A_BORRAR = ("Autos Independencia", "Dangui Automotores", "Rodar Automotores", "Roldan Automotores")
+
+
+def _borrar_agencias_prueba(conn):
+    """28/09/2026, pedido de Daniel: eliminar las agencias que creó de
+    prueba en la web. Se buscan por nombre exacto y nunca se toca la
+    agencia 1 (Italia) ni Automotores Don Franco (primer inscripto real)."""
+    if _migracion_hecha(conn, "borrar_agencias_prueba_2026_09_28"):
+        return
+    for nombre in AGENCIAS_PRUEBA_A_BORRAR:
+        for (aid,) in conn.execute(
+            "SELECT id FROM agencias WHERE lower(trim(nombre_agencia)) = lower(?) AND id != 1", (nombre,)
+        ).fetchall():
+            _borrar_datos_agencia(conn, aid)
+            conn.execute("DELETE FROM agencia_config WHERE agencia_id = ?", (aid,))
+            conn.execute("DELETE FROM verificacion_codigos WHERE agencia_id = ?", (aid,))
+            conn.execute("DELETE FROM agencias WHERE id = ?", (aid,))
+            print(f"[agencias] borrada la agencia de prueba {aid} ({nombre})")
+    _marcar_migracion(conn, "borrar_agencias_prueba_2026_09_28")
+
+
+def _migracion_hecha(conn, nombre):
+    conn.execute("CREATE TABLE IF NOT EXISTS migraciones_hechas (nombre TEXT PRIMARY KEY, fecha TEXT DEFAULT (datetime('now')))")
+    return conn.execute("SELECT 1 FROM migraciones_hechas WHERE nombre = ?", (nombre,)).fetchone() is not None
+
+
+def _marcar_migracion(conn, nombre):
+    conn.execute("INSERT OR IGNORE INTO migraciones_hechas (nombre) VALUES (?)", (nombre,))
+
+
+def _italia_email_propio(conn):
+    """28/09/2026: Italia Automotores (agencia 1) deja de usar
+    admin@agencieros.com y pasa a itaaut03@gmail.com (misma contraseña).
+    La administración de la plataforma queda en plataforma_admins."""
+    if _migracion_hecha(conn, "italia_email_propio"):
+        return
+    if not conn.execute("SELECT 1 FROM agencias WHERE id = 1").fetchone():
+        return
+    ocupado = conn.execute("SELECT id FROM agencias WHERE lower(email) = ? AND id != 1", (ITALIA_EMAIL,)).fetchone()
+    if ocupado:
+        print(f"[italia] {ITALIA_EMAIL} ya lo usa la agencia {ocupado[0]}: no se cambia el mail de Italia.")
+    else:
+        conn.execute("UPDATE agencias SET email = ?, email_verificado = 1 WHERE id = 1", (ITALIA_EMAIL,))
+    _marcar_migracion(conn, "italia_email_propio")
+
+
+def _importar_italia_real(conn):
+    """28/09/2026: la web arrancó el 18/09 con una base nueva y Italia
+    (agencia 1) quedó con los autos de ejemplo del seed. Esto borra TODO lo
+    de la agencia 1 en la base de la web y carga los datos reales exportados
+    de la compu de Daniel (seed/italia/, ver exportar_italia.py). Confirmado
+    por Daniel: en la web no había nada real de Italia que conservar.
+    Corre una sola vez y solo en Railway (en local ya están esos datos)."""
+    import json, shutil
+    from storage import VOLUME_DIR, uploads_dir
+    if not VOLUME_DIR or _migracion_hecha(conn, "importar_italia_real"):
+        return
+    if not conn.execute("SELECT 1 FROM agencias WHERE id = 1").fetchone():
+        return
+    base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seed", "italia")
+    archivo = os.path.join(base, "italia.json")
+    if not os.path.exists(archivo):
+        return
+    with open(archivo, encoding="utf-8") as f:
+        datos = json.load(f)
+
+    # 1) Borrar lo de la agencia 1 (autos de ejemplo y todo lo colgado)
+    _borrar_datos_agencia(conn, 1)
+
+    # 2) Insertar con ids nuevos, remapeando las referencias entre tablas
+    mapas = {}
+    def _insertar(tabla, fila, refs=None):
+        fila = dict(fila)
+        viejo = fila.pop("id", None)
+        for col, tabla_ref in (refs or {}).items():
+            if fila.get(col) is not None:
+                fila[col] = mapas.get(tabla_ref, {}).get(fila[col])
+        if "agencia_id" in fila:
+            fila["agencia_id"] = 1
+        cols_db = {r[1] for r in conn.execute(f"PRAGMA table_info({tabla})")}
+        fila = {k: v for k, v in fila.items() if k in cols_db}
+        cur = conn.execute(
+            f"INSERT INTO {tabla} ({', '.join(fila)}) VALUES ({', '.join('?' for _ in fila)})",
+            tuple(fila.values()),
+        )
+        mapas.setdefault(tabla, {})[viejo] = cur.lastrowid
+
+    for f in datos.get("vehiculos", []):
+        _insertar("vehiculos", f)
+    for f in datos.get("vehiculo_fotos", []):
+        _insertar("vehiculo_fotos", f, {"vehiculo_id": "vehiculos"})
+    for f in datos.get("pedidos_clientes", []):
+        _insertar("pedidos_clientes", f)
+    for f in datos.get("tomas_vehiculo", []):
+        _insertar("tomas_vehiculo", f, {"vehiculo_id": "vehiculos"})
+    for f in datos.get("inspeccion_visual", []):
+        _insertar("inspeccion_visual", f, {"toma_id": "tomas_vehiculo"})
+    for f in datos.get("inspeccion_marcadores", []):
+        _insertar("inspeccion_marcadores", f, {"inspeccion_visual_id": "inspeccion_visual"})
+    for f in datos.get("tasaciones", []):
+        _insertar("tasaciones", f, {"toma_id": "tomas_vehiculo"})
+    for f in datos.get("financiaciones", []):
+        _insertar("financiaciones", f, {"vehiculo_id": "vehiculos", "permuta_vehiculo_id": "vehiculos",
+                                        "permuta_tasacion_id": "tasaciones"})
+    for f in datos.get("financiacion_cuotas", []):
+        _insertar("financiacion_cuotas", f, {"financiacion_id": "financiaciones"})
+    for f in datos.get("garantes", []):
+        _insertar("garantes", f, {"financiacion_id": "financiaciones"})
+    for f in datos.get("ventas", []):
+        _insertar("ventas", f, {"vehiculo_id": "vehiculos", "permuta_tasacion_id": "tasaciones"})
+    for f in datos.get("agencia_config", []):
+        f = {k: v for k, v in f.items() if k not in ("id", "agencia_id")}
+        if conn.execute("SELECT 1 FROM agencia_config WHERE agencia_id = 1").fetchone():
+            conn.execute(f"UPDATE agencia_config SET {', '.join(k + ' = ?' for k in f)} WHERE agencia_id = 1", tuple(f.values()))
+        else:
+            f["agencia_id"] = 1
+            conn.execute(f"INSERT INTO agencia_config ({', '.join(f)}) VALUES ({', '.join('?' for _ in f)})", tuple(f.values()))
+
+    # 3) Fotos y logo al volumen (mismas URLs /static/uploads/...)
+    origen = os.path.join(base, "uploads")
+    for carpeta, _, archivos in os.walk(origen):
+        for nombre in archivos:
+            src = os.path.join(carpeta, nombre)
+            dst = uploads_dir(os.path.relpath(src, origen))
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            if not os.path.exists(dst):
+                shutil.copy2(src, dst)
+    _marcar_migracion(conn, "importar_italia_real")
+    print("[italia] datos reales importados:", {t: len(m) for t, m in mapas.items()})
+
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
@@ -1206,6 +1414,10 @@ def init_db():
     _migrar_ventas_credito_externo(conn)
     _migrar_ventas_plan_origen(conn)
     _migrar_permuta_destino(conn)
+    _italia_email_propio(conn)
+    _importar_italia_real(conn)
+    _borrar_agencias_prueba(conn)
+    _crear_superadmin_desde_env(conn)
     import mercado_ml
     mercado_ml.asegurar_tablas(conn)
 

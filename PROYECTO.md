@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 28/09/2026 — 08:32 ART (cierre del chat "Revista págs. 157-164 y 80-126": carga de precios en pausa; próximo: reorganizar cuentas y Red)_
+_Última actualización: 28/09/2026 — 09:37 ART (chat "Cuentas y Red", Msg 3: paso 1 hecho + datos reales de Italia a la web + agencias de prueba borradas)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -77,10 +77,10 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 ### 🟡 IMPORTANTE
 - [ ] **PRÓXIMO CHAT (pedido de Daniel 28/09/2026) — reorganizar cuentas y Red. Se deja en pausa la carga de la revista.** Alcance:
-  1. **Separar "Admin de la plataforma" de Italia Automotores:** hoy la agencia 1 (Italia) es a la vez agencia y dueña de la plataforma (`MODULOS_SOLO_AGENCIA_1` en `app.py`, `routes/plataforma.py`). Objetivo: un **usuario superadmin** que solo administra AGENCIEROS (Panel de Agencias, planes, Red) y no tiene stock propio; Italia pasa a ser **una agencia más**, sin permisos especiales. Revisar todo lo que hoy chequea `agencia_id == 1`.
+  1. ✅ **Hecho 28/09/2026 (Msg 1, ver "Cambios recientes") — falta deploy + crear el admin en Railway.** **Separar "Admin de la plataforma" de Italia Automotores:** hoy la agencia 1 (Italia) es a la vez agencia y dueña de la plataforma (`MODULOS_SOLO_AGENCIA_1` en `app.py`, `routes/plataforma.py`). Objetivo: un **usuario superadmin** que solo administra AGENCIEROS (Panel de Agencias, planes, Red) y no tiene stock propio; Italia pasa a ser **una agencia más**, sin permisos especiales. Revisar todo lo que hoy chequea `agencia_id == 1`.
   2. **Usuarios por agencia (multiusuario):** tabla `usuarios` (agencia_id, nombre, mail, password, rol: dueño/vendedor, sucursal_id opcional). El login pasa de agencia a usuario. Vendedor sin costos/ganancia. Registrar quién cargó/vendió cada unidad.
   3. **Sucursales:** tabla `sucursales` + `sucursal_id` en vehículos/ventas/financiaciones; filtro por sucursal en Stock y Dashboard; vista consolidada para el dueño.
-  4. **Check "Red" en el listado de Stock:** publica/despublica la unidad en la Red sin recargarla; baja automática al vender o señar.
+  4. **Check "Red" en el listado de Stock:** publica/despublica la unidad en la Red sin recargarla. **Criterio corregido por Daniel 28/09/2026:** al **señar** la publicación queda en la Red marcada como **"Señado"** (no se da de baja); se da de baja sola **solo al vender** (y si se cancela la seña, vuelve a "Disponible").
   5. **Control de operaciones de la Red:** decidir modelo (comisión por operación vs. cobrar por publicar vs. mixto, ver análisis en el ítem de abajo) e implementar lo mínimo que lo sostenga.
   Orden sugerido: 1 → 2 → 3 → 4 → 5 (cada paso sobre la base del anterior; probar con 2 agencias de prueba para no cruzar datos).
 - [ ] **Anotado por Daniel 24/09/2026 (a resolver, sin código todavía):**
@@ -121,6 +121,19 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 28/09/2026 (chat "Cuentas y Red", Msg 1) — Admin de la plataforma separado de Italia Automotores (paso 1)
+- **Nueva tabla `plataforma_admins`** (email, password_hash, nombre, activo). El admin de la plataforma entra por el mismo login (`/auth/login` busca primero ahí) y queda con una sesión **sin `agencia_id`** (`session["superadmin_id"]`).
+- **Qué ve el admin:** Consulta de precios, Panel de Agencias, Red de Agencieros (solo mirar y **cerrar cualquier publicación** como moderación, sin "+ Publicar") y MercadoLibre (ahora en su menú). Cualquier otra pantalla lo manda al Panel de Agencias.
+- **Italia Automotores pasa a ser una agencia más:** ya no entra a Panel de Agencias ni a `/ml/` (se sacó el bloque de MercadoLibre de su Admin). Se reemplazó `MODULOS_SOLO_AGENCIA_1` por `SOLO_SUPERADMIN` en `app.py`, y `puede_ver_todo` por `es_superadmin`.
+- **Único dato que sigue atado a Italia:** "Sincronizar desde STOCK" (lee la carpeta `03_AUTOMOTOR/STOCK` de la compu de Daniel) — no es un permiso de admin; quedó en la variable `STOCK_SYNC_AGENCIA_ID` (default 1).
+- Los `COALESCE(agencia_id, 1)` se dejan: son filas viejas sin agencia que son de Italia.
+- **Cómo se crea el admin:** en Railway, variables `SUPERADMIN_EMAIL` y `SUPERADMIN_PASSWORD` (se crea solo al arrancar si no hay ninguno); en local, `python crear_superadmin.py mail "clave"` (también sirve para cambiarle la clave). No acepta un mail que ya sea de una agencia, y el registro no acepta el mail del admin.
+- Probado con `test_client()` sobre una copia de la base: admin (ve panel/ML/precios/Red, rebota en Stock/Dashboard/Admin/Financiación), Italia (rebota en panel y ML, sigue viendo Sincronizar), agencia 2 (rebota en panel/ML, sin Sincronizar, POST → 404).
+- Archivos: `app.py`, `database.py`, `crear_superadmin.py` (nuevo), `routes/auth.py`, `routes/ml.py`, `routes/plataforma.py`, `routes/red.py`, `routes/stock.py`, `templates/base.html`, `templates/admin/index.html`, `templates/red/index.html`, `templates/stock/index.html`.
+- **Msg 2 — cuentas definitivas y datos reales de Italia en la web:** admin de la plataforma = **danve61@gmail.com** (variables `SUPERADMIN_EMAIL`/`SUPERADMIN_PASSWORD` en Railway); Italia Automotores (agencia 1) pasa de `admin@agencieros.com` a **itaaut03@gmail.com** con la misma contraseña (migración `_italia_email_propio`). **Causa de los autos de ejemplo en la web:** la base de Railway arrancó vacía el 18/09 y el seed cargó los autos de muestra; los reales (Argo, Classic, 408, Lifan, Gol y Cruze vendidos, 2 financiaciones con 25 cuotas, 3 pedidos, 3 tomas, 4 tasaciones, 23 fotos + logo) solo estaban en la base local. Se exportaron con `exportar_italia.py` a `seed/italia/` (italia.json + uploads, 7,3 MB) y la migración `_importar_italia_real` (una sola vez, solo en Railway, marcada en la tabla nueva `migraciones_hechas`) borra todo lo de la agencia 1 en la web y carga eso con ids nuevos remapeados. Daniel confirmó que en la web no había nada real de Italia para conservar. Probado sobre una base armada con el código anterior (autos de ejemplo + una 2da agencia): quedan los 6 autos reales, las 2 financiaciones y las fotos se ven; la 2da agencia no se toca; un 2do arranque no repite nada.
+- **Msg 3 — agencias de prueba borradas en la web:** migración `_borrar_agencias_prueba` (una vez) elimina por nombre exacto **Autos Independencia, Dangui Automotores, Rodar Automotores y Roldan Automotores** con todos sus datos (nueva función `_borrar_datos_agencia`, también usada por la importación de Italia). Se conserva **Automotores Don Franco** (Villa Lynch, alta 27/09: primer inscripto real por la campaña de Meta). Probado sobre una base armada con el código anterior.
+- **Paso 4 (check Red) — criterio nuevo de Daniel:** al señar la unidad queda publicada como "Señado"; solo se da de baja al vender.
 
 ### Cierre del chat 27–28/09/2026 (Msg 1-17) — carga de la revista, estado y próximos pasos
 - **Hecho:** revista Sep-2026 cargada en Excel y CSV: págs. **80-102, 104-107, 123-126 y 154-164** (~3.000 versiones, 11.006 precios en el CSV). Marcas: DS, Ferrari, Fiat, Ford, Ford Camiones, Forthing, Foton, GAC, Geely, Great Wall, Haval, Hino, Honda, Hyundai, Isuzu, Iveco, JAC, Jaguar, Jetour, JMC, JMEV, Kaiyi, Kama, Nissan (fin), Peugeot (hasta 408), Suzuki/Tank/Toyota, Volkswagen y VW Camiones. Detalle por página en `INFOAUTO/transcripcion/PAGINAS_CARGADAS.md`.

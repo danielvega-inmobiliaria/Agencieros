@@ -97,7 +97,8 @@ def cerrar(pub_id):
     publicacion = query("SELECT * FROM red_publicaciones WHERE id = ?", (pub_id,), one=True)
     if not publicacion:
         abort(404)
-    if publicacion["agencia_id"] != session.get("agencia_id"):
+    # El admin de la plataforma puede cerrar cualquier publicación (moderación).
+    if publicacion["agencia_id"] != session.get("agencia_id") and not session.get("superadmin_id"):
         flash("Esa publicación no es de tu agencia -- no la podés cerrar.", "error")
         return redirect(url_for("red.index"))
     execute("UPDATE red_publicaciones SET estado = 'cerrado' WHERE id = ?", (pub_id,))

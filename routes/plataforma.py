@@ -1,7 +1,7 @@
 """Panel de Agencias (18/09/2026, ampliado el mismo día con búsqueda +
 orden, "última actividad", y una ficha de detalle por agencia).
 
-Vista de plataforma para Daniel (agencia_id=1, el dueño de AGENCIEROS) --
+Vista de plataforma para el admin de AGENCIEROS (plataforma_admins, desde 28/09/2026) --
 no es un módulo de negocio de ninguna agencia en particular, sino el
 "pulso" del sector: quiénes son las agencias registradas, dónde están, y
 cuánto están usando la app (stock, ventas, financiación, y último
@@ -14,8 +14,8 @@ vistazo (pedido de Daniel: compacto, poco texto). Los datos de contacto
 (teléfono, contacto de referencia) viven en la ficha de detalle
 (detalle()), a un click de cada fila.
 
-Acceso: gateado en app.py (MODULOS_SOLO_AGENCIA_1) -- solo la agencia 1
-puede ver esto, igual que Dashboard/Finanzas/Tomas/Financiación.
+Acceso: gateado en app.py (SOLO_SUPERADMIN) -- solo el admin de la
+plataforma; ninguna agencia (tampoco Italia Automotores) entra acá.
 """
 
 from datetime import datetime

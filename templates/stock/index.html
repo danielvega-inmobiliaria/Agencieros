@@ -9,7 +9,7 @@
   {% endfor %}
   <div style="margin-left:auto; display:flex; gap:8px;">
     <button type="button" id="buscador-toggle" class="btn btn-secondary btn-sm">{{ 'Ocultar buscador' if filtros else 'Buscar' }}</button>
-    {% if session.get('agencia_id') == 1 %}
+    {% if puede_sincronizar_stock %}
     <form method="post" action="{{ url_for('stock.sincronizar') }}">
       <button class="btn btn-secondary btn-sm" type="submit">↻ Sincronizar desde STOCK</button>
     </form>

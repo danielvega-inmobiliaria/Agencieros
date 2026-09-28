@@ -19,9 +19,19 @@ bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 
 def _loguear(agencia):
+    session.pop("superadmin_id", None)
     session["agencia_id"] = agencia["id"]
     session["agencia_nombre"] = agencia["nombre_agencia"]
     session["agencia_email"] = agencia["email"]
+
+
+def _loguear_superadmin(admin):
+    # Admin de la plataforma (28/09/2026): sesión sin agencia_id, así no
+    # puede ver ni cargar datos de negocio de ninguna agencia.
+    session.clear()
+    session["superadmin_id"] = admin["id"]
+    session["superadmin_email"] = admin["email"]
+    session["superadmin_nombre"] = admin["nombre"] or "Admin AGENCIEROS"
 
 
 @bp.route("/login", methods=["GET", "POST"])
@@ -29,6 +39,10 @@ def login():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
+        admin = query("SELECT * FROM plataforma_admins WHERE email = ? AND activo = 1", (email,), one=True)
+        if admin and check_password_hash(admin["password_hash"], password):
+            _loguear_superadmin(admin)
+            return redirect(url_for("plataforma.agencias"))
         agencia = query("SELECT * FROM agencias WHERE email = ?", (email,), one=True)
         if not agencia or not check_password_hash(agencia["password_hash"], password):
             flash("Email o contraseña incorrectos.", "error")
@@ -89,7 +103,8 @@ def registro():
         if password != password2:
             flash("Las contraseñas no coinciden.", "error")
             return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR)
-        if query("SELECT id FROM agencias WHERE email = ?", (email,), one=True):
+        if (query("SELECT id FROM agencias WHERE email = ?", (email,), one=True)
+                or query("SELECT id FROM plataforma_admins WHERE email = ?", (email,), one=True)):
             flash("Ya hay una cuenta registrada con ese email.", "error")
             return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR)
 

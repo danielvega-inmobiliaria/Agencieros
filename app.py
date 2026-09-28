@@ -20,6 +20,9 @@ LANDING_URL = os.environ.get("LANDING_URL", "https://agencieros.net.ar").rstrip(
 # se puede pushear este codigo ya mismo y activar el Pixel despues nomas
 # cargando la variable en Railway, sin otro deploy.
 META_PIXEL_ID = os.environ.get("META_PIXEL_ID", "").strip()
+# "Sincronizar desde STOCK" lee la carpeta 03_AUTOMOTOR/STOCK de la compu de
+# Daniel: es un dato de Italia Automotores (agencia 1), no un permiso de admin.
+STOCK_SYNC_AGENCIA_ID = int(os.environ.get("STOCK_SYNC_AGENCIA_ID", "1"))
 META_DOMAIN_VERIFICATION = os.environ.get("META_DOMAIN_VERIFICATION", "").strip()
 
 
@@ -92,8 +95,13 @@ def create_app():
             return {"catalogo_json": "{}"}
 
     @app.context_processor
-    def _inject_puede_ver_todo():
-        return {"puede_ver_todo": session.get("agencia_id") == 1}
+    def _inject_superadmin():
+        # 28/09/2026: el admin de la plataforma es un usuario aparte
+        # (tabla plataforma_admins), ya no la agencia 1.
+        return {
+            "es_superadmin": bool(session.get("superadmin_id")),
+            "puede_sincronizar_stock": session.get("agencia_id") == STOCK_SYNC_AGENCIA_ID,
+        }
 
     @app.context_processor
     def _inject_meta_pixel():
@@ -140,7 +148,8 @@ def create_app():
             # la misma landing para poder verla desde la app.
             "index", "inicio", "robots_txt",
         }
-        if request.endpoint and request.endpoint not in publicas and "agencia_id" not in session:
+        if (request.endpoint and request.endpoint not in publicas
+                and "agencia_id" not in session and "superadmin_id" not in session):
             return redirect(url_for("auth.login"))
 
     @app.before_request
@@ -163,52 +172,34 @@ def create_app():
             except Exception:
                 pass
 
-    # Red de Agencieros multi-tenant (18/09/2026): por ahora solo la
-    # agencia 1 (Italia Automotores, la de Daniel) tiene estos módulos
-    # separados y probados por agencia -- el resto ya tiene la columna
-    # `agencia_id` en la base (ver database.py) pero las rutas todavía no
-    # filtran por ella. Hasta que se escale módulo por módulo, cualquier
-    # otra agencia que se registre queda bloqueada acá (nunca llega a ver
-    # datos de Italia Automotores ni de otra agencia por un WHERE que
-    # todavía falta agregar) -- ver Pendientes en PROYECTO.md para el
-    # orden en que se van habilitando.
-    # Stock salió de esta lista el 18/09/2026: ya filtra todo por
-    # `agencia_id` (routes/stock.py, buscador.py, sync_stock.py) y quedó
-    # probado con una 2da agencia de prueba antes de habilitarlo acá.
-    # Pedidos (Banco de pedidos) salió el 18/09/2026: ya filtra todo por
-    # `agencia_id` (routes/pedidos.py), con "Red" a propósito sin filtrar
-    # (mercado compartido), y quedó probado con una 2da agencia de prueba.
-    # Toma y tasación (tomas, inspeccion, tasacion) salió el 20/09/2026: la Toma
-    # y su Tasación guardan `agencia_id`, todas las rutas verifican que la Toma
-    # sea de la agencia logueada y las tasaciones ofrecidas como permuta también
-    # son solo las propias (routes/tomas.py, routes/stock.py, routes/financiacion.py).
-    # Dashboard salió el 21/09/2026: todos sus números (stock por estado,
-    # pedidos activos, ventas/ingresos/ganancia del mes, señas y permutas por
-    # resolver, gastos en reparación, cuotas) filtran por la agencia logueada
-    # (routes/dashboard.py). Las tarjetas que llevan a Financiación/Finanzas
-    # (todavía bloqueadas) se ocultan o quedan sin link para las demás
-    # agencias (templates/dashboard.html).
-    # Finanzas, Financiación y Matches se escalaron a multi-tenant el
-    # 21/09/2026 (agencia_id filtrado en cada query, planes de Financiación
-    # ya nacen con agencia_id propio) -- solo "plataforma" (Panel de
-    # Agencias) sigue siendo exclusivo de la agencia 1 a propósito.
-    MODULOS_SOLO_AGENCIA_1 = {
-        "plataforma",
-    }
+    # Separación Admin de la plataforma / agencias (28/09/2026). Antes la
+    # agencia 1 (Italia Automotores) era a la vez agencia y dueña de la
+    # plataforma (MODULOS_SOLO_AGENCIA_1). Ahora:
+    # - El admin de la plataforma (session["superadmin_id"], tabla
+    #   plataforma_admins) no tiene agencia: solo ve Panel de Agencias,
+    #   MercadoLibre, Consulta de precios y la Red (para moderar).
+    # - Las agencias (Italia incluida) no pueden entrar a esos módulos de
+    #   administración.
+    SOLO_SUPERADMIN = {"plataforma", "ml"}
+    SUPERADMIN_PERMITIDOS = {"plataforma", "ml", "precios", "auth", "static"}
+    SUPERADMIN_ENDPOINTS = {"red.index", "red.cerrar", "index", "inicio", "robots_txt"}
 
     @app.before_request
-    def _bloquear_modulos_sin_escalar():
+    def _separar_superadmin():
         from flask import request
         endpoint = request.endpoint or ""
         blueprint = endpoint.split(".")[0]
-        if blueprint in MODULOS_SOLO_AGENCIA_1 and session.get("agencia_id") != 1:
-            flash(
-                "Este módulo todavía no está habilitado para agencias nuevas -- "
-                "por ahora podés usar Dashboard, Stock, Banco de pedidos, Toma y tasación, "
-                "Red de Agencieros, Consulta de precios y tu Admin.",
-                "error",
-            )
-            return redirect(url_for("red.index"))
+        if session.get("superadmin_id"):
+            if blueprint in SUPERADMIN_PERMITIDOS or endpoint in SUPERADMIN_ENDPOINTS:
+                return None
+            if endpoint == "stock.ficha":
+                return None
+            flash("Con la cuenta de administración de la plataforma no se cargan datos de agencia.", "error")
+            return redirect(url_for("plataforma.agencias"))
+        if blueprint in SOLO_SUPERADMIN:
+            flash("Esa sección es solo para la administración de AGENCIEROS.", "error")
+            return redirect(url_for("precios.index"))
+        return None
 
     def _render_landing():
         # En el dominio raíz los botones apuntan a la app (URL absoluta); si
