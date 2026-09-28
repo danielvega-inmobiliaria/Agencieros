@@ -653,3 +653,6 @@ form textarea { min-height: 80px; }
 .pub-rg-det { color: var(--text-dim); font-size: 12px; }
 .pub-rg-precio { color: var(--gold-light); font-weight: 700; margin-top: 2px; }
 .rango-mercado .rm-nota a { color: var(--gold-light); }
+
+/* Aviso de Facebook Marketplace (28/09/2026): no funciona desde una Página */
+.nota-fb { color: var(--text-dim); font-size: 11.5px; margin: 6px 0 0; }
