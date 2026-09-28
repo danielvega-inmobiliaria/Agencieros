@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 28/09/2026 — 18:03 ART (chat "Cuentas y Red", Msg 17: admin separado, Italia con datos reales, agencias de prueba borradas, buscador de precios en celu, contador de consultas por agencia, texto de la consulta y sin botón de stock, consultas al admin con mail y push, conversaciones con respuesta desde la app, publicaciones de RosarioGarage, nota de Facebook)_
+_Última actualización: 28/09/2026 — 19:06 ART (cierre del chat "Cuentas y Red", Msg 1-18; próximo: pasos 2 a 5 de cuentas y Red)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -83,6 +83,8 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
   4. **Check "Red" en el listado de Stock:** publica/despublica la unidad en la Red sin recargarla. **Criterio corregido por Daniel 28/09/2026:** al **señar** la publicación queda en la Red marcada como **"Señado"** (no se da de baja); se da de baja sola **solo al vender** (y si se cancela la seña, vuelve a "Disponible").
   5. **Control de operaciones de la Red:** decidir modelo (comisión por operación vs. cobrar por publicar vs. mixto, ver análisis en el ítem de abajo) e implementar lo mínimo que lo sostenga.
   Orden sugerido: 1 → 2 → 3 → 4 → 5 (cada paso sobre la base del anterior; probar con 2 agencias de prueba para no cruzar datos).
+  **Estado al 28/09/2026 (cierre chat "Cuentas y Red"):** paso 1 ✅ en producción. **Próximo chat: paso 2 (usuarios por agencia).**
+- [ ] **Chicos, surgidos el 28/09/2026:** (a) pantalla para cambiar contraseña (agencias y admin; hoy no existe — el admin solo con `crear_superadmin.py` o borrando la fila); (b) confirmar en producción que aparecen las publicaciones de RosarioGarage (si no aparecen, ver logs de Railway: `[rosariogarage] No se pudo leer`); (c) MercadoLibre: pedir acceso de desarrollador/certificación para usar el buscador por API (hoy 403 incluso con token de usuario); (d) opcional: eliminar agencias desde el Panel (hoy solo por migración).
 - [ ] **Anotado por Daniel 24/09/2026 (a resolver, sin código todavía):**
   - **Agencias con sucursales:** una agencia con varias sucursales (stock, ventas y caja por sucursal, con vista consolidada para el dueño). Implica una tabla `sucursales` + `sucursal_id` en vehículos/ventas/financiaciones, y un filtro por sucursal en Stock y Dashboard.
   - **Varios vendedores por agencia (multiusuario):** hoy el login es 1 cuenta = 1 agencia. Hace falta una tabla `usuarios` por agencia con rol (dueño / vendedor), para registrar quién cargó o vendió cada unidad y definir qué ve un vendedor (ej. sin costos ni ganancia). Se cruza con los planes (cantidad de usuarios por plan).
@@ -121,6 +123,13 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Cierre del chat 28/09/2026 "Cuentas y Red" (Msg 1-18) — estado y próximos pasos
+- **En producción (commits `af101a6` → `b955f41`):** admin de la plataforma separado (danve61@gmail.com; Italia = itaaut03@gmail.com con sus datos reales importados), agencias de prueba borradas (queda Don Franco), buscador de precios en celu, contador de consultas por agencia, texto de la consulta sin "gancho" y sin botón Guardar en stock, **Consultas y avisos** (conversación por agencia, respuesta desde la app, mail + push ntfy al admin y aviso de nuevo registro), precio de mercado sin error de ML + 3 publicaciones de RosarioGarage, nota de Facebook perfil personal.
+- **Variables Railway nuevas:** `SUPERADMIN_EMAIL`, `SUPERADMIN_PASSWORD`, `NTFY_TOPIC` (tema `agencieros-835e7eb82cbf`, app ntfy en el celu de Daniel). Opcionales: `ADMIN_EMAIL`, `STOCK_SYNC_AGENCIA_ID`.
+- **Pendiente de confirmar:** que se vean las publicaciones de RosarioGarage en producción.
+- **Próximo chat:** paso 2 de "reorganizar cuentas y Red" (usuarios por agencia: dueño/vendedor), luego 3 (sucursales), 4 (check Red en Stock, con el criterio de señado) y 5 (control de la Red).
+- Nota técnica: en la base local quedó `data/agencieros.db-journal` (lo resuelve SQLite al abrir la app en la compu; no borrarlo a mano). La carpeta `.tmp_no/` es de pruebas y se puede borrar.
 
 ### Sesión 28/09/2026 (chat "Cuentas y Red", Msg 1) — Admin de la plataforma separado de Italia Automotores (paso 1)
 - **Nueva tabla `plataforma_admins`** (email, password_hash, nombre, activo). El admin de la plataforma entra por el mismo login (`/auth/login` busca primero ahí) y queda con una sesión **sin `agencia_id`** (`session["superadmin_id"]`).
