@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 27/09/2026 — 22:39 ART (chat revista: págs. 96-97 y 100-101 desde Excel de Daniel, controladas)_
+_Última actualización: 27/09/2026 — 23:03 ART (chat revista: págs. 98-99 y 102 cargadas; 103 pendiente de re-escaneo)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -114,6 +114,15 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 27/09/2026 (chat revista, Msg 13) — Págs. 98-99 y 102 (Hino, Honda, Hyundai, Isuzu, Iveco)
+- **200 versiones / 849 precios**: Haval Ora 5, Hino (marca nueva), Honda (marca nueva), Hyundai Atos→Grand Santa Fe 2.2 (págs. 99) y Veracruz 3.8 (102), Isuzu (nueva), Iveco hasta Daily 55C 16 (nueva). Transcripción en `INFOAUTO/transcripcion/datos_098_099.py` y `datos_102.py`.
+- El Excel de las págs. 98-99 que armó Daniel venía **sin nombres de modelo** y con muchas filas corridas/mezcladas: se transcribió de nuevo desde el escaneo (se usó sólo como referencia).
+- **Pág. 103 pendiente**: la columna '07 salió negra en el escaneo (y en parte '09/'11); hay que re-escanearla con más luz.
+- No cargado por ilegible: HUMMER Techo Duro (pág. 99); algunas celdas sueltas en columnas oscuras (Legend, Pilot 4WD '09, Atos '09/'07) quedan vacías.
+- **Excel:** Haval/Hino/Honda insertados antes de Hyundai (1198–1303), Hyundai pág. 99 al principio de Hyundai, Isuzu e Iveco después de Hyundai; Suzuki ahora en la 1535. Orden y contenido previo verificados sin cambios. ORIGEN = 2.424 registros.
+- **CSV:** +849 filas (8.858 en total, sin duplicados). Modelos de dos palabras nuevos: GRAND I 10, COUPE FX, COUPE GENESIS, SERIE 300, SERIE 500.
+- App probada: 2026 Honda CR-V 2.0 4X4 Advanced Hybrid $114.597.000; 2026 Isuzu NQR 5.2 TDI 90 $87.057.000; 2016 Iveco Daily 55C 16 Chasis $39.417.000.
 
 ### Sesión 27/09/2026 (chat revista, Msg 12) — Págs. 96-97 y 100-101 a partir de los Excel de Daniel
 - Daniel transcribió él mismo las págs. 96-97 y 100-101 en dos Excel. Claude las controló igual que las propias (grilla + revisión visual de las 268 filas + OCR) y encontró **7 errores** (3 valores y 4 filas corridas/mezcladas en Tunland y Tucson), corregidos y anotados en `PAGINAS_CARGADAS.md`.
