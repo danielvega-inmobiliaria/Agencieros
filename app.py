@@ -56,6 +56,7 @@ def create_app():
     from routes.plataforma import bp as plataforma_bp
     from routes.ml import bp as ml_bp
     from routes.mensajes import bp as mensajes_bp
+    from routes.cuenta import bp as cuenta_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -73,6 +74,18 @@ def create_app():
     app.register_blueprint(plataforma_bp)
     app.register_blueprint(ml_bp)
     app.register_blueprint(mensajes_bp)
+    app.register_blueprint(cuenta_bp)
+
+    @app.template_filter("fecha_ar")
+    def _fecha_ar(valor):
+        # "YYYY-MM-DD HH:MM:SS" en UTC (datetime('now') de SQLite) -> hora
+        # de Argentina, "DD/MM/YYYY HH:MM".
+        from datetime import datetime, timedelta
+        try:
+            d = datetime.strptime(str(valor)[:19], "%Y-%m-%d %H:%M:%S") - timedelta(hours=3)
+            return d.strftime("%d/%m/%Y %H:%M")
+        except Exception:
+            return valor or ""
 
     @app.before_request
     def _landing_host():
@@ -95,6 +108,11 @@ def create_app():
             return {"catalogo_json": json.dumps(obtener_catalogo(), ensure_ascii=False)}
         except Exception:
             return {"catalogo_json": "{}"}
+
+    @app.context_processor
+    def _inject_rol():
+        from utils.permisos import es_vendedor, es_dueno
+        return {"es_vendedor": es_vendedor(), "es_dueno": es_dueno()}
 
     @app.context_processor
     def _inject_superadmin():
@@ -204,7 +222,51 @@ def create_app():
     #   administración.
     SOLO_SUPERADMIN = {"plataforma", "ml"}
     SUPERADMIN_PERMITIDOS = {"plataforma", "ml", "precios", "auth", "static"}
-    SUPERADMIN_ENDPOINTS = {"red.index", "red.cerrar", "index", "inicio", "robots_txt"}
+    SUPERADMIN_ENDPOINTS = {"red.index", "red.cerrar", "index", "inicio", "robots_txt", "cuenta.index"}
+
+    @app.before_request
+    def _usuario_de_agencia():
+        # Usuarios por agencia (28/09/2026). Sesiones abiertas antes de este
+        # cambio solo tienen agencia_id: se completan con el dueño de la
+        # agencia, así nadie tiene que volver a ingresar. En cada request se
+        # verifica que el usuario siga activo (si el dueño lo desactiva,
+        # queda afuera en el próximo click) y se toma el rol vigente.
+        agencia_id = session.get("agencia_id")
+        if not agencia_id or request.endpoint in (None, "static", "auth.logout"):
+            return None
+        from database import query
+        try:
+            if session.get("usuario_id"):
+                u = query("SELECT id, nombre, email, rol, activo FROM agencia_usuarios WHERE id = ? AND agencia_id = ?",
+                          (session["usuario_id"], agencia_id), one=True)
+            else:
+                u = query("""SELECT id, nombre, email, rol, activo FROM agencia_usuarios
+                             WHERE agencia_id = ? AND activo = 1
+                             ORDER BY CASE WHEN lower(email) = lower(?) THEN 0 ELSE 1 END,
+                                      CASE rol WHEN 'dueno' THEN 0 ELSE 1 END, id LIMIT 1""",
+                          (agencia_id, session.get("agencia_email") or ""), one=True)
+        except Exception:
+            return None
+        if not u or not u["activo"]:
+            session.clear()
+            flash("Tu usuario fue desactivado. Consultá con el dueño de la agencia.", "error")
+            return redirect(url_for("auth.login"))
+        session["usuario_id"] = u["id"]
+        session["usuario_nombre"] = u["nombre"]
+        session["usuario_email"] = u["email"]
+        session["usuario_rol"] = u["rol"]
+        return None
+
+    @app.before_request
+    def _permisos_vendedor():
+        from utils.permisos import es_vendedor, BLUEPRINTS_SOLO_DUENO, ENDPOINTS_SOLO_DUENO
+        if not session.get("agencia_id") or not es_vendedor():
+            return None
+        endpoint = request.endpoint or ""
+        if endpoint.split(".")[0] in BLUEPRINTS_SOLO_DUENO or endpoint in ENDPOINTS_SOLO_DUENO:
+            flash("Esa sección es solo para el dueño de la agencia.", "error")
+            return redirect(url_for("precios.index"))
+        return None
 
     @app.before_request
     def _separar_superadmin():

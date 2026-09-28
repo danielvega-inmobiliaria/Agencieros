@@ -1222,8 +1222,10 @@ def crear_o_actualizar_superadmin(conn, email, password, nombre="Admin AGENCIERO
     email = (email or "").strip().lower()
     if not email or not password:
         return "Falta mail o contraseña."
-    if conn.execute("SELECT 1 FROM agencias WHERE lower(email) = ?", (email,)).fetchone():
-        return f"{email} ya es el mail de una agencia: usá otro para el admin de la plataforma."
+    if (conn.execute("SELECT 1 FROM agencias WHERE lower(email) = ?", (email,)).fetchone()
+            or conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'agencia_usuarios'").fetchone()
+            and conn.execute("SELECT 1 FROM agencia_usuarios WHERE lower(email) = ?", (email,)).fetchone()):
+        return f"{email} ya es el mail de una agencia o de un usuario: usá otro para el admin de la plataforma."
     existe = conn.execute("SELECT id FROM plataforma_admins WHERE email = ?", (email,)).fetchone()
     if existe:
         conn.execute(
@@ -1419,6 +1421,64 @@ def _importar_italia_real(conn):
     print("[italia] datos reales importados:", {t: len(m) for t, m in mapas.items()})
 
 
+def _migrar_usuarios_agencia(conn):
+    """Usuarios por agencia (28/09/2026, paso 2 de "reorganizar cuentas y
+    Red"). Cada agencia puede tener varios usuarios con rol 'dueno' o
+    'vendedor'; el login pasa a ser por usuario. (La tabla vieja `usuarios`
+    es del login de antes del multi-tenant y no se usa.)
+    Corre en cada arranque y es idempotente: a toda agencia que todavía no
+    tenga usuarios le crea su dueño con el mismo mail y la misma contraseña
+    de la agencia, así nadie tiene que volver a registrarse."""
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS agencia_usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agencia_id INTEGER NOT NULL,
+            nombre TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            rol TEXT NOT NULL DEFAULT 'vendedor',
+            sucursal_id INTEGER,
+            activo INTEGER DEFAULT 1,
+            ultimo_ingreso TEXT,
+            created_at TEXT DEFAULT (datetime('now'))
+        )"""
+    )
+    for a in conn.execute(
+        """SELECT a.id, a.email, a.password_hash, a.contacto_referencia, a.nombre_agencia
+           FROM agencias a
+           WHERE NOT EXISTS (SELECT 1 FROM agencia_usuarios u WHERE u.agencia_id = a.id)"""
+    ).fetchall():
+        if conn.execute("SELECT 1 FROM agencia_usuarios WHERE lower(email) = lower(?)", (a[1],)).fetchone():
+            continue
+        conn.execute(
+            """INSERT INTO agencia_usuarios (agencia_id, nombre, email, password_hash, rol)
+               VALUES (?, ?, ?, ?, 'dueno')""",
+            (a[0], (a[3] or a[4] or "Dueño").strip(), a[1].lower(), a[2]),
+        )
+    # Quién cargó y quién vendió cada unidad.
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(vehiculos)")}
+    if "cargado_por_id" not in cols:
+        conn.execute("ALTER TABLE vehiculos ADD COLUMN cargado_por_id INTEGER")
+    if "vendido_por_id" not in cols:
+        conn.execute("ALTER TABLE vehiculos ADD COLUMN vendido_por_id INTEGER")
+
+
+def mail_ocupado(conn, email, excepto_usuario_id=None):
+    """True si el mail ya lo usa una agencia, un usuario de agencia o un
+    admin de la plataforma (el login busca en las tres)."""
+    email = (email or "").strip().lower()
+    fila = conn.execute(
+        "SELECT id, agencia_id FROM agencia_usuarios WHERE lower(email) = ?", (email,)
+    ).fetchone()
+    if fila and fila[0] != excepto_usuario_id:
+        return True
+    if conn.execute("SELECT 1 FROM plataforma_admins WHERE lower(email) = ?", (email,)).fetchone():
+        return True
+    if not fila and conn.execute("SELECT 1 FROM agencias WHERE lower(email) = ?", (email,)).fetchone():
+        return True
+    return False
+
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
@@ -1460,6 +1520,7 @@ def init_db():
     _importar_italia_real(conn)
     _borrar_agencias_prueba(conn)
     _migrar_mensajes_conversacion(conn)
+    _migrar_usuarios_agencia(conn)
     _crear_superadmin_desde_env(conn)
     import mercado_ml
     mercado_ml.asegurar_tablas(conn)

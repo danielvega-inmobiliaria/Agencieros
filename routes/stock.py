@@ -5,6 +5,7 @@ from datetime import date
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort, session
 from urllib.parse import quote_plus
 
+from utils.permisos import es_vendedor, nombres_usuarios
 from database import query, execute, foto_principal, obtener_catalogo, obtener_config_agencia, TIPOS_CARROCERIA
 from storage import uploads_dir
 from sync_stock import sync_stock
@@ -184,8 +185,8 @@ def nuevo():
                (marca, modelo, version, anio, km, combustible, caja, color, dominio, estado,
                 equipamiento, observaciones, documentacion, valor_compra, gastos, valor_publicado,
                 fecha_ingreso, entrega_quien, fecha_ingreso_estimada,
-                propiedad, consignante_nombre, consignante_telefono, tipo_carroceria, agencia_id)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                propiedad, consignante_nombre, consignante_telefono, tipo_carroceria, agencia_id, cargado_por_id)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 f.get("marca"), f.get("modelo"), f.get("version"), f.get("anio") or None,
                 f.get("km") or None, f.get("combustible"), f.get("caja"), f.get("color"),
@@ -199,6 +200,7 @@ def nuevo():
                 f.get("consignante_telefono") if es_consignacion else None,
                 f.get("tipo_carroceria") or None,
                 agencia_id,
+                session.get("usuario_id"),
             ),
         )
 
@@ -299,8 +301,10 @@ def detalle(vehiculo_id):
             "destino": origen_op["permuta_destino"], "vehiculo_id": origen_op["permuta_vehiculo_id"],
             "desc": origen_op["permuta_descripcion"],
         }
+    nombres = nombres_usuarios(session["agencia_id"])
     return render_template(
         "stock/detalle.html", vehiculo=vehiculo, rent=_rentabilidad(vehiculo), estado_label=ESTADO_LABEL, fotos=fotos,
+        cargado_por=nombres.get(vehiculo["cargado_por_id"]), vendido_por=nombres.get(vehiculo["vendido_por_id"]),
         permuta_op=permuta_op,
         toma_vinculada=toma_vinculada, venta_abierta=venta_abierta, plan_pendiente=plan_pendiente,
         venta_cerrada=venta_cerrada, plan_cierre=plan_cierre, hoy=str(date.today()),
@@ -400,6 +404,14 @@ def editar(vehiculo_id):
         fecha_venta = str(date.today()) if f.get("estado") == "vendido" and vehiculo["estado"] != "vendido" else vehiculo["fecha_venta"]
         propiedad = f.get("propiedad", "propio")
         es_consignacion = propiedad == "consignacion"
+        if es_vendedor():
+            # El vendedor no ve ni edita costos: se conservan los cargados.
+            valor_compra, gastos = vehiculo["valor_compra"] or 0, vehiculo["gastos"] or 0
+        else:
+            valor_compra, gastos = float(f.get("valor_compra") or 0), float(f.get("gastos") or 0)
+        vendido_por_id = vehiculo["vendido_por_id"]
+        if f.get("estado") == "vendido" and vehiculo["estado"] != "vendido":
+            vendido_por_id = session.get("usuario_id")
         if vehiculo["estado"] == "senado" and f.get("estado") != "senado":
             # Si se cambia a mano el estado de un auto señado desde acá, la
             # seña abierta de "Venta directa" no puede quedar colgada.
@@ -413,13 +425,13 @@ def editar(vehiculo_id):
                valor_compra=?, gastos=?, valor_publicado=?, valor_vendido=?, fecha_venta=?,
                entrega_quien=?, fecha_ingreso_estimada=?,
                propiedad=?, consignante_nombre=?, consignante_telefono=?, tipo_carroceria=?,
-               updated_at=datetime('now')
+               vendido_por_id=?, updated_at=datetime('now')
                WHERE id=?""",
             (
                 f.get("marca"), f.get("modelo"), f.get("version"), f.get("anio") or None,
                 f.get("km") or None, f.get("combustible"), f.get("caja"), f.get("color"),
                 f.get("dominio"), f.get("estado"), f.get("equipamiento"), f.get("observaciones"),
-                f.get("documentacion"), float(f.get("valor_compra") or 0), float(f.get("gastos") or 0),
+                f.get("documentacion"), valor_compra, gastos,
                 float(f.get("valor_publicado") or 0),
                 float(f.get("valor_vendido")) if f.get("valor_vendido") else None,
                 fecha_venta,
@@ -428,6 +440,7 @@ def editar(vehiculo_id):
                 f.get("consignante_nombre") if es_consignacion else None,
                 f.get("consignante_telefono") if es_consignacion else None,
                 f.get("tipo_carroceria") or None,
+                vendido_por_id,
                 vehiculo_id,
             ),
         )
@@ -991,8 +1004,8 @@ def vender(vehiculo_id):
 
     execute(
         """UPDATE vehiculos SET estado = 'vendido', valor_vendido = ?, fecha_venta = ?,
-               updated_at = datetime('now') WHERE id = ? AND agencia_id = ?""",
-        (precio, fecha_venta, vehiculo_id, session["agencia_id"]),
+               vendido_por_id = ?, updated_at = datetime('now') WHERE id = ? AND agencia_id = ?""",
+        (precio, fecha_venta, session.get("usuario_id"), vehiculo_id, session["agencia_id"]),
     )
     mensaje = f"Venta cerrada — {_pesos(precio)}: {_pesos(efectivo)} en efectivo"
     if sena:

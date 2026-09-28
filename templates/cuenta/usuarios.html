@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Usuarios — Agencieros{% endblock %}
+{% block header %}Usuarios de la agencia{% endblock %}
+{% block content %}
+<div class="panel">
+  <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
+    Cada persona que usa la app entra con su propio mail y contraseña. El <b>dueño</b> ve todo;
+    el <b>vendedor</b> usa Stock, Pedidos, Toma y tasación, Financiación y la Red, pero no ve
+    valor de compra, gastos ni ganancia, ni entra a Finanzas, Admin ni a esta pantalla.
+    Queda registrado quién cargó y quién vendió cada unidad.
+  </p>
+  <table class="tabla-responsive">
+    <thead><tr><th>Nombre</th><th>Mail</th><th>Rol</th><th>Cargó / vendió</th><th>Último ingreso</th><th>Acciones</th></tr></thead>
+    <tbody>
+    {% for u in usuarios %}
+    <tr style="{{ '' if u.activo else 'opacity:.55;' }}">
+      <td data-label="Nombre">
+        <form method="post" action="{{ url_for('cuenta.usuario_editar', usuario_id=u.id) }}" style="display:flex; gap:6px; align-items:center;">
+          <input type="hidden" name="accion" value="nombre">
+          <input type="text" name="nombre" value="{{ u.nombre }}" style="min-width:120px;">
+          <button class="btn btn-secondary btn-sm" type="submit" title="Guardar nombre">✓</button>
+        </form>
+        {% if u.id == session.get('usuario_id') %}<small style="color:var(--gold-light);">(vos)</small>{% endif %}
+        {% if not u.activo %}<small style="color:var(--red);">Desactivado</small>{% endif %}
+      </td>
+      <td data-label="Mail">{{ u.email }}</td>
+      <td data-label="Rol">
+        <form method="post" action="{{ url_for('cuenta.usuario_editar', usuario_id=u.id) }}">
+          <input type="hidden" name="accion" value="rol">
+          <select name="rol" onchange="this.form.submit()" {{ 'disabled' if u.id == session.get('usuario_id') else '' }}>
+            {% for k, v in roles.items() %}<option value="{{ k }}" {{ 'selected' if u.rol == k else '' }}>{{ v }}</option>{% endfor %}
+          </select>
+        </form>
+      </td>
+      <td data-label="Cargó / vendió">{{ u.cargados }} / {{ u.vendidos }}</td>
+      <td data-label="Último ingreso">{{ u.ultimo_ingreso|fecha_ar if u.ultimo_ingreso else '—' }}</td>
+      <td data-label="Acciones">
+        <details>
+          <summary class="btn btn-secondary btn-sm" style="display:inline-block;">Opciones</summary>
+          <form method="post" action="{{ url_for('cuenta.usuario_editar', usuario_id=u.id) }}" style="margin-top:8px; display:flex; gap:6px;">
+            <input type="hidden" name="accion" value="clave">
+            <input type="text" name="clave" placeholder="Contraseña nueva" minlength="6" required>
+            <button class="btn btn-secondary btn-sm" type="submit">Cambiar clave</button>
+          </form>
+          {% if u.id != session.get('usuario_id') %}
+          <form method="post" action="{{ url_for('cuenta.usuario_editar', usuario_id=u.id) }}" style="margin-top:8px;">
+            <input type="hidden" name="accion" value="activo">
+            <input type="hidden" name="valor" value="{{ 0 if u.activo else 1 }}">
+            <button class="btn btn-secondary btn-sm" type="submit">{{ 'Desactivar' if u.activo else 'Activar' }}</button>
+          </form>
+          {% endif %}
+        </details>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="panel">
+  <h2 style="margin-top:0;">Agregar usuario</h2>
+  <form method="post" action="{{ url_for('cuenta.usuario_nuevo') }}">
+    <div class="form-row">
+      <div><label>Nombre</label><input type="text" name="nombre" required value="{{ prev.get('nombre', '') }}" placeholder="Ej: Juan Pérez"></div>
+      <div><label>Mail (con el que va a ingresar)</label><input type="email" name="email" required value="{{ prev.get('email', '') }}"></div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label>Rol</label>
+        <select name="rol">
+          {% for k, v in roles.items() %}<option value="{{ k }}" {{ 'selected' if prev.get('rol', 'vendedor') == k else '' }}>{{ v }}</option>{% endfor %}
+        </select>
+      </div>
+      <div><label>Contraseña inicial (mínimo 6)</label><input type="text" name="clave" required minlength="6"></div>
+    </div>
+    <div style="margin-top:14px;"><button class="btn" type="submit">Crear usuario</button></div>
+  </form>
+</div>
+{% endblock %}

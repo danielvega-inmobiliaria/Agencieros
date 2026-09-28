@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Mi cuenta — Agencieros{% endblock %}
+{% block header %}Mi cuenta{% endblock %}
+{% block content %}
+<div class="panel">
+  <h2 style="margin-top:0;">{{ yo.nombre or 'Admin AGENCIEROS' }}</h2>
+  <p style="color:var(--text-dim); margin-top:0;">
+    {{ yo.email }}
+    {% if es_admin %}· Administración de la plataforma{% else %}· {{ session.get('agencia_nombre') }} · {{ roles.get(yo.rol, yo.rol) }}{% endif %}
+  </p>
+</div>
+
+<div class="panel">
+  <h2 style="margin-top:0;">Cambiar contraseña</h2>
+  <form method="post" style="max-width:420px;">
+    <label>Contraseña actual</label>
+    <input type="password" name="actual" required autocomplete="current-password">
+    <label>Contraseña nueva (mínimo 6 caracteres)</label>
+    <input type="password" name="nueva" required minlength="6" autocomplete="new-password">
+    <label>Repetí la contraseña nueva</label>
+    <input type="password" name="nueva2" required minlength="6" autocomplete="new-password">
+    <div style="margin-top:14px;"><button class="btn" type="submit">Guardar contraseña</button></div>
+  </form>
+</div>
+{% endblock %}

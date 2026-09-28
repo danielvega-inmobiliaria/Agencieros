@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 28/09/2026 — 19:06 ART (cierre del chat "Cuentas y Red", Msg 1-18; próximo: pasos 2 a 5 de cuentas y Red)_
+_Última actualización: 28/09/2026 — noche (chat "Usuarios por agencia", Msg 1: paso 2 hecho, falta push; próximo: paso 3 sucursales)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -84,7 +84,8 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
   5. **Control de operaciones de la Red:** decidir modelo (comisión por operación vs. cobrar por publicar vs. mixto, ver análisis en el ítem de abajo) e implementar lo mínimo que lo sostenga.
   Orden sugerido: 1 → 2 → 3 → 4 → 5 (cada paso sobre la base del anterior; probar con 2 agencias de prueba para no cruzar datos).
   **Estado al 28/09/2026 (cierre chat "Cuentas y Red"):** paso 1 ✅ en producción. **Próximo chat: paso 2 (usuarios por agencia).**
-- [ ] **Chicos, surgidos el 28/09/2026:** (a) pantalla para cambiar contraseña (agencias y admin; hoy no existe — el admin solo con `crear_superadmin.py` o borrando la fila); (b) confirmar en producción que aparecen las publicaciones de RosarioGarage (si no aparecen, ver logs de Railway: `[rosariogarage] No se pudo leer`); (c) MercadoLibre: pedir acceso de desarrollador/certificación para usar el buscador por API (hoy 403 incluso con token de usuario); (d) opcional: eliminar agencias desde el Panel (hoy solo por migración).
+  **28/09/2026 noche (chat "Usuarios por agencia", Msg 1):** paso 2 ✅ hecho y probado en local (falta push/deploy). Próximo: paso 3 (sucursales).
+- [ ] **Chicos, surgidos el 28/09/2026:** (a) ✅ pantalla para cambiar contraseña → "Mi cuenta" (hecho 28/09 noche, falta push); (b) confirmar en producción que aparecen las publicaciones de RosarioGarage (si no aparecen, ver logs de Railway: `[rosariogarage] No se pudo leer`); (c) MercadoLibre: pedir acceso de desarrollador/certificación para usar el buscador por API (hoy 403 incluso con token de usuario); (d) opcional: eliminar agencias desde el Panel (hoy solo por migración).
 - [ ] **Anotado por Daniel 24/09/2026 (a resolver, sin código todavía):**
   - **Agencias con sucursales:** una agencia con varias sucursales (stock, ventas y caja por sucursal, con vista consolidada para el dueño). Implica una tabla `sucursales` + `sucursal_id` en vehículos/ventas/financiaciones, y un filtro por sucursal en Stock y Dashboard.
   - **Varios vendedores por agencia (multiusuario):** hoy el login es 1 cuenta = 1 agencia. Hace falta una tabla `usuarios` por agencia con rol (dueño / vendedor), para registrar quién cargó o vendió cada unidad y definir qué ve un vendedor (ej. sin costos ni ganancia). Se cruza con los planes (cantidad de usuarios por plan).
@@ -123,6 +124,20 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 28/09/2026 noche (chat "Usuarios por agencia", Msg 1) — Paso 2: usuarios por agencia (dueño/vendedor) + Mi cuenta
+- **Tabla nueva `agencia_usuarios`** (agencia_id, nombre, email único, password_hash, rol `dueno`/`vendedor`, sucursal_id para el paso 3, activo, ultimo_ingreso). La tabla vieja `usuarios` (login previo al multi-tenant) no se usa. Migración `_migrar_usuarios_agencia` (idempotente, en cada arranque): a cada agencia sin usuarios le crea su **dueño** con el mismo mail y contraseña de la agencia (nombre = contacto de referencia). Nadie tiene que re-registrarse.
+- **Login por usuario** (`routes/auth.py`): busca en `plataforma_admins`, después `agencia_usuarios` (fallback al mail de la agencia). Usuario desactivado no entra; un vendedor no entra si la agencia no validó su mail. El registro crea el dueño. Sesión: `usuario_id`, `usuario_nombre`, `usuario_rol`. Las sesiones abiertas antes del cambio se completan solas con el dueño (`_usuario_de_agencia` en `app.py`), y en cada request se verifica que el usuario siga activo (si el dueño lo desactiva, queda afuera en el próximo click).
+- **Vendedor:** no entra a Finanzas, Admin ni Usuarios (`utils/permisos.py`, `_permisos_vendedor`); en la ficha de Stock no ve valor de compra, gastos, costo total, ganancia ni rentabilidad; en el formulario no ve esos campos y al editar se conservan los que había; en el Dashboard no ve ganancia, gastos en reparación ni ingresos del mes. **Toma y tasación y Financiación quedan visibles para el vendedor** (a confirmar con Daniel: la tasación muestra el precio máximo de toma y el % de ganancia).
+- **Quién cargó / quién vendió:** columnas `vehiculos.cargado_por_id` y `vendido_por_id` (alta en Stock, cerrar venta, pasar a Vendido desde Editar y las 2 vías de Financiación). Se ve en la ficha ("Cargado por X · Vendido por Y") y en Usuarios (cargó/vendió por persona). Lo anterior al cambio queda sin dato.
+- **Pantalla Usuarios** (`/cuenta/usuarios`, solo dueño, menú "Usuarios"): alta con mail + contraseña inicial + rol, cambiar nombre y rol, blanquear contraseña, activar/desactivar. No se puede sacar el rol ni desactivarse a sí mismo, y siempre queda al menos un dueño activo. Mail único en toda la plataforma (`database.mail_ocupado`: agencias, usuarios y admins).
+- **Mi cuenta** (`/cuenta/`, link al pie del menú): cambiar la contraseña propia (pide la actual) — para usuarios de agencia y para el admin de la plataforma. Si es el dueño con el mail de la agencia, también actualiza `agencias.password_hash`.
+- **Panel de Agencias → ficha de la agencia:** lista de usuarios con rol y último ingreso. Filtro Jinja nuevo `fecha_ar` (UTC → hora Argentina).
+- Probado con test_client sobre una copia de la base local: login dueño/vendedor, alta y mail duplicado, bloqueos del vendedor, costos conservados al editar, `cargado_por_id`, desactivar → afuera, sesión vieja completada, cambio de clave (vieja deja de andar), admin cambia su clave y no entra a Usuarios, registro nuevo crea dueño.
+- Archivos: `app.py`, `database.py`, `routes/auth.py`, `routes/cuenta.py` (nuevo), `routes/stock.py`, `routes/financiacion.py`, `routes/plataforma.py`, `utils/permisos.py` (nuevo), `templates/base.html`, `templates/cuenta/index.html` y `usuarios.html` (nuevos), `templates/dashboard.html`, `templates/stock/detalle.html`, `templates/stock/form.html`, `templates/plataforma/detalle.html`.
+- **RosarioGarage en producción:** sin confirmar todavía (desde el entorno de Claude la web de RG da 403 por proxy; el navegador del panel no tiene sesión iniciada en la app).
+- **MercadoLibre:** sigue pendiente pedir acceso — texto para el pedido armado en el chat.
+- Nota: `seed/precios_infoauto/precios_infoauto_2026_09.csv` figura modificado en git solo por finales de línea (CRLF); no se incluyó en el commit.
 
 ### Cierre del chat 28/09/2026 "Cuentas y Red" (Msg 1-18) — estado y próximos pasos
 - **En producción (commits `af101a6` → `b955f41`):** admin de la plataforma separado (danve61@gmail.com; Italia = itaaut03@gmail.com con sus datos reales importados), agencias de prueba borradas (queda Don Franco), buscador de precios en celu, contador de consultas por agencia, texto de la consulta sin "gancho" y sin botón Guardar en stock, **Consultas y avisos** (conversación por agencia, respuesta desde la app, mail + push ntfy al admin y aviso de nuevo registro), precio de mercado sin error de ML + 3 publicaciones de RosarioGarage, nota de Facebook perfil personal.

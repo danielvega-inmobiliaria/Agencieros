@@ -18,11 +18,29 @@ from utils.verificacion import crear_codigo, validar_codigo, enviar_codigo_email
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 
-def _loguear(agencia):
-    session.pop("superadmin_id", None)
+def _loguear(agencia, usuario=None):
+    # Usuarios por agencia (28/09/2026): la sesión guarda la agencia y,
+    # además, qué usuario entró y con qué rol (dueño/vendedor). Si no se
+    # pasa usuario (ej. al validar el mail del registro) se usa el dueño
+    # con el mail de la agencia.
+    if usuario is None:
+        usuario = query(
+            "SELECT * FROM agencia_usuarios WHERE agencia_id = ? AND lower(email) = lower(?)",
+            (agencia["id"], agencia["email"]), one=True,
+        ) or query(
+            "SELECT * FROM agencia_usuarios WHERE agencia_id = ? AND rol = 'dueno' AND activo = 1 ORDER BY id LIMIT 1",
+            (agencia["id"],), one=True,
+        )
+    session.clear()
     session["agencia_id"] = agencia["id"]
     session["agencia_nombre"] = agencia["nombre_agencia"]
     session["agencia_email"] = agencia["email"]
+    if usuario:
+        session["usuario_id"] = usuario["id"]
+        session["usuario_nombre"] = usuario["nombre"]
+        session["usuario_email"] = usuario["email"]
+        session["usuario_rol"] = usuario["rol"]
+        execute("UPDATE agencia_usuarios SET ultimo_ingreso = datetime('now') WHERE id = ?", (usuario["id"],))
 
 
 def _loguear_superadmin(admin):
@@ -43,12 +61,28 @@ def login():
         if admin and check_password_hash(admin["password_hash"], password):
             _loguear_superadmin(admin)
             return redirect(url_for("plataforma.agencias"))
-        agencia = query("SELECT * FROM agencias WHERE email = ?", (email,), one=True)
-        if not agencia or not check_password_hash(agencia["password_hash"], password):
-            flash("Email o contraseña incorrectos.", "error")
-            return render_template("auth/login.html")
-        if not agencia["activo"]:
+        # Login por usuario de agencia (28/09/2026). Si el mail no es de
+        # ningún usuario (no debería pasar: la migración crea el dueño de
+        # cada agencia) se prueba con el mail de la agencia como antes.
+        usuario = query("SELECT * FROM agencia_usuarios WHERE lower(email) = ?", (email,), one=True)
+        if usuario:
+            if not check_password_hash(usuario["password_hash"], password):
+                flash("Email o contraseña incorrectos.", "error")
+                return render_template("auth/login.html")
+            if not usuario["activo"]:
+                flash("Tu usuario está desactivado. Consultá con el dueño de la agencia.", "error")
+                return render_template("auth/login.html")
+            agencia = query("SELECT * FROM agencias WHERE id = ?", (usuario["agencia_id"],), one=True)
+        else:
+            agencia = query("SELECT * FROM agencias WHERE email = ?", (email,), one=True)
+            if not agencia or not check_password_hash(agencia["password_hash"], password):
+                flash("Email o contraseña incorrectos.", "error")
+                return render_template("auth/login.html")
+        if not agencia or not agencia["activo"]:
             flash("Esta cuenta está desactivada.", "error")
+            return render_template("auth/login.html")
+        if not agencia["email_verificado"] and usuario and usuario["rol"] == "vendedor":
+            flash("La agencia todavía no validó su mail. Pedile al dueño que entre primero.", "error")
             return render_template("auth/login.html")
         if not agencia["email_verificado"]:
             # Sin validar todavía -- manda un código nuevo y lo lleva
@@ -59,7 +93,7 @@ def login():
             session["agencia_pendiente_id"] = agencia["id"]
             flash("Todavía no validaste tu mail -- te mandamos un código nuevo.", "error")
             return redirect(url_for("auth.verificar"))
-        _loguear(agencia)
+        _loguear(agencia, usuario)
         return redirect(url_for("precios.index"))
     return render_template("auth/login.html")
 
@@ -103,8 +137,8 @@ def registro():
         if password != password2:
             flash("Las contraseñas no coinciden.", "error")
             return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR)
-        if (query("SELECT id FROM agencias WHERE email = ?", (email,), one=True)
-                or query("SELECT id FROM plataforma_admins WHERE email = ?", (email,), one=True)):
+        from database import get_db, mail_ocupado
+        if mail_ocupado(get_db(), email):
             flash("Ya hay una cuenta registrada con ese email.", "error")
             return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR)
 
@@ -113,6 +147,12 @@ def registro():
                (nombre_agencia, email, password_hash, telefono, contacto_referencia, email_verificado, activo)
                VALUES (?, ?, ?, ?, ?, 0, 1)""",
             (nombre_agencia, email, generate_password_hash(password), telefono, contacto_referencia),
+        )
+        # Usuario dueño de la agencia (28/09/2026): mismo mail y contraseña.
+        execute(
+            """INSERT INTO agencia_usuarios (agencia_id, nombre, email, password_hash, rol)
+               VALUES (?, ?, ?, ?, 'dueno')""",
+            (agencia_id, contacto_referencia, email, generate_password_hash(password)),
         )
         # Ubicación y contacto van al perfil de la agencia (mismo lugar que
         # edita Admin y que lee el Panel de Agencias): así quedan cargados

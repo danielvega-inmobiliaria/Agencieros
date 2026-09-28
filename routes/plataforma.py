@@ -191,7 +191,12 @@ def detalle(agencia_id):
     fila = next((f for f in _armar_filas() if f["id"] == agencia_id), None)
     if fila is None:
         abort(404)
-    return render_template("plataforma/detalle.html", f=fila)
+    usuarios = query(
+        """SELECT nombre, email, rol, activo, ultimo_ingreso FROM agencia_usuarios
+           WHERE agencia_id = ? ORDER BY CASE rol WHEN 'dueno' THEN 0 ELSE 1 END, nombre""",
+        (agencia_id,),
+    )
+    return render_template("plataforma/detalle.html", f=fila, usuarios=usuarios)
 
 
 @bp.route("/mensajes")

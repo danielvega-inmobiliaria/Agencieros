@@ -37,5 +37,16 @@
       <tr><td>Créditos otorgados (monto)</td><td>${{ "{:,.0f}".format(f.creditos_monto).replace(",", ".") }}</td></tr>
     </table>
   </div>
+
+  <div class="panel">
+    <h2>Usuarios ({{ usuarios|length }})</h2>
+    <table>
+      {% for u in usuarios %}
+      <tr style="{{ '' if u.activo else 'opacity:.55;' }}"><td>{{ u.nombre }} · {{ 'Dueño' if u.rol == 'dueno' else 'Vendedor' }}{% if not u.activo %} (desactivado){% endif %}</td><td>{{ u.email }}<br><small>Último ingreso: {{ u.ultimo_ingreso|fecha_ar if u.ultimo_ingreso else 'Nunca' }}</small></td></tr>
+      {% else %}
+      <tr><td colspan="2">Sin usuarios</td></tr>
+      {% endfor %}
+    </table>
+  </div>
 </div>
 {% endblock %}

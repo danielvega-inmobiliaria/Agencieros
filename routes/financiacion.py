@@ -485,8 +485,8 @@ def nuevo():
             fecha_venta = _parsear_fecha(f.get("fecha_venta"), default=date.today())
             execute(
                 """UPDATE vehiculos SET estado = 'vendido', valor_vendido = ?,
-                   fecha_venta = ?, updated_at = datetime('now') WHERE id = ?""",
-                (precio_venta, str(fecha_venta), vehiculo_id),
+                   fecha_venta = ?, vendido_por_id = ?, updated_at = datetime('now') WHERE id = ?""",
+                (precio_venta, str(fecha_venta), session.get("usuario_id"), vehiculo_id),
             )
 
     flash(
@@ -1077,8 +1077,8 @@ def confirmar_venta(financiacion_id):
         precio_venta = fin["precio_venta"] or vehiculo["valor_publicado"]
         execute(
             """UPDATE vehiculos SET estado = 'vendido', valor_vendido = ?,
-               fecha_venta = ?, updated_at = datetime('now') WHERE id = ?""",
-            (precio_venta, str(date.today()), fin["vehiculo_id"]),
+               fecha_venta = ?, vendido_por_id = ?, updated_at = datetime('now') WHERE id = ?""",
+            (precio_venta, str(date.today()), session.get("usuario_id"), fin["vehiculo_id"]),
         )
     execute("UPDATE financiaciones SET estado = 'activo' WHERE id = ?", (financiacion_id,))
     flash("Operación cerrada — el plan pasa a activo y el vehículo a Vendido.", "success")

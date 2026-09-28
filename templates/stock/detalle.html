@@ -35,18 +35,27 @@
   </div>
 
   <div class="panel">
-    <h2>Control económico</h2>
+    <h2>{{ 'Precio' if es_vendedor else 'Control económico' }}</h2>
+    {% if cargado_por or vendido_por %}
+    <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
+      {% if cargado_por %}Cargado por <b>{{ cargado_por }}</b>{% endif %}{% if cargado_por and vendido_por %} · {% endif %}{% if vendido_por %}Vendido por <b>{{ vendido_por }}</b>{% endif %}
+    </p>
+    {% endif %}
     <div class="stat-row">
+      {% if not es_vendedor %}
       <div class="stat"><div class="n">${{ "{:,.0f}".format(vehiculo.valor_compra or 0).replace(",", ".") }}</div><div class="l">Valor de compra</div></div>
       <div class="stat"><div class="n">${{ "{:,.0f}".format(vehiculo.gastos or 0).replace(",", ".") }}</div><div class="l">Gastos / reparaciones</div></div>
+      {% endif %}
       <div class="stat"><div class="n">${{ "{:,.0f}".format(vehiculo.valor_publicado or 0).replace(",", ".") }}</div><div class="l">Precio publicado{% if vehiculo.condiciones_pago %}<br>{{ vehiculo.condiciones_pago }}{% endif %}</div></div>
       {% if vehiculo.valor_vendido %}<div class="stat"><div class="n">${{ "{:,.0f}".format(vehiculo.valor_vendido).replace(",", ".") }}</div><div class="l">Precio vendido</div></div>{% endif %}
     </div>
     <hr style="border-color:var(--border); margin:18px 0;">
     <div class="stat-row">
+      {% if not es_vendedor %}
       <div class="stat"><div class="n">${{ "{:,.0f}".format(rent.costo_total).replace(",", ".") }}</div><div class="l">Costo total</div></div>
       <div class="stat"><div class="n" style="color: {{ 'var(--green)' if rent.ganancia_bruta >= 0 else 'var(--red)' }};">${{ "{:,.0f}".format(rent.ganancia_bruta).replace(",", ".") }}</div><div class="l">Ganancia {{ 'estimada' if vehiculo.estado != 'vendido' else 'neta' }}</div></div>
       <div class="stat"><div class="n">{{ "%.1f"|format(rent.rentabilidad_pct) }}%</div><div class="l">Rentabilidad</div></div>
+      {% endif %}
       <div class="stat"><div class="n">{{ rent.dias_en_stock if rent.dias_en_stock is not none else '-' }}</div><div class="l">Días en stock</div></div>
     </div>
   </div>
