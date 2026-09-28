@@ -85,7 +85,13 @@ def parsear_listado(pagina):
         m_km = re.search(r"([\d\.]+)\s*km", detalle)
         km = int(m_km.group(1).replace(".", "")) if m_km else None
         m_anio = re.search(r"\b(19[89]\d|20[0-4]\d)\b", detalle)
-        m_foto = re.search(r'<img[^>]*\ssrc="([^"]+)"', b)
+        # Las fotos se cargan con "lazyload": la real está en data-src y el
+        # src suele ser un logo de relleno (default-553x380.png). Fix 28/09/2026.
+        m_foto = (re.search(r'<img[^>]*\sdata-src="([^"]+)"', b)
+                  or re.search(r'<img[^>]*\ssrc="([^"]+)"', b))
+        foto = m_foto.group(1) if m_foto else None
+        if foto and ("/statics/" in foto or "default-" in foto):
+            foto = None
         avisos.append({
             "id": m_id.group(1),
             "titulo": titulo,
@@ -95,7 +101,7 @@ def parsear_listado(pagina):
             "precio": precio,
             "moneda": moneda,
             "url": f"https://www.rosariogarage.com/index.php?action=carro/showProduct&itmId={m_id.group(1)}",
-            "foto": m_foto.group(1) if m_foto else None,
+            "foto": foto,
         })
     return avisos
 
@@ -140,7 +146,7 @@ def publicaciones(marca, modelo, version, anio, valor_tabla=None):
     resultado = {"ok": False, "avisos": [], "url_busqueda": url}
     if not modelo:
         return resultado
-    clave = url
+    clave = "v2|" + url  # v2: la cache anterior tenía la foto de relleno
     try:
         fila = query("SELECT datos, creado FROM rg_cache WHERE clave = ?", (clave,), one=True)
         if fila and datetime.fromisoformat(fila["creado"]) > datetime.utcnow() - timedelta(hours=CACHE_HORAS):

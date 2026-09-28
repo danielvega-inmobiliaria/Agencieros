@@ -58,7 +58,7 @@
     if (!d.ok || !d.avisos || !d.avisos.length) { contenedor.innerHTML = ''; return; }
     const tarjetas = d.avisos.map(a => `
       <a class="pub-rg" href="${esc(a.url)}">
-        ${a.foto ? `<img src="${esc(a.foto)}" alt="" loading="lazy">` : '<div class="pub-rg-sinfoto"></div>'}
+        ${a.foto ? `<img src="${esc(a.foto)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'pub-rg-sinfoto'}))">` : '<div class="pub-rg-sinfoto"></div>'}
         <div class="pub-rg-info">
           <div class="pub-rg-tit">${esc(a.titulo)}</div>
           <div class="pub-rg-det">${esc(a.detalle)}</div>
