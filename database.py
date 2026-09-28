@@ -317,6 +317,21 @@ CREATE TABLE IF NOT EXISTS consultas_precios (
 );
 CREATE INDEX IF NOT EXISTS idx_consultas_precios_agencia ON consultas_precios (agencia_id, created_at);
 
+-- Consultas y avisos de las agencias al administrador (28/09/2026), ej.
+-- "no encuentro este precio" o "este valor está distorsionado". Al crearse
+-- le llega a Daniel un mail + push (utils/notificaciones.py).
+CREATE TABLE IF NOT EXISTS mensajes_admin (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agencia_id INTEGER NOT NULL,
+    tipo TEXT NOT NULL DEFAULT 'consulta',
+    anio TEXT,
+    vehiculo TEXT,
+    mensaje TEXT NOT NULL,
+    leido INTEGER DEFAULT 0,
+    respondida INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS verificacion_codigos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     agencia_id INTEGER NOT NULL,

@@ -55,6 +55,7 @@ def create_app():
     from routes.admin import bp as admin_bp
     from routes.plataforma import bp as plataforma_bp
     from routes.ml import bp as ml_bp
+    from routes.mensajes import bp as mensajes_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -71,6 +72,7 @@ def create_app():
     app.register_blueprint(admin_bp)
     app.register_blueprint(plataforma_bp)
     app.register_blueprint(ml_bp)
+    app.register_blueprint(mensajes_bp)
 
     @app.before_request
     def _landing_host():
@@ -102,6 +104,18 @@ def create_app():
             "es_superadmin": bool(session.get("superadmin_id")),
             "puede_sincronizar_stock": session.get("agencia_id") == STOCK_SYNC_AGENCIA_ID,
         }
+
+    @app.context_processor
+    def _inject_mensajes_nuevos():
+        # Badge de mensajes sin leer de las agencias (solo para el admin).
+        if not session.get("superadmin_id"):
+            return {}
+        from database import query
+        try:
+            fila = query("SELECT COUNT(*) AS c FROM mensajes_admin WHERE leido = 0", one=True)
+            return {"mensajes_nuevos": fila["c"]}
+        except Exception:
+            return {"mensajes_nuevos": 0}
 
     @app.context_processor
     def _inject_meta_pixel():

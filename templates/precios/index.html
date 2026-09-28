@@ -25,6 +25,8 @@
       <div class="bp-ayuda" id="ayuda"></div>
     </div>
   </div>
+  <p class="bp-aviso">Los precios se cargan y actualizan constantemente. ¿No encontrás un vehículo o ves un precio distorsionado?
+    <a href="{{ url_for('mensajes.index', tipo='precio_falta') }}" id="linkAvisoGeneral">Avisanos</a>.</p>
 
   <div class="bp-resultado" id="resultado" style="display:none;">
     <div class="meta" id="resTitulo"></div>
@@ -34,6 +36,7 @@
       <a class="btn btn-primary" id="btnToma" href="#">Iniciar toma del vehículo</a>
       <a class="btn btn-secondary" id="btnDetalle" href="#">Ver historial por año</a>
     </div>
+    <div class="meta" style="margin-top:8px;">¿Este precio no te cierra? <a href="#" id="linkAvisoPrecio">Avisanos</a>.</div>
     <div id="rangoMercado"></div>
     <div class="bp-comparables">
       <div class="meta">Compará con publicaciones reales de este vehículo:</div>
@@ -44,6 +47,7 @@
   <div class="bp-resultado" id="noEncontrado" style="display:none;">
     <p style="margin:0 0 10px;">No está en la lista de precios cargada para ese año.</p>
     <button class="btn btn-secondary" id="btnBuscarIgual">Buscar igual (comparables de mercado)</button>
+    <a class="btn btn-secondary" href="#" id="linkAvisoFalta">Avisar que falta este vehículo</a>
   </div>
 </div>
 
@@ -56,7 +60,7 @@
   </p>
 </div>
 
-<script src="{{ url_for('static', filename='js/autocomplete.js') }}?v=20260928"></script>
+<script src="{{ url_for('static', filename='js/autocomplete.js') }}?v=20260928b"></script>
 <script src="{{ url_for('static', filename='js/mercado.js') }}"></script>
 <script>
 const anioSel = document.getElementById('anio');
@@ -131,7 +135,10 @@ vehInput.addEventListener('input', () => {
   if (texto.length >= 3) {
     const palabras = texto.toLowerCase().split(/\s+/);
     const hay = opciones.some(op => palabras.every(p => op.label.toLowerCase().includes(p)));
-    if (!hay) panelNo.style.display = '';
+    if (!hay) {
+      panelNo.style.display = '';
+      document.getElementById('linkAvisoFalta').href = `{{ url_for('mensajes.index') }}?${new URLSearchParams({ tipo: 'precio_falta', anio: anioSel.value, vehiculo: texto })}`;
+    }
   }
 });
 
@@ -143,6 +150,7 @@ function mostrarPrecio(o) {
   const base = { marca: o.marca, modelo: o.modelo, version: o.version, anio };
   document.getElementById('btnToma').href = `{{ url_for('tomas.nueva') }}?${new URLSearchParams(base)}`;
   document.getElementById('btnDetalle').href = `{{ url_for('precios.buscar') }}?${new URLSearchParams(base)}`;
+  document.getElementById('linkAvisoPrecio').href = `{{ url_for('mensajes.index') }}?${new URLSearchParams({ tipo: 'precio_distorsionado', anio, vehiculo: o.label })}`;
   cargarComparables(base, document.getElementById('linksComparables'));
   cargarRangoMercado(base, document.getElementById('rangoMercado'), o.precio);
   panelRes.style.display = '';

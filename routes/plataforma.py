@@ -20,9 +20,9 @@ plataforma; ninguna agencia (tampoco Italia Automotores) entra acá.
 
 from datetime import datetime, timedelta
 
-from flask import Blueprint, abort, render_template, request
+from flask import Blueprint, abort, render_template, request, redirect, url_for
 
-from database import query
+from database import query, execute
 
 bp = Blueprint("plataforma", __name__, url_prefix="/plataforma")
 
@@ -167,6 +167,7 @@ def agencias():
         "creditos_monto_total": sum(f["creditos_monto"] for f in todas),
         "consultas_mes_total": sum(f["consultas_mes"] for f in todas),
         "consultas_semana_total": sum(f["consultas_semana"] for f in todas),
+        "mensajes_sin_responder": query("SELECT COUNT(*) AS c FROM mensajes_admin WHERE respondida = 0", one=True)["c"],
     }
 
     filas = todas
@@ -191,3 +192,32 @@ def detalle(agencia_id):
     if fila is None:
         abort(404)
     return render_template("plataforma/detalle.html", f=fila)
+
+
+@bp.route("/mensajes")
+def mensajes():
+    """Bandeja de consultas y avisos de las agencias (28/09/2026). Al abrirla
+    quedan todos como leídos (el "Nuevo" se ve solo esta vez)."""
+    from routes.mensajes import TIPO_LABEL
+    filas = query(
+        """SELECT m.*, a.nombre_agencia, a.email, a.telefono
+           FROM mensajes_admin m LEFT JOIN agencias a ON a.id = m.agencia_id
+           ORDER BY m.created_at DESC LIMIT 200"""
+    )
+    mensajes = []
+    for m in filas:
+        d = dict(m)
+        d["nuevo"] = not m["leido"]
+        d["fecha_fmt"] = _formatear_fecha(m["created_at"])
+        mensajes.append(d)
+    execute("UPDATE mensajes_admin SET leido = 1 WHERE leido = 0")
+    return render_template("plataforma/mensajes.html", mensajes=mensajes, tipo_label=TIPO_LABEL)
+
+
+@bp.route("/mensajes/<int:mid>/respondido", methods=["POST"])
+def mensaje_respondido(mid):
+    fila = query("SELECT respondida FROM mensajes_admin WHERE id = ?", (mid,), one=True)
+    if fila is None:
+        abort(404)
+    execute("UPDATE mensajes_admin SET respondida = ? WHERE id = ?", (0 if fila["respondida"] else 1, mid))
+    return redirect(url_for("plataforma.mensajes"))

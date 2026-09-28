@@ -12,6 +12,11 @@
     <div class="label">Ventas del mes (todas las agencias)</div>
     <div class="value">{{ resumen.ventas_mes_total }}</div>
   </div>
+  <a class="card" href="{{ url_for('plataforma.mensajes') }}" style="text-decoration:none; color:inherit;">
+    <div class="label">Mensajes de agencias sin responder</div>
+    <div class="value">{{ resumen.mensajes_sin_responder }}</div>
+    <div class="sub">Ver mensajes</div>
+  </a>
   <div class="card">
     <div class="label">Consultas de precios del mes</div>
     <div class="value">{{ resumen.consultas_mes_total }}</div>

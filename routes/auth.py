@@ -125,6 +125,17 @@ def registro():
         )
         codigo = crear_codigo(agencia_id)
         enviado = enviar_codigo_email(email, nombre_agencia, codigo)
+        # Aviso al admin de la plataforma (28/09/2026): mail + push.
+        try:
+            from utils.notificaciones import notificar_admin
+            notificar_admin(
+                f"Nueva agencia registrada: {nombre_agencia}",
+                f"{nombre_agencia} — {ciudad}, {provincia}\nTeléfono: {telefono}\nMail: {email}\n"
+                f"Contacto: {contacto_referencia}\n(Falta que valide el código del mail.)",
+                ruta=f"/plataforma/agencias/{agencia_id}",
+            )
+        except Exception as e:
+            print(f"[auth] No se pudo avisar al admin del registro: {e}")
         session["agencia_pendiente_id"] = agencia_id
         if enviado:
             flash(f"Te mandamos un código de verificación a {email}.", "success")
