@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 28/09/2026 — 07:30 ART (chat revista: págs. 104-107, Iveco a Kama; pág. 103 pendiente)_
+_Última actualización: 28/09/2026 — 07:49 ART (chat revista: págs. 123-126 Nissan fin + Peugeot)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -114,6 +114,14 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 28/09/2026 (chat revista, Msg 15) — Págs. 123 a 126: Nissan (fin) y Peugeot
+- **282 versiones / 966 precios**: Nissan X-Trail 2.5, 350 Z, 370 Z (11) + Peugeot 2008 → 408 (271). Transcripción en `INFOAUTO/transcripcion/datos_123_126.py`. Peugeot sigue en la 127.
+- **Faltan las págs. 108-122** (entre Kama y Nissan) y la 103. El título NISSAN quedó en la fila 1819; lo que falte de Nissan va entre ese título y X-TRAIL.
+- **Pág. 124 con mancha**: 6 celdas de 208 GT/GTI/L/20 1.2 T GT quedaron vacías (ver PAGINAS_CARGADAS.md); pedir a Daniel que las lea de la revista.
+- **Excel:** filas 1819–2102; Suzuki ahora en la 2103. Orden previo verificado sin cambios. ORIGEN = 2.983 registros.
+- **CSV:** +966 filas (11.006 en total, sin duplicados). Modelo = primera palabra (2008, 206, 207, 208, 3008, 301, 307, 308, 4008, 407, 408, X-TRAIL, 350, 370).
+- App probada: 2026 Peugeot 3008 1.6 GT THP L/25 $79.500.000; 2019 208 1.6 5P Feline $16.200.000; 2023 Nissan X-Trail Exclusive L/23 $54.400.000.
 
 ### Sesión 28/09/2026 (chat revista, Msg 14) — Págs. 104 a 107: Iveco (fin), JAC, Jaguar, Jetour, JMC, JMEV, Kaiyi, Kama
 - **277 versiones / 1.182 precios**. Transcripción en `INFOAUTO/transcripcion/datos_104_107.py`. Marcas nuevas con título: JAC MOTORS, JAGUAR, JETOUR, JMC, JMEV, KAIYI, KAMA.
