@@ -124,13 +124,18 @@ def index():
         "SELECT vehiculo_id, MAX(id) AS id FROM tomas_vehiculo WHERE agencia_id = ? AND vehiculo_id IS NOT NULL GROUP BY vehiculo_id",
         (agencia_id,))}
     menu = {}
+    config_agencia = obtener_config_agencia(agencia_id)
+    nombre_agencia = config_agencia.get("nombre_agencia") or session.get("agencia_nombre")
     for v in (vehiculos or []):
         titulo = " ".join(str(x) for x in [v["marca"], v["modelo"], v["version"], v["anio"]] if x)
         link = _url_publica(url_for("stock.ficha", vehiculo_id=v["id"], wa=0))
-        texto = f"{titulo}" + (f" — {_pesos(v['valor_publicado'])}" if v["valor_publicado"] else "") + f"\n{link}"
+        texto = (f"{nombre_agencia} te comparte: " if nombre_agencia else "") + titulo \
+            + (f" — {_pesos(v['valor_publicado'])}" if v["valor_publicado"] else "") + f"\n{link}"
+        volver_listado = url_for("stock.index", estado=estado_filtro)
         menu[v["id"]] = {
             "titulo": titulo,
-            "ver": url_for("stock.detalle", vehiculo_id=v["id"], estado=estado_filtro),
+            "ver": url_for("stock.ficha", vehiculo_id=v["id"], wa=0, nav=estado_filtro, volver=volver_listado),
+            "interna": url_for("stock.detalle", vehiculo_id=v["id"], estado=estado_filtro),
             "publicar": url_for("stock.ficha", vehiculo_id=v["id"], volver=url_for("stock.index", estado=estado_filtro)),
             "whatsapp": "https://wa.me/?text=" + quote_plus(texto),
             "red": url_for("stock.red", vehiculo_id=v["id"]),
@@ -1128,9 +1133,11 @@ def _url_publica(ruta):
     """Link absoluto para compartir (WhatsApp): en producción siempre https
     con el dominio de la app."""
     base = request.host_url.rstrip("/")
-    if not base.startswith("http://localhost") and not base.startswith("http://127.") and base.startswith("http://"):
-        base = "https://" + base[len("http://"):]
-    return base + ruta
+    if "localhost" in base or "127.0.0.1" in base or base.startswith("http://192.168."):
+        return base + ruta
+    # Siempre el dominio propio (no el de Railway), aunque se esté usando
+    # la app desde agencieros-production.up.railway.app.
+    return os.environ.get("APP_URL", "https://app.agencieros.net.ar").rstrip("/") + ruta
 
 
 @bp.route("/<int:vehiculo_id>/red", methods=["POST"])
@@ -1185,6 +1192,39 @@ def ficha(vehiculo_id):
         volver_url = _volver_seguro(request.args.get("volver"), por_defecto)
 
     datos = _datos_ficha(vehiculo)
+    # Vista previa del link en WhatsApp / redes (Open Graph): datos del auto y
+    # de la agencia que lo publica, con la primera foto.
+    agencia_cfg = datos.get("agencia") or {}
+    agencia_row = query("SELECT nombre_agencia FROM agencias WHERE id = ?", (vehiculo["agencia_id"] or 1,), one=True)
+    nombre_ag = agencia_cfg.get("nombre_agencia") or (agencia_row["nombre_agencia"] if agencia_row else "")
+    titulo_v = " ".join(str(x) for x in [vehiculo["marca"], vehiculo["modelo"], vehiculo["version"], vehiculo["anio"]] if x)
+    partes = []
+    if vehiculo["valor_publicado"]:
+        partes.append(_pesos(vehiculo["valor_publicado"]))
+    if vehiculo["km"]:
+        partes.append(f"{int(vehiculo['km']):,} km".replace(",", "."))
+    lugar = ", ".join(x for x in [agencia_cfg.get("ciudad"), agencia_cfg.get("provincia")] if x)
+    partes.append(nombre_ag + (f" · {lugar}" if lugar else ""))
+    foto = datos["fotos"][0]["url"] if datos.get("fotos") else datos.get("foto_principal_url")
+    og = {
+        "titulo": f"{titulo_v} — {nombre_ag}" if nombre_ag else titulo_v,
+        "descripcion": " · ".join(p for p in partes if p),
+        "imagen": _url_publica(foto) if foto and foto.startswith("/") else foto,
+        "url": _url_publica(url_for("stock.ficha", vehiculo_id=vehiculo_id, wa=0)),
+        "sitio": nombre_ag or "Agencieros",
+    }
+    # Anterior / siguiente entre fichas (desde el menú de Stock, con sesión).
+    nav = None
+    if session.get("agencia_id") and request.args.get("nav") and (vehiculo["agencia_id"] or 1) == session["agencia_id"]:
+        estado_nav = request.args.get("nav")
+        ids = [r["id"] for r in _vehiculos_de_pestana(session["agencia_id"], estado_nav)]
+        if vehiculo_id in ids and len(ids) > 1:
+            i = ids.index(vehiculo_id)
+            volver_l = url_for("stock.index", estado=estado_nav)
+            enlace = lambda j: url_for("stock.ficha", vehiculo_id=ids[j], wa=0, nav=estado_nav, volver=volver_l)
+            nav = {"pos": i + 1, "total": len(ids),
+                   "anterior": enlace(i - 1) if i > 0 else None,
+                   "siguiente": enlace(i + 1) if i < len(ids) - 1 else None}
     if request.args.get("wa") == "0":
         # Link compartido por WhatsApp: el cliente ya está en el chat con la
         # agencia, así que la ficha va sin el botón de WhatsApp.
@@ -1193,6 +1233,8 @@ def ficha(vehiculo_id):
         "stock/ficha.html",
         vehiculo=vehiculo,
         datos=datos,
+        og=og,
+        nav=nav,
         estado_label=ESTADO_LABEL,
         volver_url=volver_url,
     )

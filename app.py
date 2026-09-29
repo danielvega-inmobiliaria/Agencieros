@@ -183,6 +183,9 @@ def create_app():
         publicas = {
             "auth.login", "auth.registro", "auth.verificar", "auth.reenviar_codigo",
             "static", "stock.ficha",
+            # Fotos y logos subidos: la ficha compartida es pública y sin
+            # esto quien la abre sin sesión (el cliente) no veía las fotos.
+            "uploads_estaticas",
             # Landing pública (21/09/2026): "index" decide solo según el host
             # (landing en agencieros.net.ar, login en la app) e "inicio" es
             # la misma landing para poder verla desde la app.

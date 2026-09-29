@@ -94,14 +94,15 @@
   <div class="hoja-fondo" data-cerrar></div>
   <div class="hoja-panel" role="dialog" aria-modal="true">
     <div class="hoja-titulo" id="hoja-titulo"></div>
-    <a class="hoja-op" id="op-ver" href="#">📋 Ver ficha <small>datos, control económico y fotos</small></a>
+    <a class="hoja-op" id="op-ver" href="#">📋 Ver ficha <small>la ficha comercial; deslizá para pasar a los demás autos</small></a>
     <form method="post" id="op-red-form">
       <input type="hidden" name="volver" value="{{ url_for('stock.index', estado=estado_filtro) }}">
       <button type="submit" class="hoja-op" id="op-red">🤝 Agregar a la Red</button>
     </form>
     <a class="hoja-op" id="op-wsp" href="#" target="_blank" rel="noopener">💬 Compartir por WhatsApp <small>la ficha va sin botón de WhatsApp</small></a>
     <a class="hoja-op" id="op-publicar" href="#">📣 Publicar <small>ficha con botón de WhatsApp, para historias y publicaciones</small></a>
-    {% if not es_vendedor %}<a class="hoja-op" id="op-toma" href="#">🔧 Ver toma</a>{% endif %}
+    {% if es_vendedor %}<a class="hoja-op" id="op-interna" href="#">🧾 Señar / vender <small>datos del vehículo y operación</small></a>
+    {% else %}<a class="hoja-op" id="op-interna" href="#">🔧 Toma y datos internos <small>ficha completa, control económico, fotos, señar/vender</small></a>{% endif %}
     <button type="button" class="hoja-op hoja-cancelar" data-cerrar>Cancelar</button>
   </div>
 </div>
@@ -119,8 +120,7 @@
       form.action = m.red;
       form.hidden = !m.red_posible && !m.en_red;
       red.textContent = m.en_red ? '🤝 Quitar de la Red' : '🤝 Agregar a la Red';
-      var toma = document.getElementById('op-toma');
-      if (toma) { toma.hidden = !m.toma; if (m.toma) toma.href = m.toma; }
+      document.getElementById('op-interna').href = m.interna;
       hoja.hidden = false;
     }
     document.querySelectorAll('tr[data-menu]').forEach(function (fila) {

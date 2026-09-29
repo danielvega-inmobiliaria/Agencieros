@@ -3,12 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>{{ vehiculo.marca }} {{ vehiculo.modelo }} {{ vehiculo.version or '' }} — Agencieros</title>
+<title>{{ og.titulo }}</title>
+<meta name="description" content="{{ og.descripcion }}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{{ og.sitio }}">
+<meta property="og:title" content="{{ og.titulo }}">
+<meta property="og:description" content="{{ og.descripcion }}">
+<meta property="og:url" content="{{ og.url }}">
+{% if og.imagen %}<meta property="og:image" content="{{ og.imagen }}">
+<meta name="twitter:card" content="summary_large_image">{% endif %}
 {% include "stock/_ficha_estilos.html" %}
 </head>
 <body>
 {% import "stock/_ficha_contenido.html" as fc %}
+{% if nav %}
+<div class="ficha-nav-publica">
+  {% if nav.anterior %}<a id="ficha-anterior" href="{{ nav.anterior }}">‹ Anterior</a>{% else %}<span class="off">‹ Anterior</span>{% endif %}
+  <span>{{ nav.pos }} de {{ nav.total }}</span>
+  {% if nav.siguiente %}<a id="ficha-siguiente" href="{{ nav.siguiente }}">Siguiente ›</a>{% else %}<span class="off">Siguiente ›</span>{% endif %}
+</div>
+{% endif %}
 {{ fc.ficha(datos, estado_label, volver_url) }}
+{% if nav %}
+<script>
+  // Deslizar para pasar de ficha (no sobre las fotos, que tienen su propio carrusel).
+  (function () {
+    var x0 = null, y0 = null;
+    document.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1 || e.target.closest('.carrusel-wrap, a, button')) { x0 = null; return; }
+      x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+    }, { passive: true });
+    document.addEventListener('touchend', function (e) {
+      if (x0 === null) return;
+      var dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+      if (Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+      var d = document.getElementById(dx < 0 ? 'ficha-siguiente' : 'ficha-anterior');
+      if (d) window.location.href = d.href;
+    }, { passive: true });
+  })();
+</script>
+{% endif %}
 <script src="{{ url_for('static', filename='js/ficha_fotos.js') }}"></script>
 </body>
 </html>

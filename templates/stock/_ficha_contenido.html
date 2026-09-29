@@ -2,6 +2,15 @@
 {% set lazy_attr = ' loading="lazy"'|safe if lazy else '' %}
 <div class="ficha">
   {% if volver_url %}<a class="btn-volver" href="{{ volver_url }}">‹ Volver</a>{% endif %}
+  {% if d.agencia and (d.agencia.nombre_agencia or d.agencia.logo_url) %}
+  <div class="agencia-header">
+    {% if d.agencia.logo_url %}<img src="{{ d.agencia.logo_url }}" alt="Logo de {{ d.agencia.nombre_agencia or 'la agencia' }}">{% endif %}
+    <div>
+      {% if d.agencia.nombre_agencia %}<div class="agencia-header-nombre">{{ d.agencia.nombre_agencia }}</div>{% endif %}
+      {% if d.agencia.ciudad or d.agencia.provincia %}<div class="agencia-header-lugar">{{ [d.agencia.ciudad, d.agencia.provincia]|select|join(', ') }}</div>{% endif %}
+    </div>
+  </div>
+  {% endif %}
   <div class="carrusel-wrap">
     <div class="carrusel">
       {% if d.fotos %}
