@@ -810,6 +810,18 @@ def _leer_credito(f):
     hay que decir de dónde viene (banco, financiera...) y por qué monto."""
     if not f.get("credito_hay"):
         return None, None, None
+    tipo = f.get("credito_tipo")
+    if tipo == "propia":
+        # "Nuestro": lo financia la agencia -> se resuelve en Financiación.
+        return None, None, None
+    if tipo in ("personal", "prendario"):
+        # Seña (29/09/2026): Personal / Prendario + banco o financiera (opcional).
+        entidad = (f.get("credito_origen") or "").strip()
+        origen = f"Crédito {tipo}" + (f" — {entidad}" if entidad else "")
+        monto = _numero(f.get("credito_monto"), 0)
+        if monto <= 0:
+            return None, None, "Cargá el monto del crédito."
+        return origen, monto, None
     origen = (f.get("credito_origen") or "").strip()
     monto = _numero(f.get("credito_monto"), 0)
     if not origen or monto <= 0:
@@ -843,6 +855,8 @@ def senar(vehiculo_id):
     # y por cuánto; al cerrar la venta se precarga.
     credito_origen, credito_monto, error_credito = _leer_credito(f)
     credito = credito_monto or 0
+    financia_agencia = bool(f.get("credito_hay")) and f.get("credito_tipo") == "propia"
+    contado = _numero(f.get("contado_previsto"), 0) if f.get("contado_hay") else 0
     error = None
     if not cliente:
         error = "Cargá el nombre de quien deja la seña."
@@ -852,31 +866,34 @@ def senar(vehiculo_id):
         error = error_permuta
     elif error_credito:
         error = error_credito
-    elif credito and not precio:
-        error = "Para registrar un crédito cargá también el precio acordado: con él se calcula cuánto queda en efectivo."
-    elif precio and sena + valor_permuta + credito > precio + 0.5:
-        error = ("La seña en efectivo + la permuta + el crédito superan el precio acordado. Revisá los montos."
-                 if credito else "La seña en efectivo + la permuta superan el precio acordado. Revisá los montos.")
+    elif f.get("contado_hay") and contado <= 0:
+        error = "Cargá cuánto entrega en contado al cerrar (o destildá Entrega contado)."
+    elif (credito or financia_agencia) and not precio:
+        error = "Para registrar un crédito cargá también el precio acordado: con él se calcula el saldo."
+    elif precio and sena + contado + valor_permuta + credito > precio + 0.5:
+        error = "La seña + el contado + la permuta + el crédito superan el precio acordado. Revisá los montos."
+    elif financia_agencia and precio - sena - contado - valor_permuta <= 0.5:
+        error = "No queda saldo para financiar: revisá los montos o destildá el crédito."
     if error:
         flash(error, "error")
         return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
     hoy = str(date.today())
     p = permuta or {}
-    execute(
+    venta_id = execute(
         """INSERT INTO ventas (agencia_id, vehiculo_id, estado, estado_previo, cliente_nombre,
                                cliente_telefono, precio_venta, sena, fecha_sena, permuta_tasacion_id,
                                permuta_valor, permuta_descripcion, permuta_marca, permuta_modelo,
                                permuta_version, permuta_anio, permuta_km, observaciones,
-                               credito_origen, credito_monto)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                               credito_origen, credito_monto, contado_previsto)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
             session["agencia_id"], vehiculo_id, "senado", vehiculo["estado"], cliente,
             (f.get("cliente_telefono") or "").strip() or None, precio, sena, hoy,
             p.get("tasacion_id"), p.get("valor"), p.get("desc"), p.get("marca"), p.get("modelo"),
             p.get("version"), p.get("anio"), p.get("km"),
             (f.get("observaciones") or "").strip() or None,
-            credito_origen, credito_monto,
+            credito_origen, credito_monto, contado or None,
         ),
     )
     execute(
@@ -886,8 +903,10 @@ def senar(vehiculo_id):
     mensaje = f"Seña de {_pesos(sena)} registrada"
     if permuta:
         mensaje += f" — permuta prevista: {permuta['desc']}"
+    if contado:
+        mensaje += f" — entrega contado prevista {_pesos(contado)}"
     if credito_monto:
-        mensaje += f" — crédito de {credito_origen} por {_pesos(credito_monto)}"
+        mensaje += f" — {credito_origen} por {_pesos(credito_monto)}"
     flash(mensaje + " — el vehículo queda Señado.", "success")
     if permuta:
         # ¿Ese vehículo ya tiene comprador? Mismo cruce que al cargar un pedido con permuta.
@@ -900,6 +919,10 @@ def senar(vehiculo_id):
             partes.append(f"{len(red)} publicación(es) de la Red")
         if partes:
             flash("⚡ La permuta ya tiene comprador: matchea con " + " y ".join(partes) + ".", "success")
+    if financia_agencia:
+        # "Nuestro": directo al cálculo de la financiación con todo precargado.
+        flash("Ahora armá la financiación del saldo: cuotas, tasa y garantes.", "success")
+        return redirect(url_for("financiacion.simulador", venta_id=venta_id))
     return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
 

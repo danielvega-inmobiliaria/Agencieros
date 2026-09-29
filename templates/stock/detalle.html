@@ -148,6 +148,9 @@
     <p style="color:var(--text-dim); font-size:13px; margin:0 0 8px;">Va a entregar en permuta: <b style="color:var(--text);">{{ venta_abierta.permuta_descripcion }}</b>{% if venta_abierta.permuta_km %} · {{ m.format(venta_abierta.permuta_km).replace(",", ".") }} km{% endif %}{% if venta_abierta.permuta_valor %} · toma estimada ${{ m.format(venta_abierta.permuta_valor).replace(",", ".") }}{% else %} · a tasar{% endif %}
       — figura como "Posible entrega" en el buscador, en Pedidos y en Matches.</p>
     {% endif %}
+    {% if venta_abierta.contado_previsto %}
+    <p style="color:var(--text-dim); font-size:13px; margin:0 0 8px;">Entrega contado prevista al cerrar: <b style="color:var(--text);">${{ m.format(venta_abierta.contado_previsto).replace(",", ".") }}</b> (además de la seña).</p>
+    {% endif %}
     {% if venta_abierta.credito_monto %}
     <p style="color:var(--text-dim); font-size:13px; margin:0 0 8px;">Parte del saldo va con un <b style="color:var(--text);">crédito externo</b>: {{ venta_abierta.credito_origen }} por <b style="color:var(--text);">${{ m.format(venta_abierta.credito_monto).replace(",", ".") }}</b>. Se precarga al cerrar la venta. Si el crédito lo rechazan, podés pasar el saldo a financiación propia con el botón de abajo.</p>
     {% endif %}
@@ -194,10 +197,22 @@
           <div><label>Monto de la seña (en efectivo)</label><input type="number" step="1" min="1" name="sena" required></div>
           <div><label>Precio acordado (opcional)</label><input type="number" step="1" name="precio_venta" value="{{ precio_sugerido }}"></div>
         </div>
-        <div class="panel" style="background:var(--navy-card-2); margin:14px 0;">
+        <div class="sena-como-paga">
+          <div class="sena-como-paga-titulo">¿Cómo completa el pago?</div>
+          <div class="panel" style="background:var(--navy-card-2); margin:10px 0;">
+            <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
+              <input type="checkbox" name="contado_hay" id="sena_contado_hay" value="1" style="width:auto;">
+              💵 Entrega contado
+            </label>
+            <div id="sena-contado-datos" hidden style="margin-top:12px;">
+              <label>Efectivo o transferencia que entrega al cerrar (además de la seña)</label>
+              <input type="number" step="1" min="1" name="contado_previsto" id="sena_contado_previsto">
+            </div>
+          </div>
+        <div class="panel" style="background:var(--navy-card-2); margin:10px 0;">
           <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
             <input type="checkbox" name="permuta_hay" id="sena_permuta_hay" value="1" style="width:auto;">
-            Va a entregar un vehículo en permuta
+            🔄 Entrega permuta
           </label>
           <div id="sena-permuta-datos" hidden style="margin-top:12px;">
             <p style="color:var(--text-dim); font-size:11.5px; margin:0 0 10px;">
@@ -228,75 +243,87 @@
               <div>
                 <label>Valor estimado de toma (opcional)</label>
                 <input type="number" step="1" name="permuta_valor" id="sena_permuta_valor">
-                <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">Si todavía no está tasado dejalo vacío: se define al cerrar la venta.</p>
+                <p style="color:var(--text-dim); font-size:11.5px; margin:4px 0 0;">Si todavía no está tasado dejalo vacío o poné un estimado: se define al cerrar la venta.</p>
               </div>
             </div>
+            <p style="font-size:12px; margin:10px 0 0;">¿Hay que tasarlo? No hace falta para señar.
+              <a href="#" id="sena-tasar-ahora" target="_blank" rel="noopener">🔧 Tasarlo ahora</a> abre la Toma en otra pestaña con estos datos;
+              cuando esté hecha, elegila en "Tasación ya hecha" (acá o al cerrar la venta).</p>
           </div>
         </div>
-        <div class="panel" style="background:var(--navy-card-2); margin:14px 0;">
-          <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
-            <input type="checkbox" name="credito_hay" id="sena_credito_hay" value="1" style="width:auto;">
-            Parte del saldo se completa con un crédito externo
-          </label>
-          <div id="sena-credito-datos" hidden style="margin-top:12px;">
-            <p style="color:var(--text-dim); font-size:11.5px; margin:0 0 10px;">
-              Es un crédito de un banco o financiera que le paga a la agencia al cerrar (no es financiación propia).
-              Cargá de dónde viene y por cuánto: el resto del saldo se cobra en efectivo. Hace falta el precio acordado.
-            </p>
-            <div class="grid-2">
-              <div>
-                <label>¿De dónde viene el crédito?</label>
-                <input type="text" name="credito_origen" id="sena_credito_origen" list="origenes-credito" placeholder="Banco, financiera..." autocomplete="off">
+          <div class="panel" style="background:var(--navy-card-2); margin:10px 0;">
+            <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
+              <input type="checkbox" name="credito_hay" id="sena_credito_hay" value="1" style="width:auto;">
+              🏦 Completa con crédito
+            </label>
+            <div id="sena-credito-datos" hidden style="margin-top:12px;">
+              <label>¿De dónde viene el crédito?</label>
+              <select name="credito_tipo" id="sena_credito_tipo">
+                <option value="personal">Crédito personal (banco / financiera)</option>
+                <option value="prendario">Crédito prendario (banco / financiera)</option>
+                <option value="propia">Nuestro — financia la agencia</option>
+              </select>
+              <div id="sena-credito-externo" class="grid-2" style="margin-top:10px;">
+                <div>
+                  <label>Banco o financiera (opcional)</label>
+                  <input type="text" name="credito_origen" id="sena_credito_origen" list="origenes-credito" placeholder="Ej: Banco Santa Fe" autocomplete="off">
+                </div>
+                <div>
+                  <label>Monto del crédito</label>
+                  <input type="number" step="1" min="1" name="credito_monto" id="sena_credito_monto">
+                </div>
               </div>
-              <div>
-                <label>Monto del crédito</label>
-                <input type="number" step="1" min="1" name="credito_monto" id="sena_credito_monto">
-              </div>
+              <p id="sena-credito-propia" hidden style="color:var(--gold-light); font-size:12.5px; margin:10px 0 0;">
+                Al guardar la seña se abre el cálculo de la financiación con el saldo, el cliente y la permuta ya cargados:
+                ahí elegís cuotas y tasa, cargás garantes y cerrás la operación.
+              </p>
+              <datalist id="origenes-credito">{% for o in origenes_credito %}<option value="{{ o }}">{% endfor %}</datalist>
             </div>
-            <p id="sena-credito-resumen" style="color:var(--text-dim); font-size:12.5px; margin:8px 0 0;"></p>
-            <datalist id="origenes-credito">{% for o in origenes_credito %}<option value="{{ o }}">{% endfor %}</datalist>
           </div>
+          <p id="sena-saldo" class="sena-saldo"></p>
         </div>
         <script>
           (function () {
-            var chkCredito = document.getElementById('sena_credito_hay');
-            var datosCredito = document.getElementById('sena-credito-datos');
-            var origenCredito = document.getElementById('sena_credito_origen');
-            var montoCredito = document.getElementById('sena_credito_monto');
-            var resumenCredito = document.getElementById('sena-credito-resumen');
-            var form = chkCredito.form;
+            var form = document.getElementById('sena_credito_hay').form;
+            var $ = function (id) { return document.getElementById(id); };
             function num(el) { return el ? (parseFloat(el.value) || 0) : 0; }
             function pesos(n) { return '$' + Math.round(n).toLocaleString('es-AR'); }
-            function actualizarCredito() {
-              var hayC = chkCredito.checked;
-              origenCredito.required = hayC;
-              montoCredito.required = hayC;
-              if (!hayC) { resumenCredito.textContent = ''; return; }
-              var precio = num(form.elements['precio_venta']);
-              var sena = num(form.elements['sena']);
-              var permutaHay = document.getElementById('sena_permuta_hay');
-              var permuta = permutaHay && permutaHay.checked ? num(document.getElementById('sena_permuta_valor')) : 0;
-              var cr = num(montoCredito);
-              if (precio > 0 && cr > 0) {
-                var resto = precio - sena - cr - permuta;
-                resumenCredito.textContent = resto >= 0
-                  ? 'Resto a cobrar en efectivo al cierre (después de la seña' + (permuta ? ', la permuta' : '') + ' y el crédito): ' + pesos(resto)
-                  : 'La seña + el crédito' + (permuta ? ' + la permuta' : '') + ' superan el precio acordado en ' + pesos(-resto) + '.';
-              } else {
-                resumenCredito.textContent = precio > 0 ? '' : 'Cargá el precio acordado para ver cuánto queda en efectivo.';
+            var chkC = $('sena_contado_hay'), chkP = $('sena_permuta_hay'), chkCr = $('sena_credito_hay');
+            var tipo = $('sena_credito_tipo'), montoCr = $('sena_credito_monto'), origen = $('sena_credito_origen');
+            function actualizar() {
+              $('sena-contado-datos').hidden = !chkC.checked;
+              $('sena_contado_previsto').required = chkC.checked;
+              if (!chkC.checked) $('sena_contado_previsto').value = '';
+              $('sena-credito-datos').hidden = !chkCr.checked;
+              var propia = chkCr.checked && tipo.value === 'propia';
+              $('sena-credito-externo').hidden = propia;
+              $('sena-credito-propia').hidden = !propia;
+              montoCr.required = chkCr.checked && !propia;
+              if (!chkCr.checked || propia) montoCr.value = '';
+              var precio = num(form.elements['precio_venta']), sena = num(form.elements['sena']);
+              var contado = chkC.checked ? num($('sena_contado_previsto')) : 0;
+              var permuta = chkP.checked ? num($('sena_permuta_valor')) : 0;
+              var credito = chkCr.checked && !propia ? num(montoCr) : 0;
+              var out = $('sena-saldo');
+              if (!precio) { out.textContent = 'Cargá el precio acordado para ver el saldo.'; return; }
+              var saldo = precio - sena - contado - permuta - credito;
+              var partes = 'Precio ' + pesos(precio) + ' − seña ' + pesos(sena)
+                + (contado ? ' − contado ' + pesos(contado) : '') + (permuta ? ' − permuta ' + pesos(permuta) : '')
+                + (credito ? ' − crédito ' + pesos(credito) : '');
+              if (saldo < -0.5) out.textContent = partes + ' → se pasa por ' + pesos(-saldo) + '. Revisá los montos.';
+              else if (propia) out.textContent = partes + ' → a financiar por la agencia: ' + pesos(saldo);
+              else out.textContent = partes + ' → saldo sin cubrir: ' + pesos(saldo) + (saldo > 0.5 ? ' (se cobra en efectivo al cierre)' : ' ✓');
+              // Link "Tasarlo ahora" con los datos de la permuta cargados.
+              var t = $('sena-tasar-ahora');
+              if (t) {
+                var q = new URLSearchParams();
+                ['anio', 'marca', 'modelo', 'version'].forEach(function (k) { var el = $('permuta_' + k); if (el && el.value) q.set(k, el.value); });
+                t.href = '{{ url_for('tomas.nueva') }}' + (q.toString() ? '?' + q.toString() : '');
               }
             }
-            chkCredito.addEventListener('change', function () {
-              datosCredito.hidden = !chkCredito.checked;
-              if (!chkCredito.checked) { origenCredito.value = ''; montoCredito.value = ''; }
-              actualizarCredito();
-            });
-            ['precio_venta', 'sena'].forEach(function (n) { form.elements[n].addEventListener('input', actualizarCredito); });
-            montoCredito.addEventListener('input', actualizarCredito);
-            var pv = document.getElementById('sena_permuta_valor');
-            if (pv) pv.addEventListener('input', actualizarCredito);
-            var ph = document.getElementById('sena_permuta_hay');
-            if (ph) ph.addEventListener('change', actualizarCredito);
+            form.addEventListener('input', actualizar);
+            form.addEventListener('change', actualizar);
+            actualizar();
           })();
         </script>
         <script>
@@ -324,7 +351,7 @@
         <input type="text" name="observaciones">
         <button class="btn btn-primary btn-sm" type="submit" style="margin-top:12px;">Guardar seña</button>
         <p style="color:var(--text-dim); font-size:11.5px; margin:8px 0 0;">
-          El vehículo pasa a "Señado" y deja de ofrecerse. Al cerrar la venta, la seña en efectivo queda incluida en el efectivo cobrado (no se suma aparte) y la permuta se precarga.
+          El vehículo pasa a "Señado" y deja de ofrecerse. Al cerrar la venta, la seña queda incluida en el efectivo cobrado (no se suma aparte) y la permuta, el contado y el crédito se precargan.
         </p>
       </form>
     </details>

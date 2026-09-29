@@ -424,7 +424,8 @@ def simulador():
         # típico cuando el crédito externo que se esperaba fue rechazado: todo el saldo
         # pasa al plan propio. Es solo un punto de partida, se puede cambiar.
         if precio_pre:
-            saldo = precio_pre - (venta_pre["sena"] or 0) - (venta_pre["permuta_valor"] or 0)
+            saldo = (precio_pre - (venta_pre["sena"] or 0) - (venta_pre["permuta_valor"] or 0)
+                     - (venta_pre["contado_previsto"] or 0))
             monto_pre = int(saldo) if saldo > 0 else ""
         datos_pre = {
             "permuta_hay": bool(venta_pre["permuta_marca"] or venta_pre["permuta_valor"] or venta_pre["permuta_tasacion_id"]),

@@ -1463,6 +1463,10 @@ def _migrar_usuarios_agencia(conn):
         conn.execute("ALTER TABLE vehiculos ADD COLUMN vendido_por_id INTEGER")
     if "senado_por_id" not in cols:
         conn.execute("ALTER TABLE vehiculos ADD COLUMN senado_por_id INTEGER")
+    vcols = {r[1] for r in conn.execute("PRAGMA table_info(ventas)")}
+    if "contado_previsto" not in vcols:
+        # Seña (29/09/2026): efectivo que el cliente entrega al cerrar, además de la seña.
+        conn.execute("ALTER TABLE ventas ADD COLUMN contado_previsto REAL")
     rcols = {r[1] for r in conn.execute("PRAGMA table_info(red_publicaciones)")}
     if "pedido_id" not in rcols:
         # Búsqueda de un Pedido publicada en la Red ("Red · Busca").

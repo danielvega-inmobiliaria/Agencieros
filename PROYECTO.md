@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 29/09/2026 (chat "Usuarios por agencia", Msg 10: pedidos a la Red; próximo: paso 3 sucursales)_
+_Última actualización: 29/09/2026 (chat "Usuarios por agencia", Msg 12: seña con contado/permuta/crédito; próximo: paso 3 sucursales)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -138,6 +138,13 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - **Msg 2 — RosarioGarage confirmado en producción por Daniel (captura del celu, Corolla 2020): aparecen los 3 avisos, pero con el logo de RG en vez de la foto.** Causa: RG carga las fotos con lazyload — la foto real está en `data-src` y el `src` es un relleno (`statics/css/skin/img/default-553x380.png`), relevado con el navegador. Fix en `publicaciones_rg.py` (toma `data-src`, descarta rellenos; clave de cache `v2|` para no reusar lo guardado con el logo) y en `static/js/mercado.js` (`referrerpolicy="no-referrer"` por si RG bloquea fotos enlazadas desde otro sitio, y si la foto falla queda el recuadro vacío). `?v=20260928e` en los 3 templates que cargan mercado.js.
 - **MercadoLibre:** sigue pendiente pedir acceso — texto para el pedido armado en el chat.
 - Nota: `seed/precios_infoauto/precios_infoauto_2026_09.csv` figura modificado en git solo por finales de línea (CRLF); no se incluyó en el commit.
+
+### Sesión 29/09/2026 (chat "Usuarios por agencia", Msg 12) — Seña: "¿Cómo completa el pago?" (contado, permuta, crédito personal/prendario/nuestro)
+- En el formulario de seña, después del precio acordado, bloque **"¿Cómo completa el pago?"** con 3 checks: **💵 Entrega contado** (monto que entrega al cerrar además de la seña; columna nueva `ventas.contado_previsto`), **🔄 Entrega permuta** (el bloque de siempre: tasación ya hecha o datos + valor estimado) y **🏦 Completa con crédito** con desplegable **Personal / Prendario / Nuestro**. Personal y prendario piden banco/financiera (opcional) y monto; se guarda como "Crédito prendario — Banco X". **Nuestro** (financia la agencia): al guardar la seña abre directo el **simulador de Financiación** con cliente, seña, permuta y el saldo a financiar ya precargados (precio − seña − contado − permuta), para cerrar todo desde la venta.
+- Línea en vivo con la cuenta: "Precio − seña − contado − permuta − crédito → saldo / a financiar".
+- **Permuta a tasar — decisión propuesta:** no se exige tasar para señar (la seña suele ser antes de que llegue el auto y la toma de 44 puntos es larga). Link **"🔧 Tasarlo ahora"** que abre la Toma en otra pestaña con año/marca/modelo/versión de la permuta; cuando está hecha se elige en "Tasación ya hecha" (en la seña o al cerrar la venta).
+- Validaciones: contado tildado sin monto, crédito sin precio, suma mayor al precio, "Nuestro" sin saldo. Probado con test_client (contado + permuta + prendario; Nuestro → simulador con $8.000.000 a financiar) y JS verificado con node.
+- Archivos: `database.py`, `routes/stock.py`, `routes/financiacion.py`, `templates/stock/detalle.html`, `static/css/style.css` (`?v=20260929c`), `templates/base.html`.
 
 ### Sesión 29/09/2026 (chat "Usuarios por agencia", Msg 10) — Publicar un Pedido en la Red cuando no hay coincidencias
 - Al cargar un pedido se sigue cotejando con Disponible, Por ingresar, En reparación, Red · Ofrece y Posible entrega. **Si no hay ninguna coincidencia**, en vez de volver al listado se abre la ficha del pedido con el aviso y el botón **"🤝 Publicar búsqueda en la Red"** (`POST /pedidos/<id>/red`, también sirve para **Quitar de la Red**).

@@ -693,3 +693,8 @@ form textarea { min-height: 80px; }
 
 /* Pedido publicado en la Red (29/09/2026) */
 .red-pedido { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: var(--navy-card-2); border: 1px dashed var(--gold); font-size: 13px; }
+
+/* Seña: cómo completa el pago (29/09/2026) */
+.sena-como-paga { margin: 14px 0; }
+.sena-como-paga-titulo { font-weight: 600; color: var(--gold-light); }
+.sena-saldo { font-size: 13px; color: var(--gold-light); margin: 6px 0 12px; }
