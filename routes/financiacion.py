@@ -28,6 +28,36 @@ METODO_LABEL = {"frances": "Francés (interés compuesto)", "simple": "Interés 
 PERIODICIDAD_LABEL = {"mensual": "Mensual", "semanal": "Semanal"}
 
 
+# Vendedor (28/09/2026, pedido de Daniel): usa el simulador, arma propuestas
+# (planes "Pendiente de firma"), relaciona el vehículo, seña y cierra la venta.
+# No ve la cartera de planes activos (cobrado/por cobrar) ni registra pagos.
+_VENDEDOR_LIBRES = {"financiacion.index", "financiacion.simulador", "financiacion.nuevo", "financiacion.guardar"}
+_VENDEDOR_SOLO_PENDIENTES = {
+    "financiacion.completar_datos", "financiacion.agregar_garante", "financiacion.eliminar_garante",
+    "financiacion.confirmar_venta", "financiacion.cancelar_reserva", "financiacion.eliminar",
+}
+
+
+@bp.before_request
+def _permisos_vendedor_financiacion():
+    from utils.permisos import es_vendedor
+    if not session.get("agencia_id") or not es_vendedor():
+        return None
+    ep = request.endpoint or ""
+    if ep in _VENDEDOR_LIBRES:
+        return None
+    fid = (request.view_args or {}).get("financiacion_id")
+    plan = _plan_de_agencia(fid) if fid else None
+    if plan and ep in _VENDEDOR_SOLO_PENDIENTES and plan["estado"] == "pendiente_firma":
+        return None
+    if plan and ep == "financiacion.detalle" and (
+        plan["estado"] == "pendiente_firma" or plan["creado_por_id"] == session.get("usuario_id")
+    ):
+        return None
+    flash("Eso lo maneja el dueño de la agencia.", "error")
+    return redirect(url_for("financiacion.index"))
+
+
 def _plan_de_agencia(financiacion_id, agencia_id=None):
     """Trae un plan de Financiación asegurando que sea de la agencia de
     quien mira -- escalado a multi-tenant 21/09/2026, mismo criterio que
@@ -247,6 +277,12 @@ def index():
             (session["agencia_id"],),
         )
     ]
+    from utils.permisos import es_vendedor
+    if es_vendedor():
+        # Propuestas en trámite de toda la agencia + las operaciones que
+        # cerró el propio vendedor. Sin los totales de la cartera.
+        planes = [p for p in planes
+                  if p["estado"] == "pendiente_firma" or p["creado_por_id"] == session.get("usuario_id")]
     activos = [p for p in planes if p["estado"] == "activo"]
     resumen = {
         "total_a_cobrar": sum(p["total_plan"] for p in activos),
@@ -466,6 +502,7 @@ def nuevo():
             n, len(cronograma), valor_cuota_final, str(fecha_inicio), f.get("observaciones") or None,
         ),
     )
+    execute("UPDATE financiaciones SET creado_por_id = ? WHERE id = ?", (session.get("usuario_id"), financiacion_id))
     for fila in cronograma:
         execute(
             """INSERT INTO financiacion_cuotas (financiacion_id, numero, fecha_vencimiento, monto)
@@ -836,6 +873,7 @@ def guardar():
             n, len(cronograma), valor_cuota_final, str(fecha_inicio),
         ),
     )
+    execute("UPDATE financiaciones SET creado_por_id = ? WHERE id = ?", (session.get("usuario_id"), financiacion_id))
     for fila in cronograma:
         execute(
             """INSERT INTO financiacion_cuotas (financiacion_id, numero, fecha_vencimiento, monto)

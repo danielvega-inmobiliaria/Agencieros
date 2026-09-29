@@ -224,7 +224,7 @@
   {% if fin.observaciones %}
   <p style="color:var(--text-dim); font-size:13px; margin:0;">{{ fin.observaciones }}</p>
   {% endif %}
-  {% if fin.estado == 'activo' %}
+  {% if fin.estado == 'activo' and not es_vendedor %}
   <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
     <p style="color:var(--text-dim); font-size:13px; margin:0 0 8px;">
       <b style="color:var(--text);">Corregir fecha de la primera cuota:</b> por si se cargó mal (por ejemplo, se dejó
@@ -300,7 +300,7 @@
         {% endif %}
       </td>
       <td>
-        {% if c.estado != 'pagada' and fin.estado == 'activo' %}
+        {% if c.estado != 'pagada' and fin.estado == 'activo' and not es_vendedor %}
         <form method="post" action="{{ url_for('financiacion.pagar_cuota', financiacion_id=fin.id, cuota_id=c.id) }}" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
           <input type="number" step="1" name="monto_pagado" placeholder="${{ '{:,.0f}'.format(c.monto_sugerido).replace(',', '.') }}" style="width:110px; padding:6px;">
           <input type="date" name="fecha_pago" title="Fecha de pago (por defecto hoy -- cambiala para cargar un cobro de otra fecha)" style="padding:6px;">
