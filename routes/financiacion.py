@@ -435,8 +435,34 @@ def simulador():
             "permuta_km": venta_pre["permuta_km"], "permuta_valor": venta_pre["permuta_valor"],
             "permuta_descripcion": venta_pre["permuta_descripcion"],
         }
+    # Viene de "Cerrar venta" con crédito "Nuestro" y sin seña previa
+    # (29/09/2026): cliente, precio, entrega en contado y permuta por URL.
+    cliente_pre = {}
+    if not venta_pre and request.args.get("desde_cierre"):
+        a = request.args
+        cliente_pre = {"nombre": a.get("cliente_nombre", ""), "telefono": a.get("cliente_telefono", "")}
+        try:
+            precio_arg = int(float(a.get("precio_venta") or 0))
+        except ValueError:
+            precio_arg = 0
+        if precio_arg:
+            precio_pre = precio_arg
+        def _n(k):
+            try:
+                return float(a.get(k) or 0)
+            except ValueError:
+                return 0
+        if a.get("permuta_hay"):
+            datos_pre = {k: a.get(k) for k in ("permuta_tasacion_id", "permuta_marca", "permuta_modelo",
+                                               "permuta_version", "permuta_anio", "permuta_km", "permuta_valor",
+                                               "permuta_descripcion")}
+            datos_pre["permuta_hay"] = True
+        if precio_pre:
+            saldo = precio_pre - _n("entrega_contado") - (_n("permuta_valor") if a.get("permuta_hay") else 0)
+            monto_pre = int(saldo) if saldo > 0 else ""
     return render_template(
         "financiacion/simulador.html",
+        cliente_pre=cliente_pre,
         vehiculo_pre=vehiculo_pre,
         venta_pre=venta_pre,
         datos_pre=datos_pre,

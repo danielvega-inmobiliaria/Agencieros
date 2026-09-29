@@ -125,11 +125,11 @@
       <div class="grid-2">
         <div>
           <label>Nombre del cliente</label>
-          <input type="text" name="cliente_nombre" id="cliente_nombre" value="{{ venta_pre.cliente_nombre or '' if venta_pre else '' }}">
+          <input type="text" name="cliente_nombre" id="cliente_nombre" value="{{ venta_pre.cliente_nombre or '' if venta_pre else (cliente_pre.nombre or '') }}">
         </div>
         <div>
           <label>Teléfono del cliente</label>
-          <input type="text" name="cliente_telefono" value="{{ venta_pre.cliente_telefono or '' if venta_pre else '' }}">
+          <input type="text" name="cliente_telefono" value="{{ venta_pre.cliente_telefono or '' if venta_pre else (cliente_pre.telefono or '') }}">
         </div>
       </div>
 

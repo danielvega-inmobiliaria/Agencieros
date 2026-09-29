@@ -804,6 +804,20 @@ def _origenes_credito(agencia_id):
     return usados + [o for o in ORIGENES_CREDITO_BASE if o not in usados]
 
 
+def _credito_tipo(origen):
+    o = (origen or "").lower()
+    return "prendario" if o.startswith("crédito prendario") else "personal"
+
+
+def _credito_entidad(origen):
+    """"Crédito prendario — Banco X" -> "Banco X" (lo viejo, texto libre, queda igual)."""
+    o = origen or ""
+    for pref in ("Crédito prendario", "Crédito personal"):
+        if o.startswith(pref):
+            return o[len(pref):].lstrip(" —-")
+    return o
+
+
 def _leer_credito(f):
     """Crédito externo del formulario (seña o cierre) -> (origen, monto, error).
     Sin tildar "parte del saldo con un crédito" no hay crédito. Si se tilda,
@@ -998,8 +1012,11 @@ def vender(vehiculo_id):
             "permuta_anio": (venta["permuta_anio"] if venta else "") or "",
             "permuta_km": _entero(venta["permuta_km"]) if venta else "",
             "credito_hay": "1" if (venta and venta["credito_monto"]) or request.args.get("modo") == "credito" else "",
-            "credito_origen": (venta["credito_origen"] if venta else "") or "",
+            "credito_origen": _credito_entidad(venta["credito_origen"] if venta else ""),
+            "credito_tipo": _credito_tipo(venta["credito_origen"] if venta else ""),
             "credito_monto": _entero(venta["credito_monto"]) if venta else "",
+            "efectivo_cobrado": _entero((venta["sena"] or 0) + (venta["contado_previsto"] or 0))
+                                if venta and venta["contado_previsto"] else "",
         })
 
     f = request.form
@@ -1020,6 +1037,44 @@ def vender(vehiculo_id):
     if efectivo is None:
         efectivo = max(precio - permuta_valor - credito, 0)
     sena = venta["sena"] if venta else _numero(f.get("sena"), 0)
+
+    if f.get("credito_hay") and f.get("credito_tipo") == "propia":
+        # "Nuestro" (29/09/2026): el saldo lo financia la agencia -> se sigue en
+        # el simulador con todo lo cargado acá; la venta se cierra desde el plan.
+        errores = []
+        if not cliente:
+            errores.append("Cargá el nombre del comprador.")
+        if precio <= 0:
+            errores.append("Cargá el precio de venta.")
+        if hay_permuta and error_permuta:
+            errores.append(error_permuta)
+        if precio - permuta_valor - efectivo <= 0.5:
+            errores.append("No queda saldo para financiar: revisá la entrega en contado y la permuta.")
+        if errores:
+            for e in errores:
+                flash(e, "error")
+            return render(datos)
+        telefono = (f.get("cliente_telefono") or "").strip() or None
+        if venta:
+            execute(
+                """UPDATE ventas SET cliente_nombre = ?, cliente_telefono = ?, precio_venta = ?,
+                       permuta_tasacion_id = ?, permuta_valor = ?, permuta_descripcion = ?, permuta_marca = ?,
+                       permuta_modelo = ?, permuta_version = ?, permuta_anio = ?, permuta_km = ?,
+                       contado_previsto = ?, credito_origen = NULL, credito_monto = NULL WHERE id = ?""",
+                (cliente, telefono, precio, permuta_tasacion_id, permuta_valor or None, permuta_desc,
+                 permuta.get("marca"), permuta.get("modelo"), permuta.get("version"), permuta.get("anio"),
+                 permuta.get("km"), max(efectivo - (sena or 0), 0) or None, venta["id"]),
+            )
+            return redirect(url_for("financiacion.simulador", venta_id=venta["id"]))
+        args = {"vehiculo_id": vehiculo_id, "desde_cierre": 1, "cliente_nombre": cliente,
+                "cliente_telefono": telefono or "", "precio_venta": int(precio), "entrega_contado": int(efectivo)}
+        if hay_permuta:
+            args.update({"permuta_hay": 1, "permuta_tasacion_id": permuta_tasacion_id or "",
+                         "permuta_marca": permuta.get("marca") or "", "permuta_modelo": permuta.get("modelo") or "",
+                         "permuta_version": permuta.get("version") or "", "permuta_anio": permuta.get("anio") or "",
+                         "permuta_km": permuta.get("km") or "", "permuta_valor": int(permuta_valor or 0),
+                         "permuta_descripcion": permuta_desc or ""})
+        return redirect(url_for("financiacion.simulador", **args))
     try:
         fecha_venta = str(date.fromisoformat((f.get("fecha_venta") or "")[:10]))
     except ValueError:
@@ -1093,7 +1148,7 @@ def vender(vehiculo_id):
     if sena:
         mensaje += f" (con la seña de {_pesos(sena)} adentro)"
     if credito_monto:
-        mensaje += f" + crédito de {credito_origen} por {_pesos(credito_monto)}"
+        mensaje += f" + {credito_origen} por {_pesos(credito_monto)}"
     if permuta_valor:
         mensaje += f" + permuta por {_pesos(permuta_valor)}"
     flash(mensaje + ". El vehículo pasa a Vendido.", "success")
