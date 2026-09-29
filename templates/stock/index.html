@@ -56,18 +56,18 @@
   <table class="tabla-responsive tabla-vehiculos">
     <tr class="fila-header"><th></th><th>Vehículo</th><th>Año</th><th>Precio</th><th>Disponibilidad</th><th></th></tr>
     {% for v in vehiculos %}
-    <tr class="fila-vehiculo-propio" data-href="{{ url_for('stock.detalle', vehiculo_id=v.id, estado=estado_filtro) }}">
+    <tr class="fila-vehiculo-propio" data-menu="{{ v.id }}">
       <td class="foto-cell"><img class="foto-mini" src="{{ foto_principal(v.id) }}" alt=""></td>
       <td data-label="Vehículo">{{ v.marca }} {{ v.modelo }} {{ v.version }}</td>
       <td data-label="Año">{{ v.anio }}</td>
       <td data-label="Precio">${{ "{:,.0f}".format(v.valor_publicado or 0).replace(",", ".") }}</td>
-      <td data-label="Disponibilidad"><span class="badge {{ v.estado }}">{{ estado_label[v.estado] }}</span></td>
+      <td data-label="Disponibilidad"><span class="badge {{ v.estado }}">{{ estado_label[v.estado] }}</span>{% if menu[v.id].en_red %} <span class="badge badge-red">En Red</span>{% endif %}</td>
       <td class="fila-compacta">
         <div class="fila-compacta-inner">
           <img class="foto-mini" src="{{ foto_principal(v.id) }}" alt="">
           <div class="fila-compacta-texto">
             {{ v.marca }} {{ v.modelo }} {{ v.version }} - {{ v.anio }} - ${{ "{:,.0f}".format(v.valor_publicado or 0).replace(",", ".") }}
-            <span class="badge {{ v.estado }}">{{ estado_label[v.estado] }}</span>
+            <span class="badge {{ v.estado }}">{{ estado_label[v.estado] }}</span>{% if menu[v.id].en_red %} <span class="badge badge-red">En Red</span>{% endif %}
           </div>
         </div>
       </td>
@@ -89,4 +89,51 @@
     });
   })();
 </script>
+{% if menu %}
+<div class="hoja-acciones" id="hoja-acciones" hidden>
+  <div class="hoja-fondo" data-cerrar></div>
+  <div class="hoja-panel" role="dialog" aria-modal="true">
+    <div class="hoja-titulo" id="hoja-titulo"></div>
+    <a class="hoja-op" id="op-ver" href="#">📋 Ver ficha <small>datos, control económico y fotos</small></a>
+    <form method="post" id="op-red-form">
+      <input type="hidden" name="volver" value="{{ url_for('stock.index', estado=estado_filtro) }}">
+      <button type="submit" class="hoja-op" id="op-red">🤝 Agregar a la Red</button>
+    </form>
+    <a class="hoja-op" id="op-wsp" href="#" target="_blank" rel="noopener">💬 Compartir por WhatsApp <small>la ficha va sin botón de WhatsApp</small></a>
+    <a class="hoja-op" id="op-publicar" href="#">📣 Publicar <small>ficha con botón de WhatsApp, para historias y publicaciones</small></a>
+    {% if not es_vendedor %}<a class="hoja-op" id="op-toma" href="#">🔧 Ver toma</a>{% endif %}
+    <button type="button" class="hoja-op hoja-cancelar" data-cerrar>Cancelar</button>
+  </div>
+</div>
+<script>
+  (function () {
+    var menu = {{ menu | tojson }};
+    var hoja = document.getElementById('hoja-acciones');
+    function abrir(id) {
+      var m = menu[id]; if (!m) return;
+      document.getElementById('hoja-titulo').textContent = m.titulo;
+      document.getElementById('op-ver').href = m.ver;
+      document.getElementById('op-wsp').href = m.whatsapp;
+      document.getElementById('op-publicar').href = m.publicar;
+      var form = document.getElementById('op-red-form'), red = document.getElementById('op-red');
+      form.action = m.red;
+      form.hidden = !m.red_posible && !m.en_red;
+      red.textContent = m.en_red ? '🤝 Quitar de la Red' : '🤝 Agregar a la Red';
+      var toma = document.getElementById('op-toma');
+      if (toma) { toma.hidden = !m.toma; if (m.toma) toma.href = m.toma; }
+      hoja.hidden = false;
+    }
+    document.querySelectorAll('tr[data-menu]').forEach(function (fila) {
+      fila.addEventListener('click', function (e) {
+        if (e.target.closest('a, button, form, input')) return;
+        abrir(fila.dataset.menu);
+      });
+    });
+    hoja.querySelectorAll('[data-cerrar]').forEach(function (el) {
+      el.addEventListener('click', function () { hoja.hidden = true; });
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') hoja.hidden = true; });
+  })();
+</script>
+{% endif %}
 {% endblock %}

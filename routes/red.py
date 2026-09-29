@@ -43,13 +43,20 @@ def _contacto_publicacion(agencia_id):
 def index():
     tipo_filtro = request.args.get("tipo", "todos")
     filtros = parsear_filtros(request.args)
-    condiciones, params = condiciones_sql(filtros, campo_precio="precio", campo_km="km")
-    condiciones.append("estado = 'activo'")
+    rp = "red_publicaciones."
+    condiciones, params = condiciones_sql(filtros, campo_precio="precio", campo_km="km",
+                                          campo_marca=rp + "marca", campo_modelo=rp + "modelo",
+                                          campo_version=rp + "version", campo_anio=rp + "anio")
+    condiciones.append("red_publicaciones.estado = 'activo'")
     if tipo_filtro in ("ofrezco", "busco"):
-        condiciones.append("tipo = ?")
+        condiciones.append("red_publicaciones.tipo = ?")
         params.append(tipo_filtro)
     where = " WHERE " + " AND ".join(condiciones)
-    publicaciones = query(f"SELECT * FROM red_publicaciones{where} ORDER BY created_at DESC", tuple(params))
+    publicaciones = query(
+        f"""SELECT red_publicaciones.*, v.estado AS vehiculo_estado, v.id AS vid
+            FROM red_publicaciones LEFT JOIN vehiculos v ON v.id = red_publicaciones.vehiculo_id
+            {where}
+            ORDER BY red_publicaciones.created_at DESC""", tuple(params))
     return render_template(
         "red/index.html",
         publicaciones=publicaciones,
@@ -104,3 +111,36 @@ def cerrar(pub_id):
     execute("UPDATE red_publicaciones SET estado = 'cerrado' WHERE id = ?", (pub_id,))
     flash("Publicación cerrada.", "success")
     return redirect(url_for("red.index"))
+
+
+# ---------------------------------------------------------------------
+# Unidades de Stock en la Red (paso 4, 28/09/2026). Criterio de Daniel:
+# al señar la publicación sigue en la Red marcada "Señado"; se da de baja
+# sola solo al vender (si se cancela la seña vuelve a verse Disponible,
+# porque el estado se toma siempre del vehículo).
+# ---------------------------------------------------------------------
+def publicacion_de_vehiculo(vehiculo_id):
+    return query(
+        "SELECT * FROM red_publicaciones WHERE vehiculo_id = ? AND estado = 'activo' ORDER BY id DESC LIMIT 1",
+        (vehiculo_id,), one=True,
+    )
+
+
+def publicar_vehiculo(vehiculo):
+    agencia_id = vehiculo["agencia_id"]
+    _, _, contacto = _contacto_publicacion(agencia_id)
+    agencia = query("SELECT nombre_agencia FROM agencias WHERE id = ?", (agencia_id,), one=True)
+    return execute(
+        """INSERT INTO red_publicaciones
+           (agencia_id, agencia_nombre, tipo, marca, modelo, version, anio, km, precio, descripcion, contacto, vehiculo_id)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (agencia_id, agencia["nombre_agencia"] if agencia else session.get("agencia_nombre", ""), "ofrezco",
+         vehiculo["marca"], vehiculo["modelo"], vehiculo["version"], vehiculo["anio"], vehiculo["km"],
+         vehiculo["valor_publicado"] or None, None, contacto, vehiculo["id"]),
+    )
+
+
+def cerrar_red_de_vehiculo(vehiculo_id):
+    """Se llama al vender la unidad (Stock, Editar y Financiación)."""
+    execute("UPDATE red_publicaciones SET estado = 'cerrado' WHERE vehiculo_id = ? AND estado = 'activo'",
+            (vehiculo_id,))

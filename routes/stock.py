@@ -116,8 +116,31 @@ def index():
         r["estado"]: r["c"]
         for r in query("SELECT estado, COUNT(*) c FROM vehiculos WHERE agencia_id = ? GROUP BY estado", (agencia_id,))
     }
+    # Menú de cada tarjeta (28/09/2026): Ver ficha, Red, WhatsApp, Publicar, Ver toma.
+    en_red = {r["vehiculo_id"] for r in query(
+        """SELECT vehiculo_id FROM red_publicaciones
+           WHERE agencia_id = ? AND estado = 'activo' AND vehiculo_id IS NOT NULL""", (agencia_id,))}
+    tomas = {r["vehiculo_id"]: r["id"] for r in query(
+        "SELECT vehiculo_id, MAX(id) AS id FROM tomas_vehiculo WHERE agencia_id = ? AND vehiculo_id IS NOT NULL GROUP BY vehiculo_id",
+        (agencia_id,))}
+    menu = {}
+    for v in (vehiculos or []):
+        titulo = " ".join(str(x) for x in [v["marca"], v["modelo"], v["version"], v["anio"]] if x)
+        link = _url_publica(url_for("stock.ficha", vehiculo_id=v["id"], wa=0))
+        texto = f"{titulo}" + (f" — {_pesos(v['valor_publicado'])}" if v["valor_publicado"] else "") + f"\n{link}"
+        menu[v["id"]] = {
+            "titulo": titulo,
+            "ver": url_for("stock.detalle", vehiculo_id=v["id"], estado=estado_filtro),
+            "publicar": url_for("stock.ficha", vehiculo_id=v["id"], volver=url_for("stock.index", estado=estado_filtro)),
+            "whatsapp": "https://wa.me/?text=" + quote_plus(texto),
+            "red": url_for("stock.red", vehiculo_id=v["id"]),
+            "en_red": v["id"] in en_red,
+            "red_posible": v["estado"] != "vendido",
+            "toma": url_for("tomas.detalle", toma_id=tomas[v["id"]]) if v["id"] in tomas else None,
+        }
     return render_template(
         "stock/index.html",
+        menu=menu,
         vehiculos=vehiculos,
         resultados=resultados,
         estado_filtro=estado_filtro,
@@ -458,6 +481,9 @@ def editar(vehiculo_id):
                 vehiculo_id,
             ),
         )
+        if f.get("estado") == "vendido":
+            from routes.red import cerrar_red_de_vehiculo
+            cerrar_red_de_vehiculo(vehiculo_id)
         flash("Vehículo actualizado.", "success")
         return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
@@ -1021,6 +1047,8 @@ def vender(vehiculo_id):
                vendido_por_id = ?, updated_at = datetime('now') WHERE id = ? AND agencia_id = ?""",
         (precio, fecha_venta, session.get("usuario_id"), vehiculo_id, session["agencia_id"]),
     )
+    from routes.red import cerrar_red_de_vehiculo
+    cerrar_red_de_vehiculo(vehiculo_id)
     mensaje = f"Venta cerrada — {_pesos(precio)}: {_pesos(efectivo)} en efectivo"
     if sena:
         mensaje += f" (con la seña de {_pesos(sena)} adentro)"
@@ -1096,6 +1124,35 @@ def _datos_ficha(vehiculo):
     }
 
 
+def _url_publica(ruta):
+    """Link absoluto para compartir (WhatsApp): en producción siempre https
+    con el dominio de la app."""
+    base = request.host_url.rstrip("/")
+    if not base.startswith("http://localhost") and not base.startswith("http://127.") and base.startswith("http://"):
+        base = "https://" + base[len("http://"):]
+    return base + ruta
+
+
+@bp.route("/<int:vehiculo_id>/red", methods=["POST"])
+def red(vehiculo_id):
+    """Agregar / quitar la unidad de la Red de Agencieros (paso 4)."""
+    from routes.red import publicacion_de_vehiculo, publicar_vehiculo
+    vehiculo = _vehiculo_propio(vehiculo_id)
+    if not vehiculo:
+        abort(404)
+    pub = publicacion_de_vehiculo(vehiculo_id)
+    if pub:
+        execute("UPDATE red_publicaciones SET estado = 'cerrado' WHERE id = ?", (pub["id"],))
+        flash(f"{vehiculo['marca']} {vehiculo['modelo']} quitado de la Red de Agencieros.", "success")
+    elif vehiculo["estado"] == "vendido":
+        flash("Un vehículo vendido no se puede ofrecer en la Red.", "error")
+    else:
+        publicar_vehiculo(vehiculo)
+        flash(f"{vehiculo['marca']} {vehiculo['modelo']} publicado en la Red de Agencieros"
+              + (" (figura como Señado)." if vehiculo["estado"] == "senado" else "."), "success")
+    return redirect(_volver_seguro(request.form.get("volver"), url_for("stock.index")))
+
+
 def _volver_seguro(destino, por_defecto):
     """Solo rutas internas ("/algo"): evita que el parámetro `volver` sirva
     para mandar a alguien a otro sitio."""
@@ -1127,10 +1184,15 @@ def ficha(vehiculo_id):
         por_defecto = url_for("stock.detalle", vehiculo_id=vehiculo_id) if propio else url_for("stock.index")
         volver_url = _volver_seguro(request.args.get("volver"), por_defecto)
 
+    datos = _datos_ficha(vehiculo)
+    if request.args.get("wa") == "0":
+        # Link compartido por WhatsApp: el cliente ya está en el chat con la
+        # agencia, así que la ficha va sin el botón de WhatsApp.
+        datos["whatsapp_link"] = None
     return render_template(
         "stock/ficha.html",
         vehiculo=vehiculo,
-        datos=_datos_ficha(vehiculo),
+        datos=datos,
         estado_label=ESTADO_LABEL,
         volver_url=volver_url,
     )

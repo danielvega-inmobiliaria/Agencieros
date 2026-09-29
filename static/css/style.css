@@ -661,3 +661,20 @@ form textarea { min-height: 80px; }
 .ficha-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
 .ficha-nav-pos { color: var(--text-dim); font-size: 13px; }
 .ficha-nav-off { opacity: .35; pointer-events: none; }
+
+/* Menú de acciones de las tarjetas de Stock (28/09/2026) */
+.hoja-acciones[hidden] { display: none; }
+.hoja-acciones { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: flex-end; justify-content: center; }
+.hoja-fondo { position: absolute; inset: 0; background: rgba(0,0,0,.55); }
+.hoja-panel { position: relative; width: 100%; max-width: 480px; background: var(--navy-card); border: 1px solid var(--border);
+  border-radius: 16px 16px 0 0; padding: 14px 14px calc(14px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 8px;
+  animation: hoja-sube .18s ease-out; }
+@media (min-width: 768px) { .hoja-acciones { align-items: center; } .hoja-panel { border-radius: 16px; } }
+@keyframes hoja-sube { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.hoja-titulo { font-weight: 600; color: var(--gold-light); padding: 4px 4px 8px; }
+.hoja-op { display: block; width: 100%; text-align: left; padding: 13px 14px; border-radius: 10px; background: rgba(255,255,255,.05);
+  border: 1px solid var(--border); color: var(--text); font-size: 15px; text-decoration: none; cursor: pointer; font-family: inherit; }
+.hoja-op small { display: block; color: var(--text-dim); font-size: 12px; margin-top: 2px; }
+.hoja-op[hidden], form[hidden] { display: none; }
+.hoja-cancelar { text-align: center; color: var(--text-dim); }
+.badge.badge-red { background: rgba(212,175,55,.15); color: var(--gold-light); }

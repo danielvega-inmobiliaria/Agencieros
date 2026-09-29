@@ -525,6 +525,8 @@ def nuevo():
                    fecha_venta = ?, vendido_por_id = ?, updated_at = datetime('now') WHERE id = ?""",
                 (precio_venta, str(fecha_venta), session.get("usuario_id"), vehiculo_id),
             )
+            from routes.red import cerrar_red_de_vehiculo
+            cerrar_red_de_vehiculo(vehiculo_id)
 
     flash(
         f"Plan de financiación creado — {len(cronograma)} cuotas de ${valor_cuota_final:,.0f}.".replace(",", "."),
@@ -1118,6 +1120,8 @@ def confirmar_venta(financiacion_id):
                fecha_venta = ?, vendido_por_id = ?, updated_at = datetime('now') WHERE id = ?""",
             (precio_venta, str(date.today()), session.get("usuario_id"), fin["vehiculo_id"]),
         )
+        from routes.red import cerrar_red_de_vehiculo
+        cerrar_red_de_vehiculo(fin["vehiculo_id"])
     execute("UPDATE financiaciones SET estado = 'activo' WHERE id = ?", (financiacion_id,))
     flash("Operación cerrada — el plan pasa a activo y el vehículo a Vendido.", "success")
     if fin["permuta_marca"]:
