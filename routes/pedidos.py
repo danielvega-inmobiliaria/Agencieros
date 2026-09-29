@@ -36,8 +36,10 @@ def _buscar_matches_permuta(agencia_id, marca, modelo, excluir_pedido_id=None):
         tuple(params_propios),
     )
 
-    cond_red = "tipo = 'busco' AND estado = 'activo' AND LOWER(marca) = LOWER(?)"
-    params_red = [marca]
+    # Las búsquedas propias publicadas desde Pedidos ya aparecen como pedido propio.
+    cond_red = ("tipo = 'busco' AND estado = 'activo' AND LOWER(marca) = LOWER(?)"
+                " AND NOT (pedido_id IS NOT NULL AND agencia_id = ?)")
+    params_red = [marca, agencia_id]
     if modelo:
         cond_red += " AND LOWER(modelo) = LOWER(?)"
         params_red.append(modelo)
@@ -102,8 +104,12 @@ def index():
             (agencia_id, estado_filtro),
         )
     pedidos = [_con_fecha_y_dias(p) for p in pedidos_raw]
+    en_red = {r["pedido_id"] for r in query(
+        "SELECT pedido_id FROM red_publicaciones WHERE agencia_id = ? AND estado = 'activo' AND pedido_id IS NOT NULL",
+        (agencia_id,))}
     return render_template(
         "pedidos/index.html",
+        en_red=en_red,
         pedidos=pedidos,
         estado_filtro=estado_filtro,
         forma_pago_label=FORMA_PAGO_LABEL,
@@ -162,13 +168,17 @@ def nuevo():
         ofertas = _buscar_oferta_para_pedido(
             f.get("marca"), f.get("modelo"), anio_desde_int, precio_maximo_val
         )
+        sin_coincidencias = False
         if ofertas:
             resumen = ", ".join(f"{o['origen_label']}: {o['marca']} {o['modelo']}" for o in ofertas[:5])
             if len(ofertas) > 5:
                 resumen += f" (+{len(ofertas) - 5} más)"
             flash(f"⚡ Ya hay {len(ofertas)} posible(s) coincidencia(s) para lo que busca este cliente: {resumen}.", "success")
         else:
-            flash("Pedido guardado. Te avisamos automáticamente si ingresa un vehículo que matchea.", "success")
+            flash("Pedido guardado. No hay ninguna coincidencia en Stock, Por ingresar, En reparación ni en la Red: "
+                  "si querés, publicá la búsqueda en la Red de Agencieros para que otras agencias te ofrezcan. "
+                  "Igual te avisamos si ingresa un vehículo que matchea.", "success")
+            sin_coincidencias = True
 
         # 2) Si además ofrece un vehículo en permuta, ¿alguien ya lo busca?
         if es_permuta and f.get("permuta_marca"):
@@ -185,6 +195,9 @@ def nuevo():
                     partes.append(f"{len(red)} publicación(es) de la Red buscando ese vehículo ({agencias})")
                 flash("⚡ El vehículo de permuta matchea con " + " y ".join(partes) + ".", "success")
 
+        if sin_coincidencias:
+            # Directo a la ficha del pedido, donde está el botón para publicarlo en la Red.
+            return redirect(url_for("pedidos.detalle", pedido_id=pedido_id))
         return redirect(url_for("pedidos.index"))
     return render_template("pedidos/form.html", formas_pago=FORMAS_PAGO, forma_pago_label=FORMA_PAGO_LABEL)
 
@@ -219,9 +232,11 @@ def detalle(pedido_id):
         pedido.get("marca"), pedido.get("modelo"), pedido.get("anio_desde"), pedido.get("precio_maximo")
     )
 
+    from routes.red import publicacion_de_pedido
     return render_template(
         "pedidos/detalle.html",
         pedido=pedido,
+        en_red=publicacion_de_pedido(pedido_id),
         matches_propios=matches_propios,
         matches_red=matches_red,
         ofertas=ofertas,
@@ -241,6 +256,8 @@ def resolver(pedido_id):
     execute(
         "UPDATE pedidos_clientes SET estado = 'resuelto' WHERE id = ? AND agencia_id = ?", (pedido_id, agencia_id)
     )
+    from routes.red import cerrar_red_de_pedido
+    cerrar_red_de_pedido(pedido_id)
     flash("Pedido marcado como resuelto.", "success")
     return redirect(url_for("pedidos.index"))
 
@@ -257,5 +274,29 @@ def cancelar(pedido_id):
     execute(
         "UPDATE pedidos_clientes SET estado = 'cancelado' WHERE id = ? AND agencia_id = ?", (pedido_id, agencia_id)
     )
+    from routes.red import cerrar_red_de_pedido
+    cerrar_red_de_pedido(pedido_id)
     flash("Pedido cancelado.", "success")
     return redirect(url_for("pedidos.index"))
+
+
+@bp.route("/<int:pedido_id>/red", methods=["POST"])
+def red(pedido_id):
+    """Publicar / quitar la búsqueda de este pedido en la Red de Agencieros."""
+    from routes.red import publicacion_de_pedido, publicar_pedido
+    pedido = query("SELECT * FROM pedidos_clientes WHERE id = ? AND agencia_id = ?",
+                   (pedido_id, session["agencia_id"]), one=True)
+    if not pedido:
+        flash("Pedido no encontrado.", "error")
+        return redirect(url_for("pedidos.index"))
+    pub = publicacion_de_pedido(pedido_id)
+    if pub:
+        execute("UPDATE red_publicaciones SET estado = 'cerrado' WHERE id = ?", (pub["id"],))
+        flash("Búsqueda quitada de la Red de Agencieros.", "success")
+    elif pedido["estado"] != "buscando":
+        flash("Solo se pueden publicar pedidos que siguen buscando.", "error")
+    else:
+        publicar_pedido(pedido)
+        flash(f"Búsqueda publicada en la Red: las demás agencias ven que buscás {pedido['marca']} {pedido['modelo']} "
+              "(sin los datos del cliente).", "success")
+    return redirect(url_for("pedidos.detalle", pedido_id=pedido_id))

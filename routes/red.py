@@ -144,3 +144,43 @@ def cerrar_red_de_vehiculo(vehiculo_id):
     """Se llama al vender la unidad (Stock, Editar y Financiación)."""
     execute("UPDATE red_publicaciones SET estado = 'cerrado' WHERE vehiculo_id = ? AND estado = 'activo'",
             (vehiculo_id,))
+
+
+# ---------------------------------------------------------------------
+# Pedidos en la Red (29/09/2026, pedido de Daniel): si un pedido no tiene
+# ninguna coincidencia, se puede publicar la búsqueda en la Red ("Busca").
+# Sin datos del cliente: solo el vehículo buscado y el contacto de la agencia.
+# Se da de baja sola al resolver o cancelar el pedido.
+# ---------------------------------------------------------------------
+def publicacion_de_pedido(pedido_id):
+    return query(
+        "SELECT * FROM red_publicaciones WHERE pedido_id = ? AND estado = 'activo' ORDER BY id DESC LIMIT 1",
+        (pedido_id,), one=True,
+    )
+
+
+def publicar_pedido(pedido):
+    agencia_id = pedido["agencia_id"]
+    _, _, contacto = _contacto_publicacion(agencia_id)
+    agencia = query("SELECT nombre_agencia FROM agencias WHERE id = ?", (agencia_id,), one=True)
+    partes = []
+    if pedido["anio_desde"] or pedido["anio_hasta"]:
+        if pedido["anio_desde"] and pedido["anio_hasta"] and pedido["anio_desde"] != pedido["anio_hasta"]:
+            partes.append(f"Año {pedido['anio_desde']} a {pedido['anio_hasta']}")
+        else:
+            partes.append(f"Año {pedido['anio_desde'] or pedido['anio_hasta']}")
+    forma = {"contado": "Paga contado", "cuotas": "Busca financiación", "permuta": "Entrega permuta"}.get(pedido["forma_pago"])
+    if forma:
+        partes.append(forma)
+    return execute(
+        """INSERT INTO red_publicaciones
+           (agencia_id, agencia_nombre, tipo, marca, modelo, version, anio, precio, descripcion, contacto, pedido_id)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+        (agencia_id, agencia["nombre_agencia"] if agencia else session.get("agencia_nombre", ""), "busco",
+         pedido["marca"], pedido["modelo"], pedido["version"], pedido["anio_desde"] or pedido["anio_hasta"],
+         pedido["precio_maximo"] or None, " · ".join(partes) or None, contacto, pedido["id"]),
+    )
+
+
+def cerrar_red_de_pedido(pedido_id):
+    execute("UPDATE red_publicaciones SET estado = 'cerrado' WHERE pedido_id = ? AND estado = 'activo'", (pedido_id,))

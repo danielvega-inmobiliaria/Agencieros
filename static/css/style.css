@@ -690,3 +690,6 @@ form textarea { min-height: 80px; }
   color: var(--text); text-decoration: none; font-size: 15px; }
 .op-opcion:hover { border-color: var(--gold); }
 .op-opcion small { display: block; color: var(--text-dim); font-size: 12px; margin-top: 4px; font-weight: 400; }
+
+/* Pedido publicado en la Red (29/09/2026) */
+.red-pedido { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: var(--navy-card-2); border: 1px dashed var(--gold); font-size: 13px; }

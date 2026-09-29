@@ -1464,6 +1464,9 @@ def _migrar_usuarios_agencia(conn):
     if "senado_por_id" not in cols:
         conn.execute("ALTER TABLE vehiculos ADD COLUMN senado_por_id INTEGER")
     rcols = {r[1] for r in conn.execute("PRAGMA table_info(red_publicaciones)")}
+    if "pedido_id" not in rcols:
+        # Búsqueda de un Pedido publicada en la Red ("Red · Busca").
+        conn.execute("ALTER TABLE red_publicaciones ADD COLUMN pedido_id INTEGER")
     if "vehiculo_id" not in rcols:
         # Publicación en la Red atada a una unidad de Stock (check "Red").
         conn.execute("ALTER TABLE red_publicaciones ADD COLUMN vehiculo_id INTEGER")

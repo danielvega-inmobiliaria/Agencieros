@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 29/09/2026 (chat "Usuarios por agencia", Msg 8: pantalla Señar / vender; próximo: paso 3 sucursales)_
+_Última actualización: 29/09/2026 (chat "Usuarios por agencia", Msg 10: pedidos a la Red; próximo: paso 3 sucursales)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -138,6 +138,13 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - **Msg 2 — RosarioGarage confirmado en producción por Daniel (captura del celu, Corolla 2020): aparecen los 3 avisos, pero con el logo de RG en vez de la foto.** Causa: RG carga las fotos con lazyload — la foto real está en `data-src` y el `src` es un relleno (`statics/css/skin/img/default-553x380.png`), relevado con el navegador. Fix en `publicaciones_rg.py` (toma `data-src`, descarta rellenos; clave de cache `v2|` para no reusar lo guardado con el logo) y en `static/js/mercado.js` (`referrerpolicy="no-referrer"` por si RG bloquea fotos enlazadas desde otro sitio, y si la foto falla queda el recuadro vacío). `?v=20260928e` en los 3 templates que cargan mercado.js.
 - **MercadoLibre:** sigue pendiente pedir acceso — texto para el pedido armado en el chat.
 - Nota: `seed/precios_infoauto/precios_infoauto_2026_09.csv` figura modificado en git solo por finales de línea (CRLF); no se incluyó en el commit.
+
+### Sesión 29/09/2026 (chat "Usuarios por agencia", Msg 10) — Publicar un Pedido en la Red cuando no hay coincidencias
+- Al cargar un pedido se sigue cotejando con Disponible, Por ingresar, En reparación, Red · Ofrece y Posible entrega. **Si no hay ninguna coincidencia**, en vez de volver al listado se abre la ficha del pedido con el aviso y el botón **"🤝 Publicar búsqueda en la Red"** (`POST /pedidos/<id>/red`, también sirve para **Quitar de la Red**).
+- La publicación es tipo **Busca**, **sin nombre ni teléfono del cliente**: marca/modelo/versión, año, "hasta $precio máximo", descripción ("Año 2022 · Paga contado / Busca financiación / Entrega permuta") y el contacto de la agencia (Admin). Columna nueva `red_publicaciones.pedido_id`. Se **da de baja sola al marcar el pedido resuelto o cancelarlo** (`routes/red.py::cerrar_red_de_pedido`). Badge "En Red" en el listado y la ficha del pedido; en la Red se ve la descripción y "hasta $…".
+- Las búsquedas propias publicadas no se duplican en los cruces propios (permuta vs. Red en Pedidos y buscador combinado de Stock).
+- Probado con test_client (vendedor): pedido sin coincidencias → ficha con botón → publicado sin datos del cliente → badge → resolver lo cierra; pedido con coincidencias sigue volviendo al listado.
+- Archivos: `database.py`, `buscador.py`, `routes/pedidos.py`, `routes/red.py`, `templates/pedidos/detalle.html`, `templates/pedidos/index.html`, `templates/red/index.html`, `static/css/style.css` (`?v=20260929b`), `templates/base.html`.
 
 ### Sesión 29/09/2026 (chat "Usuarios por agencia", Msg 8) — Pantalla "Señar / vender" desde el menú de la tarjeta
 - **Menú de la tarjeta de Stock (dueño y vendedor):** Ver ficha · Agregar/Quitar de la Red · Compartir por WhatsApp · Publicar · **Señar / vender** (+ "Toma y datos internos" solo dueño).

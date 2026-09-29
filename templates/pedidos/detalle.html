@@ -48,6 +48,23 @@
     {% else %}
     <p style="color:var(--text-dim); font-size:13px;">Por ahora no hay nada que matchee con lo que busca este cliente.</p>
     {% endif %}
+    {% if en_red %}
+    <div class="red-pedido">
+      <span class="badge badge-red">En Red</span> La búsqueda está publicada en la Red de Agencieros desde {{ en_red.created_at|fecha_ar }} (sin datos del cliente).
+      <form method="post" action="{{ url_for('pedidos.red', pedido_id=pedido.id) }}" style="display:inline;">
+        <button class="btn btn-secondary btn-sm" type="submit">Quitar de la Red</button>
+      </form>
+    </div>
+    {% elif pedido.estado == 'buscando' and not ofertas %}
+    <div class="red-pedido">
+      <p style="margin:0 0 8px;"><b>¿Publicamos la búsqueda en la Red?</b> Las demás agencias ven que buscás
+        {{ pedido.marca }} {{ pedido.modelo }} {{ pedido.version or '' }}{% if pedido.anio_desde %} {{ pedido.anio_desde }}{% endif %}{% if pedido.precio_maximo %} hasta ${{ "{:,.0f}".format(pedido.precio_maximo).replace(",", ".") }}{% endif %}
+        y te pueden ofrecer una unidad. No se muestran el nombre ni el teléfono del cliente; se da de baja sola al resolver o cancelar el pedido.</p>
+      <form method="post" action="{{ url_for('pedidos.red', pedido_id=pedido.id) }}">
+        <button class="btn btn-primary btn-sm" type="submit">🤝 Publicar búsqueda en la Red</button>
+      </form>
+    </div>
+    {% endif %}
   </div>
 
   {% if pedido.forma_pago == 'permuta' and pedido.permuta_marca %}

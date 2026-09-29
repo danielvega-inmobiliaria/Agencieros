@@ -15,11 +15,11 @@
     {% for p in pedidos %}
     <tr data-href="{{ url_for('pedidos.detalle', pedido_id=p.id) }}">
       <td class="fila-compacta">
-        <span class="badge {{ p.estado }}">{{ p.estado }}</span>{{ p.cliente_nombre }} - {{ p.telefono or 'sin teléfono' }} · {{ p.marca }} {{ p.modelo }} {{ p.version or '' }}
+        <span class="badge {{ p.estado }}">{{ p.estado }}</span>{{ p.cliente_nombre }} - {{ p.telefono or 'sin teléfono' }} · {{ p.marca }} {{ p.modelo }} {{ p.version or '' }}{% if p.id in en_red %} <span class="badge badge-red">En Red</span>{% endif %}
       </td>
       <td data-label="Cliente">{{ p.cliente_nombre }}</td>
       <td data-label="Teléfono">{{ p.telefono or '-' }}</td>
-      <td data-label="Busca">{{ p.marca }} {{ p.modelo }} {{ p.version or '' }} {% if p.anio_desde or p.anio_hasta %}({{ p.anio_desde or '' }}{% if p.anio_hasta %}–{{ p.anio_hasta }}{% endif %}){% endif %}</td>
+      <td data-label="Busca">{{ p.marca }} {{ p.modelo }} {{ p.version or '' }} {% if p.anio_desde or p.anio_hasta %}({{ p.anio_desde or '' }}{% if p.anio_hasta %}–{{ p.anio_hasta }}{% endif %}){% endif %}{% if p.id in en_red %} <span class="badge badge-red">En Red</span>{% endif %}</td>
       <td data-label="Precio máx.">{{ "$" + "{:,.0f}".format(p.precio_maximo).replace(",", ".") if p.precio_maximo else '-' }}</td>
       <td data-label="Forma de pago">
         {{ forma_pago_label.get(p.forma_pago, p.forma_pago) if p.forma_pago else '-' }}

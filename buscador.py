@@ -250,7 +250,7 @@ def buscar_combinado(filtros, agencia_id):
     cond_red, params_red = condiciones_sql(filtros, campo_precio="precio", campo_km="km")
     cond_red.append("estado = 'activo'")
     # Las unidades propias publicadas desde Stock ya aparecen como stock propio.
-    cond_red.append("NOT (vehiculo_id IS NOT NULL AND agencia_id = ?)")
+    cond_red.append("NOT ((vehiculo_id IS NOT NULL OR pedido_id IS NOT NULL) AND agencia_id = ?)")
     params_red.append(agencia_id)
     publicaciones = query(
         f"SELECT * FROM red_publicaciones WHERE {' AND '.join(cond_red)} ORDER BY created_at DESC",

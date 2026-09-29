@@ -20,9 +20,9 @@
     <tr>
       <td data-label="Tipo"><span class="badge {{ 'disponible' if p.tipo == 'ofrezco' else 'por_ingresar' }}">{{ 'Ofrece' if p.tipo == 'ofrezco' else 'Busca' }}</span></td>
       <td data-label="Agencia">{{ p.agencia_nombre }}</td>
-      <td data-label="Vehículo">{{ p.marca }} {{ p.modelo }} {{ p.version }} {{ p.anio or '' }}{% if p.vehiculo_estado == 'senado' %} <span class="badge senado">Señado</span>{% endif %}{% if p.vid %} · <a href="{{ url_for('stock.ficha', vehiculo_id=p.vid) }}" target="_blank">ver ficha</a>{% endif %}</td>
+      <td data-label="Vehículo">{{ p.marca }} {{ p.modelo }} {{ p.version }} {{ p.anio or '' }}{% if p.vehiculo_estado == 'senado' %} <span class="badge senado">Señado</span>{% endif %}{% if p.vid %} · <a href="{{ url_for('stock.ficha', vehiculo_id=p.vid) }}" target="_blank">ver ficha</a>{% endif %}{% if p.descripcion %}<br><small style="color:var(--text-dim);">{{ p.descripcion }}</small>{% endif %}</td>
       <td data-label="Km">{{ "{:,.0f}".format(p.km).replace(",", ".") if p.km else '-' }}</td>
-      <td data-label="Precio">{{ "$" + "{:,.0f}".format(p.precio).replace(",", ".") if p.precio else '-' }}</td>
+      <td data-label="Precio">{{ ("hasta " if p.tipo == 'busco' else "") + "$" + "{:,.0f}".format(p.precio).replace(",", ".") if p.precio else '-' }}</td>
       <td data-label="Contacto">{{ p.contacto or '-' }}</td>
       <td class="fila-compacta">
         <span class="badge {{ 'disponible' if p.tipo == 'ofrezco' else 'por_ingresar' }}">{{ 'Ofrece' if p.tipo == 'ofrezco' else 'Busca' }}</span>{{ p.agencia_nombre }} — {{ p.marca }} {{ p.modelo }} {{ p.version }} {{ p.anio or '' }}{% if p.vehiculo_estado == 'senado' %} <span class="badge senado">Señado</span>{% endif %} · {{ "$" + "{:,.0f}".format(p.precio).replace(",", ".") if p.precio else '-' }}{% if p.contacto %} · {{ p.contacto }}{% endif %}
