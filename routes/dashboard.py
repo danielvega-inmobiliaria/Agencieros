@@ -266,8 +266,22 @@ def index():
         {"label": "Adeudado (vencido)", "value": round(adeudado, 2), "color": COLOR_ADEUDADO},
     ])
 
+    # Usuarios por agencia (28/09/2026): el vendedor ve los totales de la
+    # agencia y, al lado, los suyos.
+    mios = None
+    if session.get("usuario_id"):
+        uid = session["usuario_id"]
+        mios = {
+            "senados": query("SELECT COUNT(*) c FROM vehiculos WHERE agencia_id = ? AND estado = 'senado' AND senado_por_id = ?",
+                             (agencia_id, uid), one=True)["c"],
+            "vendidos_mes": query(
+                """SELECT COUNT(*) c FROM vehiculos WHERE agencia_id = ? AND estado = 'vendido' AND vendido_por_id = ?
+                   AND strftime('%Y-%m', fecha_venta) = strftime('%Y-%m', 'now')""",
+                (agencia_id, uid), one=True)["c"],
+        }
     return render_template(
         "dashboard.html",
+        mios=mios,
         stock_counts=stock_counts,
         pedidos_activos=pedidos_activos,
         ventas_mes=ventas_mes,

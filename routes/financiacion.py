@@ -789,8 +789,8 @@ def guardar():
         )
         if vehiculo and vehiculo["estado"] == "disponible":
             execute(
-                "UPDATE vehiculos SET estado = 'senado', updated_at = datetime('now') WHERE id = ?",
-                (vehiculo_id,),
+                "UPDATE vehiculos SET estado = 'senado', senado_por_id = ?, updated_at = datetime('now') WHERE id = ?",
+                (session.get("usuario_id"), vehiculo_id),
             )
 
     # `permuta_valor` es siempre el número final que se cargó en el campo
@@ -935,8 +935,8 @@ def completar_datos(financiacion_id):
         vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (nuevo_vehiculo_id,), one=True)
         if vehiculo and vehiculo["estado"] == "disponible":
             execute(
-                "UPDATE vehiculos SET estado = 'senado', updated_at = datetime('now') WHERE id = ?",
-                (nuevo_vehiculo_id,),
+                "UPDATE vehiculos SET estado = 'senado', senado_por_id = ?, updated_at = datetime('now') WHERE id = ?",
+                (session.get("usuario_id"), nuevo_vehiculo_id),
             )
 
     try:

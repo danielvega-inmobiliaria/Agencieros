@@ -9,12 +9,6 @@
   {% endfor %}
   <div style="margin-left:auto; display:flex; gap:8px;">
     <button type="button" id="buscador-toggle" class="btn btn-secondary btn-sm">{{ 'Ocultar buscador' if filtros else 'Buscar' }}</button>
-    {% if puede_sincronizar_stock %}
-    <form method="post" action="{{ url_for('stock.sincronizar') }}">
-      <button class="btn btn-secondary btn-sm" type="submit">↻ Sincronizar desde STOCK</button>
-    </form>
-    {% endif %}
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('stock.fichas', estado=estado_filtro, **filtros) }}">🖼️ Ver Fichas</a>
     <a class="btn btn-primary btn-sm" href="{{ url_for('stock.nuevo') }}">+ Cargar vehículo</a>
   </div>
 </div>
@@ -62,7 +56,7 @@
   <table class="tabla-responsive tabla-vehiculos">
     <tr class="fila-header"><th></th><th>Vehículo</th><th>Año</th><th>Precio</th><th>Disponibilidad</th><th></th></tr>
     {% for v in vehiculos %}
-    <tr class="fila-vehiculo-propio" data-href="{{ url_for('stock.detalle', vehiculo_id=v.id) }}">
+    <tr class="fila-vehiculo-propio" data-href="{{ url_for('stock.detalle', vehiculo_id=v.id, estado=estado_filtro) }}">
       <td class="foto-cell"><img class="foto-mini" src="{{ foto_principal(v.id) }}" alt=""></td>
       <td data-label="Vehículo">{{ v.marca }} {{ v.modelo }} {{ v.version }}</td>
       <td data-label="Año">{{ v.anio }}</td>

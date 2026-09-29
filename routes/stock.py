@@ -302,9 +302,23 @@ def detalle(vehiculo_id):
             "desc": origen_op["permuta_descripcion"],
         }
     nombres = nombres_usuarios(session["agencia_id"])
+    # Navegar entre fichas (28/09/2026, pedido de Daniel): anterior/siguiente
+    # y deslizar con el dedo, dentro de la misma pestaña del listado de la que
+    # se vino (o "todos"/"vendido" según el estado del auto).
+    estado_nav = request.args.get("estado") or ("vendido" if vehiculo["estado"] == "vendido" else "todos")
+    ids = [r["id"] for r in _vehiculos_de_pestana(session["agencia_id"], estado_nav)]
+    nav = None
+    if vehiculo_id in ids and len(ids) > 1:
+        i = ids.index(vehiculo_id)
+        nav = {
+            "estado": estado_nav, "pos": i + 1, "total": len(ids),
+            "anterior": ids[i - 1] if i > 0 else None,
+            "siguiente": ids[i + 1] if i < len(ids) - 1 else None,
+        }
     return render_template(
         "stock/detalle.html", vehiculo=vehiculo, rent=_rentabilidad(vehiculo), estado_label=ESTADO_LABEL, fotos=fotos,
         cargado_por=nombres.get(vehiculo["cargado_por_id"]), vendido_por=nombres.get(vehiculo["vendido_por_id"]),
+        nav=nav,
         permuta_op=permuta_op,
         toma_vinculada=toma_vinculada, venta_abierta=venta_abierta, plan_pendiente=plan_pendiente,
         venta_cerrada=venta_cerrada, plan_cierre=plan_cierre, hoy=str(date.today()),
@@ -823,8 +837,8 @@ def senar(vehiculo_id):
         ),
     )
     execute(
-        "UPDATE vehiculos SET estado = 'senado', updated_at = datetime('now') WHERE id = ? AND agencia_id = ?",
-        (vehiculo_id, session["agencia_id"]),
+        "UPDATE vehiculos SET estado = 'senado', senado_por_id = ?, updated_at = datetime('now') WHERE id = ? AND agencia_id = ?",
+        (session.get("usuario_id"), vehiculo_id, session["agencia_id"]),
     )
     mensaje = f"Seña de {_pesos(sena)} registrada"
     if permuta:

@@ -1461,6 +1461,8 @@ def _migrar_usuarios_agencia(conn):
         conn.execute("ALTER TABLE vehiculos ADD COLUMN cargado_por_id INTEGER")
     if "vendido_por_id" not in cols:
         conn.execute("ALTER TABLE vehiculos ADD COLUMN vendido_por_id INTEGER")
+    if "senado_por_id" not in cols:
+        conn.execute("ALTER TABLE vehiculos ADD COLUMN senado_por_id INTEGER")
 
 
 def mail_ocupado(conn, email, excepto_usuario_id=None):

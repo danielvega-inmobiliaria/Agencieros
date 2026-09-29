@@ -2,6 +2,31 @@
 {% block title %}{{ vehiculo.marca }} {{ vehiculo.modelo }} — Agencieros{% endblock %}
 {% block header %}{{ vehiculo.marca }} {{ vehiculo.modelo }} {{ vehiculo.version }} ({{ vehiculo.anio }}){% endblock %}
 {% block content %}
+{% if nav %}
+<div class="ficha-nav">
+  {% if nav.anterior %}<a class="btn btn-secondary btn-sm" id="ficha-anterior" href="{{ url_for('stock.detalle', vehiculo_id=nav.anterior, estado=nav.estado) }}">‹ Anterior</a>{% else %}<span class="btn btn-secondary btn-sm ficha-nav-off">‹ Anterior</span>{% endif %}
+  <span class="ficha-nav-pos">{{ nav.pos }} de {{ nav.total }}</span>
+  {% if nav.siguiente %}<a class="btn btn-secondary btn-sm" id="ficha-siguiente" href="{{ url_for('stock.detalle', vehiculo_id=nav.siguiente, estado=nav.estado) }}">Siguiente ›</a>{% else %}<span class="btn btn-secondary btn-sm ficha-nav-off">Siguiente ›</span>{% endif %}
+</div>
+<script>
+  // Deslizar con el dedo para pasar a la ficha anterior / siguiente.
+  (function () {
+    var x0 = null, y0 = null;
+    document.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1 || e.target.closest('input, textarea, select, button, .no-swipe')) { x0 = null; return; }
+      x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+    }, { passive: true });
+    document.addEventListener('touchend', function (e) {
+      if (x0 === null) return;
+      var dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+      x0 = null;
+      if (Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+      var destino = document.getElementById(dx < 0 ? 'ficha-siguiente' : 'ficha-anterior');
+      if (destino) window.location.href = destino.href;
+    }, { passive: true });
+  })();
+</script>
+{% endif %}
 <div class="grid-2">
   <div class="panel">
     <h2>

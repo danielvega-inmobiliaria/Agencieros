@@ -44,14 +44,18 @@
             {% for o in opciones %}<option value="{{ o }}" {{ 'selected' if (form.get('estado_estetico') or estado_estetico_sugerido) == o }}>{{ o }}</option>{% endfor %}
           </select>
         </div>
+        {% if not es_vendedor %}
         <div>
           <label>% de ganancia esperada <span style="color:var(--text-dim); font-weight:400;">(default de tu agencia: {{ margen_objetivo_sugerido_pct }}%)</span></label>
           <input type="number" step="0.1" min="0" max="90" name="margen_objetivo_pct" value="{{ form.get('margen_objetivo_pct', margen_objetivo_sugerido_pct) }}">
         </div>
+        {% endif %}
       </div>
+      {% if not es_vendedor %}
       <p style="color:var(--text-dim); font-size:11.5px; margin-top:4px;">
         Se usa solo para esta tasación -- evaluá acá el negocio caso a caso. El default se configura en Admin.
       </p>
+      {% endif %}
       <p style="color:var(--text-dim); font-size:11.5px; margin-top:2px;">
         Estado mecánico y estético quedan registrados como referencia, pero no vuelven a descontar el precio -- el costo de la reparación ya está valorizado abajo en "Qué hay que reparar".
       </p>
@@ -108,14 +112,16 @@
     <div class="price-result">
       <div class="amount">${{ "{:,.0f}".format(tasacion_previa.precio_max_recomendado).replace(",", ".") }}</div>
       <div class="meta">
-        {% if es_nueva %}Valor de toma (precio máx. recomendado, ya descontados reparación y margen){% else %}Última tasación registrada para esta toma{% endif %}
+        {% if es_nueva %}Valor de toma (precio máx. recomendado{% if not es_vendedor %}, ya descontados reparación y margen{% endif %}){% else %}Última tasación registrada para esta toma{% endif %}
       </div>
     </div>
     <div class="stat-row" style="justify-content:center; margin-top:14px;">
       <div class="stat"><div class="n">${{ "{:,.0f}".format(tasacion_previa.gastos_estimados).replace(",", ".") }}</div><div class="l">Gastos estimados totales</div></div>
+      {% if not es_vendedor %}
       <div class="stat"><div class="n">${{ "{:,.0f}".format(tasacion_previa.margen_esperado).replace(",", ".") }}</div><div class="l">Margen esperado</div></div>
       <div class="stat"><div class="n">{{ tasacion_previa.porcentaje_beneficio }}%</div><div class="l">Beneficio</div></div>
       <div class="stat"><div class="n">{{ tasacion_previa.margen_objetivo_pct_num }}%</div><div class="l">% ganancia objetivo usado</div></div>
+      {% endif %}
     </div>
 
     {% if url_agregar_a_stock %}

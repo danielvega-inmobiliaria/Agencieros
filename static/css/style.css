@@ -656,3 +656,8 @@ form textarea { min-height: 80px; }
 
 /* Aviso de Facebook Marketplace (28/09/2026): no funciona desde una Página */
 .nota-fb { color: var(--text-dim); font-size: 11.5px; margin: 6px 0 0; }
+
+/* Navegación entre fichas de Stock (28/09/2026) */
+.ficha-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.ficha-nav-pos { color: var(--text-dim); font-size: 13px; }
+.ficha-nav-off { opacity: .35; pointer-events: none; }

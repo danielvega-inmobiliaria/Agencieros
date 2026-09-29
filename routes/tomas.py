@@ -786,6 +786,10 @@ def tasacion(toma_id):
         # no se guarda nada: se flashea el error y se re-muestra el
         # formulario con lo tipeado (mismo patrón que stock.vender/senar).
         margen_input_raw = f.get("margen_objetivo_pct")
+        from utils.permisos import es_vendedor
+        if es_vendedor():
+            # El vendedor no ve ni elige el % de ganancia: siempre el de la agencia.
+            margen_input_raw = None
         try:
             margen_input = float(margen_input_raw) if margen_input_raw not in (None, "") else None
         except ValueError:
