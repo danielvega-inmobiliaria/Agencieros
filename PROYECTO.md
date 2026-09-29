@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 28/09/2026 — noche (chat "Usuarios por agencia", Msg 1: paso 2 hecho, falta push; próximo: paso 3 sucursales)_
+_Última actualización: 29/09/2026 (chat "Usuarios por agencia", Msg 8: pantalla Señar / vender; próximo: paso 3 sucursales)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -138,6 +138,12 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - **Msg 2 — RosarioGarage confirmado en producción por Daniel (captura del celu, Corolla 2020): aparecen los 3 avisos, pero con el logo de RG en vez de la foto.** Causa: RG carga las fotos con lazyload — la foto real está en `data-src` y el `src` es un relleno (`statics/css/skin/img/default-553x380.png`), relevado con el navegador. Fix en `publicaciones_rg.py` (toma `data-src`, descarta rellenos; clave de cache `v2|` para no reusar lo guardado con el logo) y en `static/js/mercado.js` (`referrerpolicy="no-referrer"` por si RG bloquea fotos enlazadas desde otro sitio, y si la foto falla queda el recuadro vacío). `?v=20260928e` en los 3 templates que cargan mercado.js.
 - **MercadoLibre:** sigue pendiente pedir acceso — texto para el pedido armado en el chat.
 - Nota: `seed/precios_infoauto/precios_infoauto_2026_09.csv` figura modificado en git solo por finales de línea (CRLF); no se incluyó en el commit.
+
+### Sesión 29/09/2026 (chat "Usuarios por agencia", Msg 8) — Pantalla "Señar / vender" desde el menú de la tarjeta
+- **Menú de la tarjeta de Stock (dueño y vendedor):** Ver ficha · Agregar/Quitar de la Red · Compartir por WhatsApp · Publicar · **Señar / vender** (+ "Toma y datos internos" solo dueño).
+- **Señar / vender** (`/stock/<id>/operacion`, `stock.operacion`): la ficha interna mostrando **solo** la operación de venta, con cabecera (foto, auto, precio, estado, "← Volver a Stock"). Si está a la venta muestra 5 opciones: **Señar** (despliega el formulario de seña, con permuta y crédito externo), **Todo contado** (`stock.vender?modo=contado`), **Con permuta** (`?modo=permuta`, ya tildada), **Financiación propia** (simulador con el auto elegido) y **Financiación externa** (`?modo=credito`, crédito de banco/financiera ya tildado). Si está señado: cerrar venta / pasar a financiación propia / cancelar seña; si está vendido: el resumen. Las mismas 5 opciones reemplazan los botones de la sección Venta en la ficha interna completa.
+- Hecho y probado con test_client en el entorno de Claude (la compu de Daniel estaba desconectada): se entregó como parche (`senar_vender.patch`) para aplicar con `git apply`.
+- Archivos: `routes/stock.py`, `templates/stock/detalle.html`, `templates/stock/index.html`, `static/css/style.css` (`?v=20260929a`), `templates/base.html`.
 
 ### Sesión 28/09/2026 noche (chat "Usuarios por agencia", Msg 6) — Ficha comercial al tocar "Ver ficha", link de WhatsApp con datos de la agencia, fotos públicas
 - **Bug encontrado por Daniel:** el cliente que abría el link de la ficha veía las fotos rotas y sin logo. Causa: las fotos/logos se sirven por la ruta `uploads_estaticas` (`/static/uploads/...`) y no estaba en las rutas públicas de `_require_login` → sin sesión redirigía al login. Agregada a `publicas` en `app.py`.

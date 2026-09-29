@@ -101,8 +101,8 @@
     </form>
     <a class="hoja-op" id="op-wsp" href="#" target="_blank" rel="noopener">💬 Compartir por WhatsApp <small>la ficha va sin botón de WhatsApp</small></a>
     <a class="hoja-op" id="op-publicar" href="#">📣 Publicar <small>ficha con botón de WhatsApp, para historias y publicaciones</small></a>
-    {% if es_vendedor %}<a class="hoja-op" id="op-interna" href="#">🧾 Señar / vender <small>datos del vehículo y operación</small></a>
-    {% else %}<a class="hoja-op" id="op-interna" href="#">🔧 Toma y datos internos <small>ficha completa, control económico, fotos, señar/vender</small></a>{% endif %}
+    <a class="hoja-op" id="op-operacion" href="#">🧾 Señar / vender <small>seña, contado, permuta, financiación propia o externa</small></a>
+    {% if not es_vendedor %}<a class="hoja-op" id="op-interna" href="#">🔧 Toma y datos internos <small>ficha completa, control económico y fotos</small></a>{% endif %}
     <button type="button" class="hoja-op hoja-cancelar" data-cerrar>Cancelar</button>
   </div>
 </div>
@@ -120,7 +120,8 @@
       form.action = m.red;
       form.hidden = !m.red_posible && !m.en_red;
       red.textContent = m.en_red ? '🤝 Quitar de la Red' : '🤝 Agregar a la Red';
-      document.getElementById('op-interna').href = m.interna;
+      document.getElementById('op-operacion').href = m.operacion;
+      var interna = document.getElementById('op-interna'); if (interna) interna.href = m.interna;
       hoja.hidden = false;
     }
     document.querySelectorAll('tr[data-menu]').forEach(function (fila) {

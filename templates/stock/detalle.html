@@ -2,7 +2,19 @@
 {% block title %}{{ vehiculo.marca }} {{ vehiculo.modelo }} — Agencieros{% endblock %}
 {% block header %}{{ vehiculo.marca }} {{ vehiculo.modelo }} {{ vehiculo.version }} ({{ vehiculo.anio }}){% endblock %}
 {% block content %}
-{% if nav %}
+{% if solo_venta %}
+<div class="op-cabecera">
+  <a class="tab" href="{{ volver_listado }}">← Volver a Stock</a>
+  <div class="op-auto">
+    <img src="{{ foto_portada }}" alt="">
+    <div>
+      <div class="op-auto-titulo">{{ vehiculo.marca }} {{ vehiculo.modelo }} {{ vehiculo.version or '' }} · {{ vehiculo.anio or '' }}</div>
+      <div class="op-auto-precio">${{ "{:,.0f}".format(vehiculo.valor_publicado or 0).replace(",", ".") }} <span class="badge {{ vehiculo.estado }}">{{ estado_label.get(vehiculo.estado, vehiculo.estado) }}</span></div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% if nav and not solo_venta %}
 <div class="ficha-nav">
   {% if nav.anterior %}<a class="btn btn-secondary btn-sm" id="ficha-anterior" href="{{ url_for('stock.detalle', vehiculo_id=nav.anterior, estado=nav.estado) }}">‹ Anterior</a>{% else %}<span class="btn btn-secondary btn-sm ficha-nav-off">‹ Anterior</span>{% endif %}
   <span class="ficha-nav-pos">{{ nav.pos }} de {{ nav.total }}</span>
@@ -27,6 +39,7 @@
   })();
 </script>
 {% endif %}
+{% if not solo_venta %}
 <div class="grid-2">
   <div class="panel">
     <h2>
@@ -85,9 +98,10 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 <div class="panel">
-  <h2>Venta</h2>
+  <h2>{{ 'Señar / vender' if solo_venta else 'Venta' }}</h2>
   {% set m = "{:,.0f}" %}
   {% if vehiculo.estado == 'vendido' %}
     {% if plan_cierre %}
@@ -161,16 +175,15 @@
     {% endif %}
 
   {% else %}
-    <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
-      <b>Vender:</b> el comprador paga hoy, en efectivo, con un vehículo en permuta y/o con un crédito externo (banco o financiera).
-      <b>Vender con financiación propia:</b> el saldo lo paga en cuotas con tu plan (te lleva al simulador con este vehículo ya elegido).
-      También podés recibir una seña.
-    </p>
-    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <a class="btn btn-primary btn-sm" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id) }}">✅ Vender</a>
-      <a class="btn btn-primary btn-sm" href="{{ url_for('financiacion.simulador', vehiculo_id=vehiculo.id) }}">🏦 Vender con financiación propia</a>
+    <p style="color:var(--text-dim); font-size:13px; margin-top:0;">Elegí cómo se hace la operación. Las formas de pago se pueden combinar al cerrar (efectivo + permuta + crédito externo).</p>
+    <div class="op-opciones">
+      <a class="op-opcion" href="#recibir-sena" id="op-senar">🤝 <b>Señar</b><small>Reservar con una seña; se puede anotar la permuta y el crédito externo</small></a>
+      <a class="op-opcion" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id, modo='contado') }}">💵 <b>Todo contado</b><small>Paga el total ahora en efectivo o transferencia</small></a>
+      <a class="op-opcion" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id, modo='permuta') }}">🔄 <b>Con permuta</b><small>Entrega un vehículo como parte de pago</small></a>
+      <a class="op-opcion" href="{{ url_for('financiacion.simulador', vehiculo_id=vehiculo.id) }}">🏦 <b>Financiación propia</b><small>El saldo en cuotas con tu plan (simulador con este auto elegido)</small></a>
+      <a class="op-opcion" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id, modo='credito') }}">🏛️ <b>Financiación externa</b><small>Crédito de banco o financiera que le paga a la agencia</small></a>
     </div>
-    <details style="margin-top:14px;">
+    <details id="recibir-sena" style="margin-top:14px;">
       <summary style="cursor:pointer; color:var(--gold-light); font-size:13px;">🤝 Recibir una seña</summary>
       <form method="post" action="{{ url_for('stock.senar', vehiculo_id=vehiculo.id) }}" style="margin-top:12px;">
         <div class="grid-2">
@@ -315,6 +328,15 @@
         </p>
       </form>
     </details>
+    <script>
+      (function () {
+        var b = document.getElementById('op-senar'), d = document.getElementById('recibir-sena');
+        if (!b || !d) return;
+        function abrir(e) { if (e) e.preventDefault(); d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        b.addEventListener('click', abrir);
+        if (location.hash === '#recibir-sena') abrir();
+      })();
+    </script>
     <script src="{{ url_for('static', filename='js/autocomplete.js') }}"></script>
     <script src="{{ url_for('static', filename='js/catalogo.js') }}"></script>
     <script>
@@ -324,6 +346,7 @@
   {% endif %}
 </div>
 
+{% if not solo_venta %}
 <div class="panel">
   <h2>Fotos del vehículo</h2>
   {% if fotos %}
@@ -345,4 +368,5 @@
     <button type="submit" class="btn btn-primary btn-sm">Subir fotos</button>
   </form>
 </div>
+{% endif %}
 {% endblock %}

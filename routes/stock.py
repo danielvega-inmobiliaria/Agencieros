@@ -136,6 +136,7 @@ def index():
             "titulo": titulo,
             "ver": url_for("stock.ficha", vehiculo_id=v["id"], wa=0, nav=estado_filtro, volver=volver_listado),
             "interna": url_for("stock.detalle", vehiculo_id=v["id"], estado=estado_filtro),
+            "operacion": url_for("stock.operacion", vehiculo_id=v["id"], estado=estado_filtro),
             "publicar": url_for("stock.ficha", vehiculo_id=v["id"], volver=url_for("stock.index", estado=estado_filtro)),
             "whatsapp": "https://wa.me/?text=" + quote_plus(texto),
             "red": url_for("stock.red", vehiculo_id=v["id"]),
@@ -286,8 +287,17 @@ def nuevo():
     )
 
 
+@bp.route("/<int:vehiculo_id>/operacion")
+def operacion(vehiculo_id):
+    """Señar / vender (29/09/2026, pedido de Daniel): desde el menú de la
+    tarjeta, una pantalla solo con la operación de venta y todas sus
+    opciones (señar, todo contado, permuta, financiación propia o externa).
+    Es la misma ficha interna mostrando únicamente la sección de venta."""
+    return detalle(vehiculo_id, solo_venta=True)
+
+
 @bp.route("/<int:vehiculo_id>")
-def detalle(vehiculo_id):
+def detalle(vehiculo_id, solo_venta=False):
     vehiculo = query(
         "SELECT * FROM vehiculos WHERE id = ? AND agencia_id = ?", (vehiculo_id, session["agencia_id"]), one=True
     )
@@ -345,6 +355,8 @@ def detalle(vehiculo_id):
         }
     return render_template(
         "stock/detalle.html", vehiculo=vehiculo, rent=_rentabilidad(vehiculo), estado_label=ESTADO_LABEL, fotos=fotos,
+        solo_venta=solo_venta, foto_portada=foto_principal(vehiculo_id),
+        volver_listado=url_for("stock.index", estado=request.args.get("estado") or "todos"),
         cargado_por=nombres.get(vehiculo["cargado_por_id"]), vendido_por=nombres.get(vehiculo["vendido_por_id"]),
         nav=nav,
         permuta_op=permuta_op,
@@ -952,7 +964,7 @@ def vender(vehiculo_id):
             "cliente_telefono": (venta["cliente_telefono"] if venta else "") or "",
             "precio_venta": _entero((venta["precio_venta"] if venta and venta["precio_venta"] else vehiculo["valor_publicado"]) or 0),
             "fecha_venta": str(date.today()),
-            "permuta_hay": "1" if venta and (venta["permuta_marca"] or venta["permuta_valor"]) else "",
+            "permuta_hay": "1" if (venta and (venta["permuta_marca"] or venta["permuta_valor"])) or request.args.get("modo") == "permuta" else "",
             "permuta_tasacion_id": (venta["permuta_tasacion_id"] if venta else None) or "",
             "permuta_descripcion": (venta["permuta_descripcion"] if venta else "") or "",
             "permuta_valor": _entero(venta["permuta_valor"]) if venta else "",
@@ -962,7 +974,7 @@ def vender(vehiculo_id):
             "permuta_version": (venta["permuta_version"] if venta else "") or "",
             "permuta_anio": (venta["permuta_anio"] if venta else "") or "",
             "permuta_km": _entero(venta["permuta_km"]) if venta else "",
-            "credito_hay": "1" if venta and venta["credito_monto"] else "",
+            "credito_hay": "1" if (venta and venta["credito_monto"]) or request.args.get("modo") == "credito" else "",
             "credito_origen": (venta["credito_origen"] if venta else "") or "",
             "credito_monto": _entero(venta["credito_monto"]) if venta else "",
         })
