@@ -189,6 +189,7 @@
     <details id="recibir-sena" style="margin-top:14px;">
       <summary style="cursor:pointer; color:var(--gold-light); font-size:13px;">🤝 Recibir una seña</summary>
       <form method="post" action="{{ url_for('stock.senar', vehiculo_id=vehiculo.id) }}" style="margin-top:12px;">
+        {% if solo_venta %}<input type="hidden" name="desde" value="operacion">{% endif %}
         <div class="grid-2">
           <div><label>Nombre de quien deja la seña</label><input type="text" name="cliente_nombre" required></div>
           <div><label>Teléfono (opcional)</label><input type="text" name="cliente_telefono"></div>
@@ -299,11 +300,14 @@
               $('sena-credito-externo').hidden = propia;
               $('sena-credito-propia').hidden = !propia;
               montoCr.required = chkCr.checked && !propia;
-              if (!chkCr.checked || propia) montoCr.value = '';
+              if (!chkCr.checked) montoCr.value = '';
               var precio = num(form.elements['precio_venta']), sena = num(form.elements['sena']);
               var contado = chkC.checked ? num($('sena_contado_previsto')) : 0;
               var permuta = chkP.checked ? num($('sena_permuta_valor')) : 0;
               var credito = chkCr.checked && !propia ? num(montoCr) : 0;
+              // Permuta sin tasación: Año, Marca y Modelo obligatorios (así no rebota al guardar).
+              var sinTas = chkP.checked && !$('sena_permuta_tasacion').value;
+              ['permuta_anio', 'permuta_marca', 'permuta_modelo'].forEach(function (k) { var el = $(k); if (el) el.required = sinTas; });
               var out = $('sena-saldo');
               if (!precio) { out.textContent = 'Cargá el precio acordado para ver el saldo.'; return; }
               var saldo = precio - sena - contado - permuta - credito;

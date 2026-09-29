@@ -139,6 +139,12 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - **MercadoLibre:** sigue pendiente pedir acceso — texto para el pedido armado en el chat.
 - Nota: `seed/precios_infoauto/precios_infoauto_2026_09.csv` figura modificado en git solo por finales de línea (CRLF); no se incluyó en el commit.
 
+### Sesión 29/09/2026 (chat "Usuarios por agencia", Msg 16) — Fixes de la seña probada por Daniel
+- **"Nuestro" seguía mostrando Banco/financiera y Monto (y el monto no dejaba escribir):** el `hidden` no ocultaba porque `.grid-2` tiene `display:grid`. Regla global `[hidden] { display: none !important; }` al principio de `style.css` (arregla también el cierre de venta y cualquier otro `hidden` sobre elementos con display propio). El monto ya no se borra al tipear.
+- **Al guardar volvía a la ficha interna con el error de la permuta:** ahora, con permuta tildada y sin tasación elegida, Año/Marca/Modelo son obligatorios en el mismo formulario (el navegador avisa antes de enviar), y si igual hay un error del servidor vuelve a **Señar / vender** (`desde=operacion`) en la sección de la seña, no a la ficha interna.
+- Probado: error → `/stock/<id>/operacion#recibir-sena`; con datos completos y "Nuestro" → simulador con $2.900.000 a financiar (8.900.000 − 1.000.000 − 2.500.000 − 2.500.000).
+- Archivos: `static/css/style.css` (`?v=20260929f`), `templates/base.html`, `templates/stock/detalle.html`, `routes/stock.py`.
+
 ### Sesión 29/09/2026 (chat "Usuarios por agencia", Msg 14) — Toma: calificaciones con color y vista compacta por sección
 - **Formulario de la toma:** cada desplegable se pinta según lo elegido — **Bueno verde, Regular amarillo, Malo rojo** (No posee / Sin evaluar quedan neutros), en vivo al cambiarlo.
 - **Toma ya cargada (Paso 1 en la ficha de la toma):** se sacó la tabla con títulos PUNTO / CALIFICACIÓN / COSTO / COMENTARIO (que en el celu ocupaba una tarjeta de 4 renglones por punto). Ahora **una línea por punto** (ajuste de Daniel, Msg 15): **el punto y, a la derecha, el costo, los dos en el color de la calificación**; si no tiene costo va la calificación en su lugar ("Bueno" en verde). Sin la palabra de la calificación en el medio, para que no pase a 2 renglones (nombres largos se cortan con "…"). Si tiene comentario, tocando la línea se despliega. Agrupado por sección igual que el formulario: **Mecánica y carrocería / Cubiertas / Accesorios y equipamiento**, con el subtotal de costos de cada sección en el título (`routes/tomas.py::_grupos_cargados`).

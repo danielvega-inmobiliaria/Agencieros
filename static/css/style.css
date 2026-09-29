@@ -1,3 +1,5 @@
+/* El atributo hidden siempre oculta, aunque la clase tenga display propio (ej. .grid-2). */
+[hidden] { display: none !important; }
 :root {
   --navy-bg: #0b1420;
   --navy-card: #131e2e;

@@ -890,7 +890,10 @@ def senar(vehiculo_id):
         error = "No queda saldo para financiar: revisá los montos o destildá el crédito."
     if error:
         flash(error, "error")
-        return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
+        # Vuelve a la pantalla desde donde se señó (Señar / vender o la ficha interna).
+        destino = (url_for("stock.operacion", vehiculo_id=vehiculo_id) if f.get("desde") == "operacion"
+                   else url_for("stock.detalle", vehiculo_id=vehiculo_id))
+        return redirect(destino + "#recibir-sena")
 
     hoy = str(date.today())
     p = permuta or {}
