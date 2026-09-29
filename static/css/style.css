@@ -698,3 +698,21 @@ form textarea { min-height: 80px; }
 .sena-como-paga { margin: 14px 0; }
 .sena-como-paga-titulo { font-weight: 600; color: var(--gold-light); }
 .sena-saldo { font-size: 13px; color: var(--gold-light); margin: 6px 0 12px; }
+
+/* Toma: calificaciones con color y vista compacta por sección (29/09/2026) */
+.calif-bueno { color: var(--green) !important; }
+.calif-regular { color: #f2c94c !important; }
+.calif-malo { color: var(--red) !important; }
+.calif-otro { color: var(--text-dim); }
+select.calif-bueno, select.calif-regular, select.calif-malo { font-weight: 600; }
+.puntos-grupo { margin-top: 16px; }
+.puntos-grupo-titulo { font-weight: 700; color: var(--gold-light); font-size: 14px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.puntos-grupo-titulo span { color: var(--text-dim); font-weight: 400; }
+.punto-linea { border-bottom: 1px solid var(--border); }
+.punto-linea summary, .punto-fila { display: flex; align-items: center; gap: 10px; padding: 9px 2px; list-style: none; cursor: default; font-size: 14px; }
+.punto-linea summary { cursor: pointer; }
+.punto-linea summary::-webkit-details-marker { display: none; }
+.punto-nombre { flex: 1; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.punto-calif { font-size: 12.5px; min-width: 62px; }
+.punto-costo { flex: 0 0 auto; text-align: right; font-weight: 600; white-space: nowrap; }
+.punto-comentario { padding: 0 2px 10px; color: var(--text-dim); font-size: 13px; }

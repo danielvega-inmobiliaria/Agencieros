@@ -194,6 +194,23 @@ def _puntos_con_costo(toma):
     ]
 
 
+def _grupos_cargados(toma):
+    """Puntos evaluados agrupados como en el formulario (Mecánica y
+    carrocería / Cubiertas / Accesorios y equipamiento) -- vista compacta de
+    una toma ya cargada (29/09/2026)."""
+    grupos = []
+    for nombre, puntos in GRUPOS_PUNTOS:
+        filas = [
+            {"label": label, "calificacion": toma[codigo], "costo": toma[f"costo_{codigo}"],
+             "comentario": toma[f"comentario_{codigo}"]}
+            for codigo, label in puntos if toma[codigo]
+        ]
+        if filas:
+            grupos.append({"nombre": nombre, "puntos": filas,
+                           "costo": sum(f["costo"] or 0 for f in filas)})
+    return grupos
+
+
 def _puntos_a_reparar(toma):
     """Solo los puntos del Paso 1 que tienen costo de reparación cargado —
     para el resumen de 'qué hay que arreglar' que se muestra en el Paso 3
@@ -566,6 +583,7 @@ def detalle(toma_id):
         "tomas/detalle.html",
         toma=toma,
         puntos_data=_puntos_con_costo(toma),
+        grupos_cargados=_grupos_cargados(toma),
         fotos_cargadas=fotos_cargadas,
         total_marcadores=len(marcadores),
         estado_mecanico_sugerido=_calcular_estado_mecanico(toma),

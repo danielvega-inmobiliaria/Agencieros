@@ -9,17 +9,26 @@
   </div>
   {% set puntos_cargados = puntos_data | selectattr('calificacion') | list %}
   {% if puntos_cargados %}
-  <table class="tabla-responsive" style="margin-top:16px;">
-    <tr class="fila-header"><th>Punto</th><th>Calificación</th><th>Costo estimado</th><th>Comentario</th></tr>
-    {% for p in puntos_cargados %}
-    <tr>
-      <td data-label="Punto"><b>{{ p.label }}</b></td>
-      <td data-label="Calificación">{{ p.calificacion }}</td>
-      <td data-label="Costo estimado">{% if p.costo %}${{ "{:,.0f}".format(p.costo).replace(",", ".") }}{% else %}-{% endif %}</td>
-      <td data-label="Comentario">{{ p.comentario or '-' }}</td>
-    </tr>
+  {% set clase_calif = {'Bueno': 'calif-bueno', 'Regular': 'calif-regular', 'Malo': 'calif-malo'} %}
+  {% for g in grupos_cargados %}
+  <div class="puntos-grupo">
+    <div class="puntos-grupo-titulo">{{ g.nombre }}{% if g.costo %} <span>· ${{ "{:,.0f}".format(g.costo).replace(",", ".") }}</span>{% endif %}</div>
+    {% for p in g.puntos %}
+    {% set cc = clase_calif.get(p.calificacion, 'calif-otro') %}
+    {# Una sola línea: el punto en color y, a la derecha, el costo en el mismo color
+       (o la calificación si no tiene costo: "Bueno" en verde). #}
+    {% set derecha %}{% if p.costo %}${{ "{:,.0f}".format(p.costo).replace(",", ".") }}{% else %}{{ p.calificacion }}{% endif %}{% endset %}
+    {% if p.comentario %}
+    <details class="punto-linea">
+      <summary><span class="punto-nombre {{ cc }}">{{ p.label }}</span><span class="punto-costo {{ cc }}">{{ derecha }} ▾</span></summary>
+      <div class="punto-comentario">{{ p.comentario }}</div>
+    </details>
+    {% else %}
+    <div class="punto-linea"><div class="punto-fila"><span class="punto-nombre {{ cc }}">{{ p.label }}</span><span class="punto-costo {{ cc }}">{{ derecha }}</span></div></div>
+    {% endif %}
     {% endfor %}
-  </table>
+  </div>
+  {% endfor %}
   <p style="color:var(--text-dim); font-size:12px; margin-top:6px;">
     {{ puntos_cargados | length }}/{{ puntos_data | length }} puntos evaluados.
   </p>

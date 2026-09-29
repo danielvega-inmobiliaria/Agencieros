@@ -148,6 +148,11 @@
     var detalle = select.closest('.punto-check').querySelector('.punto-check-detalle');
     var mostrar = ['Regular', 'Malo', 'Si'].indexOf(select.value) !== -1;
     detalle.style.display = mostrar ? 'flex' : 'none';
+    // Colores (29/09/2026): Bueno verde, Regular amarillo, Malo rojo.
+    select.classList.remove('calif-bueno', 'calif-regular', 'calif-malo');
+    var c = {'Bueno': 'calif-bueno', 'Regular': 'calif-regular', 'Malo': 'calif-malo'}[select.value];
+    if (c) select.classList.add(c);
   }
+  document.querySelectorAll('.punto-check select').forEach(actualizarPuntoCheck);
 </script>
 {% endblock %}
