@@ -1534,6 +1534,16 @@ def _migrar_sucursales(conn):
         )
 
 
+def _migrar_planes(conn):
+    """Plan por agencia (30/09/2026, paso 5). Todas arrancan en 'libre' (sin
+    límites) mientras la app es gratis; el admin lo cambia desde el Panel.
+    Ver utils/planes.py."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(agencias)")}
+    if "plan" not in cols:
+        conn.execute("ALTER TABLE agencias ADD COLUMN plan TEXT DEFAULT 'libre'")
+    conn.execute("UPDATE agencias SET plan = 'libre' WHERE plan IS NULL OR plan = ''")
+
+
 def asignar_existentes_a_sucursal(conn, agencia_id, sucursal_id):
     """Lo que la agencia tenía sin sucursal pasa a `sucursal_id` (se usa al
     crear la primera sucursal)."""
@@ -1609,6 +1619,7 @@ def init_db():
     _migrar_mensajes_conversacion(conn)
     _migrar_usuarios_agencia(conn)
     _migrar_sucursales(conn)
+    _migrar_planes(conn)
     _crear_superadmin_desde_env(conn)
     import mercado_ml
     mercado_ml.asegurar_tablas(conn)

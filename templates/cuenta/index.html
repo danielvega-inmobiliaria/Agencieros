@@ -10,6 +10,18 @@
   </p>
 </div>
 
+{% if plan %}
+<div class="panel">
+  <h2 style="margin-top:0;">Tu plan: {{ plan.nombre }}</h2>
+  <table>
+    {% for i in plan["items"] %}
+    <tr><td>{{ i.label|capitalize }}</td><td>{{ i.uso }}{% if i.tope is not none %} de {{ i.tope if i.tope else 'no incluido' }}{% else %} · sin límite{% endif %}</td></tr>
+    {% endfor %}
+  </table>
+  {% if plan.clave == 'libre' %}<p style="color:var(--text-dim); font-size:13px;">Estás en el período de lanzamiento: todo sin límites.</p>{% endif %}
+</div>
+{% endif %}
+
 <div class="panel">
   <h2 style="margin-top:0;">Cambiar contraseña</h2>
   <form method="post" style="max-width:420px;">

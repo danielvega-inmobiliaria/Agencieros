@@ -12,6 +12,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from database import query, execute, get_db, mail_ocupado, asignar_existentes_a_sucursal
 from utils.permisos import ROLES
 from utils.sucursales import sucursales_de, nombres_sucursales
+from utils.planes import puede_agregar, resumen as resumen_plan
 
 bp = Blueprint("cuenta", __name__, url_prefix="/cuenta")
 
@@ -60,7 +61,8 @@ def index():
         flash("Listo, tu contraseña quedó cambiada.", "success")
         return redirect(url_for("cuenta.index"))
 
-    return render_template("cuenta/index.html", yo=yo, es_admin=es_admin, roles=ROLES)
+    plan = resumen_plan(yo["agencia_id"]) if not es_admin and yo["rol"] == "dueno" else None
+    return render_template("cuenta/index.html", yo=yo, es_admin=es_admin, roles=ROLES, plan=plan)
 
 
 def _usuario_de_mi_agencia(usuario_id):
@@ -108,6 +110,8 @@ def usuario_nuevo():
         error = f"La contraseña inicial tiene que tener al menos {MIN_CLAVE} caracteres."
     elif mail_ocupado(get_db(), email):
         error = "Ese mail ya está registrado en AGENCIEROS."
+    else:
+        _, error = puede_agregar(session["agencia_id"], "usuarios")
     if error:
         flash(error, "error")
         filas = query("SELECT u.*, 0 AS cargados, 0 AS vendidos FROM agencia_usuarios u WHERE u.agencia_id = ? ORDER BY u.nombre",
@@ -161,6 +165,8 @@ def usuario_editar(usuario_id):
             flash("No podés desactivarte a vos mismo.", "error")
         elif not activar and u["rol"] == "dueno" and _duenos_activos(excepto_id=u["id"]) == 0:
             flash("La agencia tiene que tener al menos un dueño activo.", "error")
+        elif activar and not u["activo"] and not puede_agregar(session["agencia_id"], "usuarios")[0]:
+            flash(puede_agregar(session["agencia_id"], "usuarios")[1], "error")
         else:
             execute("UPDATE agencia_usuarios SET activo = ? WHERE id = ?", (1 if activar else 0, u["id"]))
             flash(f"{u['nombre']} {'activado' if activar else 'desactivado (ya no puede ingresar)'}.", "success")
@@ -221,6 +227,10 @@ def sucursal_nueva():
     if query("SELECT 1 FROM sucursales WHERE agencia_id = ? AND lower(nombre) = lower(?)", (agencia_id, nombre), one=True):
         flash("Ya hay una sucursal con ese nombre.", "error")
         return redirect(url_for("cuenta.sucursales"))
+    permitido, msg = puede_agregar(agencia_id, "sucursales")
+    if not permitido:
+        flash(msg, "error")
+        return redirect(url_for("cuenta.sucursales"))
     es_primera = not query("SELECT 1 FROM sucursales WHERE agencia_id = ?", (agencia_id,), one=True)
     db = get_db()
     cur = db.execute(
@@ -270,6 +280,11 @@ def sucursal_editar(sucursal_id):
                 return redirect(url_for("cuenta.sucursales"))
             execute("UPDATE agencia_usuarios SET sucursal_id = NULL WHERE sucursal_id = ? AND agencia_id = ?",
                     (sucursal_id, agencia_id))
+        elif not suc["activa"]:
+            permitido, msg = puede_agregar(agencia_id, "sucursales")
+            if not permitido:
+                flash(msg, "error")
+                return redirect(url_for("cuenta.sucursales"))
         execute("UPDATE sucursales SET activa = ? WHERE id = ?", (1 if activar else 0, sucursal_id))
         session.pop("suc_sel", None)
         flash(f"«{suc['nombre']}» {'reactivada' if activar else 'dada de baja (lo vendido sigue en los números)'}.", "success")

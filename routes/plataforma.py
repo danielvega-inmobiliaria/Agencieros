@@ -20,7 +20,7 @@ plataforma; ninguna agencia (tampoco Italia Automotores) entra acá.
 
 from datetime import datetime, timedelta
 
-from flask import Blueprint, abort, render_template, request, redirect, url_for
+from flask import Blueprint, abort, render_template, request, redirect, url_for, flash
 
 from database import query, execute
 
@@ -66,7 +66,7 @@ def _armar_filas():
     duplicar la lógica de agregación en dos lugares."""
     agencias_rows = query(
         """SELECT a.id, a.nombre_agencia, a.email, a.telefono AS telefono_registro,
-                  a.contacto_referencia, a.email_verificado, a.activo,
+                  a.contacto_referencia, a.email_verificado, a.activo, a.plan,
                   a.created_at, a.ultima_actividad,
                   c.telefono AS telefono_comercial, c.direccion, c.ciudad, c.provincia
            FROM agencias a
@@ -117,6 +117,7 @@ def _armar_filas():
         filas.append({
             "id": a["id"],
             "nombre": a["nombre_agencia"],
+            "plan": a["plan"] or "libre",
             "email": a["email"],
             "telefono": a["telefono_comercial"] or a["telefono_registro"],
             "contacto_referencia": a["contacto_referencia"],
@@ -196,7 +197,22 @@ def detalle(agencia_id):
            WHERE agencia_id = ? ORDER BY CASE rol WHEN 'dueno' THEN 0 ELSE 1 END, nombre""",
         (agencia_id,),
     )
-    return render_template("plataforma/detalle.html", f=fila, usuarios=usuarios)
+    from utils.planes import PLANES, resumen
+    return render_template("plataforma/detalle.html", f=fila, usuarios=usuarios,
+                           planes=PLANES, plan=resumen(agencia_id))
+
+
+@bp.route("/agencias/<int:agencia_id>/plan", methods=["POST"])
+def cambiar_plan(agencia_id):
+    """Cambiar el plan de una agencia (30/09/2026, paso 5). Sin cobro
+    automático: el admin lo asigna a mano."""
+    from utils.planes import PLANES
+    plan = request.form.get("plan")
+    if plan not in PLANES or not query("SELECT 1 FROM agencias WHERE id = ?", (agencia_id,), one=True):
+        abort(404)
+    execute("UPDATE agencias SET plan = ? WHERE id = ?", (plan, agencia_id))
+    flash(f"Plan cambiado a {PLANES[plan]['nombre']}.", "success")
+    return redirect(url_for("plataforma.detalle", agencia_id=agencia_id))
 
 
 @bp.route("/mensajes")

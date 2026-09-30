@@ -6,6 +6,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from urllib.parse import quote_plus
 
 from utils.permisos import es_vendedor, nombres_usuarios
+from utils.planes import puede_agregar
 from utils.sucursales import (filtro_sql, sucursal_seleccionada, sucursal_para_alta, contexto_selector,
                                sucursales_de, nombres_sucursales)
 from database import query, execute, foto_principal, obtener_catalogo, obtener_config_agencia, TIPOS_CARROCERIA
@@ -215,6 +216,13 @@ def nuevo():
         propiedad = f.get("propiedad", "propio")
         es_consignacion = propiedad == "consignacion"
         agencia_id = session["agencia_id"]
+        # Límite de unidades del plan (30/09/2026). Una unidad que entra
+        # como Vendido no ocupa lugar.
+        if f.get("estado") != "vendido":
+            permitido, msg = puede_agregar(agencia_id, "unidades")
+            if not permitido:
+                flash(msg, "error")
+                return redirect(url_for("stock.index"))
         # Meta Pixel (21/09/2026): si esta agencia todavia no tenia ningun
         # vehiculo cargado, este alta es su "primer vehiculo" -- se chequea
         # ANTES del insert de abajo para no contarlo a el mismo.
@@ -294,6 +302,10 @@ def nuevo():
 
         return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
+    permitido, msg = puede_agregar(session["agencia_id"], "unidades")
+    if not permitido and prefill["estado"] != "vendido":
+        flash(msg, "error")
+        return redirect(url_for("stock.index"))
     origen, item_id = _parse_permuta_origen(prefill["permuta_origen"])
     return render_template(
         "stock/form.html", vehiculo=None, prefill=prefill, estados=ESTADOS, estado_label=ESTADO_LABEL,
@@ -1287,6 +1299,8 @@ def red(vehiculo_id):
         flash(f"{vehiculo['marca']} {vehiculo['modelo']} quitado de la Red de Agencieros.", "success")
     elif vehiculo["estado"] == "vendido":
         flash("Un vehículo vendido no se puede ofrecer en la Red.", "error")
+    elif not puede_agregar(vehiculo["agencia_id"], "red")[0]:
+        flash(puede_agregar(vehiculo["agencia_id"], "red")[1], "error")
     else:
         publicar_vehiculo(vehiculo)
         flash(f"{vehiculo['marca']} {vehiculo['modelo']} publicado en la Red de Agencieros"

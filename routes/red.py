@@ -83,6 +83,13 @@ def nueva():
         # cuenta logueada, así una agencia no puede publicar haciéndose
         # pasar por otra.
         agencia_nombre = session.get("agencia_nombre", "")
+        if f.get("tipo") != "busco":
+            # Límite de publicaciones del plan (30/09/2026): solo lo que se ofrece.
+            from utils.planes import puede_agregar
+            permitido, msg = puede_agregar(agencia_id, "red")
+            if not permitido:
+                flash(msg, "error")
+                return redirect(url_for("red.index"))
         execute(
             """INSERT INTO red_publicaciones
                (agencia_id, agencia_nombre, tipo, marca, modelo, version, anio, km, precio, descripcion, contacto)

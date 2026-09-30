@@ -85,7 +85,7 @@
           {% if not f.activa %}<span class="badge en_reparacion">Inactiva</span>{% endif %}
         </div>
       </td>
-      <td data-label="Agencia">{{ f.nombre }}</td>
+      <td data-label="Agencia">{{ f.nombre }}{% if f.plan != "libre" %} <span class="badge badge-sucursal">{{ f.plan|capitalize }}</span>{% endif %}</td>
       <td data-label="Ubicación">
         {% if f.ciudad or f.provincia %}{{ f.ciudad or "" }}{% if f.ciudad and f.provincia %}, {% endif %}{{ f.provincia or "" }}{% else %}<span style="color:var(--text-dim);">Sin cargar</span>{% endif %}
       </td>

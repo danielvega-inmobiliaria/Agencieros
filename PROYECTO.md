@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 29/09/2026 — 22:21 ART (chat "Sucursales", Msg 1: paso 3 sucursales hecho y probado, falta push; próximo: paso 5 control de la Red)_
+_Última actualización: 30/09/2026 — 16:20 ART (chat "Sucursales", Msg 6: paso 5 límites por plan hecho y probado, falta push; pasos 1-5 de "reorganizar cuentas y Red" completos)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -71,9 +71,31 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ## Pendientes
 
 ### 🔴 CRÍTICO
-- [ ] **Redefinir el diferencial real de AGENCIEROS a la luz de la competencia** (deConcesionarias, MOBU y ahora también **LUCY.CRM** — ver sección de arriba) antes de seguir construyendo funcionalidades — decidir si el foco es precio bajo para agencias chicas, red abierta entre independientes, o un nicho distinto.
+- [x] ~~Redefinir el diferencial~~ → **Decidido 30/09/2026** (ver "Decisiones de negocio" abajo): precio de entrada bajo para el agenciero chico/independiente + Red abierta entre agencias, arrancando por Rosario.
 - [x] ~~Definir fuente real de datos de precios~~ → **Decidido 14/09/2026: carga manual por ahora** (no se va a integrar API de InfoAuto en esta etapa). Sigue pendiente como tarea operativa, no de producto: mantener `precios_base` actualizado a mano.
-- [ ] **Decidir modelo de negocio/planes de suscripción** — Decidido 14/09/2026: va a ser **con planes de suscripción** (no freemium, no por transacción). Falta definir: cantidad de planes, qué incluye cada uno (usuarios, vehículos en stock, módulos), y precios — usar como referencia de mercado a deConcesionarias ($80k-$1,9M/mes), MOBU y ahora LUCY.CRM (Starter $250k → Enterprise $435,6k/mes), todos muy por encima de los ~$16.800 que hoy paga un agenciero chico solo por la guía de precios — ahí está el hueco de precio de entrada que definimos como diferencial.
+- [x] ~~Decidir planes de suscripción~~ → **Decidido 30/09/2026** (ver "Decisiones de negocio" abajo): 3 planes $24.990 (a confirmar) / $49.990 / $74.990.
+
+### 💼 Decisiones de negocio (30/09/2026, chat "Sucursales", Msg 4-5)
+- **Diferencial:** *"Por lo que pagás la guía, tenés la guía + la gestión de tu agencia"*. Público: agenciero chico/independiente (1-3 personas, pocos autos) que hoy paga la guía (**InfoAuto septiembre 2026: $17.300/mes**) y maneja el resto con Excel y WhatsApp. Lo que lo sostiene: **precio de entrada bajo** (deConcesionarias arranca en $80.000, LUCY en $250.000) + **Red abierta** entre agencias multimarca. No competir por cantidad de funciones (multipublicador, bot IA, subastas).
+- **Arranque geográfico: Rosario y alrededores** → hay que **modificar la campaña de Meta Ads** (segmentación Rosario).
+- **Licencia de precios:** por ahora **no depender de la licencia de InfoAuto**.
+- **Planes (mensuales):**
+
+| | Agenciero | Agencia | Multisucursal |
+|---|---|---|---|
+| Precio | **$24.990** (Daniel escribió 254.990: a confirmar) | **$49.990** | **$74.990** |
+| Usuarios | 1 (dueño) | 1 dueño + 2 vendedores | ilimitados |
+| Unidades en stock | 15 | 30 | ilimitadas |
+| Sucursales | no | no | 2 |
+| Consulta de precios, Stock, Toma y tasación, seña/venta, Pedidos con matches, **Financiación propia**, ver la Red | ✅ | ✅ | ✅ |
+| Publicar en la Red | 3 unidades | 6 unidades | ilimitado |
+
+- **Prueba gratis:** se **publica** como 30 días, pero **en los hechos queda libre (sin cobrar ni cortar)** hasta que crezca la Red.
+- **Pago anual:** 2 meses de regalo (paga 10, usa 12).
+- **Red (paso 5):** verla es gratis para todos; publicar va según el plan (3 / 6 / ilimitado). Destacados pagos: idea a futuro, no decidida.
+- **Precios: NO se publican por ahora** (Daniel 30/09/2026): que la app se empiece a usar y conocer. Ni en la landing ni en la app.
+- **Plan de arranque:** toda agencia (existente y nueva) queda en **"Libre (lanzamiento)"**, sin límites. Los límites se aplican recién cuando el admin le cambia el plan desde el Panel.
+- **Pendientes que salen de esto:** (1) confirmar el precio del plan Agenciero (Daniel escribió 254.990); (2) ✅ límites por plan en la app (30/09, Msg 6); (3) campaña Meta Ads para Rosario, sin precios → **chat aparte** (copy de arranque dado en el Msg 6 de este chat); (4) definir qué pasa con la consulta de precios si no se usa la licencia (hoy muestra los precios transcriptos de la revista InfoAuto).
 
 ### 🟡 IMPORTANTE
 - [ ] **PRÓXIMO CHAT (pedido de Daniel 28/09/2026) — reorganizar cuentas y Red. Se deja en pausa la carga de la revista.** Alcance:
@@ -81,7 +103,7 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
   2. **Usuarios por agencia (multiusuario):** tabla `usuarios` (agencia_id, nombre, mail, password, rol: dueño/vendedor, sucursal_id opcional). El login pasa de agencia a usuario. Vendedor sin costos/ganancia. Registrar quién cargó/vendió cada unidad.
   3. ✅ **Hecho 29/09/2026 (chat "Sucursales", Msg 1 — falta push).** **Sucursales:** tabla `sucursales` + `sucursal_id` en vehículos/ventas/financiaciones; filtro por sucursal en Stock y Dashboard; vista consolidada para el dueño.
   4. **Check "Red" en el listado de Stock:** publica/despublica la unidad en la Red sin recargarla. **Criterio corregido por Daniel 28/09/2026:** al **señar** la publicación queda en la Red marcada como **"Señado"** (no se da de baja); se da de baja sola **solo al vender** (y si se cancela la seña, vuelve a "Disponible").
-  5. **Control de operaciones de la Red:** decidir modelo (comisión por operación vs. cobrar por publicar vs. mixto, ver análisis en el ítem de abajo) e implementar lo mínimo que lo sostenga.
+  5. ✅ **Hecho 30/09/2026 (chat "Sucursales", Msg 6 — falta push): límites por plan + Red (ver planes en "Decisiones de negocio").** **Control de operaciones de la Red:** decidir modelo (comisión por operación vs. cobrar por publicar vs. mixto, ver análisis en el ítem de abajo) e implementar lo mínimo que lo sostenga.
   Orden sugerido: 1 → 2 → 3 → 4 → 5 (cada paso sobre la base del anterior; probar con 2 agencias de prueba para no cruzar datos).
   **Estado al 28/09/2026 (cierre chat "Cuentas y Red"):** paso 1 ✅ en producción. **Próximo chat: paso 2 (usuarios por agencia).**
   **29/09/2026 (cierre chat "Usuarios por agencia"):** pasos 1, 2 y 4 ✅ en producción (más pedidos publicables en la Red). **Próximo chat: paso 3 (sucursales)**, después 5 (control de la Red).
@@ -125,6 +147,15 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 30/09/2026 (chat "Sucursales", Msg 6) — Paso 5: planes y límites (incluida la Red)
+- **`agencias.plan`** (`database._migrar_planes`, default `'libre'`; todas las existentes quedan en Libre). **`utils/planes.py`**: `PLANES` (libre / agenciero / agencia / multisucursal con topes de usuarios, unidades, sucursales y Red), `uso()`, `puede_agregar()` y `resumen()`. Sin precios en el código visible.
+- **Qué cuenta:** usuarios activos; unidades en stock = todo lo no vendido (señados incluidos); sucursales activas; Red = publicaciones activas que **ofrecen** (unidades de Stock + "Ofrezco" manual). Las búsquedas ("Busco", manuales o desde Pedidos) son **libres**.
+- **Dónde se frena** (con mensaje "Llegaste al máximo de tu plan X… escribinos desde Consultas y avisos"): alta de vehículo (al abrir el formulario y al guardar; entrar directo como Vendido no cuenta), alta y reactivación de usuario, alta y reactivación de sucursal, "Agregar a la Red" desde Stock y publicación manual "Ofrezco" en la Red. Si una agencia queda por encima al bajarle el plan, no se borra nada: solo no puede sumar más.
+- **Panel de Agencias → ficha de la agencia:** tarjeta "Plan" con selector (Cambiar plan → `plataforma.cambiar_plan`) y uso vs. tope de cada recurso (en rojo si está excedido). En el listado, badge con el plan si no es Libre.
+- **Mi cuenta (dueño):** tarjeta "Tu plan" con el uso de cada recurso (sin precios); en Libre dice "período de lanzamiento: todo sin límites".
+- Probado con test_client sobre una copia de la base: Libre sin topes; admin pasa a Agenciero → tope de 15 unidades (GET y POST), 1 usuario, sin sucursales, 3 en la Red (desde Stock y manual), "Busco" libre; Multisucursal → máx. 2 sucursales y unidades sin tope. Test de sucursales del paso 3 repetido OK.
+- Archivos: `database.py`, `utils/planes.py` (nuevo), `routes/cuenta.py`, `routes/stock.py`, `routes/red.py`, `routes/plataforma.py`, `templates/cuenta/index.html`, `templates/plataforma/detalle.html`, `templates/plataforma/agencias.html`.
 
 ### Sesión 30/09/2026 (chat precios revista, Msg 10) — Precios Sep-2026 págs. 69-72
 - **Chevrolet completa** (Onix, S10, Silverado, Prisma, Sonic, Spark, Spin, Tracker, Trailblazer, Vectra, Zafira) y **Chrysler/Jeep** (300 C, Caravan, Crossfire; Jeep Cherokee, Commander, Compass, Gladiator, Grand Cherokee — Jeep va con marca "Jeep" en el CSV): **266 versiones / 953 precios**. Probado con base temporal. Jeep sigue en la pág. 73.

@@ -39,6 +39,21 @@
   </div>
 
   <div class="panel">
+    <h2>Plan: {{ plan.nombre }}</h2>
+    <form method="post" action="{{ url_for('plataforma.cambiar_plan', agencia_id=f.id) }}" style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+      <select name="plan">
+        {% for k, p in planes.items() %}<option value="{{ k }}" {{ 'selected' if plan.clave == k else '' }}>{{ p.nombre }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-secondary btn-sm" type="submit">Cambiar plan</button>
+    </form>
+    <table>
+      {% for i in plan["items"] %}
+      <tr><td>{{ i.label|capitalize }}</td><td style="{{ 'color:var(--red);' if i.excedido else '' }}">{{ i.uso }} / {{ 'sin límite' if i.tope is none else ('no incluye' if i.tope == 0 else i.tope) }}{% if i.excedido %} (excedido){% endif %}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="panel">
     <h2>Usuarios ({{ usuarios|length }})</h2>
     <table>
       {% for u in usuarios %}
