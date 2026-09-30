@@ -2,6 +2,7 @@
 {% block title %}Stock — Agencieros{% endblock %}
 {% block header %}Stock de vehículos{% endblock %}
 {% block content %}
+{% include "partials/selector_sucursal.html" %}
 <div class="tabs">
   <a class="tab {{ 'active' if estado_filtro == 'todos' else '' }}" href="{{ url_for('stock.index', estado='todos', **filtros) }}">Todos ({{ conteos.values()|sum - conteos.get('vendido', 0) }})</a>
   {% for e in estados %}
@@ -58,7 +59,7 @@
     {% for v in vehiculos %}
     <tr class="fila-vehiculo-propio" data-menu="{{ v.id }}">
       <td class="foto-cell"><img class="foto-mini" src="{{ foto_principal(v.id) }}" alt=""></td>
-      <td data-label="Vehículo">{{ v.marca }} {{ v.modelo }} {{ v.version }}</td>
+      <td data-label="Vehículo">{{ v.marca }} {{ v.modelo }} {{ v.version }}{% if nombres_suc.get(v.sucursal_id) %} <span class="badge badge-sucursal">{{ nombres_suc[v.sucursal_id] }}</span>{% endif %}</td>
       <td data-label="Año">{{ v.anio }}</td>
       <td data-label="Precio">${{ "{:,.0f}".format(v.valor_publicado or 0).replace(",", ".") }}</td>
       <td data-label="Disponibilidad"><span class="badge {{ v.estado }}">{{ estado_label[v.estado] }}</span>{% if menu[v.id].en_red %} <span class="badge badge-red">En Red</span>{% endif %}</td>
@@ -67,13 +68,13 @@
           <img class="foto-mini" src="{{ foto_principal(v.id) }}" alt="">
           <div class="fila-compacta-texto">
             {{ v.marca }} {{ v.modelo }} {{ v.version }} - {{ v.anio }} - ${{ "{:,.0f}".format(v.valor_publicado or 0).replace(",", ".") }}
-            <span class="badge {{ v.estado }}">{{ estado_label[v.estado] }}</span>{% if menu[v.id].en_red %} <span class="badge badge-red">En Red</span>{% endif %}
+            <span class="badge {{ v.estado }}">{{ estado_label[v.estado] }}</span>{% if menu[v.id].en_red %} <span class="badge badge-red">En Red</span>{% endif %}{% if nombres_suc.get(v.sucursal_id) %} <span class="badge badge-sucursal">{{ nombres_suc[v.sucursal_id] }}</span>{% endif %}
           </div>
         </div>
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="6">No hay vehículos en este estado.</td></tr>
+    <tr><td colspan="6">No hay vehículos en este estado{% if sucursal_sel %} en esta sucursal{% endif %}.</td></tr>
     {% endfor %}
   </table>
 </div>

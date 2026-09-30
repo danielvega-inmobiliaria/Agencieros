@@ -2,6 +2,7 @@
 {% block title %}Dashboard — Agencieros{% endblock %}
 {% block header %}Dashboard{% endblock %}
 {% block content %}
+{% include "partials/selector_sucursal.html" %}
 <div class="cards dashboard-cards">
   <a class="card" href="{{ url_for('stock.index', estado='disponible') }}">
     <div class="label">Disponibles</div>
@@ -65,6 +66,27 @@
   </a>
   {% endif %}
 </div>
+
+{% if por_sucursal %}
+<div class="panel">
+  <h2 style="margin-top:0;">Por sucursal</h2>
+  <table class="tabla-responsive">
+    <thead><tr><th>Sucursal</th><th>En stock</th><th>Señados</th><th>Vendidos este mes</th>{% if not es_vendedor %}<th>Ganancia del mes</th>{% endif %}<th>Stock a precio publicado</th></tr></thead>
+    <tbody>
+    {% for r in por_sucursal %}
+    <tr>
+      <td data-label="Sucursal"><a href="{{ url_for('dashboard.index', suc=r.id) }}"><b>{{ r.nombre }}</b></a></td>
+      <td data-label="En stock">{{ r.en_stock or 0 }}</td>
+      <td data-label="Señados">{{ r.senados or 0 }}</td>
+      <td data-label="Vendidos este mes">{{ r.vendidos_mes or 0 }}</td>
+      {% if not es_vendedor %}<td data-label="Ganancia del mes">${{ "{:,.0f}".format(r.ganancia_mes or 0).replace(",", ".") }}</td>{% endif %}
+      <td data-label="Stock a precio publicado">${{ "{:,.0f}".format(r.valor_stock or 0).replace(",", ".") }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
 
 <div class="dashboard-charts-row">
   <div class="panel chart-panel">

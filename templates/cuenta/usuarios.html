@@ -10,7 +10,7 @@
     Queda registrado quién cargó y quién vendió cada unidad.
   </p>
   <table class="tabla-responsive">
-    <thead><tr><th>Nombre</th><th>Mail</th><th>Rol</th><th>Cargó / vendió</th><th>Último ingreso</th><th>Acciones</th></tr></thead>
+    <thead><tr><th>Nombre</th><th>Mail</th><th>Rol</th>{% if sucursales %}<th>Sucursal</th>{% endif %}<th>Cargó / vendió</th><th>Último ingreso</th><th>Acciones</th></tr></thead>
     <tbody>
     {% for u in usuarios %}
     <tr style="{{ '' if u.activo else 'opacity:.55;' }}">
@@ -32,6 +32,17 @@
           </select>
         </form>
       </td>
+      {% if sucursales %}
+      <td data-label="Sucursal">
+        <form method="post" action="{{ url_for('cuenta.usuario_editar', usuario_id=u.id) }}">
+          <input type="hidden" name="accion" value="sucursal">
+          <select name="sucursal_id" onchange="this.form.submit()">
+            <option value="">{{ 'Todas (sin fija)' }}</option>
+            {% for s in sucursales %}<option value="{{ s.id }}" {{ 'selected' if u.sucursal_id == s.id else '' }}>{{ s.nombre }}</option>{% endfor %}
+          </select>
+        </form>
+      </td>
+      {% endif %}
       <td data-label="Cargó / vendió">{{ u.cargados }} / {{ u.vendidos }}</td>
       <td data-label="Último ingreso">{{ u.ultimo_ingreso|fecha_ar if u.ultimo_ingreso else '—' }}</td>
       <td data-label="Acciones">
@@ -73,6 +84,18 @@
       </div>
       <div><label>Contraseña inicial (mínimo 6)</label><input type="text" name="clave" required minlength="6"></div>
     </div>
+    {% if sucursales %}
+    <div class="form-row">
+      <div>
+        <label>Sucursal</label>
+        <select name="sucursal_id">
+          <option value="">Todas (sin fija)</option>
+          {% for s in sucursales %}<option value="{{ s.id }}" {{ 'selected' if prev.get('sucursal_id')|string == s.id|string else '' }}>{{ s.nombre }}</option>{% endfor %}
+        </select>
+      </div>
+      <div></div>
+    </div>
+    {% endif %}
     <div style="margin-top:14px;"><button class="btn" type="submit">Crear usuario</button></div>
   </form>
 </div>

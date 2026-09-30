@@ -71,6 +71,18 @@
       </div>
     </div>
 
+    {% if sucursales %}
+    <div class="form-row">
+      <div>
+        <label>Sucursal</label>
+        <select name="sucursal_id">
+          {% for s in sucursales %}<option value="{{ s.id }}" {{ 'selected' if sucursal_default == s.id else '' }}>{{ s.nombre }}</option>{% endfor %}
+        </select>
+      </div>
+      <div></div>
+    </div>
+    {% endif %}
+
     <div id="campos-por-ingresar" class="form-row" style="display:none;">
       <div><label>Quién entrega</label><input name="entrega_quien" value="{{ vehiculo.entrega_quien if vehiculo else '' }}" placeholder="Proveedor, cliente, otra agencia..."></div>
       <div><label>Fecha de ingreso estimada</label><input type="date" name="fecha_ingreso_estimada" value="{{ vehiculo.fecha_ingreso_estimada if vehiculo else '' }}"></div>

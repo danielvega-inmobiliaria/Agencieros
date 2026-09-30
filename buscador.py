@@ -217,7 +217,7 @@ def _buscar_posible_entrega_planes(filtros, agencia_id):
     )
 
 
-def buscar_combinado(filtros, agencia_id):
+def buscar_combinado(filtros, agencia_id, sucursal_id=None):
     """Un solo buscador para Disponible + Por ingresar + En reparación
     (Stock, sin Vendido) + Red de Agencieros + Posible entrega — pedido de
     Daniel 15/09/2026 (continuación 18, ampliado en continuación 26): que
@@ -242,6 +242,10 @@ def buscar_combinado(filtros, agencia_id):
     cond_stock.append("estado IN ('disponible','por_ingresar','en_reparacion')")
     cond_stock.append("agencia_id = ?")
     params_stock.append(agencia_id)
+    if sucursal_id:
+        # Selector de sucursal de Stock (29/09/2026): solo el stock propio se filtra.
+        cond_stock.append("sucursal_id = ?")
+        params_stock.append(sucursal_id)
     vehiculos = query(
         f"SELECT * FROM vehiculos WHERE {' AND '.join(cond_stock)} ORDER BY created_at DESC",
         tuple(params_stock),

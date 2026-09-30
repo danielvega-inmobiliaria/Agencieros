@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 29/09/2026 — 22:08 ART (cierre del chat "Usuarios por agencia", Msg 1-19; todo pusheado, último commit `b53cfe7`; próximo: paso 3 sucursales)_
+_Última actualización: 29/09/2026 — 22:21 ART (chat "Sucursales", Msg 1: paso 3 sucursales hecho y probado, falta push; próximo: paso 5 control de la Red)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -79,12 +79,13 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - [ ] **PRÓXIMO CHAT (pedido de Daniel 28/09/2026) — reorganizar cuentas y Red. Se deja en pausa la carga de la revista.** Alcance:
   1. ✅ **Hecho 28/09/2026 (Msg 1, ver "Cambios recientes") — falta deploy + crear el admin en Railway.** **Separar "Admin de la plataforma" de Italia Automotores:** hoy la agencia 1 (Italia) es a la vez agencia y dueña de la plataforma (`MODULOS_SOLO_AGENCIA_1` en `app.py`, `routes/plataforma.py`). Objetivo: un **usuario superadmin** que solo administra AGENCIEROS (Panel de Agencias, planes, Red) y no tiene stock propio; Italia pasa a ser **una agencia más**, sin permisos especiales. Revisar todo lo que hoy chequea `agencia_id == 1`.
   2. **Usuarios por agencia (multiusuario):** tabla `usuarios` (agencia_id, nombre, mail, password, rol: dueño/vendedor, sucursal_id opcional). El login pasa de agencia a usuario. Vendedor sin costos/ganancia. Registrar quién cargó/vendió cada unidad.
-  3. **Sucursales:** tabla `sucursales` + `sucursal_id` en vehículos/ventas/financiaciones; filtro por sucursal en Stock y Dashboard; vista consolidada para el dueño.
+  3. ✅ **Hecho 29/09/2026 (chat "Sucursales", Msg 1 — falta push).** **Sucursales:** tabla `sucursales` + `sucursal_id` en vehículos/ventas/financiaciones; filtro por sucursal en Stock y Dashboard; vista consolidada para el dueño.
   4. **Check "Red" en el listado de Stock:** publica/despublica la unidad en la Red sin recargarla. **Criterio corregido por Daniel 28/09/2026:** al **señar** la publicación queda en la Red marcada como **"Señado"** (no se da de baja); se da de baja sola **solo al vender** (y si se cancela la seña, vuelve a "Disponible").
   5. **Control de operaciones de la Red:** decidir modelo (comisión por operación vs. cobrar por publicar vs. mixto, ver análisis en el ítem de abajo) e implementar lo mínimo que lo sostenga.
   Orden sugerido: 1 → 2 → 3 → 4 → 5 (cada paso sobre la base del anterior; probar con 2 agencias de prueba para no cruzar datos).
   **Estado al 28/09/2026 (cierre chat "Cuentas y Red"):** paso 1 ✅ en producción. **Próximo chat: paso 2 (usuarios por agencia).**
   **29/09/2026 (cierre chat "Usuarios por agencia"):** pasos 1, 2 y 4 ✅ en producción (más pedidos publicables en la Red). **Próximo chat: paso 3 (sucursales)**, después 5 (control de la Red).
+  **29/09/2026 (chat "Sucursales"):** paso 3 ✅ (falta push). **Queda el paso 5 (control/monetización de la Red, atado a los planes).**
 - [ ] **Chicos, surgidos el 28/09/2026:** (a) ✅ pantalla para cambiar contraseña → "Mi cuenta" (hecho 28/09 noche, falta push); (b) confirmar en producción que aparecen las publicaciones de RosarioGarage (si no aparecen, ver logs de Railway: `[rosariogarage] No se pudo leer`); (c) MercadoLibre: pedir acceso de desarrollador/certificación para usar el buscador por API (hoy 403 incluso con token de usuario); (d) opcional: eliminar agencias desde el Panel (hoy solo por migración).
 - [ ] **Anotado por Daniel 24/09/2026 (a resolver, sin código todavía):**
   - **Agencias con sucursales:** una agencia con varias sucursales (stock, ventas y caja por sucursal, con vista consolidada para el dueño). Implica una tabla `sucursales` + `sucursal_id` en vehículos/ventas/financiaciones, y un filtro por sucursal en Stock y Dashboard.
@@ -124,6 +125,17 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 29/09/2026 (chat "Sucursales", Msg 1) — Paso 3: sucursales por agencia
+- **Decisiones de Daniel:** el vendedor con sucursal ve el stock de **todas** (puede vender cualquier unidad), arranca filtrado en la suya y lo que carga queda ahí. Al crear la **primera** sucursal, todo lo existente (stock, ventas, planes y vendedores) pasa a ella; los dueños quedan sin sucursal fija (vista consolidada).
+- **Base** (`database._migrar_sucursales`, idempotente): tabla `sucursales` (agencia_id, nombre, dirección, ciudad, teléfono, activa) y `sucursal_id` en `vehiculos`, `ventas` y `financiaciones` (`agencia_usuarios.sucursal_id` ya existía). **Triggers SQLite:** ventas y financiaciones heredan la sucursal del vehículo al crearse (o al asignarles vehículo), así ninguna de las 4 vías de seña/venta/plan tuvo que tocarse; un vehículo que nace sin sucursal en una agencia con sucursales (sync, importación) va a la primera. `asignar_existentes_a_sucursal()` para la primera sucursal.
+- **Pantalla Sucursales** (`/cuenta/sucursales`, solo dueño, menú "Sucursales" debajo de Usuarios): alta, editar datos, dar de baja/reactivar (no deja dar de baja una sucursal con unidades en stock; lo vendido sigue contando). En **Usuarios**, columna y selector de sucursal por usuario (y en el alta).
+- **`utils/sucursales.py`:** `sucursal_seleccionada()` (lee `?suc=<id>|todas`, lo recuerda en la sesión para Stock y Dashboard, default = sucursal del usuario o "Todas"), `filtro_sql()`, `sucursal_para_alta()`, `contexto_selector()`. Con 0 o 1 sucursal no aparece nada nuevo: la app se ve igual que antes.
+- **Stock:** selector de sucursal arriba (chips "Todas / Casa central / …", `partials/selector_sucursal.html`), pestañas, conteos, buscador (solo el stock propio) y "Ver fichas" filtran por la sucursal elegida; con "Todas" cada fila muestra un badge con su sucursal. Formulario de vehículo con campo **Sucursal** (con 2+); mover una unidad desde Editar arrastra su seña abierta y su plan pendiente de firma (lo cerrado queda donde se vendió). La ficha interna muestra "Sucursal X".
+- **Dashboard:** mismo selector; tarjetas, gráficos, señas por resolver, señas retenidas, ingresos/ganancia y cuotas filtran por sucursal. Con "Todas", tabla **"Por sucursal"** (en stock, señados, vendidos del mes, ganancia del mes —solo dueño— y stock a precio publicado). Pedidos y permutas por ingresar siguen siendo de toda la agencia.
+- **No incluido (a futuro si hace falta):** filtro por sucursal en Financiación, Pedidos, Toma y tasación y Finanzas; datos de la sucursal en la ficha compartible (hoy usa los de la agencia).
+- Probado con test_client sobre una copia de la base (agencia Italia): sin sucursales no cambia nada; 1ra sucursal se queda con las 6 unidades y ventas; con 2 aparece el selector; alta en Funes; filtros de Stock y Dashboard; seña hereda sucursal; mover desde Editar; baja bloqueada con stock; vendedor de Funes arranca en Funes, ve todas, no entra a Sucursales y carga en Funes; financiación hereda sucursal por trigger.
+- Archivos: `database.py`, `buscador.py`, `routes/cuenta.py`, `routes/stock.py`, `routes/dashboard.py`, `utils/permisos.py`, `utils/sucursales.py` (nuevo), `templates/cuenta/sucursales.html` (nuevo), `templates/partials/selector_sucursal.html` (nuevo), `templates/cuenta/usuarios.html`, `templates/stock/index.html`, `templates/stock/form.html`, `templates/stock/detalle.html`, `templates/dashboard.html`, `templates/base.html`, `static/css/style.css` (`?v=20260929h`).
 
 ### Sesión 28/09/2026 noche (chat "Usuarios por agencia", Msg 1) — Paso 2: usuarios por agencia (dueño/vendedor) + Mi cuenta
 - **Tabla nueva `agencia_usuarios`** (agencia_id, nombre, email único, password_hash, rol `dueno`/`vendedor`, sucursal_id para el paso 3, activo, ultimo_ingreso). La tabla vieja `usuarios` (login previo al multi-tenant) no se usa. Migración `_migrar_usuarios_agencia` (idempotente, en cada arranque): a cada agencia sin usuarios le crea su **dueño** con el mismo mail y contraseña de la agencia (nombre = contacto de referencia). Nadie tiene que re-registrarse.

@@ -3,6 +3,7 @@ from datetime import date
 from flask import Blueprint, render_template, session, redirect, url_for, flash, abort
 
 from database import query, execute
+from utils.sucursales import filtro_sql, contexto_selector
 
 bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 
@@ -46,7 +47,9 @@ def _senas_por_resolver(agencia_id):
     """Señas de operaciones canceladas que todavía no se decidieron
     (retener o devolver): las de Stock/venta directa (`ventas` en estado
     'cancelada') y las de reservas canceladas de Financiación. Una seña es
-    siempre en efectivo (Daniel 19/09/2026)."""
+    siempre en efectivo (Daniel 19/09/2026). Respeta el selector de sucursal."""
+    suc_v, suc_p = filtro_sql("vt.sucursal_id")
+    suc_f, _ = filtro_sql("f.sucursal_id")
     ventas = query(
         """SELECT vt.id AS id, 'venta' AS origen, vt.cliente_nombre AS cliente, vt.cliente_telefono AS telefono,
                   COALESCE(vt.sena, 0) AS monto, vt.fecha_sena AS fecha,
@@ -54,8 +57,8 @@ def _senas_por_resolver(agencia_id):
            FROM ventas vt JOIN vehiculos v ON v.id = vt.vehiculo_id
            WHERE vt.estado = 'cancelada' AND vt.sena_resolucion IS NULL
              AND COALESCE(vt.sena, 0) > 0
-             AND vt.agencia_id = ?""",
-        (agencia_id,),
+             AND vt.agencia_id = ?""" + suc_v,
+        (agencia_id, *suc_p),
     )
     planes = query(
         """SELECT f.id AS id, 'plan' AS origen, f.cliente_nombre AS cliente, f.cliente_telefono AS telefono,
@@ -64,8 +67,8 @@ def _senas_por_resolver(agencia_id):
            FROM financiaciones f LEFT JOIN vehiculos v ON v.id = f.vehiculo_id
            WHERE f.estado = 'cancelado_reserva' AND f.sena_resolucion IS NULL
              AND COALESCE(f.anticipo, 0) > 0
-             AND COALESCE(f.agencia_id, 1) = ?""",  # Financiación aún no guarda agencia_id al crear un plan: NULL = agencia 1
-        (agencia_id,),
+             AND COALESCE(f.agencia_id, 1) = ?""" + suc_f,  # Financiación aún no guarda agencia_id al crear un plan: NULL = agencia 1
+        (agencia_id, *suc_p),
     )
     filas = [dict(r) for r in ventas] + [dict(r) for r in planes]
     filas.sort(key=lambda r: r["fecha"] or "", reverse=True)
@@ -152,11 +155,17 @@ def index():
     # con su propio filtro (los planes de Financiación todavía pueden tener
     # agencia_id NULL = agencia 1, de ahí el COALESCE).
     agencia_id = session["agencia_id"]
+    # Sucursales (29/09/2026): con el selector en una sucursal, todo lo de
+    # vehículos, ventas, señas y cuotas se limita a ella; "Todas" = vista
+    # consolidada. Pedidos y permutas pendientes siguen siendo de la agencia.
+    sv, sp = filtro_sql("v.sucursal_id")
+    s_plano, _ = filtro_sql("sucursal_id")
+    sf, _ = filtro_sql("f.sucursal_id")
     stock_counts = {
         row["estado"]: row["c"]
         for row in query(
-            "SELECT estado, COUNT(*) c FROM vehiculos WHERE agencia_id = ? GROUP BY estado",
-            (agencia_id,),
+            "SELECT estado, COUNT(*) c FROM vehiculos v WHERE agencia_id = ?" + sv + " GROUP BY estado",
+            (agencia_id, *sp),
         )
     }
     pedidos_activos = query(
@@ -186,8 +195,8 @@ def index():
                SELECT MAX(v2.id) FROM ventas v2
                WHERE v2.vehiculo_id = v.id AND v2.estado = 'cerrada')
            WHERE v.estado = 'vendido' AND v.agencia_id = ?
-             AND strftime('%Y-%m', v.fecha_venta) = strftime('%Y-%m', 'now')""",
-        (agencia_id,),
+             AND strftime('%Y-%m', v.fecha_venta) = strftime('%Y-%m', 'now')""" + sv,
+        (agencia_id, *sp),
     )
     ventas_mes = {
         "c": len(ventas_mes_detalle),
@@ -212,12 +221,12 @@ def index():
             """SELECT COALESCE(SUM(m), 0) t FROM (
                    SELECT sena AS m FROM ventas
                    WHERE sena_resolucion = 'retenida' AND agencia_id = ?
-                     AND strftime('%Y-%m', sena_resolucion_fecha) = strftime('%Y-%m', 'now')
+                     AND strftime('%Y-%m', sena_resolucion_fecha) = strftime('%Y-%m', 'now')""" + s_plano + """
                    UNION ALL
                    SELECT anticipo AS m FROM financiaciones
                    WHERE sena_resolucion = 'retenida' AND COALESCE(agencia_id, 1) = ?
-                     AND strftime('%Y-%m', sena_resolucion_fecha) = strftime('%Y-%m', 'now'))""",
-            (agencia_id, agencia_id), one=True,
+                     AND strftime('%Y-%m', sena_resolucion_fecha) = strftime('%Y-%m', 'now')""" + s_plano + ")",
+            (agencia_id, *sp, agencia_id, *sp), one=True,
         )["t"] or 0,
         2,
     )
@@ -229,8 +238,8 @@ def index():
     from routes.stock import _permutas_pendientes
     permutas_pendientes = _permutas_pendientes(agencia_id)
     gastos_en_reparacion = query(
-        "SELECT COALESCE(SUM(gastos), 0) c FROM vehiculos WHERE estado = 'en_reparacion' AND agencia_id = ?",
-        (agencia_id,), one=True,
+        "SELECT COALESCE(SUM(gastos), 0) c FROM vehiculos v WHERE estado = 'en_reparacion' AND agencia_id = ?" + sv,
+        (agencia_id, *sp), one=True,
     )["c"]
     # Mismo universo que el resumen de Financiación (solo planes activos),
     # pero acá se separa lo pendiente en 2: "Por cobrar" (cuota que todavía
@@ -239,8 +248,8 @@ def index():
     cuotas_activas = query(
         """SELECT fc.monto, fc.monto_pagado, fc.fecha_vencimiento, fc.estado
            FROM financiacion_cuotas fc JOIN financiaciones f ON f.id = fc.financiacion_id
-           WHERE f.estado = 'activo' AND COALESCE(f.agencia_id, 1) = ?""",
-        (agencia_id,),
+           WHERE f.estado = 'activo' AND COALESCE(f.agencia_id, 1) = ?""" + sf,
+        (agencia_id, *sp),
     )
     hoy = str(date.today())
     cobrado = sum(c["monto_pagado"] or 0 for c in cuotas_activas)
@@ -279,8 +288,13 @@ def index():
                    AND strftime('%Y-%m', fecha_venta) = strftime('%Y-%m', 'now')""",
                 (agencia_id, uid), one=True)["c"],
         }
+    selector = contexto_selector()
     return render_template(
         "dashboard.html",
+        **selector,
+        suc_endpoint="dashboard.index",
+        suc_args={},
+        por_sucursal=_resumen_por_sucursal(agencia_id) if selector["sucursales_sel"] and selector["sucursal_sel"] is None else [],
         mios=mios,
         stock_counts=stock_counts,
         pedidos_activos=pedidos_activos,
@@ -293,3 +307,26 @@ def index():
         grafico_stock=grafico_stock,
         grafico_cobros=grafico_cobros,
     )
+
+
+def _resumen_por_sucursal(agencia_id):
+    """Vista consolidada del dueño (29/09/2026): una fila por sucursal con
+    unidades en stock, señadas, vendidas en el mes y su ganancia."""
+    filas = query(
+        """SELECT s.id, s.nombre,
+                  SUM(CASE WHEN v.estado IN ('disponible','por_ingresar','en_reparacion') THEN 1 ELSE 0 END) AS en_stock,
+                  SUM(CASE WHEN v.estado = 'senado' THEN 1 ELSE 0 END) AS senados,
+                  SUM(CASE WHEN v.estado = 'vendido' AND strftime('%Y-%m', v.fecha_venta) = strftime('%Y-%m', 'now')
+                           THEN 1 ELSE 0 END) AS vendidos_mes,
+                  SUM(CASE WHEN v.estado = 'vendido' AND strftime('%Y-%m', v.fecha_venta) = strftime('%Y-%m', 'now')
+                           THEN COALESCE(v.valor_vendido, 0) - COALESCE(v.valor_compra, 0) - COALESCE(v.gastos, 0)
+                           ELSE 0 END) AS ganancia_mes,
+                  SUM(CASE WHEN v.estado IN ('disponible','por_ingresar','en_reparacion')
+                           THEN COALESCE(v.valor_publicado, 0) ELSE 0 END) AS valor_stock
+           FROM sucursales s
+           LEFT JOIN vehiculos v ON v.sucursal_id = s.id AND v.agencia_id = s.agencia_id
+           WHERE s.agencia_id = ? AND s.activa = 1
+           GROUP BY s.id ORDER BY s.id""",
+        (agencia_id,),
+    )
+    return [dict(r) for r in filas]

@@ -74,9 +74,9 @@
 
   <div class="panel">
     <h2>{{ 'Precio' if es_vendedor else 'Control económico' }}</h2>
-    {% if cargado_por or vendido_por %}
+    {% if cargado_por or vendido_por or sucursal_nombre %}
     <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
-      {% if cargado_por %}Cargado por <b>{{ cargado_por }}</b>{% endif %}{% if cargado_por and vendido_por %} · {% endif %}{% if vendido_por %}Vendido por <b>{{ vendido_por }}</b>{% endif %}
+      {% if sucursal_nombre %}Sucursal <b>{{ sucursal_nombre }}</b>{% if cargado_por or vendido_por %} · {% endif %}{% endif %}{% if cargado_por %}Cargado por <b>{{ cargado_por }}</b>{% endif %}{% if cargado_por and vendido_por %} · {% endif %}{% if vendido_por %}Vendido por <b>{{ vendido_por }}</b>{% endif %}
     </p>
     {% endif %}
     <div class="stat-row">

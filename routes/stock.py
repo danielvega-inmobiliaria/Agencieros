@@ -6,6 +6,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from urllib.parse import quote_plus
 
 from utils.permisos import es_vendedor, nombres_usuarios
+from utils.sucursales import (filtro_sql, sucursal_seleccionada, sucursal_para_alta, contexto_selector,
+                               sucursales_de, nombres_sucursales)
 from database import query, execute, foto_principal, obtener_catalogo, obtener_config_agencia, TIPOS_CARROCERIA
 from storage import uploads_dir
 from sync_stock import sync_stock
@@ -82,14 +84,16 @@ def _vehiculos_de_pestana(agencia_id, estado_filtro):
     incluye Vendido -- pedido de Daniel 15/09/2026, continuación 19: solo se
     ven entrando puntualmente a esa pestaña). Lo usan el listado y el visor
     "Ver Fichas" para mostrar exactamente lo mismo."""
+    # Sucursales (29/09/2026): respeta la sucursal elegida en el selector.
+    suc_sql, suc_params = filtro_sql()
     if estado_filtro in ESTADOS:
         return query(
-            "SELECT * FROM vehiculos WHERE agencia_id = ? AND estado = ? ORDER BY created_at DESC",
-            (agencia_id, estado_filtro),
+            f"SELECT * FROM vehiculos WHERE agencia_id = ? AND estado = ?{suc_sql} ORDER BY created_at DESC",
+            (agencia_id, estado_filtro, *suc_params),
         )
     return query(
-        "SELECT * FROM vehiculos WHERE agencia_id = ? AND estado != 'vendido' ORDER BY created_at DESC",
-        (agencia_id,),
+        f"SELECT * FROM vehiculos WHERE agencia_id = ? AND estado != 'vendido'{suc_sql} ORDER BY created_at DESC",
+        (agencia_id, *suc_params),
     )
 
 
@@ -106,15 +110,17 @@ def index():
     # combinado no cubre a propósito).
     agencia_id = session["agencia_id"]
     if filtros:
-        resultados = buscar_combinado(filtros, agencia_id)
+        resultados = buscar_combinado(filtros, agencia_id, sucursal_seleccionada())
         vehiculos = None
     else:
         resultados = None
         vehiculos = _vehiculos_de_pestana(agencia_id, estado_filtro)
 
+    suc_sql, suc_params = filtro_sql()
     conteos = {
         r["estado"]: r["c"]
-        for r in query("SELECT estado, COUNT(*) c FROM vehiculos WHERE agencia_id = ? GROUP BY estado", (agencia_id,))
+        for r in query(f"SELECT estado, COUNT(*) c FROM vehiculos WHERE agencia_id = ?{suc_sql} GROUP BY estado",
+                       (agencia_id, *suc_params))
     }
     # Menú de cada tarjeta (28/09/2026): Ver ficha, Red, WhatsApp, Publicar, Ver toma.
     en_red = {r["vehiculo_id"] for r in query(
@@ -144,8 +150,14 @@ def index():
             "red_posible": v["estado"] != "vendido",
             "toma": url_for("tomas.detalle", toma_id=tomas[v["id"]]) if v["id"] in tomas else None,
         }
+    selector = contexto_selector()
     return render_template(
         "stock/index.html",
+        **selector,
+        suc_endpoint="stock.index",
+        suc_args={"estado": estado_filtro, **filtros},
+        # Con "Todas" y varias sucursales, cada fila muestra de qué sucursal es.
+        nombres_suc=nombres_sucursales(agencia_id) if selector["sucursales_sel"] and selector["sucursal_sel"] is None else {},
         menu=menu,
         vehiculos=vehiculos,
         resultados=resultados,
@@ -214,8 +226,9 @@ def nuevo():
                (marca, modelo, version, anio, km, combustible, caja, color, dominio, estado,
                 equipamiento, observaciones, documentacion, valor_compra, gastos, valor_publicado,
                 fecha_ingreso, entrega_quien, fecha_ingreso_estimada,
-                propiedad, consignante_nombre, consignante_telefono, tipo_carroceria, agencia_id, cargado_por_id)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                propiedad, consignante_nombre, consignante_telefono, tipo_carroceria, agencia_id, cargado_por_id,
+                sucursal_id)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 f.get("marca"), f.get("modelo"), f.get("version"), f.get("anio") or None,
                 f.get("km") or None, f.get("combustible"), f.get("caja"), f.get("color"),
@@ -230,6 +243,7 @@ def nuevo():
                 f.get("tipo_carroceria") or None,
                 agencia_id,
                 session.get("usuario_id"),
+                _sucursal_del_form(f) or sucursal_para_alta(),
             ),
         )
 
@@ -284,6 +298,7 @@ def nuevo():
     return render_template(
         "stock/form.html", vehiculo=None, prefill=prefill, estados=ESTADOS, estado_label=ESTADO_LABEL,
         permuta_op=_permuta_operacion(origen, item_id) if origen else None, tipos_carroceria=TIPOS_CARROCERIA,
+        sucursales=_sucursales_form(), sucursal_default=sucursal_para_alta(),
     )
 
 
@@ -358,6 +373,8 @@ def detalle(vehiculo_id, solo_venta=False):
         solo_venta=solo_venta, foto_portada=foto_principal(vehiculo_id),
         volver_listado=url_for("stock.index", estado=request.args.get("estado") or "todos"),
         cargado_por=nombres.get(vehiculo["cargado_por_id"]), vendido_por=nombres.get(vehiculo["vendido_por_id"]),
+        sucursal_nombre=nombres_sucursales(session["agencia_id"]).get(vehiculo["sucursal_id"])
+        if len(sucursales_de(session["agencia_id"])) >= 2 else None,
         nav=nav,
         permuta_op=permuta_op,
         toma_vinculada=toma_vinculada, venta_abierta=venta_abierta, plan_pendiente=plan_pendiente,
@@ -498,13 +515,23 @@ def editar(vehiculo_id):
                 vehiculo_id,
             ),
         )
+        nueva_suc = _sucursal_del_form(f)
+        if nueva_suc and nueva_suc != vehiculo["sucursal_id"]:
+            # Mover la unidad de sucursal: una seña/plan abierto se va con ella;
+            # lo ya cerrado queda en la sucursal donde se vendió.
+            execute("UPDATE vehiculos SET sucursal_id = ? WHERE id = ?", (nueva_suc, vehiculo_id))
+            execute("UPDATE ventas SET sucursal_id = ? WHERE vehiculo_id = ? AND estado = 'senado'", (nueva_suc, vehiculo_id))
+            execute("UPDATE financiaciones SET sucursal_id = ? WHERE vehiculo_id = ? AND estado = 'pendiente_firma'",
+                    (nueva_suc, vehiculo_id))
         if f.get("estado") == "vendido":
             from routes.red import cerrar_red_de_vehiculo
             cerrar_red_de_vehiculo(vehiculo_id)
         flash("Vehículo actualizado.", "success")
         return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
-    return render_template("stock/form.html", vehiculo=vehiculo, prefill=None, estados=ESTADOS, estado_label=ESTADO_LABEL, tipos_carroceria=TIPOS_CARROCERIA)
+    return render_template("stock/form.html", vehiculo=vehiculo, prefill=None, estados=ESTADOS, estado_label=ESTADO_LABEL,
+                           tipos_carroceria=TIPOS_CARROCERIA, sucursales=_sucursales_form(),
+                           sucursal_default=vehiculo["sucursal_id"])
 
 
 # ---------------------------------------------------------------------
@@ -522,6 +549,20 @@ def editar(vehiculo_id):
 # Si queda saldo para pagar en cuotas, la venta va por Financiación.
 # ---------------------------------------------------------------------
 ESTADOS_SENABLES = ("disponible", "por_ingresar", "en_reparacion")
+
+
+def _sucursales_form():
+    """Sucursales para el selector del formulario (solo si hay 2 o más)."""
+    sucs = sucursales_de(session["agencia_id"])
+    return sucs if len(sucs) >= 2 else []
+
+
+def _sucursal_del_form(f):
+    valor = f.get("sucursal_id")
+    if not valor or not str(valor).isdigit():
+        return None
+    ids = {s["id"] for s in sucursales_de(session["agencia_id"])}
+    return int(valor) if int(valor) in ids else None
 
 
 def _vehiculo_propio(vehiculo_id):
@@ -1345,7 +1386,7 @@ def fichas():
     agencia_id = session["agencia_id"]
     if filtros:
         ids = [
-            r["id"] for r in buscar_combinado(filtros, agencia_id)
+            r["id"] for r in buscar_combinado(filtros, agencia_id, sucursal_seleccionada())
             if r.get("id") and r.get("origen") in ESTADOS
         ]
         por_id = {

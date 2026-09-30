@@ -10,7 +10,8 @@ ROLES = {"dueno": "Dueño", "vendedor": "Vendedor"}
 
 # Blueprints / endpoints que un vendedor no puede abrir.
 BLUEPRINTS_SOLO_DUENO = {"finanzas", "admin"}
-ENDPOINTS_SOLO_DUENO = {"cuenta.usuarios", "cuenta.usuario_nuevo", "cuenta.usuario_editar"}
+ENDPOINTS_SOLO_DUENO = {"cuenta.usuarios", "cuenta.usuario_nuevo", "cuenta.usuario_editar",
+                        "cuenta.sucursales", "cuenta.sucursal_nueva", "cuenta.sucursal_editar"}
 
 
 def es_vendedor():

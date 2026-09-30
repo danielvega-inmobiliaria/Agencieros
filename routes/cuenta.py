@@ -4,12 +4,14 @@
                          cambia su propia contraseña.
 - /cuenta/usuarios    -> solo el dueño: alta de vendedores/dueños,
                          activar/desactivar, cambiar rol y blanquear clave.
+- /cuenta/sucursales  -> solo el dueño: sucursales de la agencia (29/09/2026).
 """
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from database import query, execute, get_db, mail_ocupado
+from database import query, execute, get_db, mail_ocupado, asignar_existentes_a_sucursal
 from utils.permisos import ROLES
+from utils.sucursales import sucursales_de, nombres_sucursales
 
 bp = Blueprint("cuenta", __name__, url_prefix="/cuenta")
 
@@ -84,7 +86,8 @@ def usuarios():
            ORDER BY u.activo DESC, CASE u.rol WHEN 'dueno' THEN 0 ELSE 1 END, u.nombre""",
         (session["agencia_id"],),
     )
-    return render_template("cuenta/usuarios.html", usuarios=filas, roles=ROLES, prev={})
+    return render_template("cuenta/usuarios.html", usuarios=filas, roles=ROLES, prev={},
+                           sucursales=sucursales_de(session["agencia_id"]))
 
 
 @bp.route("/usuarios/nuevo", methods=["POST"])
@@ -109,10 +112,11 @@ def usuario_nuevo():
         flash(error, "error")
         filas = query("SELECT u.*, 0 AS cargados, 0 AS vendidos FROM agencia_usuarios u WHERE u.agencia_id = ? ORDER BY u.nombre",
                       (session["agencia_id"],))
-        return render_template("cuenta/usuarios.html", usuarios=filas, roles=ROLES, prev=f)
+        return render_template("cuenta/usuarios.html", usuarios=filas, roles=ROLES, prev=f,
+                               sucursales=sucursales_de(session["agencia_id"]))
     execute(
-        "INSERT INTO agencia_usuarios (agencia_id, nombre, email, password_hash, rol) VALUES (?, ?, ?, ?, ?)",
-        (session["agencia_id"], nombre, email, generate_password_hash(clave), rol),
+        "INSERT INTO agencia_usuarios (agencia_id, nombre, email, password_hash, rol, sucursal_id) VALUES (?, ?, ?, ?, ?, ?)",
+        (session["agencia_id"], nombre, email, generate_password_hash(clave), rol, _sucursal_valida(f.get("sucursal_id"))),
     )
     flash(f"Usuario creado: {nombre} ({ROLES[rol]}). Pasale el mail y la contraseña inicial; "
           "después la puede cambiar desde Mi cuenta.", "success")
@@ -139,6 +143,11 @@ def usuario_editar(usuario_id):
         else:
             execute("UPDATE agencia_usuarios SET rol = ? WHERE id = ?", (rol, u["id"]))
             flash(f"{u['nombre']} ahora es {ROLES[rol]}.", "success")
+    elif accion == "sucursal":
+        suc = _sucursal_valida(request.form.get("sucursal_id"))
+        execute("UPDATE agencia_usuarios SET sucursal_id = ? WHERE id = ?", (suc, u["id"]))
+        nombre_suc = nombres_sucursales(session["agencia_id"]).get(suc)
+        flash(f"{u['nombre']}: {'sucursal ' + nombre_suc if nombre_suc else 'sin sucursal fija (ve todas)'}.", "success")
     elif accion == "nombre":
         nombre = request.form.get("nombre", "").strip()
         if nombre:
@@ -166,3 +175,102 @@ def usuario_editar(usuario_id):
                     (h, u["agencia_id"], u["email"]))
             flash(f"Contraseña de {u['nombre']} cambiada. Pasásela y que la cambie desde Mi cuenta.", "success")
     return redirect(url_for("cuenta.usuarios"))
+
+
+def _sucursal_valida(valor):
+    """id de una sucursal activa de la agencia logueada, o None."""
+    if not valor or not str(valor).isdigit():
+        return None
+    fila = query("SELECT id FROM sucursales WHERE id = ? AND agencia_id = ? AND activa = 1",
+                 (int(valor), session["agencia_id"]), one=True)
+    return fila["id"] if fila else None
+
+
+# ---------------------------------------------------------------------
+# Sucursales (29/09/2026, paso 3 de "reorganizar cuentas y Red").
+# ---------------------------------------------------------------------
+@bp.route("/sucursales")
+def sucursales():
+    agencia_id = session["agencia_id"]
+    filas = query(
+        """SELECT s.*,
+                  (SELECT COUNT(*) FROM vehiculos v WHERE v.sucursal_id = s.id AND v.agencia_id = s.agencia_id
+                     AND v.estado != 'vendido') AS en_stock,
+                  (SELECT COUNT(*) FROM vehiculos v WHERE v.sucursal_id = s.id AND v.agencia_id = s.agencia_id
+                     AND v.estado = 'vendido') AS vendidos,
+                  (SELECT COUNT(*) FROM agencia_usuarios u WHERE u.sucursal_id = s.id AND u.activo = 1) AS usuarios
+           FROM sucursales s WHERE s.agencia_id = ?
+           ORDER BY s.activa DESC, s.id""",
+        (agencia_id,),
+    )
+    return render_template("cuenta/sucursales.html", sucursales=filas)
+
+
+def _datos_sucursal(f):
+    return (f.get("nombre", "").strip(), f.get("direccion", "").strip() or None,
+            f.get("ciudad", "").strip() or None, f.get("telefono", "").strip() or None)
+
+
+@bp.route("/sucursales/nueva", methods=["POST"])
+def sucursal_nueva():
+    agencia_id = session["agencia_id"]
+    nombre, direccion, ciudad, telefono = _datos_sucursal(request.form)
+    if not nombre:
+        flash("Poné un nombre para la sucursal (ej: Casa central, Sucursal Funes).", "error")
+        return redirect(url_for("cuenta.sucursales"))
+    if query("SELECT 1 FROM sucursales WHERE agencia_id = ? AND lower(nombre) = lower(?)", (agencia_id, nombre), one=True):
+        flash("Ya hay una sucursal con ese nombre.", "error")
+        return redirect(url_for("cuenta.sucursales"))
+    es_primera = not query("SELECT 1 FROM sucursales WHERE agencia_id = ?", (agencia_id,), one=True)
+    db = get_db()
+    cur = db.execute(
+        "INSERT INTO sucursales (agencia_id, nombre, direccion, ciudad, telefono) VALUES (?, ?, ?, ?, ?)",
+        (agencia_id, nombre, direccion, ciudad, telefono),
+    )
+    if es_primera:
+        asignar_existentes_a_sucursal(db, agencia_id, cur.lastrowid)
+    db.commit()
+    if es_primera:
+        flash(f"Sucursal «{nombre}» creada. Todo lo que ya tenías cargado (stock, ventas, planes y vendedores) "
+              "quedó en esta sucursal. Cuando crees la segunda, vas a ver el selector de sucursal en Stock y Dashboard.",
+              "success")
+    else:
+        flash(f"Sucursal «{nombre}» creada. Para pasarle unidades, entrá a cada una en Stock → Editar → Sucursal.", "success")
+    return redirect(url_for("cuenta.sucursales"))
+
+
+@bp.route("/sucursales/<int:sucursal_id>", methods=["POST"])
+def sucursal_editar(sucursal_id):
+    agencia_id = session["agencia_id"]
+    suc = query("SELECT * FROM sucursales WHERE id = ? AND agencia_id = ?", (sucursal_id, agencia_id), one=True)
+    if not suc:
+        flash("Sucursal no encontrada.", "error")
+        return redirect(url_for("cuenta.sucursales"))
+    accion = request.form.get("accion")
+    if accion == "datos":
+        nombre, direccion, ciudad, telefono = _datos_sucursal(request.form)
+        if not nombre:
+            flash("El nombre no puede quedar vacío.", "error")
+        elif query("SELECT 1 FROM sucursales WHERE agencia_id = ? AND lower(nombre) = lower(?) AND id != ?",
+                   (agencia_id, nombre, sucursal_id), one=True):
+            flash("Ya hay otra sucursal con ese nombre.", "error")
+        else:
+            execute("UPDATE sucursales SET nombre = ?, direccion = ?, ciudad = ?, telefono = ? WHERE id = ?",
+                    (nombre, direccion, ciudad, telefono, sucursal_id))
+            flash("Sucursal actualizada.", "success")
+    elif accion == "activa":
+        activar = request.form.get("valor") == "1"
+        if not activar:
+            en_stock = query(
+                "SELECT COUNT(*) c FROM vehiculos WHERE sucursal_id = ? AND agencia_id = ? AND estado != 'vendido'",
+                (sucursal_id, agencia_id), one=True)["c"]
+            if en_stock:
+                flash(f"«{suc['nombre']}» tiene {en_stock} unidad(es) en stock: pasalas a otra sucursal antes de darla de baja.",
+                      "error")
+                return redirect(url_for("cuenta.sucursales"))
+            execute("UPDATE agencia_usuarios SET sucursal_id = NULL WHERE sucursal_id = ? AND agencia_id = ?",
+                    (sucursal_id, agencia_id))
+        execute("UPDATE sucursales SET activa = ? WHERE id = ?", (1 if activar else 0, sucursal_id))
+        session.pop("suc_sel", None)
+        flash(f"«{suc['nombre']}» {'reactivada' if activar else 'dada de baja (lo vendido sigue en los números)'}.", "success")
+    return redirect(url_for("cuenta.sucursales"))

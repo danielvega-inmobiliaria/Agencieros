@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Sucursales — Agencieros{% endblock %}
+{% block header %}Sucursales{% endblock %}
+{% block content %}
+<div class="panel">
+  <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
+    Si tu agencia tiene más de un local, cargá cada uno acá. Cada unidad de Stock queda en una sucursal
+    (y sus señas, ventas y planes de financiación con ella). Con dos o más sucursales aparece un selector
+    en <b>Stock</b> y en el <b>Dashboard</b> para ver una sola o <b>Todas</b> juntas.
+    A cada vendedor le podés fijar su sucursal en <a href="{{ url_for('cuenta.usuarios') }}">Usuarios</a>:
+    arranca viendo la suya (puede mirar las demás) y lo que carga queda ahí.
+  </p>
+  {% if sucursales %}
+  <table class="tabla-responsive">
+    <thead><tr><th>Sucursal</th><th>Dirección</th><th>Teléfono</th><th>En stock / vendidos</th><th>Usuarios</th><th></th></tr></thead>
+    <tbody>
+    {% for s in sucursales %}
+    <tr style="{{ '' if s.activa else 'opacity:.55;' }}">
+      <td data-label="Sucursal"><b>{{ s.nombre }}</b>{% if not s.activa %} <small style="color:var(--red);">Dada de baja</small>{% endif %}</td>
+      <td data-label="Dirección">{{ s.direccion or '—' }}{% if s.ciudad %}, {{ s.ciudad }}{% endif %}</td>
+      <td data-label="Teléfono">{{ s.telefono or '—' }}</td>
+      <td data-label="En stock / vendidos">
+        {% if s.activa %}<a href="{{ url_for('stock.index', suc=s.id) }}">{{ s.en_stock }}</a>{% else %}{{ s.en_stock }}{% endif %} / {{ s.vendidos }}
+      </td>
+      <td data-label="Usuarios">{{ s.usuarios }}</td>
+      <td data-label="">
+        <details>
+          <summary class="btn btn-secondary btn-sm" style="display:inline-block;">Editar</summary>
+          <form method="post" action="{{ url_for('cuenta.sucursal_editar', sucursal_id=s.id) }}" style="margin-top:8px;">
+            <input type="hidden" name="accion" value="datos">
+            <div class="form-row">
+              <div><label>Nombre</label><input type="text" name="nombre" value="{{ s.nombre }}" required></div>
+              <div><label>Teléfono</label><input type="text" name="telefono" value="{{ s.telefono or '' }}"></div>
+            </div>
+            <div class="form-row">
+              <div><label>Dirección</label><input type="text" name="direccion" value="{{ s.direccion or '' }}"></div>
+              <div><label>Ciudad</label><input type="text" name="ciudad" value="{{ s.ciudad or '' }}"></div>
+            </div>
+            <button class="btn btn-secondary btn-sm" type="submit" style="margin-top:8px;">Guardar</button>
+          </form>
+          <form method="post" action="{{ url_for('cuenta.sucursal_editar', sucursal_id=s.id) }}" style="margin-top:8px;">
+            <input type="hidden" name="accion" value="activa">
+            <input type="hidden" name="valor" value="{{ 0 if s.activa else 1 }}">
+            <button class="btn btn-secondary btn-sm" type="submit">{{ 'Dar de baja' if s.activa else 'Reactivar' }}</button>
+          </form>
+        </details>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>Todavía no cargaste sucursales. Si tenés un solo local no hace falta: la app funciona igual.
+     La primera que crees se queda con todo lo que ya tenés cargado.</p>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h2 style="margin-top:0;">{{ 'Agregar sucursal' if sucursales else 'Crear la primera sucursal' }}</h2>
+  <form method="post" action="{{ url_for('cuenta.sucursal_nueva') }}">
+    <div class="form-row">
+      <div><label>Nombre</label><input type="text" name="nombre" required placeholder="{{ 'Ej: Sucursal Funes' if sucursales else 'Ej: Casa central' }}"></div>
+      <div><label>Teléfono</label><input type="text" name="telefono"></div>
+    </div>
+    <div class="form-row">
+      <div><label>Dirección</label><input type="text" name="direccion"></div>
+      <div><label>Ciudad</label><input type="text" name="ciudad"></div>
+    </div>
+    <div style="margin-top:14px;"><button class="btn" type="submit">Crear sucursal</button></div>
+  </form>
+</div>
+{% endblock %}

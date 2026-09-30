@@ -1479,6 +1479,77 @@ def _migrar_usuarios_agencia(conn):
         conn.execute("ALTER TABLE financiaciones ADD COLUMN creado_por_id INTEGER")
 
 
+def _migrar_sucursales(conn):
+    """Sucursales por agencia (29/09/2026, paso 3 de "reorganizar cuentas y
+    Red"). Tabla `sucursales` + `sucursal_id` en vehiculos, ventas y
+    financiaciones (agencia_usuarios.sucursal_id ya existía).
+    - ventas/financiaciones heredan la sucursal del vehículo por trigger,
+      así ningún alta de venta o plan tiene que acordarse de cargarla.
+    - Una unidad que nace sin sucursal en una agencia que sí tiene (sync,
+      importación, altas viejas) queda en la primera sucursal de la agencia.
+    - Al crear la PRIMERA sucursal de una agencia, lo existente pasa a ella
+      (routes/cuenta.py -> asignar_existentes_a_sucursal)."""
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS sucursales (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agencia_id INTEGER NOT NULL,
+            nombre TEXT NOT NULL,
+            direccion TEXT,
+            ciudad TEXT,
+            telefono TEXT,
+            activa INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT (datetime('now'))
+        )"""
+    )
+    for tabla in ("vehiculos", "ventas", "financiaciones"):
+        cols = {r[1] for r in conn.execute(f"PRAGMA table_info({tabla})")}
+        if "sucursal_id" not in cols:
+            conn.execute(f"ALTER TABLE {tabla} ADD COLUMN sucursal_id INTEGER")
+    conn.execute(
+        """CREATE TRIGGER IF NOT EXISTS trg_vehiculos_sucursal AFTER INSERT ON vehiculos
+           WHEN NEW.sucursal_id IS NULL AND NEW.agencia_id IS NOT NULL
+           BEGIN
+             UPDATE vehiculos SET sucursal_id = (
+               SELECT MIN(id) FROM sucursales WHERE agencia_id = NEW.agencia_id AND activa = 1)
+             WHERE id = NEW.id;
+           END"""
+    )
+    for tabla in ("ventas", "financiaciones"):
+        conn.execute(
+            f"""CREATE TRIGGER IF NOT EXISTS trg_{tabla}_sucursal AFTER INSERT ON {tabla}
+                WHEN NEW.sucursal_id IS NULL AND NEW.vehiculo_id IS NOT NULL
+                BEGIN
+                  UPDATE {tabla} SET sucursal_id = (SELECT sucursal_id FROM vehiculos WHERE id = NEW.vehiculo_id)
+                  WHERE id = NEW.id;
+                END"""
+        )
+        # Si se asigna/cambia el vehículo de un plan después (simulador), hereda la sucursal.
+        conn.execute(
+            f"""CREATE TRIGGER IF NOT EXISTS trg_{tabla}_sucursal_upd AFTER UPDATE OF vehiculo_id ON {tabla}
+                WHEN NEW.vehiculo_id IS NOT NULL
+                BEGIN
+                  UPDATE {tabla} SET sucursal_id = (SELECT sucursal_id FROM vehiculos WHERE id = NEW.vehiculo_id)
+                  WHERE id = NEW.id;
+                END"""
+        )
+
+
+def asignar_existentes_a_sucursal(conn, agencia_id, sucursal_id):
+    """Lo que la agencia tenía sin sucursal pasa a `sucursal_id` (se usa al
+    crear la primera sucursal)."""
+    conn.execute("UPDATE vehiculos SET sucursal_id = ? WHERE agencia_id = ? AND sucursal_id IS NULL",
+                 (sucursal_id, agencia_id))
+    conn.execute("UPDATE ventas SET sucursal_id = ? WHERE agencia_id = ? AND sucursal_id IS NULL",
+                 (sucursal_id, agencia_id))
+    conn.execute("UPDATE financiaciones SET sucursal_id = ? WHERE COALESCE(agencia_id, 1) = ? AND sucursal_id IS NULL",
+                 (sucursal_id, agencia_id))
+    # Los vendedores quedan en esa sucursal; los dueños siguen sin sucursal
+    # (ven la vista consolidada de toda la agencia).
+    conn.execute("""UPDATE agencia_usuarios SET sucursal_id = ?
+                    WHERE agencia_id = ? AND sucursal_id IS NULL AND rol = 'vendedor'""",
+                 (sucursal_id, agencia_id))
+
+
 def mail_ocupado(conn, email, excepto_usuario_id=None):
     """True si el mail ya lo usa una agencia, un usuario de agencia o un
     admin de la plataforma (el login busca en las tres)."""
@@ -1537,6 +1608,7 @@ def init_db():
     _borrar_agencias_prueba(conn)
     _migrar_mensajes_conversacion(conn)
     _migrar_usuarios_agencia(conn)
+    _migrar_sucursales(conn)
     _crear_superadmin_desde_env(conn)
     import mercado_ml
     mercado_ml.asegurar_tablas(conn)
