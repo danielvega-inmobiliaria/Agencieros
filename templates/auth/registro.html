@@ -9,7 +9,7 @@
 </head>
 <body>
   <div class="auth-wrap">
-    <div class="brand auth-brand">AGENCIEROS<span>Sumá tu agencia a la Red</span></div>
+    <div class="brand auth-brand">AGENCIEROS<span>Sumá tu agencia a la Red de Rosario</span></div>
     {% include "auth/_video.html" %}
     <div class="panel auth-panel">
       {% with messages = get_flashed_messages(with_categories=true) %}
@@ -42,7 +42,7 @@
         <label>Repetir contraseña</label>
         <input type="password" name="password2" required>
         <button class="btn btn-primary" style="width:100%; margin-top:20px;" type="submit">Crear mi cuenta</button>
-        <p style="text-align:center; margin:10px 0 0; font-size:.85rem; color:var(--text-dim);">El registro es gratis.</p>
+        <p style="text-align:center; margin:10px 0 0; font-size:.85rem; color:var(--text-dim);">30 días gratis, sin tarjeta.</p>
       </form>
       <p style="text-align:center; margin-top:18px; font-size:.9rem;">
         ¿Ya tenés cuenta? <a href="{{ url_for('auth.login') }}">Ingresá acá</a>

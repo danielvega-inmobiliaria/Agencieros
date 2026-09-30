@@ -97,6 +97,8 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - **Plan de arranque:** toda agencia (existente y nueva) queda en **"Libre (lanzamiento)"**, sin límites. Los límites se aplican recién cuando el admin le cambia el plan desde el Panel.
 - **Pendientes que salen de esto:** (1) confirmar el precio del plan Agenciero (Daniel escribió 254.990); (2) ✅ límites por plan en la app (30/09, Msg 6); (3) campaña Meta Ads para Rosario, sin precios → **chat aparte** (copy de arranque dado en el Msg 6 de este chat); (4) definir qué pasa con la consulta de precios si no se usa la licencia (hoy muestra los precios transcriptos de la revista InfoAuto).
 
+- [x] **✅ Hecho 30/09/2026 desde el chat META Ads (falta push) — Landing para la campaña Rosario (pedido desde META Ads, 30/09/2026 — ver `05_MARKETING/META_ADS/CAMPANA_AGENCIEROS_ROSARIO.md` → "Revisión de la landing"):** (1) Financiación propia y Matches figuran "Próximamente" → "Disponible"; (2) sacar "Los módulos se habilitan para cada agencia nueva a medida que se prueban"; (3) mencionar Rosario y zona (hero + Red "estamos sumando las primeras agencias"); (4) "Probala gratis 30 días. Sin tarjeta." en hero, bloque final y `auth/registro.html`; (5) precios "con avisos reales publicados en Rosario"; (6) venta "con seña, permuta o crédito". Hacerlo ANTES de publicar los anuncios nuevos.
+
 ### 🟡 IMPORTANTE
 - [ ] **PRÓXIMO CHAT (pedido de Daniel 28/09/2026) — reorganizar cuentas y Red. Se deja en pausa la carga de la revista.** Alcance:
   1. ✅ **Hecho 28/09/2026 (Msg 1, ver "Cambios recientes") — falta deploy + crear el admin en Railway.** **Separar "Admin de la plataforma" de Italia Automotores:** hoy la agencia 1 (Italia) es a la vez agencia y dueña de la plataforma (`MODULOS_SOLO_AGENCIA_1` en `app.py`, `routes/plataforma.py`). Objetivo: un **usuario superadmin** que solo administra AGENCIEROS (Panel de Agencias, planes, Red) y no tiene stock propio; Italia pasa a ser **una agencia más**, sin permisos especiales. Revisar todo lo que hoy chequea `agencia_id == 1`.
@@ -147,6 +149,9 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 30/09/2026 (chat precios revista, Msg 11) — Precios Sep-2026 págs. 73-76
+- **Chrysler/Jeep/RAM completos** (Jeep Grand Cherokee, Patriot, Renegade, Wrangler; Journey, PT Cruiser, Town & Country; RAM 1500, 2500, Dakota, Rampage — RAM va con marca "RAM" en el CSV) y **Citroën** (Basalt, Berlingo, C3, C3 Aircross, C3 Picasso, C4, C4 Lounge, C4 Aircross, C4 Cactus): **281 versiones / 1.017 precios**. Probado con base temporal. Citroën sigue en la pág. 77.
 
 ### Sesión 30/09/2026 (chat "Sucursales", Msg 6) — Paso 5: planes y límites (incluida la Red)
 - **`agencias.plan`** (`database._migrar_planes`, default `'libre'`; todas las existentes quedan en Libre). **`utils/planes.py`**: `PLANES` (libre / agenciero / agencia / multisucursal con topes de usuarios, unidades, sucursales y Red), `uso()`, `puede_agregar()` y `resumen()`. Sin precios en el código visible.

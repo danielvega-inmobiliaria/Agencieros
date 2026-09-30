@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AGENCIEROS — La plataforma para agencias de autos</title>
-  <meta name="description" content="Consultá precios de referencia, cargá tu stock, tasá tomas con inspección de 44 puntos, armá fichas para WhatsApp y trabajá en red con otras agencias. Todo desde el celular.">
+  <title>AGENCIEROS — La app para agencias de autos usados de Rosario</title>
+  <meta name="description" content="La app para agencias de autos usados de Rosario y zona: precios de referencia con avisos reales, stock, toma y tasación con checklist de 44 puntos, señas, ventas, cuotas y red de agencias. Probala gratis 30 días.">
   <meta name="theme-color" content="#0b1420">
   <link rel="canonical" href="{{ landing_url }}/">
   <meta property="og:type" content="website">
@@ -258,14 +258,14 @@
     <section class="hero">
       <div class="wrap hero-grid">
         <div>
-          <div class="eyebrow">Para agencias de autos usados</div>
+          <div class="eyebrow">Para agencias de autos usados de Rosario y zona</div>
           <h1>Todo el negocio de tu agencia, <em>en el celular.</em></h1>
-          <p class="lead">Consultá el precio de referencia, cargá tu stock, tasá cada toma con inspección de 44 puntos, compartí fichas por WhatsApp y trabajá en red con otras agencias.</p>
+          <p class="lead">Consultá el precio de referencia con avisos reales de Rosario, cargá tu stock, tasá cada toma con checklist de 44 puntos, registrá señas, ventas y cuotas, y trabajá en red con otras agencias de la zona.</p>
           <div class="cta-row">
-            <a class="btn btn-gold" href="{{ app_url }}{{ url_for('auth.registro') }}" onclick="if(window.fbq){fbq('track','Lead');}">Registrá tu agencia gratis</a>
+            <a class="btn btn-gold" href="{{ app_url }}{{ url_for('auth.registro') }}" onclick="if(window.fbq){fbq('track','Lead');}">Probala gratis 30 días</a>
             <a class="btn btn-ghost" href="{{ app_url }}{{ url_for('auth.login') }}">Ya tengo cuenta</a>
           </div>
-          <p class="hero-note">Registro gratis. Se usa desde el celular o la compu, sin instalar nada.</p>
+          <p class="hero-note">30 días gratis, sin tarjeta. Se usa desde el celular o la compu, sin instalar nada.</p>
         </div>
         <div class="video-frame">
           <video autoplay muted loop playsinline controls preload="metadata"
@@ -303,7 +303,7 @@
           <div class="showcase-item">
             <figure class="phone"><img src="{{ url_for('static', filename='landing/m-red.webp') }}" width="540" height="1169" alt="Red de Agencieros: ofertas y búsquedas de otras agencias" loading="lazy"></figure>
             <div class="cap">Red de Agencieros</div>
-            <div class="sub">Ofrecé y buscá entre colegas</div>
+            <div class="sub">Ofrecé y buscá entre agencias de Rosario</div>
           </div>
         </div>
         <p class="hint">Deslizá para ver más</p>
@@ -314,7 +314,7 @@
     <div class="strip">
       <div class="wrap strip-grid">
         <div class="chip"><svg class="ico"><use href="#i-price"/></svg><b>Consulta de precios</b><span>Referencia en segundos</span></div>
-        <div class="chip"><svg class="ico"><use href="#i-car"/></svg><b>Stock y ventas</b><span>Con seña y permuta</span></div>
+        <div class="chip"><svg class="ico"><use href="#i-car"/></svg><b>Stock y ventas</b><span>Con seña, permuta o crédito</span></div>
         <div class="chip"><svg class="ico"><use href="#i-check"/></svg><b>Toma y tasación</b><span>Inspección de 44 puntos</span></div>
         <div class="chip"><svg class="ico"><use href="#i-chat"/></svg><b>Fichas por WhatsApp</b><span>Listas para compartir</span></div>
         <div class="chip"><svg class="ico"><use href="#i-users"/></svg><b>Red de agencias</b><span>Pedidos y ofertas</span></div>
@@ -352,7 +352,7 @@
           <ul class="ticks">
             <li>Fotos, precio, kilometraje y equipamiento de cada vehículo.</li>
             <li>Estado de cada unidad: disponible, por ingresar, en reparación, señado o vendido.</li>
-            <li>Ventas con seña y permuta, registradas desde el mismo stock.</li>
+            <li>Ventas con seña, permuta o crédito, registradas desde el mismo stock.</li>
             <li>Ficha comercial con botón de WhatsApp para compartir con el cliente.</li>
           </ul>
         </div>
@@ -377,7 +377,7 @@
             <li>Cobro mensual o semanal, con la fecha de la primera cuota.</li>
             <li>Seguimiento de cuotas cobradas, por cobrar y vencidas.</li>
           </ul>
-          <p style="margin:26px 0 0;"><span class="status soon">Próximamente para agencias nuevas</span></p>
+          <p style="margin:26px 0 0;"><span class="status live">Disponible</span></p>
         </div>
         <div class="split-media">
           <figure class="phone"><img src="{{ url_for('static', filename='landing/m-fin.webp') }}" width="540" height="1169" alt="Simulador de financiación propia con cuota calculada" loading="lazy"></figure>
@@ -413,7 +413,7 @@
           <p class="sec-lead">Sin instalar nada y sin cargar todo de golpe.</p>
         </div>
         <div class="steps">
-          <div class="step"><div class="num">1</div><h3>Registrá tu agencia</h3><p>Es gratis. Nombre, teléfono, dirección y un email. Te mandamos un código para verificarlo.</p></div>
+          <div class="step"><div class="num">1</div><h3>Registrá tu agencia</h3><p>30 días gratis, sin tarjeta. Nombre, teléfono, dirección y un email. Te mandamos un código para verificarlo.</p></div>
           <div class="step"><div class="num">2</div><h3>Cargá tu stock</h3><p>Sumá tus vehículos con fotos y precio. Tu ficha y tu WhatsApp quedan listos para compartir.</p></div>
           <div class="step"><div class="num">3</div><h3>Tasá, vendé y conectate</h3><p>Hacé tomas con inspección, seguí tus ventas y publicá lo que ofrecés o buscás en la Red.</p></div>
         </div>
@@ -426,18 +426,18 @@
         <div class="center">
           <div class="eyebrow">Módulos</div>
           <h2 class="sec-title">Lo que trae AGENCIEROS.</h2>
-          <p class="sec-lead">Un sistema hecho por y para agencieros. Los módulos se habilitan para cada agencia nueva a medida que se prueban.</p>
+          <p class="sec-lead">Un sistema hecho por y para agencieros. Todos los módulos están disponibles desde el primer día.</p>
         </div>
         <div class="mods">
-          <div class="mod"><svg class="ico"><use href="#i-price"/></svg><div><h3>Consulta de precios</h3><p>Valor de referencia e historial de variación por año, con la fecha de actualización del dato.</p><span class="status live">Disponible</span></div></div>
-          <div class="mod"><svg class="ico"><use href="#i-car"/></svg><div><h3>Stock</h3><p>Tus vehículos con fotos, estado y precio. Ventas con seña y permuta.</p><span class="status live">Disponible</span></div></div>
+          <div class="mod"><svg class="ico"><use href="#i-price"/></svg><div><h3>Consulta de precios</h3><p>Valor de referencia e historial por año, con la fecha del dato y avisos reales publicados en Rosario.</p><span class="status live">Disponible</span></div></div>
+          <div class="mod"><svg class="ico"><use href="#i-car"/></svg><div><h3>Stock</h3><p>Tus vehículos con fotos, estado y precio. Ventas con seña, permuta o crédito.</p><span class="status live">Disponible</span></div></div>
           <div class="mod"><svg class="ico"><use href="#i-check"/></svg><div><h3>Toma, inspección y tasación</h3><p>Inspección de 44 puntos y tasación con gastos y margen.</p><span class="status live">Disponible</span></div></div>
           <div class="mod"><svg class="ico"><use href="#i-chat"/></svg><div><h3>Ficha comercial</h3><p>Página pública de cada auto para mandar por WhatsApp o compartir en historias.</p><span class="status live">Disponible</span></div></div>
-          <div class="mod"><svg class="ico"><use href="#i-list"/></svg><div><h3>Banco de pedidos</h3><p>Anotá lo que busca cada cliente, con marca, modelo y presupuesto, y no se te pierde ningún pedido.</p><span class="status live">Disponible</span></div></div>
-          <div class="mod"><svg class="ico"><use href="#i-users"/></svg><div><h3>Red de Agencieros</h3><p>Ofertas y búsquedas entre agencias para mover más autos, con contacto directo.</p><span class="status live">Disponible</span></div></div>
+          <div class="mod"><svg class="ico"><use href="#i-list"/></svg><div><h3>Banco de pedidos</h3><p>Anotá lo que busca cada cliente, con marca, modelo y presupuesto. Cuando entra un auto que coincide, la app te avisa.</p><span class="status live">Disponible</span></div></div>
+          <div class="mod"><svg class="ico"><use href="#i-users"/></svg><div><h3>Red de Agencieros</h3><p>La red de agencias de Rosario y zona: ofrecé tus unidades y encontrá lo que te piden tus clientes, con contacto directo. Estamos sumando las primeras agencias.</p><span class="status live">Disponible</span></div></div>
           <div class="mod"><svg class="ico"><use href="#i-chart"/></svg><div><h3>Dashboard</h3><p>Stock, pedidos, ventas, gastos y ganancia del mes en una sola pantalla.</p><span class="status live">Disponible</span></div></div>
-          <div class="mod"><svg class="ico"><use href="#i-bank"/></svg><div><h3>Financiación propia</h3><p>Simulador de cuotas y seguimiento de cobros de tus planes.</p><span class="status soon">Próximamente</span></div></div>
-          <div class="mod"><svg class="ico"><use href="#i-target"/></svg><div><h3>Matches</h3><p>Cruce automático entre lo que buscan tus clientes y lo que hay en tu stock, por entrar o en la Red.</p><span class="status soon">Próximamente</span></div></div>
+          <div class="mod"><svg class="ico"><use href="#i-bank"/></svg><div><h3>Financiación propia</h3><p>Simulador de cuotas y seguimiento de cobros de tus planes.</p><span class="status live">Disponible</span></div></div>
+          <div class="mod"><svg class="ico"><use href="#i-target"/></svg><div><h3>Matches</h3><p>Cruce automático entre lo que buscan tus clientes y lo que hay en tu stock, por ingresar o en la Red.</p><span class="status live">Disponible</span></div></div>
         </div>
       </div>
     </section>
@@ -446,9 +446,9 @@
     <div class="wrap">
       <div class="final">
         <h2>Probá <span class="brand">AGENCIEROS</span> en tu negocio.</h2>
-        <p>Registrate gratis en un minuto y empezá a cargar tu stock hoy.</p>
+        <p>Probala gratis 30 días, sin tarjeta. Te registrás en un minuto y empezás a cargar tu stock hoy.</p>
         <div class="cta-row">
-          <a class="btn btn-gold" href="{{ app_url }}{{ url_for('auth.registro') }}" onclick="if(window.fbq){fbq('track','Lead');}">Registrá tu agencia gratis</a>
+          <a class="btn btn-gold" href="{{ app_url }}{{ url_for('auth.registro') }}" onclick="if(window.fbq){fbq('track','Lead');}">Probala gratis 30 días</a>
           <a class="btn btn-ghost" href="{{ app_url }}{{ url_for('auth.login') }}">Ingresar</a>
         </div>
       </div>
