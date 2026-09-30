@@ -126,6 +126,10 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 ## Cambios recientes
 
+### Sesión 29/09/2026 (chat precios revista) — Precios Sep-2026 págs. 127, 128, 131 y 132
+- Cargadas al Excel `INFOAUTO_PRECIOS_2026_09.xlsx` (filas 2103–2369) y al CSV `seed/precios_infoauto/precios_infoauto_2026_09.csv`: **264 versiones / 963 precios**. Peugeot (408 fin a Traveller), Porsche (718 y Taycan; marca nueva), Rely (R8; marca nueva), Renault (Alaskan a Duster; marca nueva). Probado en la app con base temporal (`/precios/api/opciones`).
+- Dudas resueltas por Daniel (30/09/2026): Partner Pata. 1.6HDI VTC PL '25 = 25600; Clio Mío 5P Dynamique SAT '15 = 10720 es correcto. Faltan págs. 129-130 (resto de Porsche), 103 y 108-122. Detalle en `INFOAUTO/transcripcion/PAGINAS_CARGADAS.md`.
+
 ### Sesión 29/09/2026 (chat "Sucursales", Msg 1) — Paso 3: sucursales por agencia
 - **Decisiones de Daniel:** el vendedor con sucursal ve el stock de **todas** (puede vender cualquier unidad), arranca filtrado en la suya y lo que carga queda ahí. Al crear la **primera** sucursal, todo lo existente (stock, ventas, planes y vendedores) pasa a ella; los dueños quedan sin sucursal fija (vista consolidada).
 - **Base** (`database._migrar_sucursales`, idempotente): tabla `sucursales` (agencia_id, nombre, dirección, ciudad, teléfono, activa) y `sucursal_id` en `vehiculos`, `ventas` y `financiaciones` (`agencia_usuarios.sucursal_id` ya existía). **Triggers SQLite:** ventas y financiaciones heredan la sucursal del vehículo al crearse (o al asignarles vehículo), así ninguna de las 4 vías de seña/venta/plan tuvo que tocarse; un vehículo que nace sin sucursal en una agencia con sucursales (sync, importación) va a la primera. `asignar_existentes_a_sucursal()` para la primera sucursal.
