@@ -126,6 +126,10 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 ## Cambios recientes
 
+### Sesión 30/09/2026 (Msg 9) — Navegación Volver/Anterior/Siguiente + panel "Publicar"
+- **Navegación común** (`utils/navegacion.py` + `templates/partials/barra_navegacion.html`, inyectada en `base.html` por `_inject_navegacion` en app.py): "‹ Volver" en Cargar/Editar vehículo, Nuevo pedido, Ficha de pedido, Nueva toma, Ficha de toma, Publicar en la Red y Mi cuenta (respeta `?volver=` interno). "‹ Anterior · n de N · Siguiente ›" en Ficha de pedido (según la pestaña del listado), Ficha de toma (Pendientes / En Stock) y Plan de financiación. Las pantallas que ya tenían su Volver (Stock, Financiación, Tomas > Fotos/Tasación, Vender, Permutas, Señas) no se duplican. "Ver toma" desde Stock vuelve a Stock.
+- **Publicar** (menú de la tarjeta de Stock): abre la ficha con `?publicar=1` y un panel (solo con sesión y vehículo propio) con: Compartir fotos + texto (menú del celu: Instagram, Facebook/Marketplace, Estados de WhatsApp), Copiar texto del aviso (editable), Copiar link, Compartir en Facebook y Descargar fotos. MercadoLibre queda pendiente (requiere conectar la cuenta ML de cada agencia).
+
 ### Sesión 30/09/2026 (chat precios revista, Msg 8) — Precios Sep-2026 págs. 65-68
 - **Chery** (Arrizo 5 a Tiggo 8) y **Chevrolet** (Agile a Onix 1.0T), marcas nuevas al comienzo del Excel (orden alfabético): **256 versiones / 909 precios**; Kangoo 2 1.6 Campus 2 PLC '11 = 10800 (confirmado por Daniel). Probado con base temporal.
 - Chevrolet sigue en la pág. 69 (Onix, Prisma, S10, Spin, Tracker…); falta el comienzo de Chery (pág. 64 o antes).

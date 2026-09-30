@@ -143,12 +143,12 @@ def index():
             "ver": url_for("stock.ficha", vehiculo_id=v["id"], wa=0, nav=estado_filtro, volver=volver_listado),
             "interna": url_for("stock.detalle", vehiculo_id=v["id"], estado=estado_filtro),
             "operacion": url_for("stock.operacion", vehiculo_id=v["id"], estado=estado_filtro),
-            "publicar": url_for("stock.ficha", vehiculo_id=v["id"], volver=url_for("stock.index", estado=estado_filtro)),
+            "publicar": url_for("stock.ficha", vehiculo_id=v["id"], publicar=1, volver=url_for("stock.index", estado=estado_filtro)),
             "whatsapp": "https://wa.me/?text=" + quote_plus(texto),
             "red": url_for("stock.red", vehiculo_id=v["id"]),
             "en_red": v["id"] in en_red,
             "red_posible": v["estado"] != "vendido",
-            "toma": url_for("tomas.detalle", toma_id=tomas[v["id"]]) if v["id"] in tomas else None,
+            "toma": url_for("tomas.detalle", toma_id=tomas[v["id"]], volver=volver_listado) if v["id"] in tomas else None,
         }
     selector = contexto_selector()
     return render_template(
@@ -1359,9 +1359,38 @@ def ficha(vehiculo_id):
             nav = {"pos": i + 1, "total": len(ids),
                    "anterior": enlace(i - 1) if i > 0 else None,
                    "siguiente": enlace(i + 1) if i < len(ids) - 1 else None}
-    if request.args.get("wa") == "0":
-        # Link compartido por WhatsApp: el cliente ya está en el chat con la
-        # agencia, así que la ficha va sin el botón de WhatsApp.
+    # Panel "Publicar" (30/09/2026): desde el menú de Stock, con sesión y solo
+    # para vehículos propios. Arma el texto del aviso y deja compartir fotos +
+    # texto con el menú del celu (Instagram, Facebook/Marketplace, Estados de
+    # WhatsApp...), copiar texto/link o bajar las fotos. La ficha pública que
+    # recibe el cliente no lo muestra.
+    publicar = None
+    if (request.args.get("publicar") == "1" and session.get("agencia_id")
+            and (vehiculo["agencia_id"] or 1) == session["agencia_id"]):
+        link_ficha = og["url"]
+        lineas = [f"🚗 {titulo_v}"]
+        if vehiculo["valor_publicado"]:
+            lineas.append(f"💲 {_pesos(vehiculo['valor_publicado'])}")
+        if vehiculo["km"]:
+            lineas.append(f"🛣️ {int(vehiculo['km']):,} km".replace(",", "."))
+        if vehiculo["condiciones_pago"]:
+            lineas.append(f"💳 {vehiculo['condiciones_pago']}")
+        if datos.get("equipamiento"):
+            lineas.append("✅ " + " · ".join(datos["equipamiento"][:5]))
+        lineas.append("")
+        if nombre_ag:
+            lineas.append(nombre_ag + (f" · {lugar}" if lugar else ""))
+        lineas.append(f"Más fotos y consultas: {link_ficha}")
+        publicar = {
+            "texto": "\n".join(lineas),
+            "link": link_ficha,
+            "titulo": titulo_v,
+            "fotos": [f["url"] for f in datos.get("fotos") or []],
+            "facebook": "https://www.facebook.com/sharer/sharer.php?u=" + quote_plus(link_ficha),
+        }
+    if request.args.get("wa") == "0" or publicar:
+        # Link compartido por WhatsApp (el cliente ya está en el chat con la
+        # agencia) o panel Publicar: la ficha va sin el botón de WhatsApp.
         datos["whatsapp_link"] = None
     return render_template(
         "stock/ficha.html",
@@ -1369,6 +1398,7 @@ def ficha(vehiculo_id):
         datos=datos,
         og=og,
         nav=nav,
+        publicar=publicar,
         estado_label=ESTADO_LABEL,
         volver_url=volver_url,
     )

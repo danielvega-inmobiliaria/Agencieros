@@ -27,7 +27,7 @@
         <span class="badge por_ingresar">pendiente</span>
         {% endif %}
       </td>
-      <td><a class="btn btn-secondary btn-sm" href="{{ url_for('tomas.detalle', toma_id=d.toma.id) }}">Ver</a></td>
+      <td><a class="btn btn-secondary btn-sm" href="{{ url_for('tomas.detalle', toma_id=d.toma.id, vista=vista) }}">Ver</a></td>
     </tr>
     {% else %}
     <tr><td colspan="6">{{ 'No hay tomas pendientes.' if vista == 'pendientes' else 'Ninguna toma terminó en un vehículo de Stock todavía.' }}</td></tr>

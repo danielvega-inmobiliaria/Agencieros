@@ -113,6 +113,15 @@ def create_app():
             return {"catalogo_json": "{}"}
 
     @app.context_processor
+    def _inject_navegacion():
+        # "‹ Volver" y "Anterior / Siguiente" comunes (30/09/2026) -- ver utils/navegacion.py.
+        from utils.navegacion import volver_auto, nav_detalle
+        try:
+            return {"volver_auto": volver_auto(), "nav_detalle": nav_detalle()}
+        except Exception:
+            return {"volver_auto": None, "nav_detalle": None}
+
+    @app.context_processor
     def _inject_rol():
         from utils.permisos import es_vendedor, es_dueno
         return {"es_vendedor": es_vendedor(), "es_dueno": es_dueno()}

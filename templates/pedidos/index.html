@@ -13,7 +13,7 @@
   <table class="tabla-responsive tabla-pedidos-compacta">
     <tr class="fila-header"><th></th><th>Cliente</th><th>Teléfono</th><th>Busca</th><th>Precio máx.</th><th>Forma de pago</th><th>Fecha</th><th>Días</th><th>Estado</th><th></th></tr>
     {% for p in pedidos %}
-    <tr data-href="{{ url_for('pedidos.detalle', pedido_id=p.id) }}">
+    <tr data-href="{{ url_for('pedidos.detalle', pedido_id=p.id, estado=estado_filtro) }}">
       <td class="fila-compacta">
         <span class="badge {{ p.estado }}">{{ p.estado }}</span>{{ p.cliente_nombre }} - {{ p.telefono or 'sin teléfono' }} · {{ p.marca }} {{ p.modelo }} {{ p.version or '' }}{% if p.id in en_red %} <span class="badge badge-red">En Red</span>{% endif %}
       </td>

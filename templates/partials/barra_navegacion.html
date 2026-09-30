@@ -1,0 +1,13 @@
+{# Volver / Anterior / Siguiente comunes (ver utils/navegacion.py). #}
+{% if volver_auto or nav_detalle %}
+<div class="barra-nav">
+  {% if volver_auto %}<a class="btn btn-secondary btn-sm" href="{{ volver_auto }}">‹ Volver</a>{% endif %}
+  {% if nav_detalle %}
+  <div class="barra-nav-lista">
+    {% if nav_detalle.anterior %}<a class="btn btn-secondary btn-sm" href="{{ nav_detalle.anterior }}">‹ Anterior</a>{% else %}<span class="btn btn-secondary btn-sm ficha-nav-off">‹ Anterior</span>{% endif %}
+    <span class="ficha-nav-pos">{{ nav_detalle.pos }} de {{ nav_detalle.total }}</span>
+    {% if nav_detalle.siguiente %}<a class="btn btn-secondary btn-sm" href="{{ nav_detalle.siguiente }}">Siguiente ›</a>{% else %}<span class="btn btn-secondary btn-sm ficha-nav-off">Siguiente ›</span>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endif %}

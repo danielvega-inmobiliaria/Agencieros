@@ -746,3 +746,7 @@ select.calif-bueno, select.calif-regular, select.calif-malo { font-weight: 600; 
 }
 .selector-sucursal .chip.active { border-color: var(--gold); color: var(--gold-light); font-weight: 600; }
 .badge-sucursal { background: var(--navy-card-2); color: var(--text-dim); border: 1px solid var(--border); }
+
+/* Barra común Volver / Anterior / Siguiente (30/09/2026, utils/navegacion.py). */
+.barra-nav { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.barra-nav-lista { display: flex; align-items: center; gap: 8px; margin-left: auto; }

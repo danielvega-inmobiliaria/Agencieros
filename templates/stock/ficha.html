@@ -23,6 +23,63 @@
   {% if nav.siguiente %}<a id="ficha-siguiente" href="{{ nav.siguiente }}">Siguiente ›</a>{% else %}<span class="off">Siguiente ›</span>{% endif %}
 </div>
 {% endif %}
+{% if publicar %}
+<div class="publicar-panel" id="publicar-panel">
+  <div class="publicar-titulo">📣 Publicar este vehículo</div>
+  <div class="publicar-ayuda">Compartí las fotos con el texto del aviso y elegí dónde: Instagram (historia o publicación), Facebook o Marketplace, Estados de WhatsApp, grupos... El aviso lleva el link a esta ficha para que te consulten.</div>
+  <div class="publicar-botones">
+    <button type="button" class="pub-btn pub-principal" id="pub-compartir">📤 Compartir fotos y texto</button>
+    <button type="button" class="pub-btn" id="pub-copiar-texto">📋 Copiar texto del aviso</button>
+    <button type="button" class="pub-btn" id="pub-copiar-link">🔗 Copiar link de la ficha</button>
+    <a class="pub-btn" href="{{ publicar.facebook }}" target="_blank" rel="noopener">📘 Compartir en Facebook</a>
+    {% if publicar.fotos %}<button type="button" class="pub-btn" id="pub-bajar">⬇️ Descargar fotos ({{ publicar.fotos|length }})</button>{% endif %}
+  </div>
+  <textarea id="pub-texto" rows="7">{{ publicar.texto }}</textarea>
+  <div class="publicar-aviso" id="pub-aviso"></div>
+  <div class="publicar-ayuda">MercadoLibre todavía no: publicar ahí necesita conectar la cuenta de ML de cada agencia (pendiente).</div>
+</div>
+<script>
+(function () {
+  var fotos = {{ publicar.fotos|tojson }}, link = {{ publicar.link|tojson }}, titulo = {{ publicar.titulo|tojson }};
+  var aviso = document.getElementById('pub-aviso'), txt = document.getElementById('pub-texto');
+  function avisar(m) { aviso.textContent = m; setTimeout(function () { aviso.textContent = ''; }, 3500); }
+  function copiar(t, m) {
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { avisar(m); },
+      function () { txt.value = t; txt.select(); document.execCommand('copy'); avisar(m); });
+  }
+  document.getElementById('pub-copiar-texto').onclick = function () { copiar(txt.value, 'Texto copiado: pegalo en la publicación.'); };
+  document.getElementById('pub-copiar-link').onclick = function () { copiar(link, 'Link copiado.'); };
+  function archivos() {
+    return Promise.all(fotos.slice(0, 10).map(function (u, i) {
+      return fetch(u).then(function (r) { return r.blob(); }).then(function (b) {
+        var ext = (b.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+        return new File([b], 'foto' + (i + 1) + '.' + ext, { type: b.type || 'image/jpeg' });
+      });
+    }));
+  }
+  document.getElementById('pub-compartir').onclick = function () {
+    var texto = txt.value;
+    if (!navigator.share) { copiar(texto, 'Este navegador no comparte directo: copié el texto; bajá las fotos y publicalas.'); return; }
+    // Instagram/Facebook no toman el texto al compartir fotos: lo dejamos copiado para pegarlo.
+    if (navigator.clipboard) navigator.clipboard.writeText(texto).catch(function () {});
+    archivos().then(function (fs) {
+      if (fs.length && navigator.canShare && navigator.canShare({ files: fs })) {
+        return navigator.share({ files: fs, title: titulo, text: texto });
+      }
+      return navigator.share({ title: titulo, text: texto, url: link });
+    }).then(function () { avisar('Listo. Si la app no tomó el texto, pegalo: ya está copiado.'); },
+      function (e) { if (!e || e.name !== 'AbortError') navigator.share({ title: titulo, text: texto, url: link }).catch(function () {}); });
+  };
+  var bajar = document.getElementById('pub-bajar');
+  if (bajar) bajar.onclick = function () {
+    fotos.forEach(function (u, i) {
+      setTimeout(function () { var a = document.createElement('a'); a.href = u; a.download = 'foto' + (i + 1); document.body.appendChild(a); a.click(); a.remove(); }, i * 400);
+    });
+    avisar('Descargando ' + fotos.length + ' fotos…');
+  };
+})();
+</script>
+{% endif %}
 {{ fc.ficha(datos, estado_label, volver_url) }}
 {% if nav %}
 <script>
