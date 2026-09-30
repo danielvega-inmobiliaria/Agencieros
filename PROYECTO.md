@@ -126,6 +126,10 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 ## Cambios recientes
 
+### Sesión 30/09/2026 (chat precios revista, Msg 8) — Precios Sep-2026 págs. 65-68
+- **Chery** (Arrizo 5 a Tiggo 8) y **Chevrolet** (Agile a Onix 1.0T), marcas nuevas al comienzo del Excel (orden alfabético): **256 versiones / 909 precios**; Kangoo 2 1.6 Campus 2 PLC '11 = 10800 (confirmado por Daniel). Probado con base temporal.
+- Chevrolet sigue en la pág. 69 (Onix, Prisma, S10, Spin, Tracker…); falta el comienzo de Chery (pág. 64 o antes).
+
 ### Sesión 30/09/2026 (chat precios revista, Msg 7) — Precios Sep-2026 págs. 150-153 + reorden del Excel
 - Toyota completa (Hilux, Innova, Land Cruiser, Lexus, Prius, RAV 4, Supra, SW4, Yaris, Yaris Cross) y comienzo de VW Amarok 4X2: **252 versiones / 969 precios**. En el CSV los Lexus quedan con marca "Lexus". Probado con base temporal.
 - Excel: marcas en orden alfabético (Land Rover movida), autofiltro en todos los años, borradas 159 filas Toyota sin precio. El ranking de patentamientos (CATALOGO VEHICULOS.xlsx) se usa para pedir qué marcas escanear primero.
