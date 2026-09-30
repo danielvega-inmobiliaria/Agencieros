@@ -1,11 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Fotos e inspección visual — Agencieros{% endblock %}
-{% block header %}Paso 2 · Fotos e inspección visual{% endblock %}
+{% block title %}Inspección visual — Agencieros{% endblock %}
+{% block header %}{% endblock %}
 {% block content %}
-<div class="tabs">
-  <a class="btn btn-secondary btn-sm" href="{{ url_for('tomas.detalle', toma_id=toma.id) }}">← Volver a la toma</a>
-  <span style="color:var(--text-dim); font-size:13px; align-self:center; margin-left:12px;">{{ toma.marca }} {{ toma.modelo }} {{ toma.version }}{% if toma.anio %} ({{ toma.anio }}){% endif %}</span>
-  <a class="btn btn-primary btn-sm" style="margin-left:auto;" href="{{ url_for('tomas.tasacion', toma_id=toma.id) }}">Continuar a Tasación →</a>
+<div class="barra-fija" id="barra-fija">
+  <div class="barra-fija-titulo">Inspección visual</div>
+  <div class="barra-fija-botones">
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('tomas.detalle', toma_id=toma.id) }}">← Volver</a>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('tomas.tasacion', toma_id=toma.id) }}">Continuar a Tasación →</a>
+  </div>
+  <div class="barra-fija-sub">{{ toma.marca }} {{ toma.modelo }} {{ toma.version }}{% if toma.anio %} ({{ toma.anio }}){% endif %}</div>
 </div>
 
 <p style="color:var(--text-dim); font-size:13px; margin-bottom:6px;">
@@ -77,4 +80,5 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/inspeccion.js') }}"></script>
+<script src="{{ url_for('static', filename='js/barra_fija.js') }}?v=20260929"></script>
 {% endblock %}

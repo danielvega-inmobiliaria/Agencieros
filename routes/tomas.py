@@ -579,8 +579,13 @@ def detalle(toma_id):
             dict(TIPOS_DANIO), dict(GRAVEDADES),
         )
         label_agregar_a_stock = "Agregar a Stock"
+    precio_publicado = None
+    if toma["vehiculo_id"]:
+        veh = query("SELECT valor_publicado FROM vehiculos WHERE id = ?", (toma["vehiculo_id"],), one=True)
+        precio_publicado = veh["valor_publicado"] if veh else None
     return render_template(
         "tomas/detalle.html",
+        precio_publicado=precio_publicado,
         toma=toma,
         puntos_data=_puntos_con_costo(toma),
         grupos_cargados=_grupos_cargados(toma),

@@ -1,6 +1,9 @@
 import json
+import mimetypes
 import os
 from flask import Flask, redirect, url_for, session, flash, send_from_directory, request, render_template, Response
+
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 from database import init_db, close_db, obtener_catalogo
 from storage import uploads_dir

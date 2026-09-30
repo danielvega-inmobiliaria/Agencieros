@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Toma — Agencieros{% endblock %}
-{% block header %}{{ toma.marca }} {{ toma.modelo }} {{ toma.version }}{% if toma.anio %} ({{ toma.anio }}){% endif %}{% endblock %}
+{% block header %}{% endblock %}
 {% block content %}
+<div class="barra-fija" id="barra-fija">
+  <div class="barra-fija-titulo">{{ toma.marca }} {{ toma.modelo }} {{ toma.version }}{% if toma.anio %} ({{ toma.anio }}){% endif %}</div>
+</div>
 <div class="panel">
   <h2>Paso 1 · Datos técnicos {% if toma.evaluador %}— {{ toma.evaluador }}{% endif %}</h2>
   <div class="stat-row">
@@ -12,7 +15,7 @@
   {% set clase_calif = {'Bueno': 'calif-bueno', 'Regular': 'calif-regular', 'Malo': 'calif-malo'} %}
   {% for g in grupos_cargados %}
   <div class="puntos-grupo">
-    <div class="puntos-grupo-titulo">{{ g.nombre }}{% if g.costo %} <span>· ${{ "{:,.0f}".format(g.costo).replace(",", ".") }}</span>{% endif %}</div>
+    <div class="puntos-grupo-titulo pegajoso">{{ g.nombre }}{% if g.costo %} <span>· ${{ "{:,.0f}".format(g.costo).replace(",", ".") }}</span>{% endif %}</div>
     {% for p in g.puntos %}
     {% set cc = clase_calif.get(p.calificacion, 'calif-otro') %}
     {# Una sola línea: el punto en color y, a la derecha, el costo en el mismo color
@@ -53,26 +56,26 @@
   {% if toma.observaciones %}<p style="color:var(--text-dim); margin-top:16px;"><b>Observaciones:</b> {{ toma.observaciones }}</p>{% endif %}
 </div>
 
-<div class="panel">
-  <h2>Paso 2 · Fotos e inspección visual</h2>
-  <p style="color:var(--text-dim); font-size:13px;">
-    {{ fotos_cargadas }}/5 fotos cargadas · {{ total_marcadores }} daño(s) marcado(s) · Estado estético sugerido: <strong>{{ estado_estetico_sugerido }}</strong>
+<a class="panel panel-link" href="{{ url_for('tomas.inspeccion', toma_id=toma.id) }}">
+  <h2>Paso 2 · Inspección visual <span class="panel-link-flecha">›</span></h2>
+  <p style="color:var(--text-dim); font-size:13px; margin-bottom:0;">
+    {{ fotos_cargadas }}/5 fotos · {{ total_marcadores }} daño(s) marcado(s) · Estado estético sugerido: <strong>{{ estado_estetico_sugerido }}</strong>
   </p>
-  <a class="btn btn-primary btn-sm" href="{{ url_for('tomas.inspeccion', toma_id=toma.id) }}">
-    {{ 'Continuar con las fotos' if fotos_cargadas < 5 else 'Ver / editar inspección visual' }}
-  </a>
-</div>
+</a>
 
 <div class="panel">
   <h2>Paso 3 · Tasación</h2>
   {% if tasacion %}
   {% if tasacion.fecha_fmt %}<p style="color:var(--text-dim); font-size:11.5px; margin:0 0 8px;">Tasado el {{ tasacion.fecha_fmt }}</p>{% endif %}
-  <div class="stat-row">
-    <div class="stat"><div class="n">${{ "{:,.0f}".format(tasacion.precio_max_recomendado).replace(",", ".") }}</div><div class="l">Precio máx. recomendado</div></div>
+  {% set m = "{:,.0f}" %}
+  <div class="tasacion-resumen">
+    {% if tasacion.valor_referencia %}<div><span>Precio de referencia</span><b>${{ m.format(tasacion.valor_referencia).replace(",", ".") }}</b></div>{% endif %}
+    <div class="destacado"><span>Máximo recomendado</span><b>${{ m.format(tasacion.precio_max_recomendado).replace(",", ".") }}</b></div>
+    <div><span>Gastos de reparación</span><b>${{ m.format(tasacion.gastos_estimados or 0).replace(",", ".") }}</b></div>
     {% if not es_vendedor %}
-    <div class="stat"><div class="n">${{ "{:,.0f}".format(tasacion.margen_esperado).replace(",", ".") }}</div><div class="l">Margen esperado</div></div>
-    <div class="stat"><div class="n">{{ tasacion.porcentaje_beneficio }}%</div><div class="l">Beneficio</div></div>
+    <div><span>Margen esperado</span><b>${{ m.format(tasacion.margen_esperado or 0).replace(",", ".") }} <small>({{ tasacion.porcentaje_beneficio }}%)</small></b></div>
     {% endif %}
+    {% if precio_publicado %}<div><span>Precio publicado</span><b>${{ m.format(precio_publicado).replace(",", ".") }}</b></div>{% endif %}
   </div>
   <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
     <a class="btn btn-secondary btn-sm" href="{{ url_for('tomas.tasacion', toma_id=toma.id) }}">Volver a tasar</a>
@@ -90,3 +93,5 @@
   {% endif %}
 </div>
 {% endblock %}
+
+<script src="{{ url_for('static', filename='js/barra_fija.js') }}?v=20260929"></script>
