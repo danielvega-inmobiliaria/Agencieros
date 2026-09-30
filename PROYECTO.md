@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 29/09/2026 (chat "Usuarios por agencia", Msg 12: seña con contado/permuta/crédito; próximo: paso 3 sucursales)_
+_Última actualización: 29/09/2026 — 22:08 ART (cierre del chat "Usuarios por agencia", Msg 1-19; todo pusheado, último commit `b53cfe7`; próximo: paso 3 sucursales)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -84,7 +84,7 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
   5. **Control de operaciones de la Red:** decidir modelo (comisión por operación vs. cobrar por publicar vs. mixto, ver análisis en el ítem de abajo) e implementar lo mínimo que lo sostenga.
   Orden sugerido: 1 → 2 → 3 → 4 → 5 (cada paso sobre la base del anterior; probar con 2 agencias de prueba para no cruzar datos).
   **Estado al 28/09/2026 (cierre chat "Cuentas y Red"):** paso 1 ✅ en producción. **Próximo chat: paso 2 (usuarios por agencia).**
-  **28/09/2026 noche (chat "Usuarios por agencia"):** paso 2 ✅ y paso 4 ✅ hechos y probados en local (falta push/deploy). Próximo: paso 3 (sucursales) y 5 (control de la Red).
+  **29/09/2026 (cierre chat "Usuarios por agencia"):** pasos 1, 2 y 4 ✅ en producción (más pedidos publicables en la Red). **Próximo chat: paso 3 (sucursales)**, después 5 (control de la Red).
 - [ ] **Chicos, surgidos el 28/09/2026:** (a) ✅ pantalla para cambiar contraseña → "Mi cuenta" (hecho 28/09 noche, falta push); (b) confirmar en producción que aparecen las publicaciones de RosarioGarage (si no aparecen, ver logs de Railway: `[rosariogarage] No se pudo leer`); (c) MercadoLibre: pedir acceso de desarrollador/certificación para usar el buscador por API (hoy 403 incluso con token de usuario); (d) opcional: eliminar agencias desde el Panel (hoy solo por migración).
 - [ ] **Anotado por Daniel 24/09/2026 (a resolver, sin código todavía):**
   - **Agencias con sucursales:** una agencia con varias sucursales (stock, ventas y caja por sucursal, con vista consolidada para el dueño). Implica una tabla `sucursales` + `sucursal_id` en vehículos/ventas/financiaciones, y un filtro por sucursal en Stock y Dashboard.
@@ -138,6 +138,14 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 - **Msg 2 — RosarioGarage confirmado en producción por Daniel (captura del celu, Corolla 2020): aparecen los 3 avisos, pero con el logo de RG en vez de la foto.** Causa: RG carga las fotos con lazyload — la foto real está en `data-src` y el `src` es un relleno (`statics/css/skin/img/default-553x380.png`), relevado con el navegador. Fix en `publicaciones_rg.py` (toma `data-src`, descarta rellenos; clave de cache `v2|` para no reusar lo guardado con el logo) y en `static/js/mercado.js` (`referrerpolicy="no-referrer"` por si RG bloquea fotos enlazadas desde otro sitio, y si la foto falla queda el recuadro vacío). `?v=20260928e` en los 3 templates que cargan mercado.js.
 - **MercadoLibre:** sigue pendiente pedir acceso — texto para el pedido armado en el chat.
 - Nota: `seed/precios_infoauto/precios_infoauto_2026_09.csv` figura modificado en git solo por finales de línea (CRLF); no se incluyó en el commit.
+
+### Cierre del chat 28–29/09/2026 "Usuarios por agencia" (Msg 1-19) — estado y próximos pasos
+- **Todo en producción** (último commit `b53cfe7`; Railway a veces no toma un push: si no aparece el deploy, `git commit --allow-empty -m "Forzar deploy" && git push`).
+- **Hecho en el chat:** usuarios por agencia dueño/vendedor + Mi cuenta (cambiar contraseña) + quién cargó/señó/vendió; permisos del vendedor (sin costos/ganancia, Dashboard sin cuotas, Tasación sin %, Financiación solo simulador/propuestas); fotos reales de RosarioGarage; menú de acciones en las tarjetas de Stock (Ver ficha comercial navegable, Red, WhatsApp sin botón, Publicar, Señar/vender, Toma y datos internos); ficha compartible con fotos públicas y vista previa con datos de la agencia; unidades de Stock en la Red (paso 4: señado visible, baja al vender); pedidos publicables en la Red sin datos del cliente; pantalla Señar/vender con seña y cierre "cómo completa el pago" (contado, permuta, crédito personal/prendario/nuestro → simulador); toma con colores y vista compacta por sección, barras fijas, Paso 2 como tarjeta, Paso 3 completo; app instalable (PWA).
+- **Para probar por Daniel:** instalar la app en el celu (Safari → Agregar a inicio / Chrome → Instalar app, desde app.agencieros.net.ar); seña con "Nuestro" de punta a punta hasta cerrar el plan; vendedor de prueba en todas las pantallas.
+- **Próximo chat:** paso 3 **sucursales** (tabla `sucursales` + `sucursal_id` en vehículos/ventas/financiaciones y usuarios —la columna `agencia_usuarios.sucursal_id` ya existe—, filtro en Stock y Dashboard, vista consolidada del dueño). Después paso 5 (control/monetización de la Red, atado a los planes).
+- **Otros pendientes:** pedir acceso de desarrollador a MercadoLibre (texto en Msg 1 de este chat); pasar ML a cuenta de servicio; eliminar agencias desde el Panel (opcional); DMARC a quarantine; decisiones 🔴 (diferencial y planes de suscripción); retomar la carga de la revista; Financiación francés/semanal y recordatorios; imprimir informe de tasación; notificaciones de matches; service worker (offline) si hace falta.
+- Nota: `seed/precios_infoauto/precios_infoauto_2026_09.csv` figura modificado solo por finales de línea (no commitear). `.git/index.lock` puede quedar si Claude corre git en la carpeta: `rm -f .git/index.lock`.
 
 ### Sesión 29/09/2026 (chat "Usuarios por agencia", Msg 18) — App instalable (sin barras del navegador), barras fijas en la toma y Paso 3 completo
 - **App instalable (PWA básica):** `static/manifest.webmanifest` (display standalone, colores navy, íconos `static/icons/icon-192/512.png` + `apple-touch-icon.png` generados con una "A" dorada) y metas `apple-mobile-web-app-capable`/`theme-color` en `base.html`; `app.py` registra el mimetype `.webmanifest`. Para no ver la barra del navegador: abrir **app.agencieros.net.ar** en Safari (iPhone) → Compartir → "Agregar a inicio", o en Chrome (Android) → menú → "Instalar app"; se abre desde el ícono. Desde el navegador interno de WhatsApp o con la dirección de Railway siempre se ven las barras. (Pendiente a futuro: service worker / modo offline — no hace falta para instalarla.)
