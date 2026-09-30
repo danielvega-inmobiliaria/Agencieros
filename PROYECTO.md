@@ -126,6 +126,14 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 ## Cambios recientes
 
+### Sesión 30/09/2026 (chat precios revista, Msg 7) — Precios Sep-2026 págs. 150-153 + reorden del Excel
+- Toyota completa (Hilux, Innova, Land Cruiser, Lexus, Prius, RAV 4, Supra, SW4, Yaris, Yaris Cross) y comienzo de VW Amarok 4X2: **252 versiones / 969 precios**. En el CSV los Lexus quedan con marca "Lexus". Probado con base temporal.
+- Excel: marcas en orden alfabético (Land Rover movida), autofiltro en todos los años, borradas 159 filas Toyota sin precio. El ranking de patentamientos (CATALOGO VEHICULOS.xlsx) se usa para pedir qué marcas escanear primero.
+
+### Sesión 30/09/2026 (chat precios revista, Msg 5) — Precios Sep-2026 págs. 137-139 y 149
+- Renault (Megane II fin a Symbol), **Renault Camiones** y **Land Rover** (marcas nuevas), y Toyota Etios/Hiace/Hilux L/05-L/12 2.5 (pág. 149, dentro del bloque Toyota): **277 versiones / 982 precios**. Excel filas 2631–2843 y 2970–3035; CSV. Probado con base temporal.
+- Pendiente: KANGOO 2 1.6 CAMPUS 2 PLC '11 (10600 o 10800). Faltan págs. 103, 108-122, 129-130, 140-148.
+
 ### Sesión 30/09/2026 (chat precios revista, Msg 4) — Precios Sep-2026 págs. 133 a 136
 - Renault (Duster fin, Fluence, Grand Scenic, Kangoo/Kangoo Express, Kardian, Koleos, Kwid, Laguna II, Latitude, Logan/Logan II, Master, Megane F/2 y Megane II 1.5): **261 versiones / 942 precios**, Excel filas 2370–2630 y CSV. Probado con base temporal en `/precios/api/opciones`.
 - Pendiente: KANGOO 2 1.6 CAMPUS 2 PLC '11 (10600 o 10800) sin cargar hasta que Daniel lo confirme.
