@@ -126,6 +126,10 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 ## Cambios recientes
 
+### Sesión 30/09/2026 (chat precios revista, Msg 4) — Precios Sep-2026 págs. 133 a 136
+- Renault (Duster fin, Fluence, Grand Scenic, Kangoo/Kangoo Express, Kardian, Koleos, Kwid, Laguna II, Latitude, Logan/Logan II, Master, Megane F/2 y Megane II 1.5): **261 versiones / 942 precios**, Excel filas 2370–2630 y CSV. Probado con base temporal en `/precios/api/opciones`.
+- Pendiente: KANGOO 2 1.6 CAMPUS 2 PLC '11 (10600 o 10800) sin cargar hasta que Daniel lo confirme.
+
 ### Sesión 29/09/2026 (chat precios revista) — Precios Sep-2026 págs. 127, 128, 131 y 132
 - Cargadas al Excel `INFOAUTO_PRECIOS_2026_09.xlsx` (filas 2103–2369) y al CSV `seed/precios_infoauto/precios_infoauto_2026_09.csv`: **264 versiones / 963 precios**. Peugeot (408 fin a Traveller), Porsche (718 y Taycan; marca nueva), Rely (R8; marca nueva), Renault (Alaskan a Duster; marca nueva). Probado en la app con base temporal (`/precios/api/opciones`).
 - Dudas resueltas por Daniel (30/09/2026): Partner Pata. 1.6HDI VTC PL '25 = 25600; Clio Mío 5P Dynamique SAT '15 = 10720 es correcto. Faltan págs. 129-130 (resto de Porsche), 103 y 108-122. Detalle en `INFOAUTO/transcripcion/PAGINAS_CARGADAS.md`.
