@@ -150,6 +150,9 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 ## Cambios recientes
 
+### Sesión 01/10/2026 (chat precios revista, Msg 17) — Precios Sep-2026 págs. 114-119
+- **Mercedes-Benz completa** (ML, S, SL, SLC, SLK, SLS, Sprinter, Viano, Vito), **Mercedes-Benz Camiones** (Accelo, Actros, Arocs, Atego, Atron, Axor, L/LK/LP/LS), **MG** y **Mini** hasta Cooper S (sigue en la 120): **423 versiones / 2.185 precios**. Probado con base temporal.
+
 ### Sesión 01/10/2026 (chat precios revista, Msg 14) — Precios Sep-2026 págs. 108-113
 - **Kia** (N° 16 del ranking, completa), Kia Camiones, Kama (fin), Karry, Landking, Lifan, Maserati, Maxus y **Mercedes-Benz** A a ML (sigue en la 114): **418 versiones / 1.510 precios**. Probado con base temporal. Pendiente: Mercedes E 500 Avantgarde Aut L/07 '07 (33500 o 33300).
 
