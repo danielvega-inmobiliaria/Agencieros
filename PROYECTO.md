@@ -150,11 +150,16 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 ## Cambios recientes
 
+### Cierre chat "Precios revista Sep-2026" (29/09 → 01/10/2026)
+- Cargadas en esta sesión las págs. 64-79, 108-119, 127-128, 131-139, 149-153 (Chevrolet, Citroën, Chrysler/Jeep/RAM, Chery, BMW X4-Z4, BYD, DFSK, Kia, Mercedes-Benz y Camiones, MG, Mini, Peugeot, Porsche, Renault y Camiones, Land Rover, Toyota completa, etc.). CSV `precios_infoauto_2026_09.csv`: ~22.200 precios. Excel ordenado alfabéticamente por marca con autofiltro en todos los años.
+- Navegación Volver/Anterior/Siguiente común y panel "Publicar" en Stock (ver Msg 9 abajo).
+- Próximo: cargar 58-63 (ya en la carpeta); pedir a Daniel 120-122, 129-130, 140-148, 1-57, 165+ y re-escaneo de la 103. Detalle en `INFOAUTO/transcripcion/PAGINAS_CARGADAS.md`.
+
 ### Sesión 01/10/2026 (chat precios revista, Msg 17) — Precios Sep-2026 págs. 114-119
 - **Mercedes-Benz completa** (ML, S, SL, SLC, SLK, SLS, Sprinter, Viano, Vito), **Mercedes-Benz Camiones** (Accelo, Actros, Arocs, Atego, Atron, Axor, L/LK/LP/LS), **MG** y **Mini** hasta Cooper S (sigue en la 120): **423 versiones / 2.185 precios**. Probado con base temporal.
 
 ### Sesión 01/10/2026 (chat precios revista, Msg 14) — Precios Sep-2026 págs. 108-113
-- **Kia** (N° 16 del ranking, completa), Kia Camiones, Kama (fin), Karry, Landking, Lifan, Maserati, Maxus y **Mercedes-Benz** A a ML (sigue en la 114): **418 versiones / 1.510 precios**. Probado con base temporal. Pendiente: Mercedes E 500 Avantgarde Aut L/07 '07 (33500 o 33300).
+- **Kia** (N° 16 del ranking, completa), Kia Camiones, Kama (fin), Karry, Landking, Lifan, Maserati, Maxus y **Mercedes-Benz** A a ML (sigue en la 114): **418 versiones / 1.510 precios**. Probado con base temporal. Mercedes E 500 Avantgarde Aut L/07 '07 = 33500 (confirmado 01/10/2026).
 
 ### Sesión 30/09/2026 (chat precios revista, Msg 12) — Precios Sep-2026 págs. 64 y 77-79
 - **Citroën completa**, **Chery completa**, y marcas nuevas BMW (X4 a Z4; falta el comienzo, pág. 63 o antes), BYD, Changan, Daewoo, DFM, DFSK, Domy, Dongfeng, Dongfeng Camiones, más DS3/DS4 de DS Automobiles: **238 versiones / 780 precios**. Excel en orden alfabético. Probado con base temporal.
