@@ -150,6 +150,9 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 ## Cambios recientes
 
+### Sesión 01/10/2026 (chat precios revista, Msg 14) — Precios Sep-2026 págs. 108-113
+- **Kia** (N° 16 del ranking, completa), Kia Camiones, Kama (fin), Karry, Landking, Lifan, Maserati, Maxus y **Mercedes-Benz** A a ML (sigue en la 114): **418 versiones / 1.510 precios**. Probado con base temporal. Pendiente: Mercedes E 500 Avantgarde Aut L/07 '07 (33500 o 33300).
+
 ### Sesión 30/09/2026 (chat precios revista, Msg 12) — Precios Sep-2026 págs. 64 y 77-79
 - **Citroën completa**, **Chery completa**, y marcas nuevas BMW (X4 a Z4; falta el comienzo, pág. 63 o antes), BYD, Changan, Daewoo, DFM, DFSK, Domy, Dongfeng, Dongfeng Camiones, más DS3/DS4 de DS Automobiles: **238 versiones / 780 precios**. Excel en orden alfabético. Probado con base temporal.
 
