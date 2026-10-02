@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 01/10/2026 — 22:32 ART (chat "Sucursales", Msg 8: tasación con 3 botones de destino, falta push)_
+_Última actualización: 01/10/2026 — 23:00 ART (chat "Sucursales", Msg 10: cuotas compactas en el detalle del plan, falta push)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -149,6 +149,14 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 01/10/2026 (chat "Sucursales", Msg 10) — Cuotas compactas en el detalle del plan
+- Pedido de Daniel (captura del celu: cada cuota ocupaba media pantalla con títulos). En `financiacion/detalle.html`:
+  - **Pendiente de firma:** resumen de 4 líneas — "Cuota 1 · dd/mm/aaaa · $monto" / "hasta" / "Cuota N · dd/mm/aaaa · $monto" / "Cantidad de cuotas (semanales|mensuales) = N".
+  - **Otorgado (activo y demás):** una línea por cuota sin títulos: Nº · vencimiento · monto · estado (Pagada dd/mm con recargo si hubo, Vencida, Pendiente; "pagó $X" si es pago parcial). Las cobrables muestran "Cobrar ▾" y al tocar la línea se despliega el formulario de pago (monto + fecha) de siempre; las demás no se despliegan.
+- Fechas en formato dd/mm/aaaa. CSS `.cuota-linea`, `.cuota-item`… en `style.css` (`?v=20261001a`).
+- Probado con test_client (copia de la base): plan activo de 12 cuotas en una línea cada una con "Cobrar" en las pendientes; el mismo plan como pendiente de firma muestra el resumen.
+- Archivos: `templates/financiacion/detalle.html`, `static/css/style.css`, `templates/base.html`.
 
 ### Sesión 01/10/2026 (chat "Sucursales", Msg 8) — Tasación: elegir destino al pasar a Stock
 - Pedido de Daniel: el estado se elegía recién dentro del alta de Stock (campo Estado, por defecto Disponible) y se pasaba por alto. Ahora, al terminar la tasación (pantalla de Tasación y ficha de la toma), en lugar de "Agregar a Stock" hay **3 botones: "Ingresa a Stock (Disponible)", "Por ingresar" y "A reparación"**; cada uno abre el alta con el estado ya elegido (`&estado=` sobre el link de `_url_agregar_a_stock`; `stock.nuevo` ya aceptaba `estado` en el prefill). Por ingresar muestra "Quién entrega / Fecha estimada"; A reparación arranca el seguimiento al guardar. Texto de ayuda corregido.

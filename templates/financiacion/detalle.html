@@ -275,45 +275,63 @@
   {% endif %}
 </div>
 
+{# Cuotas compactas (01/10/2026, pedido de Daniel desde el celu). #}
+{% macro fecha(f) %}{% if f and f|length >= 10 %}{{ f[8:10] }}/{{ f[5:7] }}/{{ f[:4] }}{% else %}{{ f or '-' }}{% endif %}{% endmacro %}
+{% macro pesos(n) %}${{ "{:,.0f}".format(n or 0).replace(",", ".") }}{% endmacro %}
 <div class="panel">
   <h2>Cuotas</h2>
-  <table class="tabla-responsive">
-    <tr class="fila-header"><th>#</th><th>Vencimiento</th><th>Monto</th><th>Pagado</th><th>Recargo por atraso</th><th>Estado</th><th></th></tr>
+  {% if fin.estado == 'pendiente_firma' and cuotas %}
+  {% set primera = cuotas[0] %}{% set ultima = cuotas[-1] %}
+  <div class="cuotas-resumen">
+    <div class="cuota-linea"><span class="cuota-n">Cuota {{ primera.numero }}</span><span>{{ fecha(primera.fecha_vencimiento) }}</span><b>{{ pesos(primera.monto) }}</b></div>
+    {% if cuotas|length > 1 %}
+    <div class="cuotas-hasta">hasta</div>
+    <div class="cuota-linea"><span class="cuota-n">Cuota {{ ultima.numero }}</span><span>{{ fecha(ultima.fecha_vencimiento) }}</span><b>{{ pesos(ultima.monto) }}</b></div>
+    {% endif %}
+    <div class="cuotas-total">Cantidad de cuotas ({{ 'semanales' if fin.periodicidad == 'semanal' else 'mensuales' }}) = <b>{{ cuotas|length }}</b></div>
+  </div>
+  {% else %}
+  <div class="cuotas-lista">
     {% for c in cuotas %}
     {% set recargo_cuota = (c.monto_pagado or 0) - c.monto %}
-    <tr>
-      <td data-label="#">{{ c.numero }}</td>
-      <td data-label="Vencimiento">{{ c.fecha_vencimiento }}{% if c.estado != 'pagada' and c.fecha_vencimiento and c.fecha_vencimiento < hoy %} <span style="color:var(--red); font-size:11px;">(vencida)</span>{% endif %}</td>
-      <td data-label="Monto">${{ "{:,.0f}".format(c.monto).replace(",", ".") }}</td>
-      <td data-label="Pagado">
-        ${{ "{:,.0f}".format(c.monto_pagado or 0).replace(",", ".") }}
-        {% if c.fecha_pago %}<div style="color:var(--text-dim); font-size:11px;">{{ c.fecha_pago }}</div>{% endif %}
-      </td>
-      <td data-label="Recargo por atraso">{% if recargo_cuota > 0.5 %}${{ "{:,.0f}".format(recargo_cuota).replace(",", ".") }}{% else %}—{% endif %}</td>
-      <td data-label="Estado">
+    {% set vencida = c.estado != 'pagada' and c.fecha_vencimiento and c.fecha_vencimiento < hoy %}
+    {% set cobrable = c.estado != 'pagada' and fin.estado == 'activo' and not es_vendedor %}
+    <details class="cuota-item {{ 'cuota-pagada' if c.estado == 'pagada' else ('cuota-vencida' if vencida else '') }}" {% if not cobrable %}data-fija{% endif %}>
+      <summary class="cuota-linea">
+        <span class="cuota-n">{{ c.numero }}</span>
+        <span>{{ fecha(c.fecha_vencimiento) }}</span>
+        <b>{{ pesos(c.monto) }}</b>
         {% if c.estado == 'pagada' %}
-        <span class="badge disponible">Pagada</span>
-        {% elif c.fecha_vencimiento and c.fecha_vencimiento < hoy %}
+        <span class="badge disponible">Pagada{% if c.fecha_pago %} {{ fecha(c.fecha_pago)[:5] }}{% endif %}</span>
+        {% if recargo_cuota > 0.5 %}<small class="cuota-extra">+{{ pesos(recargo_cuota) }} recargo</small>{% endif %}
+        {% elif vencida %}
         <span class="badge en_reparacion">Vencida</span>
         {% else %}
         <span class="badge por_ingresar">Pendiente</span>
         {% endif %}
-      </td>
-      <td>
-        {% if c.estado != 'pagada' and fin.estado == 'activo' and not es_vendedor %}
-        <form method="post" action="{{ url_for('financiacion.pagar_cuota', financiacion_id=fin.id, cuota_id=c.id) }}" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
-          <input type="number" step="1" name="monto_pagado" placeholder="${{ '{:,.0f}'.format(c.monto_sugerido).replace(',', '.') }}" style="width:110px; padding:6px;">
-          <input type="date" name="fecha_pago" title="Fecha de pago (por defecto hoy -- cambiala para cargar un cobro de otra fecha)" style="padding:6px;">
-          <button class="btn btn-secondary btn-sm" type="submit">Registrar pago</button>
-        </form>
+        {% if c.estado != 'pagada' and (c.monto_pagado or 0) > 0 %}<small class="cuota-extra">pagó {{ pesos(c.monto_pagado) }}</small>{% endif %}
+        {% if cobrable %}<span class="cuota-cobrar">Cobrar ▾</span>{% endif %}
+      </summary>
+      {% if cobrable %}
+      <form method="post" action="{{ url_for('financiacion.pagar_cuota', financiacion_id=fin.id, cuota_id=c.id) }}" class="cuota-form">
+        <input type="number" step="1" name="monto_pagado" placeholder="{{ pesos(c.monto_sugerido) }}" style="width:120px; padding:6px;">
+        <input type="date" name="fecha_pago" title="Fecha de pago (por defecto hoy -- cambiala para cargar un cobro de otra fecha)" style="padding:6px;">
+        <button class="btn btn-secondary btn-sm" type="submit">Registrar pago</button>
         {% if fin.tasa_interes_punitorio and c.monto_sugerido > (c.monto - (c.monto_pagado or 0)) + 0.5 %}
-        <p style="color:var(--gold-light); font-size:11px; margin:4px 0 0;">Incluye recargo por atraso sugerido ({{ fin.tasa_interes_punitorio }}% cada 30 días).</p>
+        <p style="color:var(--gold-light); font-size:11px; margin:4px 0 0; width:100%;">Incluye recargo por atraso sugerido ({{ fin.tasa_interes_punitorio }}% cada 30 días).</p>
         {% endif %}
-        {% endif %}
-      </td>
-    </tr>
+      </form>
+      {% endif %}
+    </details>
     {% endfor %}
-  </table>
+  </div>
+  <script>
+    // Las cuotas que no se pueden cobrar no se despliegan.
+    document.querySelectorAll('details.cuota-item[data-fija] > summary').forEach(function (s) {
+      s.addEventListener('click', function (e) { e.preventDefault(); });
+    });
+  </script>
+  {% endif %}
 </div>
 
 <script>
