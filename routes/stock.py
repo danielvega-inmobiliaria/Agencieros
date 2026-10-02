@@ -1252,7 +1252,7 @@ def _datos_ficha(vehiculo):
     # agencia dueña del vehículo (no siempre la de Daniel) -- si esa
     # agencia todavía no cargó nada en Admin, cae al default fijo de
     # siempre (pisable con WHATSAPP_COMERCIAL).
-    agencia = obtener_config_agencia(vehiculo["agencia_id"] or 1)
+    agencia = _redes_ordenadas(dict(obtener_config_agencia(vehiculo["agencia_id"] or 1)))
     whatsapp_numero = _whatsapp_ar(
         agencia.get("telefono")
         or os.environ.get("WHATSAPP_COMERCIAL", "5493413017371").strip()
@@ -1274,6 +1274,15 @@ def _datos_ficha(vehiculo):
         "agencia": agencia,
         "plan_oferta": _plan_oferta(vehiculo),
     }
+
+
+def _redes_ordenadas(agencia):
+    """Si en Admin quedaron cruzados los links (el de Facebook en el campo
+    Instagram o al revés), en la ficha se muestran bien igual (02/10/2026)."""
+    ig, fb = agencia.get("instagram") or "", agencia.get("facebook") or ""
+    if "facebook" in ig.lower() or "fb.com" in ig.lower() or "instagram" in fb.lower():
+        agencia = {**agencia, "instagram": fb or None, "facebook": ig or None}
+    return agencia
 
 
 def _plan_oferta(vehiculo):

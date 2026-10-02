@@ -53,10 +53,9 @@
         <select name="periodicidad" id="periodicidad">{% for k, l in periodicidad_label.items() %}<option value="{{ k }}" {{ 'selected' if (d.periodicidad if d else 'mensual') == k else '' }}>{{ l }}es</option>{% endfor %}</select>
       </div>
       <div class="plan-fila"><span>Cuota sugerida</span><b id="cuota-calc">—</b></div>
-      <div class="plan-fila"><span>Redondear cuota hacia arriba</span>
-        <select name="redondeo" id="redondeo">
-          {% for r in redondeos %}<option value="{{ r }}" {{ 'selected' if (d.redondeo if d else 0) == r else '' }}>{{ 'Sin redondeo' if r == 0 else 'A ' ~ pesos(r) }}</option>{% endfor %}
-        </select>
+      <div class="plan-fila"><span>Cuota redondeada <small>(la que se ofrece, editala)</small></span>
+        <input type="number" name="cuota_final" id="cuota-final" step="1" min="0" inputmode="numeric"
+               value="{{ plan.cuota_final|round(0)|int if plan else '' }}">
       </div>
       <div class="plan-fila plan-final"><span>Así se ve en la ficha</span><div id="vista-ficha">—</div></div>
     </div>
@@ -105,14 +104,20 @@
       cuota = cuota / 4;
     }
     cuota = Math.round(cuota * 100) / 100;
-    var r = +$('redondeo').value, final = r ? Math.ceil(cuota / r) * r : cuota;
     $('cuota-calc').textContent = fmt(cuota) + ' × ' + cantidad + (semanal ? ' semanas' : ' meses');
+    // Al cambiar los datos del plan, la cuota redondeada arranca en la sugerida
+    // (entera); después se edita a mano, como en el Simulador.
+    if (!editandoCuota) $('cuota-final').value = Math.ceil(cuota);
+    var final = +$('cuota-final').value || Math.ceil(cuota);
     $('vista-ficha').innerHTML = 'Entrega <b>' + fmt(entrega) + '</b><br>Saldo en <b>' + cantidad + ' cuotas ' +
       (semanal ? 'semanales ' : '') + 'fijas de ' + fmt(final) + '</b> en pesos';
   }
-  ['entrega', 'tasa', 'plazo', 'metodo', 'periodicidad', 'redondeo'].forEach(function (id) {
-    $(id).addEventListener('input', calcular); $(id).addEventListener('change', calcular);
+  var editandoCuota = !!$('cuota-final').value;
+  ['entrega', 'tasa', 'plazo', 'metodo', 'periodicidad'].forEach(function (id) {
+    $(id).addEventListener('input', function () { editandoCuota = false; calcular(); });
+    $(id).addEventListener('change', function () { editandoCuota = false; calcular(); });
   });
+  $('cuota-final').addEventListener('input', function () { editandoCuota = true; calcular(); });
   calcular();
 })();
 </script>

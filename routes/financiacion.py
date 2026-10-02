@@ -1307,8 +1307,14 @@ def plan_guardar(vehiculo_id):
     plazo = int(num("plazo_meses"))
     metodo = f.get("metodo") if f.get("metodo") in METODO_LABEL else "simple"
     periodicidad = f.get("periodicidad") if f.get("periodicidad") in PERIODICIDAD_LABEL else "mensual"
-    redondeo = int(num("redondeo"))
-    calc = calcular_plan_oferta(precio, entrega, tasa, plazo, metodo, periodicidad, redondeo)
+    calc = calcular_plan_oferta(precio, entrega, tasa, plazo, metodo, periodicidad, 0)
+    redondeo = 0
+    # Cuota redondeada (02/10/2026): la escribe el usuario, como la "cuota
+    # aplicada" del Simulador; si viene vacía, la sugerida redondeada al peso.
+    if calc:
+        import math
+        cuota_manual = num("cuota_final")
+        calc["cuota_final"] = round(cuota_manual) if cuota_manual > 0 else float(math.ceil(calc["cuota_calculada"]))
     if not precio or not calc:
         flash("Revisá los datos: hace falta precio publicado, una entrega menor al precio y un plazo.", "error")
         return redirect(url_for("financiacion.planes", vehiculo_id=vehiculo_id))

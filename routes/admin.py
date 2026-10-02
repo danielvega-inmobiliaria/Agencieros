@@ -46,6 +46,10 @@ def index():
         telefono = request.form.get("telefono", "").strip() or None
         instagram = request.form.get("instagram", "").strip() or None
         facebook = request.form.get("facebook", "").strip() or None
+        # Si se cargaron cruzados (link de Facebook en Instagram o al revés), se acomodan.
+        if ("facebook" in (instagram or "").lower() or "fb.com" in (instagram or "").lower()) or \
+           ("instagram" in (facebook or "").lower()):
+            instagram, facebook = facebook, instagram
         sitio_web = request.form.get("sitio_web", "").strip() or None
 
         if telefono and not telefono.isdigit():

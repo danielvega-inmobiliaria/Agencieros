@@ -783,3 +783,15 @@ select.calif-bueno, select.calif-regular, select.calif-malo { font-weight: 600; 
 .plan-fila input, .plan-fila select { max-width: 190px; text-align: right; }
 .plan-final { border-bottom: none; align-items: flex-start; }
 .plan-final b { color: var(--gold-light); }
+
+
+/* Celu (02/10/2026): iPhone agranda la pantalla al tocar un campo con letra
+   menor a 16px y después queda corrida; además nada puede ser más ancho que
+   la pantalla (evita que se "mueva" de costado). */
+html, body { max-width: 100%; overflow-x: hidden; }
+@media (max-width: 700px) {
+  input, select, textarea { font-size: 16px !important; }
+}
+.plan-fila > span { flex: 1 1 auto; min-width: 0; }
+.plan-fila input, .plan-fila select { flex: 0 1 46%; min-width: 0; width: 46%; max-width: 220px; }
+.plan-fila > b { text-align: right; }

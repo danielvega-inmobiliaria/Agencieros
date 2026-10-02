@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 02/10/2026 — 17:08 ART (chat "Sucursales", Msg 11: Financiación → Planes para ofrecer unidades + Entrega/cuotas en la ficha, falta push)_
+_Última actualización: 02/10/2026 — 17:48 ART (chat "Sucursales", Msg 12: cuota redondeada editable en Planes, redes de la ficha, zoom en el celu; falta push)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -149,6 +149,13 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 02/10/2026 (chat "Sucursales", Msg 12) — Ajustes de Planes, redes de la ficha y zoom en el celu
+- **Planes:** se saca el selector de redondeo; debajo de "Cuota sugerida" va **"Cuota redondeada"**, un campo que arranca con la sugerida (entera, hacia arriba) y se edita a mano, como la "cuota aplicada" del Simulador. Si se cambian entrega/tasa/plazo/método/periodicidad vuelve a la sugerida. La ficha muestra la cuota redondeada. El servidor guarda lo tipeado (vacío = sugerida al peso).
+- **Ficha comercial — Instagram/Facebook cruzados:** el template estaba bien; los links de Italia quedaron cargados al revés en Admin. Ahora se acomodan solos: al guardar Admin (si el campo Instagram tiene un link de Facebook o al revés, se intercambian) y al mostrar la ficha (`_redes_ordenadas` en `routes/stock.py`), así se corrige sin volver a cargarlos.
+- **Pantalla agrandada y que se mueve de costado (iPhone):** iOS hace zoom al tocar un campo con letra menor a 16px y la página quedaba ampliada y corrida. Arreglo: en celu todos los campos con 16px, viewport con `maximum-scale=1` (en `base.html`, como ya tenían las fichas) y `overflow-x: hidden` en html/body (app y fichas); las filas de Planes ya no se pasan del ancho.
+- Probado con test_client (copia de la base): cuota redondeada 740.000 guardada y mostrada; vacía → sugerida; links cruzados en la base se muestran bien en la ficha; Admin y Dashboard OK; JS validado con node.
+- Archivos: `templates/financiacion/planes.html`, `routes/financiacion.py`, `routes/admin.py`, `routes/stock.py`, `templates/stock/_ficha_estilos.html`, `static/css/style.css`, `templates/base.html` (`?v=20261002b`).
 
 ### Sesión 02/10/2026 (chat precios revista 2, Msg 7) — Modo ahorro para la carga de la revista
 - Nuevo `INFOAUTO/transcripcion/herramientas/control_base.py`: compara lo transcripto con el mes base y marca solo las filas dudosas para el control visual (8% de las filas en la tanda 59-64, antes 100%). `inter3.py` hace el control visual solo de esas filas. Skill `transcribir-revista-precios` actualizada (propuesta) con este método.
