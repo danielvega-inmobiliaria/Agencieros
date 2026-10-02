@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Planes — Agencieros{% endblock %}
+{% block header %}Planes de financiación{% endblock %}
+{% macro pesos(n) %}${{ "{:,.0f}".format(n or 0).replace(",", ".") }}{% endmacro %}
+{% block content %}
+<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+  <a class="btn btn-secondary btn-sm" href="{{ url_for('financiacion.index') }}">‹ Financiación</a>
+  <a class="btn btn-secondary btn-sm" href="{{ url_for('financiacion.simulador') }}">🧮 Simulador de cuotas</a>
+</div>
+
+<div class="panel">
+  <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
+    Elegí una unidad de Stock y armale un plan para ofrecerla financiada. En la ficha comercial se ve solo
+    <b>Entrega</b> y <b>Saldo en N cuotas fijas</b>; la tasa, el método y el redondeo quedan internos.
+    <span style="color:var(--gold-light);">●</span> = ya tiene plan.
+  </p>
+  <div class="burbujas">
+    {% for v in vehiculos %}
+    <a class="burbuja {{ 'active' if sel and sel.id == v.id else '' }}" href="{{ url_for('financiacion.planes', vehiculo_id=v.id) }}">
+      {% if v.plan_id %}<span class="burbuja-dot {{ 'desact' if v.plan_precio != v.valor_publicado or not v.mostrar_en_ficha else '' }}"></span>{% endif %}
+      {{ v.marca }} {{ v.modelo }} {{ v.anio or '' }}
+    </a>
+    {% else %}
+    <p>No hay unidades en Stock para ofrecer (Disponible, Por ingresar o En reparación).</p>
+    {% endfor %}
+  </div>
+</div>
+
+{% if sel %}
+<div class="panel">
+  <h2 style="margin-top:0;">{{ sel.marca }} {{ sel.modelo }} {{ sel.version or '' }} {{ sel.anio or '' }}</h2>
+  {% if not sel.valor_publicado %}
+  <p style="color:var(--red);">Esta unidad no tiene precio publicado: cargalo en Stock → Editar para poder armar el plan.</p>
+  {% else %}
+  {% if plan and plan.precio != sel.valor_publicado %}
+  <p style="color:var(--gold-light); font-size:13px;">El precio cambió desde que guardaste el plan ({{ pesos(plan.precio) }} → {{ pesos(sel.valor_publicado) }}). Revisalo y guardalo de nuevo: mientras tanto la ficha no lo muestra.</p>
+  {% endif %}
+  {% set d = plan or ultimo %}
+  <form method="post" action="{{ url_for('financiacion.plan_guardar', vehiculo_id=sel.id) }}" id="form-plan">
+    <div class="plan-calc">
+      <div class="plan-fila"><span>Precio</span><b id="precio" data-v="{{ sel.valor_publicado|round(0)|int }}">{{ pesos(sel.valor_publicado) }}</b></div>
+      <div class="plan-fila">
+        <span>Entrega <small>(sugerida 50% redondeado a {{ pesos(redondeo_entrega) }})</small></span>
+        <input type="number" name="entrega" id="entrega" step="1000" min="0" value="{{ (plan.entrega if plan else entrega_def)|round(0)|int }}">
+      </div>
+      <div class="plan-fila"><span>Saldo a financiar</span><b id="saldo">—</b></div>
+      <div class="plan-fila"><span>Tasa mensual (%)</span><input type="number" name="tasa" id="tasa" step="0.01" min="0" value="{{ d.tasa if d else '' }}" placeholder="Ej: 5"></div>
+      <div class="plan-fila"><span>Plazo (meses)</span><input type="number" name="plazo_meses" id="plazo" step="1" min="1" value="{{ d.plazo_meses if d else 12 }}"></div>
+      <div class="plan-fila"><span>Método</span>
+        <select name="metodo" id="metodo">{% for k, l in metodo_label.items() %}<option value="{{ k }}" {{ 'selected' if (d.metodo if d else 'simple') == k else '' }}>{{ l }}</option>{% endfor %}</select>
+      </div>
+      <div class="plan-fila"><span>Cuotas</span>
+        <select name="periodicidad" id="periodicidad">{% for k, l in periodicidad_label.items() %}<option value="{{ k }}" {{ 'selected' if (d.periodicidad if d else 'mensual') == k else '' }}>{{ l }}es</option>{% endfor %}</select>
+      </div>
+      <div class="plan-fila"><span>Cuota sugerida</span><b id="cuota-calc">—</b></div>
+      <div class="plan-fila"><span>Redondear cuota hacia arriba</span>
+        <select name="redondeo" id="redondeo">
+          {% for r in redondeos %}<option value="{{ r }}" {{ 'selected' if (d.redondeo if d else 0) == r else '' }}>{{ 'Sin redondeo' if r == 0 else 'A ' ~ pesos(r) }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="plan-fila plan-final"><span>Así se ve en la ficha</span><div id="vista-ficha">—</div></div>
+    </div>
+    <label style="display:flex; gap:8px; align-items:center; margin-top:12px;">
+      <input type="checkbox" name="mostrar_en_ficha" value="1" {{ 'checked' if (not plan or plan.mostrar_en_ficha) else '' }} style="width:auto;">
+      Mostrar en la ficha comercial
+    </label>
+    {% if not es_vendedor %}
+    <div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn" type="submit">Guardar plan</button>
+    </div>
+    {% else %}
+    <p style="color:var(--text-dim); font-size:12px;">Guardar o quitar planes lo hace el dueño de la agencia.</p>
+    {% endif %}
+  </form>
+  {% if plan and not es_vendedor %}
+  <form method="post" action="{{ url_for('financiacion.plan_quitar', vehiculo_id=sel.id) }}" style="margin-top:8px;">
+    <button class="btn btn-secondary btn-sm" type="submit">Quitar plan</button>
+  </form>
+  {% endif %}
+  {% endif %}
+</div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  if (!$('form-plan')) return;
+  function fmt(n) { return '$ ' + Math.round(n).toLocaleString('es-AR'); }
+  function sumarMeses(d, m) {
+    var t = d.getMonth() + m, y = d.getFullYear() + Math.floor(t / 12), mes = t % 12;
+    var ult = new Date(y, mes + 1, 0).getDate();
+    return new Date(y, mes, Math.min(d.getDate(), ult));
+  }
+  function calcular() {
+    var precio = +$('precio').dataset.v, entrega = +$('entrega').value || 0;
+    var tasa = (+$('tasa').value || 0) / 100, n = parseInt($('plazo').value, 10) || 0;
+    var saldo = Math.max(precio - entrega, 0);
+    $('saldo').textContent = fmt(saldo);
+    if (!n || !saldo) { $('cuota-calc').textContent = '—'; $('vista-ficha').textContent = '—'; return; }
+    var cuota;
+    if ($('metodo').value === 'simple') cuota = (saldo / n) * (1 + tasa * n);
+    else cuota = tasa === 0 ? saldo / n : saldo * (tasa * Math.pow(1 + tasa, n)) / (Math.pow(1 + tasa, n) - 1);
+    var cantidad = n, semanal = $('periodicidad').value === 'semanal';
+    if (semanal) {
+      var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+      cantidad = Math.floor((sumarMeses(hoy, n) - hoy) / 86400000 / 7) + 1;
+      cuota = cuota / 4;
+    }
+    cuota = Math.round(cuota * 100) / 100;
+    var r = +$('redondeo').value, final = r ? Math.ceil(cuota / r) * r : cuota;
+    $('cuota-calc').textContent = fmt(cuota) + ' × ' + cantidad + (semanal ? ' semanas' : ' meses');
+    $('vista-ficha').innerHTML = 'Entrega <b>' + fmt(entrega) + '</b><br>Saldo en <b>' + cantidad + ' cuotas ' +
+      (semanal ? 'semanales ' : '') + 'fijas de ' + fmt(final) + '</b> en pesos';
+  }
+  ['entrega', 'tasa', 'plazo', 'metodo', 'periodicidad', 'redondeo'].forEach(function (id) {
+    $(id).addEventListener('input', calcular); $(id).addEventListener('change', calcular);
+  });
+  calcular();
+})();
+</script>
+{% endif %}
+{% endblock %}

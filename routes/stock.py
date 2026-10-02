@@ -1272,7 +1272,13 @@ def _datos_ficha(vehiculo):
         "whatsapp_link": whatsapp_link,
         "equipamiento": equipamiento_destacado(vehiculo["equipamiento"]),
         "agencia": agencia,
+        "plan_oferta": _plan_oferta(vehiculo),
     }
+
+
+def _plan_oferta(vehiculo):
+    from routes.financiacion import plan_oferta_de
+    return plan_oferta_de(vehiculo)
 
 
 def _url_publica(ruta):

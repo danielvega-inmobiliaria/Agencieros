@@ -2,6 +2,10 @@
 {% block title %}Financiación — Agencieros{% endblock %}
 {% block header %}Financiación{% endblock %}
 {% block content %}
+<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+  <a class="btn btn-primary btn-sm" href="{{ url_for('financiacion.simulador') }}">🧮 Simulador de cuotas</a>
+  <a class="btn btn-secondary btn-sm" href="{{ url_for('financiacion.planes') }}">📋 Planes</a>
+</div>
 {% if not es_vendedor %}
 <div class="cards">
   <div class="card">
@@ -20,7 +24,6 @@
 
 <div class="tabs">
   <span style="color:var(--text-dim); font-size:13px; align-self:center;">{{ 'Propuestas en trámite y tus operaciones' if es_vendedor else 'Planes de financiación cargados' }}</span>
-  <a class="btn btn-primary btn-sm" style="margin-left:auto;" href="{{ url_for('financiacion.simulador') }}">🧮 Simulador de cuotas</a>
 </div>
 
 <div class="panel">

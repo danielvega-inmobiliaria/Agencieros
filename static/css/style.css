@@ -769,3 +769,17 @@ select.calif-bueno, select.calif-regular, select.calif-malo { font-weight: 600; 
 .cuota-cobrar { margin-left: auto; color: var(--gold-light); font-size: 12px; }
 .cuota-form { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding: 0 2px 10px; }
 .cuotas-resumen .cuota-linea { padding: 2px; }
+
+/* Financiación → Planes (02/10/2026). */
+.burbujas { display: flex; flex-wrap: wrap; gap: 8px; }
+.burbuja { padding: 7px 13px; border-radius: 18px; font-size: 13px; background: var(--navy-card-2); border: 1px solid var(--border); color: var(--text); display: inline-flex; align-items: center; gap: 6px; }
+.burbuja.active { background: var(--gold); color: #17202e; border-color: var(--gold); font-weight: 600; }
+.burbuja-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold-light); }
+.burbuja-dot.desact { background: var(--text-dim); }
+.plan-calc { display: flex; flex-direction: column; gap: 2px; max-width: 520px; }
+.plan-fila { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.plan-fila > span { color: var(--text-dim); font-size: 13.5px; }
+.plan-fila small { font-size: 11px; }
+.plan-fila input, .plan-fila select { max-width: 190px; text-align: right; }
+.plan-final { border-bottom: none; align-items: flex-start; }
+.plan-final b { color: var(--gold-light); }

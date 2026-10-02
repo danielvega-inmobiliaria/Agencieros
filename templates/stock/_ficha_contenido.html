@@ -41,6 +41,12 @@
   {% if d.vehiculo.valor_publicado %}
   <div class="precio">$ {{ "{:,.0f}".format(d.vehiculo.valor_publicado).replace(",", ".") }}</div>
   {% endif %}
+  {% if d.plan_oferta %}
+  <div class="plan-oferta">
+    <div>Entrega <b>$ {{ "{:,.0f}".format(d.plan_oferta.entrega).replace(",", ".") }}</b></div>
+    <div>Saldo en <b>{{ d.plan_oferta.cantidad_cuotas }} cuotas {{ 'semanales ' if d.plan_oferta.periodicidad == 'semanal' else '' }}fijas de $ {{ "{:,.0f}".format(d.plan_oferta.cuota_final).replace(",", ".") }}</b> en pesos</div>
+  </div>
+  {% endif %}
   {% if d.vehiculo.condiciones_pago %}<div class="condiciones">{{ d.vehiculo.condiciones_pago }}</div>{% endif %}
 
   <div class="panel">

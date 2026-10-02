@@ -31,7 +31,8 @@ PERIODICIDAD_LABEL = {"mensual": "Mensual", "semanal": "Semanal"}
 # Vendedor (28/09/2026, pedido de Daniel): usa el simulador, arma propuestas
 # (planes "Pendiente de firma"), relaciona el vehículo, seña y cierra la venta.
 # No ve la cartera de planes activos (cobrado/por cobrar) ni registra pagos.
-_VENDEDOR_LIBRES = {"financiacion.index", "financiacion.simulador", "financiacion.nuevo", "financiacion.guardar"}
+_VENDEDOR_LIBRES = {"financiacion.index", "financiacion.simulador", "financiacion.nuevo", "financiacion.guardar",
+                    "financiacion.planes"}
 _VENDEDOR_SOLO_PENDIENTES = {
     "financiacion.completar_datos", "financiacion.agregar_garante", "financiacion.eliminar_garante",
     "financiacion.confirmar_venta", "financiacion.cancelar_reserva", "financiacion.eliminar",
@@ -1201,3 +1202,135 @@ def cancelar_reserva(financiacion_id):
     else:
         flash("Reserva cancelada — el vehículo vuelve a Disponible.", "success")
     return redirect(url_for("financiacion.index"))
+
+
+# ---------------------------------------------------------------------
+# Planes para ofrecer unidades de Stock con financiación (02/10/2026,
+# pedido de Daniel). Uno por vehículo: precio, entrega sugerida (50%
+# redondeado hacia arriba a $100.000), saldo, tasa, plazo, método y
+# periodicidad -> cuota sugerida + redondeo opcional. La ficha comercial
+# muestra solo "Entrega $X" y "Saldo en N cuotas fijas de $Y", y solo
+# mientras el precio guardado coincida con el precio publicado.
+# El vendedor ve los planes; guardarlos/quitarlos lo hace el dueño.
+# ---------------------------------------------------------------------
+REDONDEO_ENTREGA = 100000
+REDONDEOS_CUOTA = (0, 1000, 5000, 10000)
+ESTADOS_OFRECIBLES = ("disponible", "por_ingresar", "en_reparacion")
+
+
+def _redondear_arriba(n, paso):
+    if not paso:
+        return round(n, 2)
+    import math
+    return float(math.ceil(round(n, 2) / paso) * paso)
+
+
+def entrega_sugerida(precio):
+    return _redondear_arriba((precio or 0) * 0.5, REDONDEO_ENTREGA)
+
+
+def calcular_plan_oferta(precio, entrega, tasa, plazo_meses, metodo, periodicidad, redondeo):
+    """Misma cuenta que el simulador: cuota mensual por francés o interés
+    simple; en semanal, cuota mensual / 4 y semanas contadas desde hoy."""
+    saldo = max(round((precio or 0) - (entrega or 0), 2), 0)
+    n = int(plazo_meses or 0)
+    if n <= 0 or saldo <= 0:
+        return None
+    cuota_mensual = _cuota_simple(saldo, tasa, n) if metodo == "simple" else _cuota_frances(saldo, tasa, n)
+    if periodicidad == "semanal":
+        inicio = date.today()
+        cantidad = (_sumar_meses(inicio, n) - inicio).days // 7 + 1
+        cuota = round(cuota_mensual / 4, 2)
+    else:
+        cantidad, cuota = n, cuota_mensual
+    return {
+        "saldo": saldo, "cantidad_cuotas": cantidad, "cuota_calculada": cuota,
+        "cuota_final": _redondear_arriba(cuota, redondeo if redondeo in REDONDEOS_CUOTA else 0),
+    }
+
+
+def plan_oferta_de(vehiculo):
+    """Plan para mostrar en la ficha comercial, o None (sin plan, oculto o
+    con el precio desactualizado)."""
+    if not vehiculo or vehiculo["estado"] not in ESTADOS_OFRECIBLES + ("senado",):
+        return None
+    p = query("SELECT * FROM planes_oferta WHERE vehiculo_id = ? AND mostrar_en_ficha = 1",
+              (vehiculo["id"],), one=True)
+    if not p or abs((p["precio"] or 0) - (vehiculo["valor_publicado"] or 0)) > 0.5:
+        return None
+    return p
+
+
+@bp.route("/planes")
+def planes():
+    agencia_id = session["agencia_id"]
+    vehiculos = query(
+        f"""SELECT v.id, v.marca, v.modelo, v.version, v.anio, v.valor_publicado, v.estado,
+                   p.id AS plan_id, p.precio AS plan_precio, p.cuota_final, p.cantidad_cuotas, p.periodicidad AS plan_periodicidad,
+                   p.mostrar_en_ficha
+            FROM vehiculos v LEFT JOIN planes_oferta p ON p.vehiculo_id = v.id
+            WHERE v.agencia_id = ? AND v.estado IN ({','.join('?' * len(ESTADOS_OFRECIBLES))})
+            ORDER BY v.marca, v.modelo, v.anio""",
+        (agencia_id, *ESTADOS_OFRECIBLES),
+    )
+    sel_id = request.args.get("vehiculo_id", type=int)
+    sel = next((v for v in vehiculos if v["id"] == sel_id), None)
+    plan = query("SELECT * FROM planes_oferta WHERE vehiculo_id = ?", (sel_id,), one=True) if sel else None
+    # Valores por defecto: los del último plan guardado por la agencia.
+    ultimo = query("SELECT tasa, plazo_meses, metodo, periodicidad, redondeo FROM planes_oferta WHERE agencia_id = ? "
+                   "ORDER BY updated_at DESC LIMIT 1", (agencia_id,), one=True)
+    return render_template(
+        "financiacion/planes.html", vehiculos=vehiculos, sel=sel, plan=plan, ultimo=ultimo,
+        entrega_def=entrega_sugerida(sel["valor_publicado"]) if sel else 0,
+        redondeo_entrega=REDONDEO_ENTREGA, redondeos=REDONDEOS_CUOTA,
+        metodo_label=METODO_LABEL, periodicidad_label=PERIODICIDAD_LABEL,
+    )
+
+
+@bp.route("/planes/<int:vehiculo_id>/guardar", methods=["POST"])
+def plan_guardar(vehiculo_id):
+    agencia_id = session["agencia_id"]
+    v = query("SELECT * FROM vehiculos WHERE id = ? AND agencia_id = ?", (vehiculo_id, agencia_id), one=True)
+    if not v:
+        flash("Vehículo no encontrado.", "error")
+        return redirect(url_for("financiacion.planes"))
+    f = request.form
+
+    def num(k, d=0):
+        try:
+            return float(str(f.get(k, "")).replace(".", "").replace(",", ".") or d)
+        except ValueError:
+            return d
+    precio = v["valor_publicado"] or 0
+    entrega = num("entrega")
+    tasa = num("tasa")
+    plazo = int(num("plazo_meses"))
+    metodo = f.get("metodo") if f.get("metodo") in METODO_LABEL else "simple"
+    periodicidad = f.get("periodicidad") if f.get("periodicidad") in PERIODICIDAD_LABEL else "mensual"
+    redondeo = int(num("redondeo"))
+    calc = calcular_plan_oferta(precio, entrega, tasa, plazo, metodo, periodicidad, redondeo)
+    if not precio or not calc:
+        flash("Revisá los datos: hace falta precio publicado, una entrega menor al precio y un plazo.", "error")
+        return redirect(url_for("financiacion.planes", vehiculo_id=vehiculo_id))
+    datos = (precio, entrega, calc["saldo"], tasa, plazo, metodo, periodicidad, calc["cantidad_cuotas"],
+             calc["cuota_calculada"], redondeo, calc["cuota_final"], 1 if f.get("mostrar_en_ficha") else 0)
+    if query("SELECT 1 FROM planes_oferta WHERE vehiculo_id = ?", (vehiculo_id,), one=True):
+        execute("""UPDATE planes_oferta SET precio=?, entrega=?, saldo=?, tasa=?, plazo_meses=?, metodo=?, periodicidad=?,
+                   cantidad_cuotas=?, cuota_calculada=?, redondeo=?, cuota_final=?, mostrar_en_ficha=?,
+                   creado_por_id=?, updated_at=datetime('now') WHERE vehiculo_id=?""",
+                (*datos, session.get("usuario_id"), vehiculo_id))
+    else:
+        execute("""INSERT INTO planes_oferta (precio, entrega, saldo, tasa, plazo_meses, metodo, periodicidad,
+                   cantidad_cuotas, cuota_calculada, redondeo, cuota_final, mostrar_en_ficha, creado_por_id,
+                   agencia_id, vehiculo_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (*datos, session.get("usuario_id"), agencia_id, vehiculo_id))
+    flash(f"Plan guardado: entrega ${entrega:,.0f} y {calc['cantidad_cuotas']} cuotas fijas de ${calc['cuota_final']:,.0f}."
+          .replace(",", "."), "success")
+    return redirect(url_for("financiacion.planes", vehiculo_id=vehiculo_id))
+
+
+@bp.route("/planes/<int:vehiculo_id>/quitar", methods=["POST"])
+def plan_quitar(vehiculo_id):
+    execute("DELETE FROM planes_oferta WHERE vehiculo_id = ? AND agencia_id = ?", (vehiculo_id, session["agencia_id"]))
+    flash("Plan quitado: la ficha vuelve a mostrar solo el precio.", "success")
+    return redirect(url_for("financiacion.planes", vehiculo_id=vehiculo_id))

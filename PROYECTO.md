@@ -150,6 +150,10 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 ## Cambios recientes
 
+### Sesión 02/10/2026 (chat precios revista 2, Msg 7) — Modo ahorro para la carga de la revista
+- Nuevo `INFOAUTO/transcripcion/herramientas/control_base.py`: compara lo transcripto con el mes base y marca solo las filas dudosas para el control visual (8% de las filas en la tanda 59-64, antes 100%). `inter3.py` hace el control visual solo de esas filas. Skill `transcribir-revista-precios` actualizada (propuesta) con este método.
+- Decisión de Daniel: **un chat por cada tanda de 6 páginas** (el historial largo encarece cada mensaje). Se puede probar con Sonnet eligiéndolo en el selector de modelo al abrir el chat.
+
 ### Sesión 02/10/2026 (chat "Sucursales", Msg 11) — Financiación → Planes (ofrecer unidades financiadas) y Entrega/cuotas en la ficha
 - **Financiación:** arriba de todo, botones **🧮 Simulador de cuotas** y **📋 Planes** (el del simulador ya no está al lado de "Planes cargados").
 - **Pantalla Planes** (`/financiacion/planes`, `templates/financiacion/planes.html`): burbujas con las unidades de Stock (Disponible, Por ingresar, En reparación; punto dorado = ya tiene plan, gris = precio cambiado u oculto). Al elegir una: Precio · **Entrega** (sugerida 50% redondeado hacia arriba a $100.000, editable) · Saldo a financiar · Tasa mensual · Plazo (meses) · Método (simple/francés) · Cuotas mensuales/semanales · **Cuota sugerida** · Redondeo hacia arriba (sin / $1.000 / $5.000 / $10.000) · vista previa "Así se ve en la ficha". Cálculo en vivo (JS) y el mismo en el servidor al guardar (misma fórmula que el simulador; semanal = cuota mensual / 4 y semanas contadas desde hoy). Por defecto toma tasa/plazo/método/redondeo del último plan guardado. Check "Mostrar en la ficha comercial". Guardar/Quitar solo el dueño; el vendedor lo ve.
