@@ -150,6 +150,11 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 ## Cambios recientes
 
+### Sesión 02/10/2026 (chat precios revista 2, Msg 4) — Revista OCTUBRE 2026: lista nueva completa + págs. 53-58
+- Nuevo `INFOAUTO_PRECIOS_2026_10.xlsx` y `seed/precios_infoauto/precios_infoauto_2026_10.csv` (25.267 precios): págs. 53-58 reales (Agrale, Alfa Romeo, Arcfox —marcas nuevas— y Audi A1 a Q6, 414 versiones) y el resto **estimado desde Septiembre** con coeficientes por año (0KM ×1,00; '25 ×1,01; '24-'09 ×0,99; '08-'07 ×0,94). En el Excel lo estimado va en gris; en la app no se marca (decisión de Daniel). Se regenera en cada tanda con `INFOAUTO/transcripcion/herramientas/armar_mes.py` (config y coeficientes en `INFOAUTO/OCT-2026/`). Análisis de variación en `INFOAUTO/OCT-2026/VARIACION_PRECIOS.md`.
+- `database.py::_importar_precios_infoauto`: ahora carga **solo el CSV del mes más nuevo** y borra las filas de listas anteriores (la app muestra "actualizado 10/2026"). Probado con base temporal, también pasando de una base con Septiembre.
+- Próximo: Daniel pasa 59-168 de a 6; en cada tanda medir error de la estimación y recalcular coeficientes.
+
 ### Sesión 01/10/2026 (chat "Sucursales", Msg 10) — Cuotas compactas en el detalle del plan
 - Pedido de Daniel (captura del celu: cada cuota ocupaba media pantalla con títulos). En `financiacion/detalle.html`:
   - **Pendiente de firma:** resumen de 4 líneas — "Cuota 1 · dd/mm/aaaa · $monto" / "hasta" / "Cuota N · dd/mm/aaaa · $monto" / "Cantidad de cuotas (semanales|mensuales) = N".

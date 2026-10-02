@@ -1189,9 +1189,15 @@ def _importar_precios_infoauto(conn):
     # el usuario lo arma routes/precios.py::etiqueta_referencia.
     conn.execute("UPDATE precios_base SET fuente = REPLACE(fuente, 'InfoAuto', 'Lista') WHERE fuente LIKE '%InfoAuto%'")
     carpeta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seed", "precios_infoauto")
-    for ruta in sorted(glob.glob(os.path.join(carpeta, "precios_infoauto_*.csv"))):
+    # 02/10/2026: cada mes es una lista completa (las páginas que faltan de la
+    # revista nueva se estiman desde el mes anterior), así que se carga SOLO el
+    # CSV más reciente y se borran las filas de las listas de meses anteriores.
+    # Los CSV viejos quedan en la carpeta como historial.
+    rutas = sorted(glob.glob(os.path.join(carpeta, "precios_infoauto_*.csv")))[-1:]
+    for ruta in rutas:
         m = re.search(r"(\d{4})_(\d{2})\.csv$", ruta)
         fuente = f"Lista {_MESES_ABREV[int(m.group(2))]}-{m.group(1)}" if m else "Lista"
+        conn.execute("DELETE FROM precios_base WHERE fuente LIKE 'Lista%' AND fuente != ?", (fuente,))
         with open(ruta, encoding="utf-8", newline="") as f:
             filas = [
                 (r["marca"].strip(), r["modelo"].strip(), r["version"].strip(), int(r["anio"]), float(r["precio"]))
