@@ -1550,6 +1550,34 @@ def _migrar_planes(conn):
     conn.execute("UPDATE agencias SET plan = 'libre' WHERE plan IS NULL OR plan = ''")
 
 
+def _migrar_planes_oferta(conn):
+    """Planes de financiación para OFRECER unidades de Stock (02/10/2026,
+    pedido de Daniel): uno por vehículo. Se arma en Financiación → Planes y
+    la ficha comercial muestra solo "Entrega $X" y "Saldo en N cuotas fijas
+    de $Y" (tasa, método y redondeo quedan internos)."""
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS planes_oferta (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agencia_id INTEGER NOT NULL,
+            vehiculo_id INTEGER NOT NULL UNIQUE,
+            precio REAL NOT NULL,
+            entrega REAL NOT NULL,
+            saldo REAL NOT NULL,
+            tasa REAL NOT NULL DEFAULT 0,
+            plazo_meses INTEGER NOT NULL,
+            metodo TEXT NOT NULL DEFAULT 'simple',
+            periodicidad TEXT NOT NULL DEFAULT 'mensual',
+            cantidad_cuotas INTEGER NOT NULL,
+            cuota_calculada REAL NOT NULL,
+            redondeo INTEGER NOT NULL DEFAULT 0,
+            cuota_final REAL NOT NULL,
+            mostrar_en_ficha INTEGER NOT NULL DEFAULT 1,
+            creado_por_id INTEGER,
+            updated_at TEXT DEFAULT (datetime('now'))
+        )"""
+    )
+
+
 def asignar_existentes_a_sucursal(conn, agencia_id, sucursal_id):
     """Lo que la agencia tenía sin sucursal pasa a `sucursal_id` (se usa al
     crear la primera sucursal)."""
@@ -1626,6 +1654,7 @@ def init_db():
     _migrar_usuarios_agencia(conn)
     _migrar_sucursales(conn)
     _migrar_planes(conn)
+    _migrar_planes_oferta(conn)
     _crear_superadmin_desde_env(conn)
     import mercado_ml
     mercado_ml.asegurar_tablas(conn)

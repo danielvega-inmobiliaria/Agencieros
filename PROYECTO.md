@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 01/10/2026 — 23:00 ART (chat "Sucursales", Msg 10: cuotas compactas en el detalle del plan, falta push)_
+_Última actualización: 02/10/2026 — 17:08 ART (chat "Sucursales", Msg 11: Financiación → Planes para ofrecer unidades + Entrega/cuotas en la ficha, falta push)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -149,6 +149,19 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 02/10/2026 (chat "Sucursales", Msg 11) — Financiación → Planes (ofrecer unidades financiadas) y Entrega/cuotas en la ficha
+- **Financiación:** arriba de todo, botones **🧮 Simulador de cuotas** y **📋 Planes** (el del simulador ya no está al lado de "Planes cargados").
+- **Pantalla Planes** (`/financiacion/planes`, `templates/financiacion/planes.html`): burbujas con las unidades de Stock (Disponible, Por ingresar, En reparación; punto dorado = ya tiene plan, gris = precio cambiado u oculto). Al elegir una: Precio · **Entrega** (sugerida 50% redondeado hacia arriba a $100.000, editable) · Saldo a financiar · Tasa mensual · Plazo (meses) · Método (simple/francés) · Cuotas mensuales/semanales · **Cuota sugerida** · Redondeo hacia arriba (sin / $1.000 / $5.000 / $10.000) · vista previa "Así se ve en la ficha". Cálculo en vivo (JS) y el mismo en el servidor al guardar (misma fórmula que el simulador; semanal = cuota mensual / 4 y semanas contadas desde hoy). Por defecto toma tasa/plazo/método/redondeo del último plan guardado. Check "Mostrar en la ficha comercial". Guardar/Quitar solo el dueño; el vendedor lo ve.
+- **Tabla `planes_oferta`** (uno por vehículo; `database._migrar_planes_oferta`): precio, entrega, saldo, tasa, plazo_meses, metodo, periodicidad, cantidad_cuotas, cuota_calculada, redondeo, cuota_final, mostrar_en_ficha.
+- **Ficha comercial** (pública, visor y vista previa): debajo del precio, "Entrega **$X**" / "Saldo en **N cuotas [semanales] fijas de $Y** en pesos". Solo si el plan está visible y el precio guardado coincide con el precio publicado (si el precio cambia, se oculta hasta volver a guardar). Tasa, método y redondeo nunca se muestran.
+- Ojo: el texto libre "Condiciones de pago" del vehículo se sigue mostrando debajo (ej. el LIFAN ya tenía "Entrega $6.000.000 + 12 cuotas…"); si se usa el plan conviene vaciar ese texto para no duplicar.
+- Probado con test_client (copia de la base): LIFAN $16.000.000 → entrega sugerida $8.000.000; guardado entrega $5.800.000, 5% simple, 12 meses, redondeo $5.000 → 12 cuotas de $1.360.000 (verificado a mano); ficha lo muestra; al cambiar el precio se oculta; semanal francés → 53 cuotas de $288.000; visor de fichas OK; quitar OK. JS validado con node.
+- Archivos: `database.py`, `routes/financiacion.py`, `routes/stock.py`, `templates/financiacion/planes.html` (nuevo), `templates/financiacion/index.html`, `templates/stock/_ficha_contenido.html`, `templates/stock/_ficha_estilos.html`, `static/css/style.css`, `templates/base.html` (`?v=20261002a`).
+
+### Sesión 02/10/2026 (chat precios revista 2, Msg 5) — Octubre 2026 págs. 59-64
+- Reales: Audi (fin), BAIC, BMW completa, BYD, Changan, Chery Arrizo 5 Confort: **412 versiones / 1.598 precios** (acumulado Oct: 826 versiones reales, 5.783 estimadas, CSV 25.265 precios). Salen las BMW "50 Jahre Edition"; entra BYD Seal 5 DM-I GL; Changan Eado Plus → Eado Plus PHEV.
+- Variación recalculada con 1.886 comparables: 0KM alemanas sin cambio y chinas +0,65%; usados '25 +1,5%, '24 +0,9%, '23 −0,5%, resto −0,9%. Coeficientes nuevos (error 1,87%); el −6% de '08/'07 de la tanda 1 era solo de Audi y se descartó. Skill `transcribir-revista-precios` actualizada (propuesta) con el método mensual.
 
 ### Sesión 02/10/2026 (chat precios revista 2, Msg 4) — Revista OCTUBRE 2026: lista nueva completa + págs. 53-58
 - Nuevo `INFOAUTO_PRECIOS_2026_10.xlsx` y `seed/precios_infoauto/precios_infoauto_2026_10.csv` (25.267 precios): págs. 53-58 reales (Agrale, Alfa Romeo, Arcfox —marcas nuevas— y Audi A1 a Q6, 414 versiones) y el resto **estimado desde Septiembre** con coeficientes por año (0KM ×1,00; '25 ×1,01; '24-'09 ×0,99; '08-'07 ×0,94). En el Excel lo estimado va en gris; en la app no se marca (decisión de Daniel). Se regenera en cada tanda con `INFOAUTO/transcripcion/herramientas/armar_mes.py` (config y coeficientes en `INFOAUTO/OCT-2026/`). Análisis de variación en `INFOAUTO/OCT-2026/VARIACION_PRECIOS.md`.
