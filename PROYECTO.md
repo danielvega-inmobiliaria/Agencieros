@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 30/09/2026 — 16:20 ART (chat "Sucursales", Msg 6: paso 5 límites por plan hecho y probado, falta push; pasos 1-5 de "reorganizar cuentas y Red" completos)_
+_Última actualización: 01/10/2026 — 22:32 ART (chat "Sucursales", Msg 8: tasación con 3 botones de destino, falta push)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -150,10 +150,18 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 ## Cambios recientes
 
+### Sesión 01/10/2026 (chat "Sucursales", Msg 8) — Tasación: elegir destino al pasar a Stock
+- Pedido de Daniel: el estado se elegía recién dentro del alta de Stock (campo Estado, por defecto Disponible) y se pasaba por alto. Ahora, al terminar la tasación (pantalla de Tasación y ficha de la toma), en lugar de "Agregar a Stock" hay **3 botones: "Ingresa a Stock (Disponible)", "Por ingresar" y "A reparación"**; cada uno abre el alta con el estado ya elegido (`&estado=` sobre el link de `_url_agregar_a_stock`; `stock.nuevo` ya aceptaba `estado` en el prefill). Por ingresar muestra "Quién entrega / Fecha estimada"; A reparación arranca el seguimiento al guardar. Texto de ayuda corregido.
+- Probado con test_client (copia de la base): los 2 templates muestran los 3 botones y el alta abre con "Por ingresar" seleccionado.
+- Archivos: `templates/tomas/tasacion.html`, `templates/tomas/detalle.html`.
+
+### Sesión 01/10/2026 (chat precios revista 2, Msg 1) — Precios Sep-2026 págs. 58-63
+- **Audi** desde A6 4.2 (A6/A7/A8, Allroad, E-Tron, Q2-Q8, R8, RS, S, SQ5, TT/TTS), **BAIC** completa (marca nueva) y **BMW** desde 116I hasta X 4 20I (empalma con la pág. 64): **418 versiones / 1.636 precios**. Excel filas 2-422 (AUDI y BAIC con título nuevo); CSV ~23.860 líneas. Probado con base temporal (`/precios/api/opciones`). Falta el comienzo de Audi (pág. 57 o antes).
+
 ### Cierre chat "Precios revista Sep-2026" (29/09 → 01/10/2026)
 - Cargadas en esta sesión las págs. 64-79, 108-119, 127-128, 131-139, 149-153 (Chevrolet, Citroën, Chrysler/Jeep/RAM, Chery, BMW X4-Z4, BYD, DFSK, Kia, Mercedes-Benz y Camiones, MG, Mini, Peugeot, Porsche, Renault y Camiones, Land Rover, Toyota completa, etc.). CSV `precios_infoauto_2026_09.csv`: ~22.200 precios. Excel ordenado alfabéticamente por marca con autofiltro en todos los años.
 - Navegación Volver/Anterior/Siguiente común y panel "Publicar" en Stock (ver Msg 9 abajo).
-- Próximo: cargar 58-63 (ya en la carpeta); pedir a Daniel 120-122, 129-130, 140-148, 1-57, 165+ y re-escaneo de la 103. Detalle en `INFOAUTO/transcripcion/PAGINAS_CARGADAS.md`.
+- Próximo: ~~cargar 58-63~~ (hecho 01/10); pedir a Daniel 120-122, 129-130, 140-148, 1-57, 165+ y re-escaneo de la 103. Detalle en `INFOAUTO/transcripcion/PAGINAS_CARGADAS.md`.
 
 ### Sesión 01/10/2026 (chat precios revista, Msg 17) — Precios Sep-2026 págs. 114-119
 - **Mercedes-Benz completa** (ML, S, SL, SLC, SLK, SLS, Sprinter, Viano, Vito), **Mercedes-Benz Camiones** (Accelo, Actros, Arocs, Atego, Atron, Axor, L/LK/LP/LS), **MG** y **Mini** hasta Cooper S (sigue en la 120): **423 versiones / 2.185 precios**. Probado con base temporal.

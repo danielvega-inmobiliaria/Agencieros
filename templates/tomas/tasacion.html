@@ -126,11 +126,18 @@
 
     {% if url_agregar_a_stock %}
     <div style="text-align:center; margin-top:16px;">
-      <a class="btn btn-primary" href="{{ url_agregar_a_stock }}">{{ label_agregar_a_stock }}</a>
       {% if label_agregar_a_stock == 'Agregar a Stock' %}
+      {# 01/10/2026: un botón por destino, el alta abre con el estado ya elegido. #}
+      <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+        <a class="btn btn-primary" href="{{ url_agregar_a_stock }}&estado=disponible">Ingresa a Stock (Disponible)</a>
+        <a class="btn btn-secondary" href="{{ url_agregar_a_stock }}&estado=por_ingresar">Por ingresar</a>
+        <a class="btn btn-secondary" href="{{ url_agregar_a_stock }}&estado=en_reparacion">A reparación</a>
+      </div>
       <p style="color:var(--text-dim); font-size:11.5px; margin-top:6px;">
-        Abre el alta de Stock con Marca/Modelo/Versión/Año, Valor de compra, Gastos y Observaciones ya cargados con lo tasado — faltan Km, Combustible, Caja, Color y Dominio, y elegir el estado (Disponible / Por ingresar).
+        Abre el alta de Stock con Marca/Modelo/Versión/Año, Valor de compra, Gastos y Observaciones ya cargados con lo tasado y el estado elegido — faltan Km, Combustible, Caja, Color y Dominio.
       </p>
+      {% else %}
+      <a class="btn btn-primary" href="{{ url_agregar_a_stock }}">{{ label_agregar_a_stock }}</a>
       {% endif %}
     </div>
     {% endif %}
