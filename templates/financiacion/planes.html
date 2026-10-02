@@ -44,7 +44,7 @@
         <input type="number" name="entrega" id="entrega" step="1000" min="0" value="{{ (plan.entrega if plan else entrega_def)|round(0)|int }}">
       </div>
       <div class="plan-fila"><span>Saldo a financiar</span><b id="saldo">—</b></div>
-      <div class="plan-fila"><span>Tasa mensual (%)</span><input type="number" name="tasa" id="tasa" step="0.01" min="0" value="{{ d.tasa if d else '' }}" placeholder="Ej: 5"></div>
+      <div class="plan-fila"><span>Tasa mensual (%)</span><input type="number" name="tasa" id="tasa" step="0.01" min="0" value="{{ ('%g' % d.tasa) if d and d.tasa is not none else '' }}" placeholder="Ej: 5"></div>
       <div class="plan-fila"><span>Plazo (meses)</span><input type="number" name="plazo_meses" id="plazo" step="1" min="1" value="{{ d.plazo_meses if d else 12 }}"></div>
       <div class="plan-fila"><span>Método</span>
         <select name="metodo" id="metodo">{% for k, l in metodo_label.items() %}<option value="{{ k }}" {{ 'selected' if (d.metodo if d else 'simple') == k else '' }}>{{ l }}</option>{% endfor %}</select>

@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 02/10/2026 — 17:48 ART (chat "Sucursales", Msg 12: cuota redondeada editable en Planes, redes de la ficha, zoom en el celu; falta push)_
+_Última actualización: 02/10/2026 — 17:57 ART (chat "Sucursales", Msg 13: fix tasa x10 en Planes; falta push)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -149,6 +149,12 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 02/10/2026 (chat "Sucursales", Msg 13) — Fix: la tasa de Planes se multiplicaba por 10
+- Bug: al guardar un plan, `num()` en `plan_guardar` sacaba los puntos como separador de miles; la tasa guardada como `5.0` se mostraba "5.0" y al volver a guardar llegaba "50" (y la cuota salía enorme). Ahora se lee el número tal cual (los campos son type=number, el decimal siempre viene con punto) y la tasa se muestra sin ".0".
+- **Los planes ya guardados en producción con la tasa en 50 hay que volver a guardarlos con 5** (LIFAN y Peugeot 408 de Italia).
+- Probado: 5 → 5 (cuota $1.200.000 sobre saldo $9.000.000, 12 meses simple), 5.0 → 5, 4.5 → 4.5.
+- Archivos: `routes/financiacion.py`, `templates/financiacion/planes.html`.
 
 ### Sesión 02/10/2026 (chat "Sucursales", Msg 12) — Ajustes de Planes, redes de la ficha y zoom en el celu
 - **Planes:** se saca el selector de redondeo; debajo de "Cuota sugerida" va **"Cuota redondeada"**, un campo que arranca con la sugerida (entera, hacia arriba) y se edita a mano, como la "cuota aplicada" del Simulador. Si se cambian entrega/tasa/plazo/método/periodicidad vuelve a la sugerida. La ficha muestra la cuota redondeada. El servidor guarda lo tipeado (vacío = sugerida al peso).

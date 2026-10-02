@@ -1297,8 +1297,12 @@ def plan_guardar(vehiculo_id):
     f = request.form
 
     def num(k, d=0):
+        # Los campos son type="number": el navegador siempre manda el decimal
+        # con punto ("5.5"). Antes se sacaban los puntos como si fueran de
+        # miles y una tasa guardada como 5.0 volvía como 50 (02/10/2026).
+        v = str(f.get(k, "")).strip().replace(",", ".")
         try:
-            return float(str(f.get(k, "")).replace(".", "").replace(",", ".") or d)
+            return float(v) if v else d
         except ValueError:
             return d
     precio = v["valor_publicado"] or 0
