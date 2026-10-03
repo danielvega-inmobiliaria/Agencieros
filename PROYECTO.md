@@ -150,6 +150,15 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 ## Cambios recientes
 
+### Sesión 02/10/2026 (chat precios revista 8, Msg 1) — Octubre 2026 págs. 95-100
+- Cargadas **págs. 95-100** (modo ahorro): **Ford Camiones** (Cargo 1723/37 EV a F- 4000 TDI), **Forthing**, **Foton** (Auman, Aumark, E-Aumark, Gratour, Tunland, View, Wonder), **GAC**, **Geely**, **Great Wall**, **Haval**, **Hino**, **Honda**, **Hummer** (marca nueva) y **Hyundai** hasta Santa Fe 2.2 CRDI 5 AS.PRE L/06. 404 versiones / 1.646 precios reales (399 reemplazan a las de Septiembre; 5 versiones nuevas: AION V Luxury, Riddara RD6 PHEV, H7 2WD HEV, H7 4WD ICE, Hummer Techo Duro).
+- Archivos: `INFOAUTO/transcripcion/datos_oct_095_100.py`, `INFOAUTO/OCT-2026/config_2026_10.json` (se agregó a `datos` y `HUMMER` a `marcas_csv`), Excel y CSV de Octubre regenerados con TODOS los datos (53-100: 3.196 versiones reales, 3.432 estimadas, 25.326 precios), `PAGINAS_CARGADAS.md` y `VARIACION_PRECIOS.md` (tanda 8). `grid2.py` no se tocó (las grillas 95-100 no se calibraron: control visual con recortes de lectura).
+- Control B: 31 de 404 filas marcadas (8%), todas verificadas a ojo y bien leídas. Páginas 98-100 inclinadas: asignación fila-valor confirmada contra Septiembre. Nombres cargados con la grafía de Sep: F-4000 TDI (impreso "F- 4000"), Cargo 2842/33 6X2 CD, Auman D 1825 EST - M 245, D 2027 EST - M 270, R 2543 - 430 6X2T y Santa Fe 2.2 CRDI 5 AS.PRE. L/06 (impreso sin el punto final).
+- Verificado: Excel = CSV (25.326 celdas), 0 diferencias en las 404 filas reales, 0 diferencias en las 3.432 estimadas (Sep × coeficiente), orden alfabético de marcas, CRLF sin LF sueltos, sin duplicados. No se levantó la app con base temporal en esta tanda (sin Flask en la PC; el formato del CSV no cambió).
+- Variación: usados de la tanda +0,3% (Honda +0,8%, Ford Camiones +0,6%, Foton/Geely/Haval -1%); coeficientes sin cambios (el pooled mejora solo 0,008 pt). Idea pendiente: coeficiente por marca.
+- **Aviso procesos paralelos:** el config/Excel/CSV los regeneran varios chats a la vez; el último en correr `armar_mes.py` debe usar el config con TODOS los `datos` (hoy 053_058 a 095_100).
+- **Sigue:** pág. 101 en adelante (Hyundai: Santa Fe 2.2 CRDI AT, Tucson, Veloster...; todavía sin PDF de la 101). Falta deploy: `git add/commit/push` del CSV y PROYECTO.md (bloque en la respuesta del chat).
+
 ### Sesión 02/10/2026 (chat "Sucursales", Msg 14) — "Por cobrar" distinto entre Financiación y Dashboard
 - Daniel vio $8.730.000 en Financiación y $9.810.000 en el Dashboard. Causa: Financiación calculaba total del plan − total cobrado, y el **recargo por atraso cobrado** en cuotas pagadas tarde (Laura Lezcano: $1.080.000) restaba deuda de las cuotas siguientes. El Dashboard sumaba lo pendiente de las cuotas no pagadas (correcto).
 - Fix en `_con_resumen` (`routes/financiacion.py`): `total_adeudado` = saldo pendiente de las cuotas no pagadas. Ahora los dos dan $9.810.000 (verificado sobre copia de la base). Afecta también "Saldo pendiente" del detalle del plan y el monto sugerido de cancelación anticipada (antes quedaban bajos por el mismo motivo).
