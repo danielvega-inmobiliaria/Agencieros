@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 02/10/2026 — 21:00 ART (chat precios revista 3, Msg 1: Octubre págs. 65-70)_
+_Última actualización: 02/10/2026 — 22:27 ART (chat precios revista 5, Msg 1: Octubre págs. 77-82)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -149,6 +149,22 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 02/10/2026 (chat precios revista 5, Msg 1) — Octubre 2026 págs. 77-82
+- Cargadas **págs. 77-82** (modo ahorro): Citroën (fin), **Coradir (marca nueva)**, Daewoo, DFM, DFSK, Domy, Dongfeng, Dongfeng Camiones, DS Automobiles, Ferrari y Fiat (500 a Mobi). 377 versiones / 1.291 precios reales.
+- Octubre ahora: reales págs. 53-82 (2.007 versiones / 7.463 precios), estimadas 4.616 versiones, CSV 25.310 precios.
+- Archivos: `INFOAUTO/transcripcion/datos_oct_077_082.py`, `grid2.py` (grillas 77-82), config y coef de `INFOAUTO/OCT-2026/`, Excel y CSV del mes regenerados, `PAGINAS_CARGADAS.md`, `VARIACION_PRECIOS.md`. `armar_mes.py` ganó la opción `quitar` en el config ({marca: [nombres del mes base renombrados]}) para retirar versiones renombradas que quedan al final de una marca (usada para MOBI EASY/EASY PACK TOP/LIKE L/21/TREKKING).
+- Control B: 47 de 377 filas marcadas (12%), todas verificadas a ojo. Renombres en la revista: Línea → Línea HLX (9), Mobi → Mobi 1.0 (4 viejas quitadas; MOBI WAY queda estimada hasta la pág. 83).
+- Variación: 0KM por marca (Fiat +3,2%, Dongfeng Camiones +3,9%, Citroën +1,6%, DS −3,0%); usados '25 −0,9%, resto −0,6/−0,9%, Ferrari +1,6%. Coeficientes '25 ×1,004 y '24 ×0,995. Idea pendiente: coeficiente de 0KM por marca.
+- Verificado: Excel = CSV (25.310), 0 diferencias en reales y estimadas (usados redondeados a 100), CRLF sin LF sueltos, sin duplicados; la app (base temporal) muestra "actualizado 10/2026" con solo la fuente Lista Oct-2026 y encuentra Mobi 1.0 Trekking '25, Ferrari 430 F1 '13, Coradir Tita 300 '24, Fiat Cronos L/21 y Dongfeng Captain C 615.
+- **Sigue:** págs. 83-88 (Fiat: Mobi Way, Mobi, Palio, Punto...). Falta deploy: `git add/commit/push` del CSV y PROYECTO.md (bloque en la respuesta del chat).
+
+### Sesión 02/10/2026 (chat precios revista 4, Msg 1) — Octubre 2026 págs. 71-76
+- Reales: Chevrolet (Prisma LTZ L/17 a Zafira, fin de marca), Chrysler/Jeep/RAM completa y Citroën Basalt a C 4 Cactus 1.6 VTI Feel PK: **422 versiones / 1.525 precios** (acumulado Oct: 1.630 versiones reales, 4.979 estimadas, CSV 25.260 precios). Modo ahorro: control contra Septiembre (28 filas marcadas de 422 = 7%, todas revisadas a ojo y bien leídas). Sin altas ni bajas de catálogo (las 422 versiones ya existían).
+- Columna '07 cortada en el borde derecho de las págs. 74 y 76 (escaneo): se amplió para confirmar los últimos dígitos. Huecos impresos igual que Sep (C 4 2.0I 4 PTAS X sin '10/'09).
+- Variación: 0KM Chevrolet +4,0%, Chrysler/Jeep/RAM +3,2%, Citroën +3,2% (sigue 1,00 global: depende de la marca); usados Chrysler/Jeep +1,7%, Citroën −0,8%. Coeficientes ajustados en milésimas (error usados 1,57%). Detalle en `INFOAUTO/OCT-2026/VARIACION_PRECIOS.md`.
+- Archivos: `INFOAUTO/transcripcion/datos_oct_071_076.py`, `grid2.py` (grillas 71-76), config y coef de `INFOAUTO/OCT-2026/`, Excel y CSV del mes regenerados, `PAGINAS_CARGADAS.md`.
+- Verificado: Excel = CSV (25.260), 0 diferencias en los 1.525 reales, CSV con CRLF y sin duplicados. No se repitió la prueba de la app con base temporal en esta tanda (mismo formato de CSV que las anteriores). Sigue: págs. 77-82.
 
 ### Sesión 02/10/2026 (chat precios revista 3, Msg 1) — Octubre 2026 págs. 65-70
 - Reales: Chery (Arrizo 5 Luxury a Tiggo 8) y Chevrolet Agile a Prisma 1.4 LTZ L/13 AUT: **382 versiones / 1.354 precios** (acumulado Oct: 1.208 versiones reales, 5.401 estimadas, CSV 25.260 precios). Modo ahorro: control contra Septiembre (46 filas marcadas de 382 = 12%, todas revisadas a ojo; un corrimiento de año en S10 4X4 LTZ L/12 detectado y corregido).
