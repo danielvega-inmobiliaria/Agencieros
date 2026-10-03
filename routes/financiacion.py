@@ -237,7 +237,13 @@ def _con_resumen(fin):
     recargo = round(sum(max(0, (c["monto_pagado"] or 0) - c["monto"]) for c in cuotas), 2)
     f["total_plan"] = total
     f["total_cobrado"] = cobrado
-    f["total_adeudado"] = round(total - cobrado, 2)
+    # Saldo pendiente = lo que falta cobrar de las cuotas no pagadas (02/10/2026).
+    # Antes era total - cobrado: el recargo por atraso cobrado de más en una
+    # cuota "descontaba" deuda de las cuotas siguientes y Financiación mostraba
+    # menos que el Dashboard (caso Laura Lezcano: $1.080.000 de recargos).
+    f["total_adeudado"] = round(sum(
+        max(0, c["monto"] - (c["monto_pagado"] or 0)) for c in cuotas if c["estado"] != "pagada"
+    ), 2)
     f["total_recargo_atraso"] = recargo
     f["cuotas_vencidas"] = vencidas
     f["monto_vencido"] = monto_vencido
