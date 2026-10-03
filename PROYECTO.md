@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 03/10/2026 — chat precios revista: Octubre págs. 137-142 cargadas (Renault, Renault Camiones, Land Rover, Scania); falta push del CSV_
+_Última actualización: 03/10/2026 — chat precios revista: Octubre págs. 164-168 cargadas; **Octubre completo (53-168, 7.807 versiones reales)**; falta push del CSV_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -149,6 +149,35 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 03/10/2026 (chat precios revista) — Octubre 2026 págs. 164-168 (fin de la revista)
+- Cargadas págs. 164-168 de Octubre: Virtus 1.6 MSI L/23 y Sense, Voyage, **Volkswagen Camiones** completa, **Volvo** completa, **Volvo Camiones** completa y **Zanella**: **329 versiones / 1.715 precios reales** (53 con base en Sep, 276 nuevas: las págs. 165-168 no estaban en Septiembre). Marcas nuevas en el CSV: Volvo, Volvo Camiones, Zanella.
+- **Octubre queda completo: págs. 53-168, 7.807 versiones, 0 estimadas, 30.340 precios.** Se incluyeron todos los `datos_oct_*.py` (incluido `datos_oct_160_163.py` del otro chat). Excel y CSV regenerados y verificados (CSV = Excel = transcripción, 0 diferencias; sin duplicados; CRLF).
+- Control contra Sep: 0 celdas desparejas en las 268 comparables (mediana usados +0,2%, 0KM 0,0%). Camiones y Voyage viejos casi no se movieron (coeficiente global empeora la estimación: 1,38% vs 0,65% sin ajustar); anotado en `VARIACION_PRECIOS.md` para Noviembre.
+- Archivos tocados: `INFOAUTO/transcripcion/datos_oct_164_168.py` (nuevo), `INFOAUTO/OCT-2026/config_2026_10.json` (dato nuevo + marcas_csv), `INFOAUTO_PRECIOS_2026_10.xlsx`, `seed/precios_infoauto/precios_infoauto_2026_10.csv`, `PAGINAS_CARGADAS.md`, `VARIACION_PRECIOS.md`.
+- **Falta:** push del CSV (bloque Git Bash), probar la app con el CSV nuevo (`/precios/api/opciones`, etiqueta "actualizado 10/2026"), y preparar Noviembre (carpeta NOV-2026, config con base = Octubre completo).
+
+### Sesión 03/10/2026 (chat precios revista) — Octubre 2026 págs. 160-163
+- Cargadas págs. 160-163 de Octubre (Volkswagen: Saveiro, Scirocco, Sharan, Suran, Suran Cross, Taos, T-Cross, Tera, The Beetle, Tiguan, Tiguan Allspace, Touareg, Transporter, Up!, Vento, Vento Variant, Virtus hasta Virtus 1.6 MSI L/22 AT): **284 versiones / 1.024 precios reales**, 0 altas/bajas respecto de Septiembre, 0 celdas desparejas en el control contra el mes base. Archivo `INFOAUTO/transcripcion/datos_oct_160_163.py`.
+- Excel y CSV de Octubre regenerados con TODOS los datos (18 archivos `datos_oct_*.py` previos + este): 7.478 versiones reales, 53 estimadas, 7.531 en total, 28.893 precios (Excel = CSV, 0 duplicados, CRLF sin LF sueltos, transcripción = CSV con 0 diferencias). `config_2026_10.json` actualizado (datos y texto_fuente). Coeficientes sin cambios (variación en `VARIACION_PRECIOS.md`). No se probó la app (formato del CSV sin cambios).
+- **Falta:** push del CSV (git add/commit/push). **Sigue:** Octubre págs. 164-168 (Virtus fin si continúa, Voyage, Volkswagen Camiones, Volvo, etc.).
+
+### Sesión 03/10/2026 (chat precios revista) — Octubre 2026 págs. 155-159
+- Cargadas págs. 155-159 de Octubre (Volkswagen: Fox, CrossFox, Gol, Gol Trend, Gol Country, Golf, Golf VII, Multivan, New Beetle, Nivus, Passat, Passat CC, Polo, Santana, Saveiro 1.6 MI): **308 versiones / 1158 precios reales**, 0 altas/bajas respecto de Septiembre, 0 celdas desparejas en el control contra el mes base. Archivo `INFOAUTO/transcripcion/datos_oct_155_159.py`.
+- Excel y CSV de Octubre regenerados con TODOS los datos (17 archivos `datos_oct_*.py`, incluidos 143-148 y 149-154 de otros chats): 7.194 versiones reales, 337 estimadas, 28.893 precios. Typos de la revista corregidos: STARTLIINE→STARTLINE, TRENDLIN→TRENDLINE.
+- Hallazgo de variación: VW '25-'15 +1,3% y '14-'07 −0,9% vs Sep (coeficiente por marca/antigüedad a evaluar; ver `VARIACION_PRECIOS.md`). Sigue: págs. 160-168 (Volkswagen fin + Camiones, Volvo, etc.). **Falta commit/push del CSV `precios_infoauto_2026_10.csv`.**
+
+### Sesión 03/10/2026 (chat precios revista) — Octubre 2026 págs. 143-148
+- Cargadas 390 versiones / 1.373 precios reales: Scania (sigue de la 142: R, RH, RN, S), Seat, Shacman, Shineray, Sitrak, Smart, Squeast, Subaru, Suzuki, Tank y Toyota (86 a Etios). Marcas nuevas sin base en Sep agregadas a `marcas_csv`: SEAT, SHACMAN, SHINERAY, SITRAK, SMART, SQUEAST, SUBARU (Suzuki, Tank y Toyota ya estaban).
+- Nombres Toyota: la revista imprime punto decimal y Sep tenía coma ('COROLLA 2,0 ...'): se cargaron con la grafía de Sep (42 nombres) para que reemplacen. Typo de Sep 'COROLLA 1.8 XEI L/0214 PACK' quitado vía `quitar`. Corolla 1.8 SE-G L/17 (y CVT): Sep los tenía corridos un año; la revista trae '20-'17.
+- Control: sin repetidos ni precios que suban, huecos de año confirmados, 0 celdas desparejas vs Sep (299 comparables, 80 filas con base). Sin grilla/tinta ni control visual completo (la mayoría de las filas no tiene base): lectura con zoom y control de regularidad de saltos. Variación vs Sep: usados −0,7% (Toyota −0,7%, Suzuki +1,1%), 0KM 0,0%.
+- Archivos: `INFOAUTO/transcripcion/datos_oct_143_148.py`, `config_2026_10.json` (se incluyó `datos_oct_149_154.py` del otro chat; marcas_csv, texto_fuente y quitar actualizados), Excel y CSV de Octubre regenerados con TODOS los datos (6.886 versiones reales, 645 estimadas, 28.893 precios; Excel = CSV, 0 duplicados, CRLF sin LF sueltos). No se probó la app (formato del CSV sin cambios). Falta push: git add/commit/push del CSV y PROYECTO.md.
+- **Sigue:** Octubre págs. 155-168 (Volkswagen en adelante) y lo que falte entre 100-148.
+
+### Sesión 03/10/2026 (chat precios revista) — Octubre 2026 págs. 149-154
+- **Cargadas págs. 149-154** (Toyota completa 149-153, Lexus, Volkswagen Amarok/Bora/Caddy hasta Caddy 1.9 SD AA): 391 versiones / 1.532 precios reales. Altas: Land Cruiser 300 3.4 TDI GR-SPORT AUT y VX AUT HEV (0KM) y Amarok V6 30TD 4X4 DC AT Unlimited. Typo corregido: CONFORTLINE → COMFORTLINE.
+- Nuevo `INFOAUTO/transcripcion/datos_oct_149_154.py`; config, Excel y CSV de Octubre regenerados con todos los `datos` (6.496 versiones reales, 768 estimadas, 7.264 en total, 27.944 precios en el CSV). Variación: Toyota +0,65%, VW −0,7% vs Sep (sin cambiar coeficientes). Registro en `PAGINAS_CARGADAS.md` y `VARIACION_PRECIOS.md`.
+- Falta: págs. 143-148 (otro chat), 155-168; push del CSV (ver Git Bash en la respuesta del chat).
 
 ### Sesión 03/10/2026 (chat precios revista) — Octubre 2026 págs. 131-136
 - Cargadas **págs. 131-136**: **Porsche** (fin: Taycan completa), **Rely** (R8) y **Renault** (Alaskan, Arkana, Boreal, Captur, Clio 2, Clio Mio, Duster, Fluence, Grand Scenic, Kangoo, Kangoo Express, Kardian, Koleos, Kwid, Laguna, Latitude, Logan, Master, Megane F/2, Megane II hasta Confort DCI Plus). **401 versiones / 1.310 precios reales**, todas con el nombre de Sep (0 nuevas, 0 quitadas).
