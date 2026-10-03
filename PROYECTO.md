@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 02/10/2026 — 17:57 ART (chat "Sucursales", Msg 13: fix tasa x10 en Planes; falta push)_
+_Última actualización: 02/10/2026 — 21:00 ART (chat precios revista 3, Msg 1: Octubre págs. 65-70)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -149,6 +149,12 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 02/10/2026 (chat precios revista 3, Msg 1) — Octubre 2026 págs. 65-70
+- Reales: Chery (Arrizo 5 Luxury a Tiggo 8) y Chevrolet Agile a Prisma 1.4 LTZ L/13 AUT: **382 versiones / 1.354 precios** (acumulado Oct: 1.208 versiones reales, 5.401 estimadas, CSV 25.260 precios). Modo ahorro: control contra Septiembre (46 filas marcadas de 382 = 12%, todas revisadas a ojo; un corrimiento de año en S10 4X4 LTZ L/12 detectado y corregido).
+- La revista renombró Onix Plus ("ONIX PLUS 1.0T LT"...) y pasó el "AT" al final en Onix 1.0T LTZ/RS L/21-L/25: se quitaron 26 versiones viejas. La publicidad Red Marca tapa '14-'07 en Onix 1.4 LT, LTZ y LTZ AUT (quedan sin '14/'13, que en Sep tenían precio).
+- Variación: Chery 0KM +0,65% (confirma chinas), **Chevrolet 0KM +4,0%**, Chevrolet usados viejos '10-'07 +1,4%. Coeficientes nuevos (error usados 1,60%). Detalle en `INFOAUTO/OCT-2026/VARIACION_PRECIOS.md`.
+- Verificado: Excel = CSV (25.260), 0 diferencias en reales y estimadas, CSV con CRLF y sin duplicados, y la app muestra "actualizado 10/2026" con solo la fuente Lista Oct-2026 (probado con base temporal). Sigue: págs. 71-76.
 
 ### Sesión 02/10/2026 (chat "Sucursales", Msg 13) — Fix: la tasa de Planes se multiplicaba por 10
 - Bug: al guardar un plan, `num()` en `plan_guardar` sacaba los puntos como separador de miles; la tasa guardada como `5.0` se mostraba "5.0" y al volver a guardar llegaba "50" (y la cuota salía enorme). Ahora se lee el número tal cual (los campos son type=number, el decimal siempre viene con punto) y la tasa se muestra sin ".0".
