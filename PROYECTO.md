@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 03/10/2026 — 09:20 ART (chat precios revista 9: Octubre págs. 107-112 cargadas; falta push del CSV)_
+_Última actualización: 03/10/2026 — chat precios revista 10: Octubre págs. 113-118 cargadas; falta push del CSV_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -150,10 +150,20 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 
 ## Cambios recientes
 
+### Sesión 03/10/2026 (chat precios revista) — Octubre 2026 págs. 119-124
+- Cargadas 421 versiones reales (MB Camiones fin, MG, MINI, Mitsubishi [marca nueva], Nissan, Peugeot hasta 208 1.6 XY). Octubre ahora: reales págs. 53-124, CSV 26.436 precios. Se incluyó el `datos_oct_113_118.py` del otro chat.
+- Archivos: `INFOAUTO/transcripcion/datos_oct_119_124.py`, `grid2.py` (grillas 119-124), `config_2026_10.json` (+ MITSUBISHI en `marcas_csv`), Excel y CSV de Octubre regenerados.
+- Control B: 3 celdas desparejas y 1 fila movida (Countryman One mal alineado: corregido); resto verificado a ojo. Excel = CSV, 0 duplicados, CRLF sin LF sueltos.
+- **Sigue:** pág. 125 en adelante (Peugeot 208/308...). Falta deploy: git add/commit/push del CSV y PROYECTO.md.
+
+### Sesión 03/10/2026 (chat precios revista 10) — Octubre 2026 págs. 113-118
+- Cargadas **págs. 113-118**: **Mercedes Benz** de E 400 hasta Vito (autos, G, GL*, GT, ML, S, SL, SLC, SLK, SLS, Sprinter, Viano, Vito) y **Mercedes Benz Camiones** (Accelo, Actros, Arocs, Atego, Atron, Axor, L hasta L 2638-54). 425 versiones / 2.171 precios reales, todas con el mismo nombre que Septiembre (sin altas ni bajas).
+- Archivos: `INFOAUTO/transcripcion/datos_oct_113_118.py`, `INFOAUTO/OCT-2026/config_2026_10.json` (se agregó a `datos` y se actualizó `texto_fuente`), Excel y CSV de Octubre regenerados con TODOS los datos (53-118: 4.454 versiones reales, 2.250 estimadas, 25.635 precios), `PAGINAS_CARGADAS.md` y `VARIACION_PRECIOS.md` (tanda 11).
+- Control B: 11 de 425 filas marcadas (3%), todas verificadas a ojo y bien leídas. Mercedes usados +0,13% vs Sep (el resto de las marcas baja ~0,7%): candidato a coeficiente por marca, no se tocaron los coeficientes. Sigue: pág. 119 (Camiones LK/LP/LS, MG, Mini), 120-122 (Mini fin, Mitsubishi, Nissan inicio).
 ### Sesión 03/10/2026 (chat precios revista 9) — Octubre 2026 págs. 107-112
 - Cargadas **págs. 107-112**: **JAC** (S7 Luxury a X200), **Jaguar**, **Jetour**, **JMC**, **JMEV**, **Kaiyi**, **Kama**, **Karry**, **Kia** completa, **Kia Camiones**, **Landking**, **Leapmotor** y **Lynk & Co** (marcas nuevas), **Lifan**, **Maserati**, **Maxus** y **Mercedes Benz** de A 200 hasta E 350 Sport Coupe L/13. 410 versiones / 1.444 precios reales (389 reemplazan a las de Septiembre; 21 Sorento renombradas por la revista —nombres nuevos, las 21 viejas se quitaron— y 5 versiones de marcas nuevas).
 - Archivos: `INFOAUTO/transcripcion/datos_oct_107_112.py`, `INFOAUTO/OCT-2026/config_2026_10.json` (se agregó a `datos`; `LEAPMOTOR` y `LYNK & CO` a `marcas_csv`), Excel y CSV de Octubre regenerados con TODOS los datos (53-112: 4.029 versiones reales incluyendo 101-106 del otro chat, 2.675 estimadas, 25.635 precios), `PAGINAS_CARGADAS.md` y `VARIACION_PRECIOS.md` (tanda 9). `grid2.py` no se tocó (grillas 107-112 no calibradas: control con comparación contra Sep + lectura a ojo de lo marcado).
-- Control B: 33 de 410 filas marcadas (8%), todas verificadas a ojo y bien leídas. Páginas 107, 108 y 110 con publicidades/inclinación sin tapar precios. **LAND ROVER ya no figura en la revista de Oct** (queda estimado de Sep; a confirmar con Daniel si la sacaron o está en otra página).
+- Control B: 33 de 410 filas marcadas (8%), todas verificadas a ojo y bien leídas. Páginas 107, 108 y 110 con publicidades/inclinación sin tapar precios. **LAND ROVER no es una baja:** la revista lo imprime como "ROVER LAND ROVER" después de Renault Camiones (pág. ~139, igual que en Sep), no en la L; queda estimado desde Sep hasta que lleguen esas páginas de Oct. Regla de Daniel (03/10/2026): lo que desaparezca de la revista se mantiene y se sigue estimando con el algoritmo mes a mes; lo mismo para el año 2007 cuando salga en Enero (la app lo conserva).
 - Verificado: Excel = CSV (25.635 celdas), 0 diferencias en las 1.444 celdas reales de la tanda, orden alfabético de marcas, CRLF sin LF sueltos, sin duplicados. No se levantó la app con base temporal (el formato del CSV no cambió).
 - Variación: usados de la tanda −1,0% (Mercedes −1,1%, Jaguar −1,2%, Kia −0,7%); 0KM +0,65% en las chinas/Kia/Jetour y 0% en Mercedes/Lifan/Kama; error de lo estimado 0,95%; coeficientes sin cambios.
 - **Sigue:** pág. 113 en adelante (Mercedes Benz: E 400...; todavía sin PDF más allá de la 112 en OCT-2026). Falta deploy: `git add/commit/push` del CSV y PROYECTO.md (bloque en la respuesta del chat).
