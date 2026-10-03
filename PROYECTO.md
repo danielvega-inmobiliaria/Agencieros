@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 02/10/2026 — 23:52 ART (chat "Sucursales", Msg 15: Por sucursal compacto en el Dashboard; falta push)_
+_Última actualización: 03/10/2026 — 09:20 ART (chat precios revista 9: Octubre págs. 107-112 cargadas; falta push del CSV)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -149,6 +149,21 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 03/10/2026 (chat precios revista 9) — Octubre 2026 págs. 107-112
+- Cargadas **págs. 107-112**: **JAC** (S7 Luxury a X200), **Jaguar**, **Jetour**, **JMC**, **JMEV**, **Kaiyi**, **Kama**, **Karry**, **Kia** completa, **Kia Camiones**, **Landking**, **Leapmotor** y **Lynk & Co** (marcas nuevas), **Lifan**, **Maserati**, **Maxus** y **Mercedes Benz** de A 200 hasta E 350 Sport Coupe L/13. 410 versiones / 1.444 precios reales (389 reemplazan a las de Septiembre; 21 Sorento renombradas por la revista —nombres nuevos, las 21 viejas se quitaron— y 5 versiones de marcas nuevas).
+- Archivos: `INFOAUTO/transcripcion/datos_oct_107_112.py`, `INFOAUTO/OCT-2026/config_2026_10.json` (se agregó a `datos`; `LEAPMOTOR` y `LYNK & CO` a `marcas_csv`), Excel y CSV de Octubre regenerados con TODOS los datos (53-112: 4.029 versiones reales incluyendo 101-106 del otro chat, 2.675 estimadas, 25.635 precios), `PAGINAS_CARGADAS.md` y `VARIACION_PRECIOS.md` (tanda 9). `grid2.py` no se tocó (grillas 107-112 no calibradas: control con comparación contra Sep + lectura a ojo de lo marcado).
+- Control B: 33 de 410 filas marcadas (8%), todas verificadas a ojo y bien leídas. Páginas 107, 108 y 110 con publicidades/inclinación sin tapar precios. **LAND ROVER ya no figura en la revista de Oct** (queda estimado de Sep; a confirmar con Daniel si la sacaron o está en otra página).
+- Verificado: Excel = CSV (25.635 celdas), 0 diferencias en las 1.444 celdas reales de la tanda, orden alfabético de marcas, CRLF sin LF sueltos, sin duplicados. No se levantó la app con base temporal (el formato del CSV no cambió).
+- Variación: usados de la tanda −1,0% (Mercedes −1,1%, Jaguar −1,2%, Kia −0,7%); 0KM +0,65% en las chinas/Kia/Jetour y 0% en Mercedes/Lifan/Kama; error de lo estimado 0,95%; coeficientes sin cambios.
+- **Sigue:** pág. 113 en adelante (Mercedes Benz: E 400...; todavía sin PDF más allá de la 112 en OCT-2026). Falta deploy: `git add/commit/push` del CSV y PROYECTO.md (bloque en la respuesta del chat).
+
+### Sesión 03/10/2026 (chat precios revista 9, Msg 1) — Octubre 2026 págs. 101-106
+- Cargadas **págs. 101-106** (modo ahorro): **Hyundai** (Santa Fe 2.2 CRDI AT a Veracruz), **Isuzu**, **Iveco completa** (Cursor, Daily, Eurocargo, Eurotech, Eurotrakker, Stralis, S-Way, Tector, Trakker, Vertis) y **JAC Motors** (EV30X a S7 2.0T Intelligent). 423 versiones / 1.835 precios reales (352 reemplazan a las de Septiembre; 71 versiones de la pág. 103 no existían en Sep).
+- Archivos: `INFOAUTO/transcripcion/datos_oct_101_106.py`, `INFOAUTO/transcripcion/herramientas/grid2.py` (grillas 101-106 calibradas), `INFOAUTO/OCT-2026/config_2026_10.json` (se agregó a `datos`, `texto_fuente` actualizado), Excel y CSV de Octubre regenerados con TODOS los datos (53-106: 3.619 versiones reales, 3.080 estimadas, 25.630 precios), `PAGINAS_CARGADAS.md` y `VARIACION_PRECIOS.md` (tanda 9). Coeficientes sin cambios.
+- Verificado: Excel = CSV (25.630 celdas = 25.630 líneas), 0 diferencias en las 3.619 filas reales, estimadas = Sep × coef (redondeo a 100), CRLF sin LF sueltos, sin duplicados; la carga de la app (base temporal) deja solo "Lista Oct-2026" (25.630 filas) y consulta bien Iveco/Isuzu/Hyundai/JAC ("actualizado 10/2026").
+- **Nota:** `armar_mes.py` tarda más de 2 minutos en la PC (el límite de device_bash es 120 s y los procesos en segundo plano mueren al terminar la llamada): se corrió en el entorno cloud con copias de los archivos y se bajó el resultado a la carpeta.
+- **Sigue:** pág. 107 en adelante (JAC desde S7 2.0T Luxury, Jaguar, Jeep, Kia...). Falta deploy: `git add/commit/push` del CSV y PROYECTO.md (bloque en la respuesta del chat).
 
 ### Sesión 02/10/2026 (chat "Sucursales", Msg 15) — Dashboard: "Por sucursal" en 2 líneas
 - Pedido de Daniel (captura del celu): cada sucursal ocupaba una tarjeta de 5 filas con títulos. Ahora: línea 1 = **nombre** a la izquierda y stock a precio publicado (dorado) a la derecha; línea 2 = "N en stock · N señados · N vendidos en el mes · ganancia $X" (la ganancia solo para el dueño). Toda la fila es link a la sucursal.
