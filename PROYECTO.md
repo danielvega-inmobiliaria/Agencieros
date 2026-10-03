@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 03/10/2026 — chat precios revista 10: Octubre págs. 113-118 cargadas; falta push del CSV_
+_Última actualización: 03/10/2026 — chat precios revista: Octubre págs. 137-142 cargadas (Renault, Renault Camiones, Land Rover, Scania); falta push del CSV_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -149,6 +149,23 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 03/10/2026 (chat precios revista) — Octubre 2026 págs. 131-136
+- Cargadas **págs. 131-136**: **Porsche** (fin: Taycan completa), **Rely** (R8) y **Renault** (Alaskan, Arkana, Boreal, Captur, Clio 2, Clio Mio, Duster, Fluence, Grand Scenic, Kangoo, Kangoo Express, Kardian, Koleos, Kwid, Laguna, Latitude, Logan, Master, Megane F/2, Megane II hasta Confort DCI Plus). **401 versiones / 1.310 precios reales**, todas con el nombre de Sep (0 nuevas, 0 quitadas).
+- Control contra Sep: 14 de 401 filas marcadas (3%), todas verificadas a ojo. Celdas raras impresas así (verificadas con zoom): Kangoo Express 2 1.5 D Generique '08 = 7170 (posible errata de la revista), Logan 1.6 8V Authentique '09 = 7490, Clio Mio 1.2 5P Dynamique SAT '15 = 10520, Koleos 1.5T/2.0T '25 −7/−9% vs estimado.
+- Variación (tanda 14): Renault usados −0,8% parejo, 0KM Renault +2,0%, Porsche usados +0,9%; coeficientes sin cambios (error 1,23%).
+- Archivos: `INFOAUTO/transcripcion/datos_oct_131_136.py`, `INFOAUTO/OCT-2026/config_2026_10.json` (se agregó a `datos`, `texto_fuente` actualizado; se incluyó el `datos_oct_125_130.py` del otro chat), Excel y CSV de Octubre regenerados con TODOS los datos (53-136: 5.682 versiones reales, 1.367 estimadas, 27.064 precios), `PAGINAS_CARGADAS.md`, `VARIACION_PRECIOS.md` (tanda 14). Excel = CSV, 0 diferencias en las 401 reales, 0 duplicados, CRLF sin LF sueltos.
+- **Sigue:** pág. 137 en adelante (Megane II fin, Megane III, Oroch, Sandero, Symbol, Renault Camiones, Land Rover como 'ROVER LAND ROVER'). Faltan págs. 140-148. Falta deploy: git add/commit/push del CSV y PROYECTO.md.
+
+### Sesión 03/10/2026 (chat precios revista) — Octubre 2026 págs. 137-142
+- Cargadas **págs. 137-142**: Renault (Megane II/III/E-Tech, Oroch, Sandero, Scenic 2, Symbol), Renault Camiones completa, Land Rover (impreso "ROVER LAND ROVER") y **Scania** (marca nueva, 699 filas en el CSV). 423 versiones / 1.598 precios reales. Control base + control visual: 0 diferencias.
+- Excel y CSV de Octubre regenerados con todos los datos 53-142 (incluye 131-136 del otro chat). Archivos: `datos_oct_137_142.py`, `config_2026_10.json` (agrega `SCANIA` a `marcas_csv`), Excel y CSV.
+- Sigue: págs. 143-148 de Octubre.
+
+### Sesión 03/10/2026 (chat precios revista) — Octubre 2026 págs. 125-130
+- Cargadas **págs. 125-130**: **Peugeot** completo (208 L/20-L/26, 3008, 301, 307, 308, 4008, 407, 408, 5008, 508, 607, 807, Boxer, Expert, Hoggar, Partner, RCZ, Traveller) y **Porsche** (718, 911, Boxster, Cayenne, Cayman, Macan, Panamera, Taycan hasta GTS). 406 versiones reales.
+- Control contra Sep: el Excel/CSV de Septiembre tenía el Peugeot 3008 1.6 (ALLURE, FELINE, PREMIUM, ROLAND GARROS) y 2.0 HDI FELINE/PREMIUM PLUS con los años corridos 1-2 columnas (la revista de Sep imprime lo mismo que la de Oct): Oct está bien, la base Sep tenía el error. El 508 THP ALLURE TIPTRONIC se había cargado un año corrido por error mío y quedó corregido ('14-'12). **Ojo:** otras filas de Sep todavía no reemplazadas podrían tener el mismo problema (Daniel lo detectó). Nombres corregidos a la grafía de Sep: TIPRONIC→TIPTRONIC (308 THP ALLURE PACK/FELINE/SPORT), "L17" sin barra en 5008. Variación vs Sep (1.081 comparables): mediana −0,7%, 0KM Peugeot +1,8% (208 L/24 +3,2%), Porsche +0,4%; coeficientes sin cambio.
+- Archivos: `INFOAUTO/transcripcion/datos_oct_125_130.py`, `config_2026_10.json`, Excel y CSV de Octubre regenerados (págs. 53-130). **Falta:** push del CSV (git add/commit/push).
 
 ### Sesión 03/10/2026 (chat precios revista) — Octubre 2026 págs. 119-124
 - Cargadas 421 versiones reales (MB Camiones fin, MG, MINI, Mitsubishi [marca nueva], Nissan, Peugeot hasta 208 1.6 XY). Octubre ahora: reales págs. 53-124, CSV 26.436 precios. Se incluyó el `datos_oct_113_118.py` del otro chat.
