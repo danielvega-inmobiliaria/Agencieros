@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 03/10/2026 — chat precios revista: Octubre págs. 164-168 cargadas; **Octubre completo (53-168, 7.807 versiones reales)**; falta push del CSV_
+_Última actualización: 03/10/2026 (tarde) — chat precios revista: Octubre completo en producción; fix cuotas semanales (falta push); carpetas NOV-2026 y DIC-2026 preparadas_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -149,6 +149,13 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 03/10/2026 (tarde, chat precios revista, Msg 3) — fix cuotas semanales + carpetas Nov/Dic + decisiones de Daniel
+- **Octubre 2026 en producción** (deploy exitoso de Railway con el commit "Precios Octubre-2026 págs. 164-168"). El Excel está en `APP_AGENCIEROS/INFOAUTO_PRECIOS_2026_10.xlsx` (hoja `INFOAUTO 10-2026`, más ORIGEN y ESTIMACION); el CSV que carga la app, en `seed/precios_infoauto/`.
+- **Fix Financiación — cuotas semanales (falta push):** en semanal la última cuota cae SIEMPRE en la misma fecha del plazo en meses (regla de Daniel, vale para cualquier plazo). Ej.: 12 meses con primera cuota el 10/10/26 → última el 10/10/27 y **54 cuotas** (53 semanales hasta el 09/10/27 + la del 10/10/27); antes daba 53. Cambios: `_fechas_semanales()` nueva y uso en `_cronograma_semanal`, en `calcular_plan_oferta` y en `corregir_fechas` (planes ya cargados con otra cantidad mantienen su cuenta de 7 en 7); JS en `templates/financiacion/simulador.html` y `planes.html`. Probado: 12 meses = 54 (última 10/10/27), 1 mes de 30 días = 6, 1 mes de 28 días = 5 (calza justo), 24 meses = 106. Los planes ya creados no se recalculan solos.
+- **Carpetas `INFOAUTO/NOV-2026` y `INFOAUTO/DIC-2026`** con `config_2026_11/12.json` (Nov: base = Octubre completo; Dic: base = Noviembre, que se genera con la primera tanda de Nov), coeficientes provisorios (copia de Octubre) y `VARIACION_PRECIOS.md` con los aprendizajes de Octubre.
+- **Decisiones de Daniel (03/10/2026):** (1) Enero 2027: se ajustan las herramientas y se **mantienen los precios del 2007**; (2) las consultas siguen contra el CSV del mes vigente hasta que habiliten la licencia de InfoAuto; (3) sucursales, límites por plan y "Mi cuenta" ya funcionan en producción, **sin límites hasta que se decida cobrar**; (4) plan Agenciero **$24.990** confirmado; (5) la campaña de Meta Ads Rosario está activa; (6) **ya aparecen los 3 avisos de RosarioGarage**; (7) Rodar Automotores era una agencia de prueba, ya eliminada; (8) se intenta de nuevo el acceso a la API de MercadoLibre; (9) falta definir cómo controlar y monetizar la Red.
+- **Stock de muestra:** quedan 2: Toyota Hilux (id 1, vendido, con financiación real "Ezequiel Petrini" cancelada) y LIFAN X50 2018 (id 6, vinculado a la ficha real "LIFAN_X50_2018_Roldan"). Falta que Daniel confirme si son reales (lo más probable) o de prueba.
 
 ### Sesión 03/10/2026 (chat precios revista) — Octubre 2026 págs. 164-168 (fin de la revista)
 - Cargadas págs. 164-168 de Octubre: Virtus 1.6 MSI L/23 y Sense, Voyage, **Volkswagen Camiones** completa, **Volvo** completa, **Volvo Camiones** completa y **Zanella**: **329 versiones / 1.715 precios reales** (53 con base en Sep, 276 nuevas: las págs. 165-168 no estaban en Septiembre). Marcas nuevas en el CSV: Volvo, Volvo Camiones, Zanella.

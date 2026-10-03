@@ -166,22 +166,36 @@ def _cronograma_mensual(monto, tasa_mensual_pct, n, fecha_inicio, metodo):
     return cuota, filas
 
 
+def _fechas_semanales(fecha_inicio, plazo_meses):
+    """Fechas de las cuotas semanales (03/10/2026, criterio de Daniel): una
+    cuota cada 7 días desde la primera, y la ÚLTIMA cae siempre en la misma
+    fecha del plazo elegido en meses (ej. 12 meses desde el 10/10/26 -> última
+    cuota el 10/10/27). Si los 7 días no calzan justo con esa fecha, se agrega
+    una cuota final en ella (12 meses = 54 cuotas: 53 semanales hasta el
+    09/10/27 + la del 10/10/27)."""
+    fecha_fin = _sumar_meses(fecha_inicio, plazo_meses)
+    total_dias = (fecha_fin - fecha_inicio).days
+    fechas = [fecha_inicio + timedelta(days=7 * k) for k in range(total_dias // 7 + 1)]
+    if fechas[-1] != fecha_fin:
+        fechas.append(fecha_fin)
+    return fechas
+
+
 def _cronograma_semanal(cuota_mensual, plazo_meses, fecha_inicio):
     """Convierte la cuota mensual en semanal dividiendo por 4 (criterio de
     Daniel, 14/09/2026): la cantidad de cuotas semanales sale de contar
     semanas de 7 días entre la primera cuota y esa misma fecha del plazo en
-    meses elegido (ej. 12 meses = mismo día del año siguiente) — por eso el
+    meses elegido (ej. 12 meses = mismo día del año siguiente), con la última
+    cuota EXACTAMENTE en esa fecha (ver `_fechas_semanales`) — por eso el
     total pagado en semanal siempre da un poco más que en mensual, no es un
     error, es el mismo criterio que ya usaba en su planilla."""
-    fecha_fin = _sumar_meses(fecha_inicio, plazo_meses)
-    total_dias = (fecha_fin - fecha_inicio).days
-    cantidad_semanas = total_dias // 7 + 1
+    fechas = _fechas_semanales(fecha_inicio, plazo_meses)
     cuota_semanal = round(cuota_mensual / 4, 2)
     filas = []
-    for numero in range(1, cantidad_semanas + 1):
+    for numero, fecha in enumerate(fechas, start=1):
         filas.append({
             "numero": numero,
-            "fecha": fecha_inicio + timedelta(days=7 * (numero - 1)),
+            "fecha": fecha,
             "monto": cuota_semanal,
             "interes": None,
             "amortizacion": None,
@@ -692,9 +706,16 @@ def corregir_fechas(financiacion_id):
     cuotas = query(
         "SELECT * FROM financiacion_cuotas WHERE financiacion_id = ? ORDER BY numero", (financiacion_id,)
     )
+    fechas_sem = _fechas_semanales(nueva_fecha, fin["plazo_meses"]) if (
+        fin["periodicidad"] == "semanal" and fin["plazo_meses"]) else []
     for c in cuotas:
         if fin["periodicidad"] == "semanal":
-            nueva_venc = nueva_fecha + timedelta(days=7 * (c["numero"] - 1))
+            # Planes nuevos: la última cuota cae en la fecha del plazo. Planes
+            # viejos (53 cuotas) o sin plazo: se mantiene la cuenta de 7 en 7.
+            if len(fechas_sem) == len(cuotas):
+                nueva_venc = fechas_sem[c["numero"] - 1]
+            else:
+                nueva_venc = nueva_fecha + timedelta(days=7 * (c["numero"] - 1))
         else:
             nueva_venc = _sumar_meses(nueva_fecha, c["numero"] - 1)
         execute(
@@ -1244,8 +1265,7 @@ def calcular_plan_oferta(precio, entrega, tasa, plazo_meses, metodo, periodicida
         return None
     cuota_mensual = _cuota_simple(saldo, tasa, n) if metodo == "simple" else _cuota_frances(saldo, tasa, n)
     if periodicidad == "semanal":
-        inicio = date.today()
-        cantidad = (_sumar_meses(inicio, n) - inicio).days // 7 + 1
+        cantidad = len(_fechas_semanales(date.today(), n))
         cuota = round(cuota_mensual / 4, 2)
     else:
         cantidad, cuota = n, cuota_mensual

@@ -100,7 +100,9 @@
     var cantidad = n, semanal = $('periodicidad').value === 'semanal';
     if (semanal) {
       var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-      cantidad = Math.floor((sumarMeses(hoy, n) - hoy) / 86400000 / 7) + 1;
+      var totalDias = Math.round((sumarMeses(hoy, n) - hoy) / 86400000);
+      // Una cuota cada 7 días y la última justo en la fecha del plazo.
+      cantidad = Math.floor(totalDias / 7) + 1 + (totalDias % 7 ? 1 : 0);
       cuota = cuota / 4;
     }
     cuota = Math.round(cuota * 100) / 100;

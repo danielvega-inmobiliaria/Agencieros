@@ -85,8 +85,8 @@
     </div>
     <p id="nota-semanal" hidden style="color:var(--text-dim); font-size:12.5px;">
       En semanal, la cuota es la cuota mensual dividida 4, y la cantidad de cuotas sale de contar
-      semanas entre la primera fecha y el mismo día del plazo elegido en meses — por eso el total
-      pagado en semanal siempre da un poco más que en mensual.
+      semanas entre la primera fecha y el mismo día del plazo elegido en meses (la última cuota cae
+      justo en esa fecha) — por eso el total pagado en semanal siempre da un poco más que en mensual.
     </p>
 
     <div class="cards" id="resultado-cards" hidden style="margin-bottom:16px;">
@@ -311,7 +311,9 @@
     var fechaInicio = fechaInicioStr ? new Date(fechaInicioStr + 'T00:00:00') : new Date();
     var fechaFin = sumarMesesJS(fechaInicio, plazoMeses);
     var totalDias = Math.round((fechaFin - fechaInicio) / 86400000);
-    return Math.floor(totalDias / 7) + 1;
+    // Una cuota cada 7 días y la última cae justo en la fecha del plazo:
+    // si los 7 días no calzan, se suma una cuota final en esa fecha.
+    return Math.floor(totalDias / 7) + 1 + (totalDias % 7 ? 1 : 0);
   }
 
   // Si el agenciero ya editó "Cuota aplicada" a mano, no se lo pisamos
