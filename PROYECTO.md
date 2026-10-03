@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 02/10/2026 — 22:27 ART (chat precios revista 5, Msg 1: Octubre págs. 77-82)_
+_Última actualización: 02/10/2026 — 23:40 ART (chat "Sucursales", Msg 14: Por cobrar igual en Financiación y Dashboard; falta push)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -149,6 +149,19 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 02/10/2026 (chat "Sucursales", Msg 14) — "Por cobrar" distinto entre Financiación y Dashboard
+- Daniel vio $8.730.000 en Financiación y $9.810.000 en el Dashboard. Causa: Financiación calculaba total del plan − total cobrado, y el **recargo por atraso cobrado** en cuotas pagadas tarde (Laura Lezcano: $1.080.000) restaba deuda de las cuotas siguientes. El Dashboard sumaba lo pendiente de las cuotas no pagadas (correcto).
+- Fix en `_con_resumen` (`routes/financiacion.py`): `total_adeudado` = saldo pendiente de las cuotas no pagadas. Ahora los dos dan $9.810.000 (verificado sobre copia de la base). Afecta también "Saldo pendiente" del detalle del plan y el monto sugerido de cancelación anticipada (antes quedaban bajos por el mismo motivo).
+
+### Sesión 02/10/2026 (chat precios revista 6, Msg 1) — Octubre 2026 págs. 83-88
+- Cargadas **págs. 83-88** (modo ahorro): Fiat completa (Mobi 1.0 Way, Palio, Pulse, Punto, Qubo, Siena, Stilo, Strada, Tipo, Titano, Toro, Uno) y **Ford** desde Bronco hasta Fiesta KD (inicio: Bronco, Courier, Eco Sport, Everest, F-100, F-150, Fiesta). 400 versiones / 1.325 precios reales.
+- Octubre ahora: reales págs. 53-88 (2.407 versiones / 8.788 precios), estimadas 4.216 versiones, CSV 25.310 precios.
+- Archivos: `INFOAUTO/transcripcion/datos_oct_083_088.py`, `grid2.py` (grillas 83-88, ajustadas con búsqueda automática por la inclinación de 84/86/88), config (MOBI WAY en `quitar`) y coef de `INFOAUTO/OCT-2026/`, Excel y CSV del mes regenerados, `PAGINAS_CARGADAS.md` (de paso se movieron a la tabla de Octubre las filas 77-82 que estaban en la de Septiembre), `VARIACION_PRECIOS.md`.
+- Control B: 8 de 400 filas marcadas (2%), todas verificadas a ojo y bien leídas. Único renombre: Mobi Way → Mobi 1.0 Way. Huecos impresos: Strada 1.3 Trekking JTD sin '13, Strada Adventure 1.6 DC L/14 XTRE sin '18/'17.
+- Variación: 0KM Fiat +3,2%, Ford +0,2%; usados parejos (pooled −0,4% a −0,9%; Toro +2,6%, Uno +2,2%, F-100 −3,2% como excepciones por modelo). Coeficientes = medianas pooled por año (error medio usados 1,40%). Idea pendiente: coeficiente de 0KM por marca.
+- Verificado: Excel = CSV (25.310), 0 diferencias en reales (2.407) y estimadas (4.216, usados redondeados a 100), marcas en orden alfabético, CRLF sin LF sueltos, sin duplicados; la app (base temporal) muestra "actualizado 10/2026" con solo la fuente Lista Oct-2026 y encuentra Mobi 1.0 Way '22, Pulse 1.3 Drive L/25 '25, Toro 2.0TDI Volcano L/24 '24, Bronco 2.0T Badlands '25, Eco Sport 2.0 Freestyle 4X4 AT L18 '20 y Fiesta Trend '13.
+- **Sigue:** págs. 89-94 (Ford: Fiesta KD, Fiesta Max/One, Focus). Falta deploy: `git add/commit/push` del CSV y PROYECTO.md (bloque en la respuesta del chat).
 
 ### Sesión 02/10/2026 (chat precios revista 5, Msg 1) — Octubre 2026 págs. 77-82
 - Cargadas **págs. 77-82** (modo ahorro): Citroën (fin), **Coradir (marca nueva)**, Daewoo, DFM, DFSK, Domy, Dongfeng, Dongfeng Camiones, DS Automobiles, Ferrari y Fiat (500 a Mobi). 377 versiones / 1.291 precios reales.
