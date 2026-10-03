@@ -795,3 +795,12 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .plan-fila > span { flex: 1 1 auto; min-width: 0; }
 .plan-fila input, .plan-fila select { flex: 0 1 46%; min-width: 0; width: 46%; max-width: 220px; }
 .plan-fila > b { text-align: right; }
+
+
+/* Dashboard → Por sucursal compacto (02/10/2026). */
+.suc-lista { display: flex; flex-direction: column; }
+.suc-item { display: block; padding: 9px 2px; border-bottom: 1px solid var(--border); }
+.suc-item:last-child { border-bottom: none; }
+.suc-l1 { display: flex; justify-content: space-between; gap: 10px; font-size: 15px; }
+.suc-l1 span { color: var(--gold-light); font-weight: 600; }
+.suc-l2 { color: var(--text-dim); font-size: 12.5px; margin-top: 2px; }

@@ -70,21 +70,17 @@
 {% if por_sucursal %}
 <div class="panel">
   <h2 style="margin-top:0;">Por sucursal</h2>
-  <table class="tabla-responsive">
-    <thead><tr><th>Sucursal</th><th>En stock</th><th>Señados</th><th>Vendidos este mes</th>{% if not es_vendedor %}<th>Ganancia del mes</th>{% endif %}<th>Stock a precio publicado</th></tr></thead>
-    <tbody>
+  {# Una sucursal en 2 líneas, sin títulos obvios (02/10/2026). #}
+  <div class="suc-lista">
     {% for r in por_sucursal %}
-    <tr>
-      <td data-label="Sucursal"><a href="{{ url_for('dashboard.index', suc=r.id) }}"><b>{{ r.nombre }}</b></a></td>
-      <td data-label="En stock">{{ r.en_stock or 0 }}</td>
-      <td data-label="Señados">{{ r.senados or 0 }}</td>
-      <td data-label="Vendidos este mes">{{ r.vendidos_mes or 0 }}</td>
-      {% if not es_vendedor %}<td data-label="Ganancia del mes">${{ "{:,.0f}".format(r.ganancia_mes or 0).replace(",", ".") }}</td>{% endif %}
-      <td data-label="Stock a precio publicado">${{ "{:,.0f}".format(r.valor_stock or 0).replace(",", ".") }}</td>
-    </tr>
+    <a class="suc-item" href="{{ url_for('dashboard.index', suc=r.id) }}">
+      <div class="suc-l1"><b>{{ r.nombre }}</b><span>${{ "{:,.0f}".format(r.valor_stock or 0).replace(",", ".") }}</span></div>
+      <div class="suc-l2">
+        {{ r.en_stock or 0 }} en stock · {{ r.senados or 0 }} señado{{ '' if (r.senados or 0) == 1 else 's' }} · {{ r.vendidos_mes or 0 }} vendido{{ '' if (r.vendidos_mes or 0) == 1 else 's' }} en el mes{% if not es_vendedor %} · ganancia ${{ "{:,.0f}".format(r.ganancia_mes or 0).replace(",", ".") }}{% endif %}
+      </div>
+    </a>
     {% endfor %}
-    </tbody>
-  </table>
+  </div>
 </div>
 {% endif %}
 

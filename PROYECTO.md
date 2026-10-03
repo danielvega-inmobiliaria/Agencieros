@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 02/10/2026 — 23:40 ART (chat "Sucursales", Msg 14: Por cobrar igual en Financiación y Dashboard; falta push)_
+_Última actualización: 02/10/2026 — 23:52 ART (chat "Sucursales", Msg 15: Por sucursal compacto en el Dashboard; falta push)_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -149,6 +149,10 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 02/10/2026 (chat "Sucursales", Msg 15) — Dashboard: "Por sucursal" en 2 líneas
+- Pedido de Daniel (captura del celu): cada sucursal ocupaba una tarjeta de 5 filas con títulos. Ahora: línea 1 = **nombre** a la izquierda y stock a precio publicado (dorado) a la derecha; línea 2 = "N en stock · N señados · N vendidos en el mes · ganancia $X" (la ganancia solo para el dueño). Toda la fila es link a la sucursal.
+- Archivos: `templates/dashboard.html`, `static/css/style.css`, `templates/base.html` (`?v=20261002c`).
 
 ### Sesión 02/10/2026 (chat precios revista 8, Msg 1) — Octubre 2026 págs. 95-100
 - Cargadas **págs. 95-100** (modo ahorro): **Ford Camiones** (Cargo 1723/37 EV a F- 4000 TDI), **Forthing**, **Foton** (Auman, Aumark, E-Aumark, Gratour, Tunland, View, Wonder), **GAC**, **Geely**, **Great Wall**, **Haval**, **Hino**, **Honda**, **Hummer** (marca nueva) y **Hyundai** hasta Santa Fe 2.2 CRDI 5 AS.PRE L/06. 404 versiones / 1.646 precios reales (399 reemplazan a las de Septiembre; 5 versiones nuevas: AION V Luxury, Riddara RD6 PHEV, H7 2WD HEV, H7 4WD ICE, Hummer Techo Duro).
