@@ -46,7 +46,7 @@ def estado():
     prueba = None
     if request.args.get("probar") and mercado_ml.disponible():
         prueba = mercado_ml.rango_mercado("Toyota", "Etios", "", request.args.get("anio") or "2018")
-    diag = mercado_ml.diagnostico() if request.args.get("diagnostico") and mercado_ml.disponible() else None
+    diag = mercado_ml.diagnostico(request.args.get("seller_id")) if request.args.get("diagnostico") and mercado_ml.disponible() else None
     return render_template("ml/estado.html", estado=mercado_ml.estado_conexion(), prueba=prueba, diag=diag,
                            redirect_uri=mercado_ml.redirect_uri())
 

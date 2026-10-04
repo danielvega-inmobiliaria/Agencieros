@@ -330,7 +330,7 @@ def rango_mercado(marca, modelo, version="", anio=""):
     return {"disponible": True, "ok": False, "motivo": motivo, "http": ultimo_error}
 
 
-def diagnostico():
+def diagnostico(seller_id=None):
     """Pruebas contra la API real para ver QUÉ rechaza ML y por qué (24/09/2026:
     /sites/MLA/search dio 403 con token de app y también con token de usuario).
     Devuelve [(descripcion, tipo_token, http, mensaje)] -- sin tokens ni secretos."""
@@ -342,6 +342,14 @@ def diagnostico():
         ("Datos de la categoría Autos (no es búsqueda)", f"{API}/categories/{CATEGORIA_AUTOS}"),
         ("Mi usuario (/users/me)", f"{API}/users/me"),
     ]
+    # 04/10/2026: la doc de ML solo menciona la busqueda por vendedor (seller_id / nickname)
+    sid = str(seller_id or "").strip()
+    if sid.isdigit():
+        pruebas += [
+            (f"Buscar por vendedor {sid} (seller_id)", f"{API}/sites/MLA/search?" + urlencode({"seller_id": sid, "limit": 1})),
+            (f"Buscar por vendedor {sid} en Autos", f"{API}/sites/MLA/search?" + urlencode({"seller_id": sid, "category": CATEGORIA_AUTOS, "limit": 1})),
+            (f"Items del vendedor {sid} (/users/{sid}/items/search)", f"{API}/users/{sid}/items/search?" + urlencode({"limit": 1})),
+        ]
     tokens = tokens_disponibles() or [("sin token", None)]
     for tipo, token in tokens:
         for desc, url in pruebas:
