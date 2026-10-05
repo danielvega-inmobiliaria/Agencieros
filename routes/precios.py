@@ -132,39 +132,78 @@ def _zona_habilitada():
     return session.get("agencia_id") == int(os.environ.get("STOCK_SYNC_AGENCIA_ID", "1"))
 
 
-@bp.route("/api/zona")
-def api_zona():
-    """Avisos de DeAutos dentro de un radio (km) de una localidad -- ver
-    zona_deautos.py. Prueba solo para la agencia 1."""
-    if not _zona_habilitada():
-        return jsonify({"habilitado": False}), 403
-    import zona_deautos
+def _zona_origen(a):
+    """(texto de localidad, es_por_defecto) -- la de la agencia si no se eligió."""
     from database import obtener_config_agencia
-    a = request.args
     origen = (a.get("localidad") or "").strip()
-    por_defecto = False
-    if not origen:
-        cfg = obtener_config_agencia(session.get("agencia_id")) or {}
-        origen = ", ".join(x for x in (cfg.get("ciudad"), cfg.get("provincia")) if x)
-        por_defecto = True
+    if origen:
+        return origen, False
+    cfg = obtener_config_agencia(session.get("agencia_id")) or {}
+    return ", ".join(x for x in (cfg.get("ciudad"), cfg.get("provincia")) if x), True
+
+
+def _zona_params(a):
+    import zona_deautos
+    modo = "radio" if a.get("modo") == "radio" else "region"
+    region = a.get("region") or "Centro"
+    if region != "todo" and region not in zona_deautos.REGIONES:
+        region = "Centro"
     try:
         radio = int(a.get("radio") or 100)
     except ValueError:
         radio = 100
-    radio = max(5, min(radio, 1500))
+    return modo, region, max(5, min(radio, 1500))
+
+
+@bp.route("/api/zona")
+def api_zona():
+    """Avisos de DeAutos por región o por radio (km) de una localidad -- ver
+    zona_deautos.py. Prueba solo para la agencia 1."""
+    if not _zona_habilitada():
+        return jsonify({"habilitado": False}), 403
+    import os
+    import zona_deautos
+    a = request.args
+    origen, por_defecto = _zona_origen(a)
+    modo, region, radio = _zona_params(a)
     res = zona_deautos.buscar(a.get("marca", ""), a.get("modelo", ""), a.get("version", ""), a.get("anio", ""),
-                              origen, radio, query, execute, fuente=a.get("fuente") or None)
+                              modo, region, origen, radio, query, execute, fuente=a.get("fuente") or None)
+    if os.environ.get("AUTOCOSMOS_ACTIVO", "1") != "1":
+        res["ac_pedidos"] = []
     res.update({"habilitado": True, "localidad_texto": origen, "por_defecto": por_defecto,
                 "radios": zona_deautos.RADIOS})
+    return jsonify(res)
+
+
+@bp.route("/api/zona_autocosmos")
+def api_zona_autocosmos():
+    """Una provincia de Autocosmos (prueba solo agencia 1; sus términos piden
+    autorización escrita, pedida el 05/10/2026: se apaga con AUTOCOSMOS_ACTIVO=0)."""
+    if not _zona_habilitada():
+        return jsonify({"habilitado": False}), 403
+    import os
+    import zona_deautos
+    if os.environ.get("AUTOCOSMOS_ACTIVO", "1") != "1":
+        return jsonify({"habilitado": True, "ok": False, "avisos": [], "motivo": "Autocosmos desactivado."})
+    a = request.args
+    origen, _ = _zona_origen(a)
+    modo, region, radio = _zona_params(a)
+    try:
+        cod = int(a.get("cod") or 0)
+    except ValueError:
+        cod = 0
+    res = zona_deautos.autocosmos(a.get("marca", ""), a.get("modelo", ""), a.get("version", ""), a.get("anio", ""),
+                                  cod, modo, region, origen, radio, query, execute)
+    res["habilitado"] = True
     return jsonify(res)
 
 
 @bp.route("/api/localidades")
 def api_localidades():
     if not _zona_habilitada():
-        return jsonify([]), 403
+        return jsonify({"localidades": [], "regiones": []}), 403
     import zona_deautos
-    return jsonify(zona_deautos.nombres_localidades())
+    return jsonify({"localidades": zona_deautos.nombres_localidades(), "regiones": zona_deautos.nombres_regiones()})
 
 
 @bp.route("/api/marcas")

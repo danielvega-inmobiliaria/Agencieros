@@ -91,51 +91,107 @@
       contenedor.insertAdjacentElement('afterend', cont);
     }
     if (_localidades === null) {
-      try { _localidades = await (await fetch('/precios/api/localidades')).json(); } catch (e) { _localidades = []; }
+      try {
+        const r = await (await fetch('/precios/api/localidades')).json();
+        _localidades = { localidades: r.localidades || [], regiones: r.regiones || [] };
+      } catch (e) { _localidades = { localidades: [], regiones: [] }; }
     }
     const g = guardado();
     const radios = [25, 50, 100, 200, 300, 500, 1000];
+    const regSel = g.region || 'Centro';
+    const opcReg = _localidades.regiones.map(r => `<option value="${esc(r)}"${r === regSel ? ' selected' : ''}>${esc(r)}</option>`).join('')
+      + `<option value="todo"${regSel === 'todo' ? ' selected' : ''}>Todo el país</option>`
+      + `<option value="radio"${regSel === 'radio' ? ' selected' : ''}>Cerca de una localidad…</option>`;
     cont.innerHTML = `
       <div class="rango-mercado">
-        <div class="rm-titulo">Publicaciones por zona · DeAutos (prueba)</div>
+        <div class="rm-titulo">Publicaciones por zona · DeAutos + Autocosmos (prueba)</div>
         <div class="zona-bar">
-          <label class="zona-pill"><span>Localidad</span>
+          <label class="zona-pill"><span>Región</span><select class="zona-reg">${opcReg}</select></label>
+          <label class="zona-pill zona-solo-radio"><span>Localidad</span>
             <input type="text" class="zona-loc" list="zona-lista" placeholder="Ej.: Rosario, Santa Fe" value="${esc(g.localidad || '')}" autocomplete="off"></label>
-          <label class="zona-pill"><span>Radio (km)</span>
+          <label class="zona-pill zona-solo-radio"><span>Radio (km)</span>
             <select class="zona-radio">${radios.map(r => `<option value="${r}"${String(r) === String(g.radio || 100) ? ' selected' : ''}>${r} km</option>`).join('')}</select></label>
           <button type="button" class="btn btn-secondary btn-sm zona-ir">Buscar</button>
         </div>
-        <datalist id="zona-lista">${_localidades.map(l => `<option value="${esc(l)}">`).join('')}</datalist>
-        <div class="zona-res"><div class="rm-cargando">Buscando por zona…</div></div>
+        <datalist id="zona-lista">${_localidades.localidades.map(l => `<option value="${esc(l)}">`).join('')}</datalist>
+        <div class="zona-res"></div>
       </div>`;
-    const inLoc = cont.querySelector('.zona-loc'), selR = cont.querySelector('.zona-radio'), res = cont.querySelector('.zona-res');
-    async function buscar() {
-      res.innerHTML = '<div class="rm-cargando">Buscando por zona…</div>';
-      const q = new URLSearchParams({ ...params, localidad: inLoc.value.trim(), radio: selR.value });
-      let d;
-      try { d = await (await fetch('/precios/api/zona?' + q)).json(); } catch (e) { d = { ok: false, motivo: 'No se pudo consultar.' }; }
-      if (d.origen && !inLoc.value.trim()) inLoc.value = `${d.origen.nombre}, ${d.origen.provincia}`;
-      guardar({ localidad: inLoc.value.trim(), radio: selR.value });
-      if (!d.habilitado) { cont.innerHTML = ''; return; }
-      const tarjetas = (d.avisos || []).map(a => `
+    const selReg = cont.querySelector('.zona-reg'), inLoc = cont.querySelector('.zona-loc'),
+      selR = cont.querySelector('.zona-radio'), res = cont.querySelector('.zona-res');
+    const soloRadio = cont.querySelectorAll('.zona-solo-radio');
+    const dormir = ms => new Promise(ok => setTimeout(ok, ms));
+    let ticket = 0;
+
+    function pintar(d, avisos, estado) {
+      const tarjetas = avisos.map(a => `
         <a class="pub-rg" href="${esc(a.url)}" target="_blank" rel="noopener">
+          ${a.foto ? `<img src="${esc(a.foto)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'pub-rg-sinfoto'}))">` : '<div class="pub-rg-sinfoto"></div>'}
           <div class="pub-rg-info">
             <div class="pub-rg-tit">${esc(a.titulo)}${a.version ? ' · ' + esc(a.version) : ''}</div>
-            <div class="pub-rg-det">${a.anio || ''}${a.km ? ' · ' + a.km.toLocaleString('es-AR') + ' km' : ''} · ${esc(a.fuente || '')} · ${esc(a.ciudad || a.loc || '')}${a.aprox ? ' (zona aprox.)' : ''} · a ${a.distancia_km} km</div>
+            <div class="pub-rg-det">${a.anio || ''}${a.km ? ' · ' + a.km.toLocaleString('es-AR') + ' km' : ''} · ${esc(a.fuente || '')} · ${esc(a.ciudad || a.loc || '')}${a.provincia && a.distancia_km == null ? ', ' + esc(a.provincia) : ''}${a.aprox ? ' (zona aprox.)' : ''}${a.distancia_km != null ? ' · a ' + a.distancia_km + ' km' : ''}</div>
             <div class="pub-rg-precio">${a.moneda === 'USD' ? 'USD ' : '$ '}${Math.round(a.precio).toLocaleString('es-AR')}</div>
           </div>
         </a>`).join('');
+      const ars = avisos.filter(a => a.moneda === 'ARS' && !a.dif_anio).map(a => a.precio).sort((x, y) => x - y);
+      const mediana = ars.length >= 3 ? ars[Math.floor(ars.length / 2)] : null;
       const nota = [`${d.leidos} avisos leídos en DeAutos`];
-      if (d.en_radio != null) nota.push(`${d.en_radio} dentro del radio`);
-      if (d.fuera_de_radio) nota.push(`${d.fuera_de_radio} fuera`);
+      if (d.fuera_de_radio) nota.push(`${d.fuera_de_radio} de otras zonas`);
       if (d.sin_ubicar) nota.push(`${d.sin_ubicar} sin ubicación reconocida`);
-      const mediana = d.mediana_ars ? `<div class="rm-nota">Mediana de los avisos en pesos del mismo año dentro del radio: <strong>${pesos(d.mediana_ars)}</strong></div>` : '';
-      res.innerHTML = `${d.ok ? tarjetas : `<div class="rm-nota">${esc(d.motivo || 'Sin resultados.')}</div>`}
-        ${mediana}
-        <div class="rm-nota">${nota.join(' · ')}. DeAutos reúne avisos de Mercado Libre, Autocosmos, Kavak y particulares (precio que pide cada vendedor; se incluyen años ±1).
+      res.innerHTML = `${avisos.length ? tarjetas : `<div class="rm-nota">${esc(estado.fin ? (d.motivo || 'Sin resultados.') : 'Sin resultados todavía…')}</div>`}
+        ${mediana ? `<div class="rm-nota">Mediana de los avisos en pesos del mismo año: <strong>${pesos(mediana)}</strong></div>` : ''}
+        ${estado.msg ? `<div class="rm-cargando">${esc(estado.msg)}</div>` : ''}
+        <div class="rm-nota">${nota.join(' · ')}${estado.ac ? ' · ' + esc(estado.ac) : ''}. Precio que pide cada vendedor; se incluyen años ±1. Autocosmos: solo la primera página de la marca por provincia.
           ${d.url_busqueda ? `<a href="${esc(d.url_busqueda)}" target="_blank" rel="noopener">Ver en DeAutos</a>` : ''}</div>`;
     }
+
+    async function buscar() {
+      const mi = ++ticket;
+      const radioModo = selReg.value === 'radio';
+      soloRadio.forEach(el => { el.style.display = radioModo ? '' : 'none'; });
+      res.innerHTML = '<div class="rm-cargando">Buscando por zona…</div>';
+      const base = { ...params, modo: radioModo ? 'radio' : 'region', region: radioModo ? '' : selReg.value, localidad: inLoc.value.trim(), radio: selR.value };
+      let d;
+      try { d = await (await fetch('/precios/api/zona?' + new URLSearchParams(base))).json(); } catch (e) { d = { ok: false, motivo: 'No se pudo consultar.' }; }
+      if (mi !== ticket) return;
+      if (!d.habilitado) { cont.innerHTML = ''; return; }
+      if (d.origen && !inLoc.value.trim()) inLoc.value = `${d.origen.nombre}, ${d.origen.provincia}`;
+      guardar({ region: selReg.value, localidad: inLoc.value.trim(), radio: selR.value });
+      const mapa = new Map();
+      const sumar = lista => (lista || []).forEach(a => {
+        const k = [a.anio, a.km, a.precio].join('|');
+        if (!mapa.has(k) || a.fuente === 'Autocosmos' && a.url.indexOf('autocosmos.com') >= 0) mapa.set(k, a);
+      });
+      const lista = () => [...mapa.values()].sort((a, b) => (a.dif_anio - b.dif_anio) || (a.precio - b.precio));
+      sumar(d.avisos);
+      const pedidos = d.ac_pedidos || [];
+      let hechos = 0;
+      pintar(d, lista(), { fin: !pedidos.length, msg: pedidos.length ? `Consultando Autocosmos (0/${pedidos.length})…` : '' });
+      for (const p of pedidos) {
+        let r = null;
+        for (let intento = 0; intento < 4; intento++) {
+          try { r = await (await fetch('/precios/api/zona_autocosmos?' + new URLSearchParams({ ...base, cod: p.cod }))).json(); } catch (e) { r = null; break; }
+          if (mi !== ticket) return;
+          if (r && r.espera > 0) {
+            pintar(d, lista(), { fin: false, msg: `Autocosmos ${hechos}/${pedidos.length}: esperando ${r.espera} s para respetar al sitio…` });
+            await dormir((r.espera + 1) * 1000);
+            if (mi !== ticket) return;
+            r = null;
+            continue;
+          }
+          break;
+        }
+        if (mi !== ticket) return;
+        hechos++;
+        if (r && r.avisos) sumar(r.avisos);
+        d.leidos += (r && r.leidos) || 0;
+        d.fuera_de_radio += (r && r.fuera_de_radio) || 0;
+        d.sin_ubicar += (r && r.sin_ubicar) || 0;
+        pintar(d, lista(), { fin: hechos >= pedidos.length, msg: hechos < pedidos.length ? `Consultando Autocosmos (${hechos}/${pedidos.length})…` : '' });
+      }
+      if (pedidos.length) pintar(d, lista(), { fin: true, ac: `Autocosmos: ${pedidos.map(p => p.nombre).join(', ')}` });
+    }
     cont.querySelector('.zona-ir').addEventListener('click', buscar);
+    selReg.addEventListener('change', buscar);
     selR.addEventListener('change', buscar);
     inLoc.addEventListener('change', buscar);
     buscar();

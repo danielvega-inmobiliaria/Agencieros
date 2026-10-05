@@ -22,6 +22,8 @@ import json
 import math
 import re
 import statistics
+import threading
+import time
 import unicodedata
 import urllib.error
 import urllib.request
@@ -257,6 +259,59 @@ def distancia_km(lat1, lon1, lat2, lon2):
     return 2 * r * math.asin(math.sqrt(a))
 
 
+
+
+
+# ----------------------------------------------------------------- regiones
+
+REGIONES = {
+    "Centro": ["Santa Fe", "Córdoba", "Entre Ríos"],
+    "Buenos Aires": ["Buenos Aires"],  # provincia + AMBA + CABA
+    "Cuyo": ["Mendoza", "San Juan", "San Luis"],
+    "Norte (NOA)": ["Salta", "Jujuy", "Tucumán", "Catamarca", "Santiago del Estero", "La Rioja"],
+    "Noreste (NEA)": ["Chaco", "Corrientes", "Formosa", "Misiones"],
+    "Sur (Patagonia)": ["La Pampa", "Neuquén", "Río Negro", "Chubut", "Santa Cruz", "Tierra del Fuego"],
+}
+
+# Códigos de provincia de Autocosmos (parámetro ?pr=), relevados el 05/10/2026.
+# Catamarca, Formosa, Jujuy, San Juan y Santiago del Estero no figuraron.
+AC_COD = {
+    "Santa Fe": [320], "Córdoba": [305], "Entre Ríos": [307],
+    "Buenos Aires": [301, 374, 324],  # provincia, A.M.B.A., CABA
+    "Mendoza": [312], "San Luis": [318], "Salta": [316], "Tucumán": [323], "La Rioja": [311],
+    "Chaco": [303], "Corrientes": [306], "Misiones": [313], "La Pampa": [310],
+    "Neuquén": [314], "Río Negro": [315], "Chubut": [304], "Santa Cruz": [319],
+    "Tierra del Fuego": [322],
+}
+AC_NOMBRE = {301: "Buenos Aires (provincia)", 374: "Buenos Aires (AMBA)", 324: "CABA"}
+AC_BASE = "https://www.autocosmos.com.ar"
+AC_ESPERA = 20  # segundos entre pedidos (Crawl-delay de su robots.txt)
+AC_MAX_PEDIDOS = 6
+
+
+def provincia_de(loc):
+    """'Salsipuedes, Córdoba' / 'Gran Buenos Aires, Buenos Aires' / 'Salta' -> 'Córdoba'..."""
+    partes = [p.strip() for p in re.split(r"[,|]", _n(loc)) if p.strip()]
+    if not partes:
+        return None
+    for p in reversed(partes):
+        if "buenos aires" in p or "autonoma" in p or p in ("caba", "capital federal"):
+            return "Buenos Aires"
+        if p in _PROVINCIAS_N:
+            return _PROVINCIAS_N[p]
+    r = resolver(loc)
+    return r["provincia"] if r else None
+
+
+def _ciudad_txt(loc):
+    partes = [p.strip() for p in re.split(r"[,|]", str(loc or "")) if p.strip()]
+    return partes[0] if partes else ""
+
+
+def nombres_regiones():
+    return list(REGIONES)
+
+
 # ---------------------------------------------------------------- lectura
 
 def _slug(texto):
@@ -280,9 +335,17 @@ def _campo(bloque, clase):
     return _txt(m.group(1)) if m else ""
 
 
+def _foto(bloque):
+    m = re.search(r'<img[^>]*\ssrc="(https?://[^"]+)"', bloque)
+    if not m:
+        return None
+    f = html.unescape(m.group(1))
+    return None if re.search(r"placeholder|default|logo|noimage|sin-foto", f, re.I) else f
+
+
 def parsear_listado(pagina):
-    """[{titulo, version, anio, km, precio, moneda, fuente, loc, url}] a partir
-    del HTML de DeAutos (tarjetas <a class="card card-link">)."""
+    """[{titulo, version, anio, km, precio, moneda, fuente, loc, url, foto}] a
+    partir del HTML de DeAutos (tarjetas <a class="card card-link">)."""
     avisos = []
     for b in re.split(r'<a class="card card-link"', pagina)[1:]:
         m_url = re.search(r'href="(/auto/[^"]+)"', b)
@@ -293,8 +356,7 @@ def parsear_listado(pagina):
         precio_txt = _txt((re.search(r'class="card-price">(.*?)</div>', b, re.S) or [None, ""])[1])
         moneda = "USD" if re.search(r"USD|U\$S|US\$", precio_txt) else ("ARS" if "$" in precio_txt else None)
         digitos = re.sub(r"\D", "", precio_txt)
-        km_txt = _campo(b, "card-km")
-        digitos_km = re.sub(r"\D", "", km_txt)
+        digitos_km = re.sub(r"\D", "", _campo(b, "card-km"))
         avisos.append({
             "titulo": m_anio.group(2) if m_anio else titulo,
             "version": _campo(b, "card-version"),
@@ -305,6 +367,40 @@ def parsear_listado(pagina):
             "fuente": _campo(b, "dealer-name"),
             "loc": _campo(b, "dealer-loc").lstrip("· ").strip(),
             "url": "https://deautos.com" + m_url.group(1),
+            "foto": _foto(b),
+        })
+    return avisos
+
+
+def parsear_autocosmos(pagina):
+    """Tarjetas de Autocosmos: <a href="/auto/usado/..."><figure class="listing-card__image">..."""
+    avisos = []
+    partes = re.split(r'<a[^>]*href="(/auto/usado/[^"]+)"[^>]*>\s*(?=<figure class="listing-card__image")', pagina)
+    for i in range(1, len(partes) - 1, 2):
+        href, b = partes[i], partes[i + 1]
+        b = b.split("</a>", 1)[0]
+        marca = _campo(b, "listing-card__brand")
+        modelo = _campo(b, "listing-card__model")
+        precio_txt = _campo(b, "listing-card__price-value")
+        moneda = "USD" if re.search(r"u\$s|usd|us\$", precio_txt, re.I) else ("ARS" if "$" in precio_txt else None)
+        digitos = re.sub(r"\D", "", precio_txt)
+        m_anio = re.search(r"(19[6-9]\d|20[0-4]\d)", _campo(b, "listing-card__year"))
+        digitos_km = re.sub(r"\D", "", _campo(b, "listing-card__km"))
+        ciudad = _campo(b, "listing-card__city").replace("|", "").strip()
+        prov = _campo(b, "listing-card__province")
+        if not modelo:
+            continue
+        avisos.append({
+            "titulo": f"{marca} {modelo}".strip(),
+            "version": _campo(b, "listing-card__version"),
+            "anio": int(m_anio.group(1)) if m_anio else None,
+            "km": int(digitos_km) if digitos_km else None,
+            "precio": int(digitos) if digitos and moneda else None,
+            "moneda": moneda,
+            "fuente": "Autocosmos",
+            "loc": ", ".join(x for x in (ciudad, prov) if x),
+            "url": AC_BASE + href,
+            "foto": _foto(b),
         })
     return avisos
 
@@ -315,16 +411,16 @@ def _bajar(url):
         return r.read().decode("utf-8", errors="replace")
 
 
-def _leer(url, query, execute):
-    """Avisos del listado, con caché de 24 h. Devuelve (avisos, desde_cache)."""
-    clave = "deautos|v1|" + url
+def _cache_get(clave, query):
     fila = query("SELECT datos, creado FROM rg_cache WHERE clave = ?", (clave,), one=True)
     if fila and datetime.fromisoformat(fila["creado"]) > datetime.utcnow() - timedelta(hours=CACHE_HORAS):
-        return json.loads(fila["datos"]), True
-    avisos = parsear_listado(_bajar(url))
+        return json.loads(fila["datos"])
+    return None
+
+
+def _cache_set(clave, avisos, execute):
     execute("INSERT OR REPLACE INTO rg_cache (clave, datos, creado) VALUES (?, ?, ?)",
             (clave, json.dumps(avisos, ensure_ascii=False), datetime.utcnow().isoformat()))
-    return avisos, False
 
 
 # ------------------------------------------------------------- selección
@@ -344,33 +440,106 @@ def _filtrar(avisos, marca, modelo, version, anio):
         dif_anio = abs(a["anio"] - int(anio)) if (anio and a.get("anio")) else 0
         if anio and a.get("anio") and dif_anio > 1:
             continue
-        a = dict(a, _dif_anio=dif_anio, _coincide=len(pedidas_version & palabras))
-        salida.append(a)
+        salida.append(dict(a, dif_anio=dif_anio, coincide=len(pedidas_version & palabras)))
     return salida
 
 
-def buscar(marca, modelo, version, anio, origen_txt, radio_km, query, execute, fuente=None):
-    """Resultado para la pantalla. Nunca levanta error."""
-    url = url_listado(marca, modelo)
-    res = {"ok": False, "avisos": [], "url_busqueda": url, "origen": None, "radio": radio_km,
-           "motivo": None, "leidos": 0, "en_radio": 0, "fuera_de_radio": 0, "sin_ubicar": 0,
-           "mediana_ars": None, "fuentes": []}
+def _aplicar_zona(candidatos, modo, region, origen, radio_km, res):
+    """Deja solo los avisos de la región / del radio y suma los contadores."""
+    en = []
+    for a in candidatos:
+        ciudad = _ciudad_txt(a.get("loc"))
+        if modo == "region":
+            prov = provincia_de(a.get("loc"))
+            if not prov:
+                res["sin_ubicar"] += 1
+                continue
+            if region != "todo" and prov not in REGIONES.get(region, []):
+                res["fuera_de_radio"] += 1
+                continue
+            en.append(dict(a, provincia=prov, distancia_km=None, aprox=False, ciudad=ciudad))
+        else:
+            ubic = resolver(a.get("loc"))
+            if not ubic:
+                res["sin_ubicar"] += 1
+                continue
+            d = distancia_km(origen["lat"], origen["lon"], ubic["lat"], ubic["lon"])
+            if d > radio_km:
+                res["fuera_de_radio"] += 1
+                continue
+            en.append(dict(a, provincia=ubic["provincia"], distancia_km=round(d), aprox=ubic["aprox"], ciudad=ubic["nombre"]))
+    return en
+
+
+def _ordenar_y_cortar(en, res, tope=None):
+    en.sort(key=lambda a: (a["dif_anio"], -a["coincide"],
+                           a["distancia_km"] if a.get("distancia_km") is not None else 0, a["precio"]))
+    res["en_radio"] = len(en)
+    ars = [a["precio"] for a in en if a["moneda"] == "ARS" and a["dif_anio"] == 0]
+    if len(ars) >= 3:
+        res["mediana_ars"] = int(statistics.median(ars))
+    res["avisos"] = [dict(a) for a in (en[:tope] if tope else en)]
+    res["ok"] = bool(res["avisos"])
+
+
+def pedidos_autocosmos(modo, region, origen):
+    """[{cod, nombre}] de provincias a consultar en Autocosmos (máx. AC_MAX_PEDIDOS)."""
+    if modo == "region":
+        if region == "todo":
+            return []
+        provs = REGIONES.get(region, [])
+    else:
+        provs = [origen["provincia"]] if origen else []
+    out = []
+    for p in provs:
+        for cod in AC_COD.get(p, []):
+            out.append({"cod": cod, "nombre": AC_NOMBRE.get(cod, p)})
+    return out[:AC_MAX_PEDIDOS]
+
+
+def _base_res(url, modo, region, radio_km):
+    return {"ok": False, "avisos": [], "url_busqueda": url, "origen": None, "radio": radio_km,
+            "modo": modo, "region": region, "motivo": None, "leidos": 0, "en_radio": 0,
+            "fuera_de_radio": 0, "sin_ubicar": 0, "mediana_ars": None}
+
+
+def _origen(modo, origen_txt, res):
+    """Resuelve la localidad de partida (solo modo radio). Devuelve (origen, ok)."""
+    if modo != "radio":
+        return None, True
     origen = resolver(origen_txt)
     if not origen:
         res["motivo"] = "Elegí una Localidad de la lista para calcular el radio."
-        return res
+        return None, False
     res["origen"] = {"nombre": origen["nombre"], "provincia": origen["provincia"]}
+    return origen, True
+
+
+def buscar(marca, modelo, version, anio, modo, region, origen_txt, radio_km, query, execute, fuente=None):
+    """DeAutos: resultado para la pantalla. Nunca levanta error."""
+    url = url_listado(marca, modelo)
+    res = _base_res(url, modo, region, radio_km)
+    origen, ok = _origen(modo, origen_txt, res)
+    if not ok:
+        return res
     if not modelo:
         res["motivo"] = "Falta el modelo."
         return res
+    res["ac_pedidos"] = pedidos_autocosmos(modo, region, origen)
     try:
-        avisos, cache = _leer(url, query, execute)
+        avisos = _cache_get("deautos|v2|" + url, query)
+        if avisos is None:
+            avisos = parsear_listado(_bajar(url))
+            _cache_set("deautos|v2|" + url, avisos, execute)
     except urllib.error.HTTPError as e:
         if e.code == 404 and marca:  # no hay página del modelo: se prueba la de la marca
             try:
                 url = url_listado(marca, "")
                 res["url_busqueda"] = url
-                avisos, cache = _leer(url, query, execute)
+                avisos = _cache_get("deautos|v2|" + url, query)
+                if avisos is None:
+                    avisos = parsear_listado(_bajar(url))
+                    _cache_set("deautos|v2|" + url, avisos, execute)
             except Exception as e2:
                 print(f"[zona_deautos] No se pudo leer {url}: {e2}")
                 res["motivo"] = "DeAutos no tiene esa página o no respondió."
@@ -386,25 +555,56 @@ def buscar(marca, modelo, version, anio, origen_txt, radio_km, query, execute, f
     candidatos = _filtrar(avisos, marca, modelo, version, anio)
     if fuente:
         candidatos = [a for a in candidatos if _n(a.get("fuente")) == _n(fuente)]
-    en_radio = []
-    for a in candidatos:
-        ubic = resolver(a.get("loc"))
-        if not ubic:
-            res["sin_ubicar"] += 1
-            continue
-        d = distancia_km(origen["lat"], origen["lon"], ubic["lat"], ubic["lon"])
-        if d > radio_km:
-            res["fuera_de_radio"] += 1
-            continue
-        en_radio.append(dict(a, distancia_km=round(d), aprox=ubic["aprox"], ciudad=ubic["nombre"]))
-    en_radio.sort(key=lambda a: (a["_dif_anio"], -a["_coincide"], a["distancia_km"]))
-    res["en_radio"] = len(en_radio)
-    res["fuentes"] = sorted({a["fuente"] for a in candidatos if a.get("fuente")})
-    ars = [a["precio"] for a in en_radio if a["moneda"] == "ARS" and a["_dif_anio"] == 0]
-    if len(ars) >= 3:
-        res["mediana_ars"] = int(statistics.median(ars))
-    res["avisos"] = [{k: v for k, v in a.items() if not k.startswith("_")} for a in en_radio[:MAX_AVISOS]]
-    res["ok"] = bool(res["avisos"])
+    en = _aplicar_zona(candidatos, modo, region, origen, radio_km, res)
+    _ordenar_y_cortar(en, res)
     if not res["ok"]:
-        res["motivo"] = "Sin avisos en ese radio (DeAutos tiene pocos avisos todavía)."
+        res["motivo"] = "Sin avisos de DeAutos en esa zona (tiene pocos avisos todavía)."
+    return res
+
+
+# -------- Autocosmos (prueba solo agencia 1; sus términos exigen autorización
+# escrita, pedida el 05/10/2026: ver AUTOCOSMOS_ACTIVO para apagarlo).
+
+_ac_lock = threading.Lock()
+_ac_ultimo = [0.0]
+
+
+def autocosmos(marca, modelo, version, anio, cod, modo, region, origen_txt, radio_km, query, execute):
+    """Una provincia de Autocosmos (primera página de la marca, 30 avisos como
+    máximo). Respeta la espera de 20 s entre pedidos al sitio: si todavía no
+    toca devuelve {"espera": segundos} y la pantalla reintenta."""
+    cod = int(cod)
+    cods_validos = {c for v in AC_COD.values() for c in v}
+    url = f"{AC_BASE}/auto/usado/{_slug(marca)}?pr={cod}"
+    res = _base_res(url, modo, region, radio_km)
+    res["espera"] = 0
+    res["fuente"] = "Autocosmos"
+    if cod not in cods_validos or not marca or not modelo:
+        res["motivo"] = "Falta marca o modelo."
+        return res
+    origen, ok = _origen(modo, origen_txt, res)
+    if not ok:
+        return res
+    clave = f"autocosmos|v1|{_slug(marca)}|{cod}"
+    avisos = _cache_get(clave, query)
+    if avisos is None:
+        with _ac_lock:
+            falta = AC_ESPERA - (time.monotonic() - _ac_ultimo[0])
+            if falta > 0:
+                res["espera"] = int(math.ceil(falta))
+                return res
+            _ac_ultimo[0] = time.monotonic()
+        try:
+            avisos = parsear_autocosmos(_bajar(url))
+            _cache_set(clave, avisos, execute)
+        except Exception as e:
+            print(f"[zona_autocosmos] No se pudo leer {url}: {e}")
+            res["motivo"] = "Autocosmos no respondió."
+            return res
+    res["leidos"] = len(avisos)
+    candidatos = _filtrar(avisos, marca, modelo, version, anio)
+    en = _aplicar_zona(candidatos, modo, region, origen, radio_km, res)
+    _ordenar_y_cortar(en, res)
+    if not res["ok"]:
+        res["motivo"] = "Sin avisos de ese modelo en la primera página de Autocosmos."
     return res
