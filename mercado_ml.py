@@ -325,7 +325,7 @@ def rango_mercado(marca, modelo, version="", anio=""):
                 _cache_set(clave, datos)
                 datos["cache"] = False
                 return datos
-    motivo = ("MercadoLibre rechazó la búsqueda (403). Conectá la cuenta de ML desde Admin → MercadoLibre."
+    motivo = ("MercadoLibre bloquea la búsqueda de avisos para esta app (403, aun con la cuenta conectada). Ver PROYECTO.md: consulta pendiente con soporte de ML."
               if ultimo_error in (401, 403) else f"MercadoLibre no respondió (HTTP {ultimo_error}).")
     return {"disponible": True, "ok": False, "motivo": motivo, "http": ultimo_error}
 

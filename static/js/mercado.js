@@ -8,6 +8,11 @@
   window.cargarRangoMercado = async function (params, contenedor, valorTabla) {
     if (!contenedor) return;
     contenedor.innerHTML = '<div class="rm-cargando">Buscando publicaciones reales…</div>';
+    // 04/10/2026: ML bloquea /sites/MLA/search (403, ver PROYECTO.md). Mientras tanto no
+    // se llama a la API: se muestran solo las publicaciones de RosarioGarage.
+    // Para reactivar: USAR_ML = true.
+    const USAR_ML = false;
+    if (!USAR_ML) { await cargarPublicacionesRG(params, contenedor, valorTabla); return; }
     let d;
     try {
       const r = await fetch('/precios/api/mercado?' + new URLSearchParams(params));
