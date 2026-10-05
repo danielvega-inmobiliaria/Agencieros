@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <title>{% block title %}Agencieros{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20261002c">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20261005a">
   {# App instalable (29/09/2026): "Agregar a inicio" abre sin barras del navegador. #}
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
   <meta name="theme-color" content="#131e2e">
@@ -14,6 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="Agencieros">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
   {% include "partials/meta_pixel.html" %}
+  <script>window.ZONA_DEAUTOS = {{ "true" if zona_deautos else "false" }};</script>
 </head>
 <body>
   <div class="mobile-topbar">

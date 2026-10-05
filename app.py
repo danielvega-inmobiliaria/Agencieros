@@ -133,6 +133,7 @@ def create_app():
         return {
             "es_superadmin": bool(session.get("superadmin_id")),
             "puede_sincronizar_stock": session.get("agencia_id") == STOCK_SYNC_AGENCIA_ID,
+            "zona_deautos": session.get("agencia_id") == STOCK_SYNC_AGENCIA_ID,
         }
 
     @app.context_processor

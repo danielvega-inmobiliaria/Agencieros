@@ -78,6 +78,75 @@
       </div>`;
   }
 
+  // ---- Publicaciones por zona (DeAutos) -- prueba 05/10/2026, solo agencia 1 ----
+  let _localidades = null;
+  function guardado() { try { return JSON.parse(localStorage.getItem('agencieros_zona') || '{}'); } catch (e) { return {}; } }
+  function guardar(o) { try { localStorage.setItem('agencieros_zona', JSON.stringify(o)); } catch (e) {} }
+
+  async function cargarZona(params, contenedor) {
+    let cont = contenedor.nextElementSibling;
+    if (!cont || !cont.classList.contains('zona-deautos')) {
+      cont = document.createElement('div');
+      cont.className = 'zona-deautos';
+      contenedor.insertAdjacentElement('afterend', cont);
+    }
+    if (_localidades === null) {
+      try { _localidades = await (await fetch('/precios/api/localidades')).json(); } catch (e) { _localidades = []; }
+    }
+    const g = guardado();
+    const radios = [25, 50, 100, 200, 300, 500, 1000];
+    cont.innerHTML = `
+      <div class="rango-mercado">
+        <div class="rm-titulo">Publicaciones por zona · DeAutos (prueba)</div>
+        <div class="zona-bar">
+          <label class="zona-pill"><span>Localidad</span>
+            <input type="text" class="zona-loc" list="zona-lista" placeholder="Ej.: Rosario, Santa Fe" value="${esc(g.localidad || '')}" autocomplete="off"></label>
+          <label class="zona-pill"><span>Radio (km)</span>
+            <select class="zona-radio">${radios.map(r => `<option value="${r}"${String(r) === String(g.radio || 100) ? ' selected' : ''}>${r} km</option>`).join('')}</select></label>
+          <button type="button" class="btn btn-secondary btn-sm zona-ir">Buscar</button>
+        </div>
+        <datalist id="zona-lista">${_localidades.map(l => `<option value="${esc(l)}">`).join('')}</datalist>
+        <div class="zona-res"><div class="rm-cargando">Buscando por zona…</div></div>
+      </div>`;
+    const inLoc = cont.querySelector('.zona-loc'), selR = cont.querySelector('.zona-radio'), res = cont.querySelector('.zona-res');
+    async function buscar() {
+      res.innerHTML = '<div class="rm-cargando">Buscando por zona…</div>';
+      const q = new URLSearchParams({ ...params, localidad: inLoc.value.trim(), radio: selR.value });
+      let d;
+      try { d = await (await fetch('/precios/api/zona?' + q)).json(); } catch (e) { d = { ok: false, motivo: 'No se pudo consultar.' }; }
+      if (d.origen && !inLoc.value.trim()) inLoc.value = `${d.origen.nombre}, ${d.origen.provincia}`;
+      guardar({ localidad: inLoc.value.trim(), radio: selR.value });
+      if (!d.habilitado) { cont.innerHTML = ''; return; }
+      const tarjetas = (d.avisos || []).map(a => `
+        <a class="pub-rg" href="${esc(a.url)}" target="_blank" rel="noopener">
+          <div class="pub-rg-info">
+            <div class="pub-rg-tit">${esc(a.titulo)}${a.version ? ' · ' + esc(a.version) : ''}</div>
+            <div class="pub-rg-det">${a.anio || ''}${a.km ? ' · ' + a.km.toLocaleString('es-AR') + ' km' : ''} · ${esc(a.fuente || '')} · ${esc(a.ciudad || a.loc || '')}${a.aprox ? ' (zona aprox.)' : ''} · a ${a.distancia_km} km</div>
+            <div class="pub-rg-precio">${a.moneda === 'USD' ? 'USD ' : '$ '}${Math.round(a.precio).toLocaleString('es-AR')}</div>
+          </div>
+        </a>`).join('');
+      const nota = [`${d.leidos} avisos leídos en DeAutos`];
+      if (d.en_radio != null) nota.push(`${d.en_radio} dentro del radio`);
+      if (d.fuera_de_radio) nota.push(`${d.fuera_de_radio} fuera`);
+      if (d.sin_ubicar) nota.push(`${d.sin_ubicar} sin ubicación reconocida`);
+      const mediana = d.mediana_ars ? `<div class="rm-nota">Mediana de los avisos en pesos del mismo año dentro del radio: <strong>${pesos(d.mediana_ars)}</strong></div>` : '';
+      res.innerHTML = `${d.ok ? tarjetas : `<div class="rm-nota">${esc(d.motivo || 'Sin resultados.')}</div>`}
+        ${mediana}
+        <div class="rm-nota">${nota.join(' · ')}. DeAutos reúne avisos de Mercado Libre, Autocosmos, Kavak y particulares (precio que pide cada vendedor; se incluyen años ±1).
+          ${d.url_busqueda ? `<a href="${esc(d.url_busqueda)}" target="_blank" rel="noopener">Ver en DeAutos</a>` : ''}</div>`;
+    }
+    cont.querySelector('.zona-ir').addEventListener('click', buscar);
+    selR.addEventListener('change', buscar);
+    inLoc.addEventListener('change', buscar);
+    buscar();
+  }
+
+  const _cargarOriginal = window.cargarRangoMercado;
+  window.cargarRangoMercado = async function (params, contenedor, valorTabla) {
+    await _cargarOriginal(params, contenedor, valorTabla);
+    if (window.ZONA_DEAUTOS && contenedor && params && params.modelo) { cargarZona(params, contenedor); }
+  };
+
   // Auto-carga para elementos server-side: <div data-rango-mercado data-marca=.. data-modelo=.. data-version=.. data-anio=.. data-valor-tabla=..>
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-rango-mercado]').forEach(el => {

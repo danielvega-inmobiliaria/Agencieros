@@ -126,6 +126,47 @@ def api_publicaciones():
                                                   a.get("anio", ""), a.get("valor_tabla")))
 
 
+def _zona_habilitada():
+    """Prueba de 'publicaciones por zona' (05/10/2026): solo la agencia 1 (Italia)."""
+    import os
+    return session.get("agencia_id") == int(os.environ.get("STOCK_SYNC_AGENCIA_ID", "1"))
+
+
+@bp.route("/api/zona")
+def api_zona():
+    """Avisos de DeAutos dentro de un radio (km) de una localidad -- ver
+    zona_deautos.py. Prueba solo para la agencia 1."""
+    if not _zona_habilitada():
+        return jsonify({"habilitado": False}), 403
+    import zona_deautos
+    from database import obtener_config_agencia
+    a = request.args
+    origen = (a.get("localidad") or "").strip()
+    por_defecto = False
+    if not origen:
+        cfg = obtener_config_agencia(session.get("agencia_id")) or {}
+        origen = ", ".join(x for x in (cfg.get("ciudad"), cfg.get("provincia")) if x)
+        por_defecto = True
+    try:
+        radio = int(a.get("radio") or 100)
+    except ValueError:
+        radio = 100
+    radio = max(5, min(radio, 1500))
+    res = zona_deautos.buscar(a.get("marca", ""), a.get("modelo", ""), a.get("version", ""), a.get("anio", ""),
+                              origen, radio, query, execute, fuente=a.get("fuente") or None)
+    res.update({"habilitado": True, "localidad_texto": origen, "por_defecto": por_defecto,
+                "radios": zona_deautos.RADIOS})
+    return jsonify(res)
+
+
+@bp.route("/api/localidades")
+def api_localidades():
+    if not _zona_habilitada():
+        return jsonify([]), 403
+    import zona_deautos
+    return jsonify(zona_deautos.nombres_localidades())
+
+
 @bp.route("/api/marcas")
 def api_marcas():
     """Marcas para el datalist. Con Año ya elegido, solo las marcas que
