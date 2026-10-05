@@ -128,7 +128,7 @@
           ${a.foto ? `<img src="${esc(a.foto)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'pub-rg-sinfoto'}))">` : '<div class="pub-rg-sinfoto"></div>'}
           <div class="pub-rg-info">
             <div class="pub-rg-tit">${esc(a.titulo)}${a.version ? ' · ' + esc(a.version) : ''}</div>
-            <div class="pub-rg-det">${a.anio || ''}${a.km ? ' · ' + a.km.toLocaleString('es-AR') + ' km' : ''} · ${esc(a.fuente || '')} · ${esc(a.ciudad || a.loc || '')}${a.provincia && a.distancia_km == null ? ', ' + esc(a.provincia) : ''}${a.aprox ? ' (zona aprox.)' : ''}${a.distancia_km != null ? ' · a ' + a.distancia_km + ' km' : ''}</div>
+            <div class="pub-rg-det">${a.anio || ''}${a.km ? ' · ' + a.km.toLocaleString('es-AR') + ' km' : ''} · ${esc(a.fuente || '')} · ${esc(a.ciudad || a.loc || '')}${a.provincia && !(a.ciudad || '').includes(a.provincia) ? ', ' + esc(a.provincia) : ''}${a.aprox ? ' (zona aprox.)' : ''}${a.distancia_km != null ? ' · a ' + a.distancia_km + ' km' : ''}</div>
             <div class="pub-rg-precio">${a.moneda === 'USD' ? 'USD ' : '$ '}${Math.round(a.precio).toLocaleString('es-AR')}</div>
           </div>
         </a>`).join('');
@@ -140,7 +140,7 @@
       res.innerHTML = `${avisos.length ? tarjetas : `<div class="rm-nota">${esc(estado.fin ? (d.motivo || 'Sin resultados.') : 'Sin resultados todavía…')}</div>`}
         ${mediana ? `<div class="rm-nota">Mediana de los avisos en pesos del mismo año: <strong>${pesos(mediana)}</strong></div>` : ''}
         ${estado.msg ? `<div class="rm-cargando">${esc(estado.msg)}</div>` : ''}
-        <div class="rm-nota">${nota.join(' · ')}${estado.ac ? ' · ' + esc(estado.ac) : ''}. Precio que pide cada vendedor; se incluyen años ±1. Autocosmos: solo la primera página de la marca por provincia.
+        <div class="rm-nota">${nota.join(' · ')}${estado.ac ? ' · ' + esc(estado.ac) : ''}. Ordenados por cercanía a la agencia. Precio que pide cada vendedor; se incluyen años ±1. Autocosmos: solo la primera página de la marca por provincia.
           ${d.url_busqueda ? `<a href="${esc(d.url_busqueda)}" target="_blank" rel="noopener">Ver en DeAutos</a>` : ''}</div>`;
     }
 
@@ -149,19 +149,19 @@
       const radioModo = selReg.value === 'radio';
       soloRadio.forEach(el => { el.style.display = radioModo ? '' : 'none'; });
       res.innerHTML = '<div class="rm-cargando">Buscando por zona…</div>';
-      const base = { ...params, modo: radioModo ? 'radio' : 'region', region: radioModo ? '' : selReg.value, localidad: inLoc.value.trim(), radio: selR.value };
+      const base = { ...params, modo: radioModo ? 'radio' : 'region', region: radioModo ? '' : selReg.value, localidad: radioModo ? inLoc.value.trim() : '', radio: selR.value };
       let d;
       try { d = await (await fetch('/precios/api/zona?' + new URLSearchParams(base))).json(); } catch (e) { d = { ok: false, motivo: 'No se pudo consultar.' }; }
       if (mi !== ticket) return;
       if (!d.habilitado) { cont.innerHTML = ''; return; }
-      if (d.origen && !inLoc.value.trim()) inLoc.value = `${d.origen.nombre}, ${d.origen.provincia}`;
+      if (radioModo && d.origen && !inLoc.value.trim()) inLoc.value = `${d.origen.nombre}, ${d.origen.provincia}`;
       guardar({ region: selReg.value, localidad: inLoc.value.trim(), radio: selR.value });
       const mapa = new Map();
       const sumar = lista => (lista || []).forEach(a => {
         const k = [a.anio, a.km, a.precio].join('|');
         if (!mapa.has(k) || a.fuente === 'Autocosmos' && a.url.indexOf('autocosmos.com') >= 0) mapa.set(k, a);
       });
-      const lista = () => [...mapa.values()].sort((a, b) => (a.dif_anio - b.dif_anio) || (a.precio - b.precio));
+      const lista = () => [...mapa.values()].sort((a, b) => ((a.distancia_km == null) - (b.distancia_km == null)) || ((a.distancia_km || 0) - (b.distancia_km || 0)) || (a.dif_anio - b.dif_anio) || (a.precio - b.precio));
       sumar(d.avisos);
       const pedidos = d.ac_pedidos || [];
       let hechos = 0;

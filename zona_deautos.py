@@ -457,7 +457,9 @@ def _aplicar_zona(candidatos, modo, region, origen, radio_km, res):
             if region != "todo" and prov not in REGIONES.get(region, []):
                 res["fuera_de_radio"] += 1
                 continue
-            en.append(dict(a, provincia=prov, distancia_km=None, aprox=False, ciudad=ciudad))
+            ubic = resolver(a.get("loc"))
+            dist = round(distancia_km(origen["lat"], origen["lon"], ubic["lat"], ubic["lon"])) if (origen and ubic) else None
+            en.append(dict(a, provincia=prov, distancia_km=dist, aprox=bool(ubic and ubic["aprox"]), ciudad=ciudad))
         else:
             ubic = resolver(a.get("loc"))
             if not ubic:
@@ -472,8 +474,9 @@ def _aplicar_zona(candidatos, modo, region, origen, radio_km, res):
 
 
 def _ordenar_y_cortar(en, res, tope=None):
-    en.sort(key=lambda a: (a["dif_anio"], -a["coincide"],
-                           a["distancia_km"] if a.get("distancia_km") is not None else 0, a["precio"]))
+    # más cercanos primero; los sin distancia al final
+    en.sort(key=lambda a: (a["distancia_km"] is None, a["distancia_km"] or 0,
+                           a["dif_anio"], -a["coincide"], a["precio"]))
     res["en_radio"] = len(en)
     ars = [a["precio"] for a in en if a["moneda"] == "ARS" and a["dif_anio"] == 0]
     if len(ars) >= 3:
@@ -505,9 +508,11 @@ def _base_res(url, modo, region, radio_km):
 
 def _origen(modo, origen_txt, res):
     """Resuelve la localidad de partida (solo modo radio). Devuelve (origen, ok)."""
-    if modo != "radio":
-        return None, True
     origen = resolver(origen_txt)
+    if modo != "radio":
+        if origen:
+            res["origen"] = {"nombre": origen["nombre"], "provincia": origen["provincia"]}
+        return origen, True
     if not origen:
         res["motivo"] = "Elegí una Localidad de la lista para calcular el radio."
         return None, False
