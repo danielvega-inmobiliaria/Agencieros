@@ -107,7 +107,7 @@
         <div class="rm-titulo">Publicaciones por zona · DeAutos + Autocosmos (prueba)</div>
         <div class="zona-bar">
           <label class="zona-pill"><span>Región</span><select class="zona-reg">${opcReg}</select></label>
-          <label class="zona-pill zona-solo-radio"><span>Localidad</span>
+          <label class="zona-pill"><span>Tu ubicación</span>
             <input type="text" class="zona-loc" list="zona-lista" placeholder="Ej.: Rosario, Santa Fe" value="${esc(g.localidad || '')}" autocomplete="off"></label>
           <label class="zona-pill zona-solo-radio"><span>Radio (km)</span>
             <select class="zona-radio">${radios.map(r => `<option value="${r}"${String(r) === String(g.radio || 100) ? ' selected' : ''}>${r} km</option>`).join('')}</select></label>
@@ -134,7 +134,9 @@
         </a>`).join('');
       const ars = avisos.filter(a => a.moneda === 'ARS' && !a.dif_anio).map(a => a.precio).sort((x, y) => x - y);
       const mediana = ars.length >= 3 ? ars[Math.floor(ars.length / 2)] : null;
-      const nota = [`${d.leidos} avisos leídos en DeAutos`];
+      const nota = [];
+      if (d.sin_origen) nota.push('Elegí «Tu ubicación» (ciudad de la agencia) para ordenar por cercanía');
+      nota.push(`${d.leidos} avisos leídos en DeAutos`);
       if (d.fuera_de_radio) nota.push(`${d.fuera_de_radio} de otras zonas`);
       if (d.sin_ubicar) nota.push(`${d.sin_ubicar} sin ubicación reconocida`);
       res.innerHTML = `${avisos.length ? tarjetas : `<div class="rm-nota">${esc(estado.fin ? (d.motivo || 'Sin resultados.') : 'Sin resultados todavía…')}</div>`}
@@ -149,12 +151,12 @@
       const radioModo = selReg.value === 'radio';
       soloRadio.forEach(el => { el.style.display = radioModo ? '' : 'none'; });
       res.innerHTML = '<div class="rm-cargando">Buscando por zona…</div>';
-      const base = { ...params, modo: radioModo ? 'radio' : 'region', region: radioModo ? '' : selReg.value, localidad: radioModo ? inLoc.value.trim() : '', radio: selR.value };
+      const base = { ...params, modo: radioModo ? 'radio' : 'region', region: radioModo ? '' : selReg.value, localidad: inLoc.value.trim(), radio: selR.value };
       let d;
       try { d = await (await fetch('/precios/api/zona?' + new URLSearchParams(base))).json(); } catch (e) { d = { ok: false, motivo: 'No se pudo consultar.' }; }
       if (mi !== ticket) return;
       if (!d.habilitado) { cont.innerHTML = ''; return; }
-      if (radioModo && d.origen && !inLoc.value.trim()) inLoc.value = `${d.origen.nombre}, ${d.origen.provincia}`;
+      if (d.origen && !inLoc.value.trim()) inLoc.value = `${d.origen.nombre}, ${d.origen.provincia}`;
       guardar({ region: selReg.value, localidad: inLoc.value.trim(), radio: selR.value });
       const mapa = new Map();
       const sumar = lista => (lista || []).forEach(a => {

@@ -512,6 +512,8 @@ def _origen(modo, origen_txt, res):
     if modo != "radio":
         if origen:
             res["origen"] = {"nombre": origen["nombre"], "provincia": origen["provincia"]}
+        else:
+            res["sin_origen"] = True
         return origen, True
     if not origen:
         res["motivo"] = "Elegí una Localidad de la lista para calcular el radio."
