@@ -56,6 +56,9 @@ a { color: inherit; text-decoration: none; }
 .sidebar-user-agencia { color: var(--text); font-weight: 600; }
 .sidebar-user-nombre { color: var(--text-dim); margin-top: 2px; }
 .sidebar-user-logout { display: inline-block; color: var(--gold-light); margin-top: 8px; }
+/* Mi cuenta a la izquierda y Salir a la derecha, con zona de toque grande (06/10/2026). */
+.sidebar-user-links { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+.sidebar-user-links .sidebar-user-logout { margin-top: 0; padding: 12px 6px; font-size: 14px; }
 
 .brand {
   font-size: 20px;
