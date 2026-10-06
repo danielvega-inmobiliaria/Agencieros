@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Tasación — Agencieros{% endblock %}
-{% block header %}Paso 3 · Tasación{% endblock %}
+{% block header %}Tasación{% endblock %}
 {% block content %}
 <div class="tabs">
   <a class="btn btn-secondary btn-sm" href="{{ url_for('tomas.inspeccion', toma_id=toma.id) }}">← Volver a fotos</a>
@@ -68,7 +68,7 @@
           — se suman automáticamente al calcular la tasación.
         </p>
         {% if puntos_a_reparar %}
-        <p style="color:var(--text-dim); font-size:11.5px; margin:0 0 4px;">Del Paso 1 (datos técnicos):</p>
+        <p style="color:var(--text-dim); font-size:11.5px; margin:0 0 4px;">De los datos técnicos:</p>
         <ul style="margin:0 0 10px; padding-left:18px; font-size:13px;">
           {% for p in puntos_a_reparar %}
           <li>
@@ -79,7 +79,7 @@
         </ul>
         {% endif %}
         {% if danios_por_vista %}
-        <p style="color:var(--text-dim); font-size:11.5px; margin:0 0 4px;">Del Paso 2 (daños marcados en las fotos), por foto:</p>
+        <p style="color:var(--text-dim); font-size:11.5px; margin:0 0 4px;">De la inspección visual (daños marcados en las fotos), por foto:</p>
         {% for g in danios_por_vista %}
         <p style="font-size:12.5px; margin:8px 0 2px; color:var(--text);">
           <b>{{ g.vista_label }}</b>

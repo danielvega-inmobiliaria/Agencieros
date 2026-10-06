@@ -1,6 +1,6 @@
 {# Volver / Anterior / Siguiente comunes (ver utils/navegacion.py). #}
 {% if volver_auto or nav_detalle %}
-<div class="barra-nav">
+<div class="barra-nav sticky-movil">
   {% if volver_auto %}<a class="btn btn-secondary btn-sm" href="{{ volver_auto }}">‹ Volver</a>{% endif %}
   {% if nav_detalle %}
   <div class="barra-nav-lista">

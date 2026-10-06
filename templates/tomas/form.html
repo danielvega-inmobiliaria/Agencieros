@@ -22,7 +22,7 @@
           {% endfor %}
         </select>
         <p style="color:var(--text-dim); font-size:12px; margin:4px 0 0;">
-          Elegí la silueta más parecida a la carrocería real -- se va a usar en el Paso 2 para marcar los daños.
+          Elegí la silueta más parecida a la carrocería real -- se va a usar en la Inspección visual para marcar los daños.
         </p>
       </div>
     </div>
@@ -106,7 +106,7 @@
   attachAutocomplete(document.getElementById('evaluador'), () => evaluadoresCache);
 
   // Precio de guía apenas hay Marca+Modelo: no hace falta
-  // esperar a la Tasación (Paso 3) para saber si el vehículo tiene precio
+  // esperar a la Tasación para saber si el vehículo tiene precio
   // de referencia cargado.
   const anioEl = document.getElementById('anio');
   const marcaEl = document.getElementById('marca');

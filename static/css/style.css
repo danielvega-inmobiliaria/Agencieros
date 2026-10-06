@@ -769,6 +769,17 @@ select.calif-bueno, select.calif-regular, select.calif-malo { font-weight: 600; 
 .punto-costo { flex: 0 0 auto; text-align: right; font-weight: 600; white-space: nowrap; }
 .punto-comentario { padding: 0 2px 10px; color: var(--text-dim); font-size: 13px; }
 
+/* Desplegables de Datos técnicos (06/10/2026) */
+.grupo-desplegable { border-top: 1px solid var(--border); }
+.grupo-desplegable:last-of-type { border-bottom: 1px solid var(--border); }
+.grupo-desplegable > summary {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; cursor: pointer;
+  list-style: none; padding: 13px 2px; font-weight: 700; color: var(--gold-light); font-size: 15px;
+}
+.grupo-desplegable > summary::-webkit-details-marker { display: none; }
+.grupo-meta { color: var(--text-dim); font-weight: 400; font-size: 13px; white-space: nowrap; }
+.grupo-desplegable[open] > summary { border-bottom: 1px solid var(--border); }
+
 /* Barra fija de toma / inspección y títulos de sección pegajosos (29/09/2026) */
 .barra-fija { position: sticky; top: var(--alto-topbar, 0px); z-index: 50; background: var(--navy-bg);
   margin: -8px -4px 14px; padding: 8px 4px 10px; border-bottom: 1px solid var(--border); }

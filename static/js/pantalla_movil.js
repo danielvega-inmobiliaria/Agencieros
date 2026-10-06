@@ -9,7 +9,8 @@
   var h1 = document.querySelector('.topbar h1');
   var titulo = h1 ? h1.textContent.trim() : '';
   var marca = texto ? texto.textContent : '';
-  var fijas = Array.prototype.slice.call(document.querySelectorAll('.sticky-movil'));
+  var fijas = Array.prototype.slice.call(document.querySelectorAll('.sticky-movil, .barra-fija'));
+  var raiz = document.documentElement;
 
   var btn = document.createElement('button');
   btn.type = 'button'; btn.id = 'btn-arriba'; btn.setAttribute('aria-label', 'Volver arriba');
@@ -19,9 +20,15 @@
 
   function apilar() {
     var off = mq.matches && barra ? barra.offsetHeight : 0;
+    if (!mq.matches) { raiz.style.removeProperty('--alto-topbar'); raiz.style.removeProperty('--alto-barra-fija'); }
     fijas.forEach(function (el) {
       if (!mq.matches) { el.style.top = ''; return; }
       el.style.top = off + 'px';
+      if (el.classList.contains('barra-fija')) {
+        // los títulos pegajosos de sección quedan debajo de toda la pila
+        raiz.style.setProperty('--alto-topbar', off + 'px');
+        raiz.style.setProperty('--alto-barra-fija', el.offsetHeight + 'px');
+      }
       off += el.offsetHeight;
     });
     return off;

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <title>{% block title %}Agencieros{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20261006f">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20261006g">
   {# App instalable (29/09/2026): "Agregar a inicio" abre sin barras del navegador. #}
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
   <meta name="theme-color" content="#131e2e">
@@ -170,7 +170,7 @@
       });
     })();
   </script>
-<script src="{{ url_for('static', filename='js/pantalla_movil.js') }}?v=20261006"></script>
+<script src="{{ url_for('static', filename='js/pantalla_movil.js') }}?v=20261006b"></script>
 {% for evento in fb_eventos_pendientes %}
 <script>if (window.fbq) { fbq('track', '{{ evento }}'); }</script>
 {% endfor %}
