@@ -2,12 +2,12 @@
 {% block title %}Toma y tasación — Agencieros{% endblock %}
 {% block header %}Toma y tasación{% endblock %}
 {% block content %}
-<div class="tabs">
-  <a class="tab {{ 'active' if vista == 'pendientes' else '' }}" href="{{ url_for('tomas.index', vista='pendientes') }}">Pendientes ({{ pendientes_count }})</a>
-  <a class="tab {{ 'active' if vista == 'en_stock' else '' }}" href="{{ url_for('tomas.index', vista='en_stock') }}">En Stock ({{ en_stock_count }})</a>
-  <span style="color:var(--text-dim); font-size:13px; align-self:center; margin-left:8px;">Datos técnicos → Fotos y chapa → Tasación, en un mismo flujo.</span>
-  <a class="btn btn-primary btn-sm" style="margin-left:auto;" href="{{ url_for('tomas.nueva') }}">+ Nueva toma</a>
+{% from "partials/filtro_estado.html" import filtro_estado %}
+<div class="tabs tabs-filtro">
+  {{ filtro_estado([('pendientes', 'Pendientes (' ~ pendientes_count ~ ')', url_for('tomas.index', vista='pendientes')), ('en_stock', 'En Stock (' ~ en_stock_count ~ ')', url_for('tomas.index', vista='en_stock'))], vista) }}
+  <div class="tabs-acciones"><a class="btn btn-primary btn-sm" href="{{ url_for('tomas.nueva') }}">+ Nueva toma</a></div>
 </div>
+<p style="color:var(--text-dim); font-size:13px; margin:-8px 0 14px;">Datos técnicos → Fotos y chapa → Tasación, en un mismo flujo.</p>
 
 <div class="panel">
   <table class="tabla-responsive">

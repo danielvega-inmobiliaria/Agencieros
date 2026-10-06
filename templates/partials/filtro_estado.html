@@ -1,0 +1,8 @@
+{# Filtro desplegable (06/10/2026): reemplaza las filas de pastillas (Todos / Disponible / ...) en todas las listas.
+   Uso: {% from "partials/filtro_estado.html" import filtro_estado %}
+        {{ filtro_estado([(valor, "Etiqueta", url), ...], valor_actual) }} #}
+{% macro filtro_estado(opciones, actual) -%}
+<select class="filtro-estado" aria-label="Filtrar" onchange="if (this.value) window.location.href = this.value;">
+  {% for o in opciones %}<option value="{{ o[2] }}" {{ 'selected' if o[0] == actual else '' }}>{{ o[1] }}</option>{% endfor %}
+</select>
+{%- endmacro %}

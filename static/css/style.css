@@ -255,6 +255,15 @@ tr:hover td { background: var(--navy-card-2); }
   padding: 7px 14px; border-radius: 20px; font-size: 13px; background: var(--navy-card);
   border: 1px solid var(--border); color: var(--text-dim);
 }
+/* Filtro desplegable + acciones a la derecha (06/10/2026), en todas las listas. */
+.tabs-filtro { flex-wrap: nowrap; align-items: center; }
+.tabs-acciones { margin-left: auto; display: flex; gap: 8px; flex-shrink: 0; }
+.filtro-estado {
+  appearance: none; -webkit-appearance: none; min-width: 0; max-width: 100%;
+  padding: 8px 34px 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600;
+  background: var(--gold) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%2317202e' stroke-width='2' stroke-linecap='round'/></svg>") no-repeat right 14px center;
+  color: #17202e; border: 1px solid var(--gold); cursor: pointer;
+}
 .tab.active { background: var(--gold); color: #17202e; border-color: var(--gold); font-weight: 600; }
 
 .btn {
