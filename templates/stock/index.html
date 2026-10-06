@@ -6,7 +6,7 @@
 {% from "partials/filtro_estado.html" import filtro_estado %}
 {% set opts = [('todos', 'Todos (' ~ (conteos.values()|sum - conteos.get('vendido', 0)) ~ ')', url_for('stock.index', estado='todos', **filtros))] %}
 {% for e in estados %}{% set _ = opts.append((e, estado_label[e] ~ ' (' ~ conteos.get(e, 0) ~ ')', url_for('stock.index', estado=e, **filtros))) %}{% endfor %}
-<div class="tabs tabs-filtro">
+<div class="tabs tabs-filtro sticky-movil">
   {{ filtro_estado(opts, estado_filtro) }}
   <div class="tabs-acciones">
     <button type="button" id="buscador-toggle" class="btn btn-secondary btn-sm">{{ 'Ocultar buscador' if filtros else 'Buscar' }}</button>

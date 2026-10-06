@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <title>{% block title %}Agencieros{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20261006e">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20261006f">
   {# App instalable (29/09/2026): "Agregar a inicio" abre sin barras del navegador. #}
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
   <meta name="theme-color" content="#131e2e">
@@ -18,7 +18,7 @@
 </head>
 <body>
   <div class="mobile-topbar">
-    <span class="mobile-brand"><img src="{{ url_for('static', filename='img/logo_agencieros.png') }}" alt="" class="brand-logo">AGENCIEROS</span>
+    <span class="mobile-brand"><img src="{{ url_for('static', filename='img/logo_agencieros.png') }}" alt="" class="brand-logo"><span id="mobile-brand-texto">AGENCIEROS</span></span>
     <button type="button" id="menu-toggle" class="menu-toggle" aria-label="Abrir menú" aria-controls="sidebar" aria-expanded="false">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
     </button>
@@ -170,6 +170,7 @@
       });
     })();
   </script>
+<script src="{{ url_for('static', filename='js/pantalla_movil.js') }}?v=20261006"></script>
 {% for evento in fb_eventos_pendientes %}
 <script>if (window.fbq) { fbq('track', '{{ evento }}'); }</script>
 {% endfor %}

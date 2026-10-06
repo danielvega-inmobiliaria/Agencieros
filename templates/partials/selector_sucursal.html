@@ -2,7 +2,7 @@
    Usa: sucursales_sel, sucursal_sel, y `suc_endpoint` + `suc_args` para armar los links. #}
 {% if sucursales_sel %}
 {# 06/10/2026: mismo formato en todas las ventanas (una sola línea, sin rótulo, como en Dashboard). #}
-<div class="selector-sucursal una-linea">
+<div class="selector-sucursal una-linea sticky-movil">
   <a class="chip {{ 'active' if sucursal_sel is none else '' }}" href="{{ url_for(suc_endpoint, suc='todas', **(suc_args or {})) }}">Todas</a>
   {% for s in sucursales_sel %}
   <a class="chip {{ 'active' if sucursal_sel == s.id else '' }}" href="{{ url_for(suc_endpoint, suc=s.id, **(suc_args or {})) }}">{{ s.nombre }}</a>

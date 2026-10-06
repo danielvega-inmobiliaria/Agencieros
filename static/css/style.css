@@ -563,6 +563,31 @@ form textarea { min-height: 80px; }
   .sidebar .brand { display: none; } /* el nombre ya está en .mobile-topbar */
 
   .main { padding: 18px 16px; }
+
+  /* Título que pasa a la barra al scrollear (más chico) */
+  .mobile-topbar .mobile-brand { min-width: 0; flex: 1; }
+  #mobile-brand-texto { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  #mobile-brand-texto.es-titulo { font-size: 15px; color: var(--text); font-weight: 600; }
+  .mobile-topbar .menu-toggle { flex-shrink: 0; margin-left: 10px; }
+
+  /* Filas de filtros/botones fijas debajo de la barra */
+  .sticky-movil {
+    position: sticky; top: 53px; z-index: 60; background: var(--navy-bg);
+    margin-bottom: 0 !important; padding: 8px 0 10px;
+  }
+}
+
+/* Botón flotante "volver arriba" (solo celu, aparece al scrollear en pantallas largas) */
+#btn-arriba { display: none; }
+@media (max-width: 700px) {
+  #btn-arriba {
+    display: flex; align-items: center; justify-content: center;
+    position: fixed; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom));
+    width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--gold);
+    background: var(--gold); color: #17202e; box-shadow: 0 4px 14px rgba(0,0,0,.45);
+    z-index: 90; opacity: 0; pointer-events: none; transition: opacity .2s ease;
+  }
+  #btn-arriba.visible { opacity: 1; pointer-events: auto; }
 }
 
 /* --- Galería de fotos del vehículo (Stock) --- */
@@ -816,7 +841,7 @@ select.calif-bueno, select.calif-regular, select.calif-malo { font-weight: 600; 
 /* Celu (02/10/2026): iPhone agranda la pantalla al tocar un campo con letra
    menor a 16px y después queda corrida; además nada puede ser más ancho que
    la pantalla (evita que se "mueva" de costado). */
-html, body { max-width: 100%; overflow-x: hidden; }
+html, body { max-width: 100%; overflow-x: hidden; overflow-x: clip; } /* clip: no rompe position:sticky en iPhone */
 @media (max-width: 700px) {
   input, select, textarea { font-size: 16px !important; }
 }

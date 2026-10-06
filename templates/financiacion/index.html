@@ -2,7 +2,7 @@
 {% block title %}Financiación — Agencieros{% endblock %}
 {% block header %}Financiación{% endblock %}
 {% block content %}
-<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+<div class="sticky-movil" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
   <a class="btn btn-primary btn-sm" href="{{ url_for('financiacion.simulador') }}">🧮 Simulador de cuotas</a>
   <a class="btn btn-secondary btn-sm" href="{{ url_for('financiacion.planes') }}">📋 Planes</a>
 </div>
