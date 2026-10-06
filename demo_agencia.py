@@ -116,9 +116,14 @@ def generar_fotos(forzar=False):
     """Genera static/demo/<clave>.jpg: la silueta de la carrocería (las mismas
     ilustraciones que usa la Inspección visual) pintada del color del auto,
     sobre un fondo de la app, con marca/modelo. Son ilustraciones, no fotos."""
-    from PIL import Image, ImageDraw, ImageFont, ImageOps
-
     os.makedirs(CARPETA_FOTOS, exist_ok=True)
+    faltan = [v[0] for v in VEHICULOS if not os.path.exists(os.path.join(CARPETA_FOTOS, f"{v[0]}.jpg"))]
+    if not faltan and not forzar:
+        return  # ya están generadas (van en el repo): no hace falta Pillow en el servidor
+    try:
+        from PIL import Image, ImageDraw, ImageFont, ImageOps
+    except ImportError:
+        return  # sin Pillow no se generan; la demo funciona igual (sin esas fotos)
 
     def fuente(tam, negrita=False):
         for ruta in ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if negrita else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
