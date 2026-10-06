@@ -2,7 +2,6 @@
 {% block title %}Dashboard — Agencieros{% endblock %}
 {% block header %}Dashboard{% endblock %}
 {% block content %}
-{% set suc_sin_label = true %}
 {% include "partials/selector_sucursal.html" %}
 <div class="cards dashboard-cards">
   <a class="card" href="{{ url_for('stock.index', estado='disponible') }}">
