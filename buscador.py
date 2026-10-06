@@ -253,6 +253,8 @@ def buscar_combinado(filtros, agencia_id, sucursal_id=None):
 
     cond_red, params_red = condiciones_sql(filtros, campo_precio="precio", campo_km="km")
     cond_red.append("estado = 'activo'")
+    from utils.demo import condicion_red
+    cond_red.append(condicion_red("", agencia_id))
     # Las unidades propias publicadas desde Stock ya aparecen como stock propio.
     cond_red.append("NOT ((vehiculo_id IS NOT NULL OR pedido_id IS NOT NULL) AND agencia_id = ?)")
     params_red.append(agencia_id)

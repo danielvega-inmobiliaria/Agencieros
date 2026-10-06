@@ -39,6 +39,8 @@ def _buscar_matches_permuta(agencia_id, marca, modelo, excluir_pedido_id=None):
     # Las búsquedas propias publicadas desde Pedidos ya aparecen como pedido propio.
     cond_red = ("tipo = 'busco' AND estado = 'activo' AND LOWER(marca) = LOWER(?)"
                 " AND NOT (pedido_id IS NOT NULL AND agencia_id = ?)")
+    from utils.demo import condicion_red
+    cond_red += " AND " + condicion_red("", agencia_id)
     params_red = [marca, agencia_id]
     if modelo:
         cond_red += " AND LOWER(modelo) = LOWER(?)"

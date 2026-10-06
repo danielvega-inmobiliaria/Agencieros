@@ -878,3 +878,8 @@ html, body { max-width: 100%; overflow-x: hidden; overflow-x: clip; } /* clip: n
 .zona-pill input, .zona-pill select { background: transparent; border: 0; padding: 0; margin: 0; width: auto; min-width: 120px; color: var(--text); font-size: 14px; outline: none; }
 .zona-pill select option { background: var(--navy-card); }
 .zona-deautos .pub-rg { padding: 8px 0; }
+
+/* Banner de la agencia demo (06/10/2026) */
+.banner-demo { background: rgba(217,164,65,.14); border: 1px solid var(--gold); color: var(--gold-light);
+  border-radius: 10px; padding: 9px 12px; font-size: 13px; margin-bottom: 14px; line-height: 1.4; }
+.banner-demo a { color: var(--text); text-decoration: underline; white-space: nowrap; }

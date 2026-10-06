@@ -52,6 +52,23 @@ def _loguear_superadmin(admin):
     session["superadmin_nombre"] = admin["nombre"] or "Admin AGENCIEROS"
 
 
+@bp.route("/demo")
+def demo():
+    """Entrada a la agencia DEMO sin mail ni contraseña (06/10/2026). La
+    primera entrada de cada día reinicia los datos de ejemplo."""
+    from demo_agencia import reiniciar_demo, _hoy_ar
+    agencia = query("SELECT * FROM agencias WHERE es_demo = 1 ORDER BY id LIMIT 1", one=True)
+    vacia = agencia and not query("SELECT 1 FROM vehiculos WHERE agencia_id = ? LIMIT 1", (agencia["id"],), one=True)
+    if not agencia or vacia or agencia["demo_reset_at"] != str(_hoy_ar()):
+        reiniciar_demo()
+        agencia = query("SELECT * FROM agencias WHERE es_demo = 1 ORDER BY id LIMIT 1", one=True)
+    usuario = query("SELECT * FROM agencia_usuarios WHERE agencia_id = ? AND rol = 'dueno' ORDER BY id LIMIT 1",
+                    (agencia["id"],), one=True)
+    _loguear(agencia, usuario)
+    session["es_demo"] = True
+    return redirect(url_for("dashboard.index"))
+
+
 @bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":

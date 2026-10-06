@@ -70,7 +70,8 @@ def _armar_filas():
                   a.created_at, a.ultima_actividad,
                   c.telefono AS telefono_comercial, c.direccion, c.ciudad, c.provincia
            FROM agencias a
-           LEFT JOIN agencia_config c ON c.agencia_id = a.id"""
+           LEFT JOIN agencia_config c ON c.agencia_id = a.id
+           WHERE COALESCE(a.es_demo, 0) = 0"""
     )
 
     stock_rows = query(
@@ -185,6 +186,15 @@ def agencias():
         filas=filas, resumen=resumen,
         q=q, orden=orden, direccion=direccion, orden_opciones=ORDEN_OPCIONES,
     )
+
+
+@bp.route("/demo/reiniciar", methods=["POST"])
+def reiniciar_demo_ruta():
+    """Vuelve la agencia demo a su estado original (06/10/2026)."""
+    from demo_agencia import reiniciar_demo
+    reiniciar_demo()
+    flash("Agencia demo reiniciada: vuelve a tener los datos de ejemplo.", "success")
+    return redirect(url_for("plataforma.agencias"))
 
 
 @bp.route("/agencias/<int:agencia_id>")

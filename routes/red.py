@@ -48,6 +48,8 @@ def index():
                                           campo_marca=rp + "marca", campo_modelo=rp + "modelo",
                                           campo_version=rp + "version", campo_anio=rp + "anio")
     condiciones.append("red_publicaciones.estado = 'activo'")
+    from utils.demo import condicion_red
+    condiciones.append(condicion_red("red_publicaciones."))
     if tipo_filtro in ("ofrezco", "busco"):
         condiciones.append("red_publicaciones.tipo = ?")
         params.append(tipo_filtro)

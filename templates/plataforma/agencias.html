@@ -2,6 +2,18 @@
 {% block title %}Panel de Agencias — Agencieros{% endblock %}
 {% block header %}Panel de Agencias{% endblock %}
 {% block content %}
+<div class="panel" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+  <div style="flex:1; min-width:220px;">
+    <b>Agencia demo</b>
+    <div style="color:var(--text-dim); font-size:13px;">Para mostrarle la app a un agenciero. Link para mandar:
+      <b style="color:var(--text);">{{ request.url_root }}auth/demo</b> — se reinicia sola cada día.</div>
+  </div>
+  <a class="btn btn-secondary btn-sm" href="{{ url_for('auth.demo') }}" target="_blank" rel="noopener">Ver demo</a>
+  <form method="post" action="{{ url_for('plataforma.reiniciar_demo_ruta') }}"
+        onsubmit="return window.confirm('¿Reiniciar la agencia demo? Se borra lo que se haya cargado y vuelve a los datos de ejemplo.');">
+    <button class="btn btn-primary btn-sm" type="submit">♻ Reiniciar demo</button>
+  </form>
+</div>
 <div class="cards">
   <div class="card">
     <div class="label">Agencias registradas</div>

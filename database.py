@@ -499,6 +499,16 @@ def _migrar_tomas_tipo_carroceria(conn):
         conn.execute("ALTER TABLE tomas_vehiculo ADD COLUMN tipo_carroceria TEXT")
 
 
+def _migrar_demo(conn):
+    """Agencia demo (06/10/2026): `es_demo` = 1 la agencia demo, 2 las agencias
+    ficticias de su Red; `demo_reset_at` = día (Argentina) del último reinicio."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(agencias)")}
+    if "es_demo" not in cols:
+        conn.execute("ALTER TABLE agencias ADD COLUMN es_demo INTEGER NOT NULL DEFAULT 0")
+    if "demo_reset_at" not in cols:
+        conn.execute("ALTER TABLE agencias ADD COLUMN demo_reset_at TEXT")
+
+
 def _migrar_financiaciones(conn):
     """Agrega a `financiaciones` el método de interés (francés / interés
     simple), la periodicidad de cobro (mensual / semanal) y el plazo en
@@ -1638,6 +1648,7 @@ def init_db():
     _migrar_multi_tenant_agencias(conn)
     _migrar_agencia_config_multi_tenant(conn)
     _migrar_agencia_config_ciudad_provincia(conn)
+    _migrar_demo(conn)
     _migrar_agencia_config_contacto_margen(conn)
     _migrar_tasaciones_margen_objetivo(conn)
     _migrar_agencias_ultima_actividad(conn)

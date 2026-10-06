@@ -127,6 +127,21 @@ def create_app():
         return {"es_vendedor": es_vendedor(), "es_dueno": es_dueno()}
 
     @app.context_processor
+    def _inject_demo():
+        return {"es_demo": bool(session.get("es_demo"))}
+
+    # Demo (06/10/2026): se puede cargar y probar todo, pero no tocar cuentas
+    # ni mandar mensajes (le llegarían al administrador).
+    DEMO_BLOQUEADOS = {"cuenta.index", "cuenta.usuario_nuevo", "cuenta.usuario_editar", "mensajes.index"}
+
+    @app.before_request
+    def _proteger_demo():
+        if session.get("es_demo") and request.method == "POST" and (request.endpoint or "") in DEMO_BLOQUEADOS:
+            flash("En la demo esta acción está desactivada. ¡Registrá tu agencia para usarla!", "error")
+            return redirect(request.referrer or url_for("dashboard.index"))
+        return None
+
+    @app.context_processor
     def _inject_superadmin():
         # 28/09/2026: el admin de la plataforma es un usuario aparte
         # (tabla plataforma_admins), ya no la agencia 1.
@@ -194,7 +209,7 @@ def create_app():
         # tiene (ni necesita) usuario en la app (pedido de Daniel
         # 16/09/2026).
         publicas = {
-            "auth.login", "auth.registro", "auth.verificar", "auth.reenviar_codigo",
+            "auth.login", "auth.registro", "auth.verificar", "auth.reenviar_codigo", "auth.demo",
             "static", "stock.ficha",
             # Fotos y logos subidos: la ficha compartida es pública y sin
             # esto quien la abre sin sesión (el cliente) no veía las fotos.
