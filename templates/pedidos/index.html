@@ -2,10 +2,11 @@
 {% block title %}Banco de pedidos — Agencieros{% endblock %}
 {% block header %}Banco de pedidos{% endblock %}
 {% block content %}
-{% from "partials/filtro_estado.html" import filtro_estado %}
-<div class="tabs tabs-filtro">
-  {{ filtro_estado([('todos', 'Todos', url_for('pedidos.index', estado='todos')), ('buscando', 'Buscando', url_for('pedidos.index', estado='buscando')), ('resuelto', 'Resueltos', url_for('pedidos.index', estado='resuelto'))], estado_filtro) }}
-  <div class="tabs-acciones"><a class="btn btn-primary btn-sm" href="{{ url_for('pedidos.nuevo') }}">+ Nuevo pedido</a></div>
+<div class="tabs">
+  <a class="tab {{ 'active' if estado_filtro == 'buscando' else '' }}" href="{{ url_for('pedidos.index', estado='buscando') }}">Buscando</a>
+  <a class="tab {{ 'active' if estado_filtro == 'resuelto' else '' }}" href="{{ url_for('pedidos.index', estado='resuelto') }}">Resueltos</a>
+  <a class="tab {{ 'active' if estado_filtro == 'todos' else '' }}" href="{{ url_for('pedidos.index', estado='todos') }}">Todos</a>
+  <a class="btn btn-primary btn-sm" style="margin-left:auto;" href="{{ url_for('pedidos.nuevo') }}">+ Nuevo pedido</a>
 </div>
 
 <div class="panel">
