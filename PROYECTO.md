@@ -6,7 +6,7 @@
 
 ---
 
-_Última actualización: 03/10/2026 (tarde) — chat precios revista: Octubre completo en producción; fix cuotas semanales (falta push); carpetas NOV-2026 y DIC-2026 preparadas_
+_Última actualización: 04/10/2026 — chat MercadoLibre: búsqueda sigue en 403; permisos revisados; logo guardado. Antes: 03/10/2026 (tarde) — chat precios revista: Octubre completo en producción; fix cuotas semanales (falta push); carpetas NOV-2026 y DIC-2026 preparadas_
 
 ## Qué es este proyecto
 **AGENCIEROS**: la plataforma más completa para agencias de automotores de Argentina. Unifica consulta de precios, gestión del negocio, tasación, rentabilidad y una red de colaboración entre agencieros.
@@ -149,6 +149,30 @@ El mercado argentino **no está vacío** — hay al menos dos jugadores directos
 ---
 
 ## Cambios recientes
+
+### Sesión 05/10/2026 (chat MercadoLibre → zonas, Msg 1-20) — ML descartado, prueba de búsqueda por zona (solo Italia)
+- **ML cerrado por ahora:** `/sites/MLA/search` da 403 con token de usuario y de app, con cualquier parámetro; `/users/{otro}/items/search` también 403 ("restricted"). Solo `/categories/MLA1744` y `/users/me` dan 200. La certificación (Developer Partner Program: 30 usuarios activos, 300 avisos, OAuth, chequeo de vulnerabilidades, examen) no es viable hoy. El Asistente de soporte de ML falla; no se creó ticket. `static/js/mercado.js`: `USAR_ML = false` (poner `true` para reactivar). `mercado_ml.diagnostico(seller_id)` y la ruta `/ml/?diagnostico=1&seller_id=N` quedan para pruebas.
+- **Mensajes enviados el 05/10/2026:** a DeAutos (`hola@deautos.com`) y a Autocosmos (formulario SAC, motivo "Solicitud de información de servicios") pidiendo autorización. **Sin respuesta todavía → seguimiento a los 7-10 días.** Opcional: DeMotores (certificado vencido) y WhatsApp de DeAutos.
+- **Hallazgo legal:** los Términos de Autocosmos (`/institucional/terminoscondiciones`) prohíben reproducir sus avisos "salvo autorización expresa y por escrito"; su robots.txt permite `/auto/usado` con Crawl-delay 20 s. DeAutos: robots `Allow: /`, sin términos encontrados.
+- **Prueba "Publicaciones por zona" (SOLO agencia 1 / Italia, `STOCK_SYNC_AGENCIA_ID`):** nuevo `zona_deautos.py` (catálogo de localidades, regiones, parseo DeAutos y Autocosmos, caché 24 h en `rg_cache`, claves `deautos|v2|` y `autocosmos|v1|`). Rutas en `routes/precios.py`: `/api/zona`, `/api/zona_autocosmos`, `/api/localidades`. Front en `static/js/mercado.js` (`cargarZona`) + CSS `.zona-*`; flag `window.ZONA_DEAUTOS` desde `app.py`/`base.html`.
+  - Selector **Región** (Centro, Buenos Aires, Cuyo, Norte NOA, Noreste NEA, Sur Patagonia, Todo el país, "Cerca de una localidad" con Radio) y campo **Tu ubicación** (guardado en localStorage `agencieros_zona`; si está vacío usa ciudad+provincia de la config de la agencia, que en Italia probablemente está vacía).
+  - Tarjetas con foto como RosarioGarage, ordenadas **por cercanía** a "Tu ubicación" (sin ubicación reconocida al final), con "a X km".
+  - Autocosmos: una provincia por pedido, 20 s de espera entre pedidos (carga progresiva), solo 1ª página de la marca por provincia. Códigos `?pr=`: 301 Bs As, 374 AMBA, 324 CABA, 303 Chaco, 304 Chubut, 305 Córdoba, 306 Corrientes, 307 Entre Ríos, 310 La Pampa, 311 La Rioja, 312 Mendoza, 313 Misiones, 314 Neuquén, 315 Río Negro, 316 Salta, 318 San Luis, 319 Santa Cruz, 320 Santa Fe, 322 Tierra del Fuego, 323 Tucumán (sin código: Catamarca, Formosa, Jujuy, San Juan, Santiago del Estero).
+  - **Apagar Autocosmos:** variable de entorno `AUTOCOSMOS_ACTIVO=0` en Railway. Está prendido solo como prueba de Daniel hasta tener autorización escrita.
+  - RosarioGarage se deja como estaba.
+- **Dashboard:** el selector de sucursal ya no muestra la palabra "Sucursal:" y queda en una sola línea (Todas + sucursales, con scroll horizontal si no entran). Parámetro `suc_sin_label` en `partials/selector_sucursal.html`.
+- **Menú:** logo (`static/img/logo_agencieros.png`, el auto con la red) a la izquierda de AGENCIEROS, en el sidebar (compu) y en la barra del celu. El sidebar de compu queda fijo (`position: sticky; height: 100vh`) y la barra del celu ya era sticky: no se pierden al scrollear, en todas las pantallas.
+- **Archivos tocados:** `zona_deautos.py` (nuevo), `routes/precios.py`, `routes/ml.py`, `mercado_ml.py`, `app.py`, `static/js/mercado.js`, `static/css/style.css`, `templates/base.html`, `templates/dashboard.html`, `templates/partials/selector_sucursal.html`, `templates/precios/index.html`, `templates/precios/resultado.html`, `templates/tomas/tasacion.html`. Cache-busters: JS `?v=20261005d`, CSS `?v=20261005e`.
+- **Pendientes:** respuestas de DeAutos/Autocosmos; decidir si la zona se abre a otras agencias; cargar ciudad/provincia en la config de Italia; ML (ticket de Soporte para Integradores, validar identidad de la cuenta 204246566); RosarioGarage, monetizar la Red, revista Noviembre, Enero 2027 (mantener 2007).
+
+### Sesión 04/10/2026 (chat MercadoLibre, Msg 3-20) — Cierre: la búsqueda de ML sigue bloqueada
+- **Diagnóstico de /ml/ (04/10):** búsquedas (`/sites/MLA/search` con y sin categoría, y categoría sin texto) = **403 forbidden**, con token de usuario y de app; `/categories/MLA1744` y `/users/me` = **200 OK**. Credenciales y OAuth bien; el bloqueo es solo del endpoint de búsqueda.
+- **Acceso a /ml/:** solo con el admin de la plataforma (danve61@gmail.com); con Italia o sin sesión redirige al login. Reconectar la cuenta (usuario 204246566, 04/10 17:40 UTC) no cambió nada; DevCenter la sigue mostrando "INACTIVA" (dato informativo, no explica el 403).
+- **Permisos funcionales revisados en DevCenter (Editar app):** Usuarios = Lectura y escritura (fijo); todo lo demás, incl. Publicación y sincronización = **Lectura**. No hay permiso específico de búsqueda → esa vía descartada. Cuenta danve61 (app) vs. Italia (ML) no influye.
+- **Chat Asistente de ML (developers.mercadolibre.com.ar):** respuesta genérica de 403 (IP allowlist, scopes, usuario validado, app bloqueada); dice que no hay endpoint oficial alternativo para precios de vehículos (`/products/search` es de catálogo). No hay formulario de soporte visible; /soporte redirige al inicio. Se redactó un 2º mensaje (con firma Daniel Vega) pidiendo el requisito para habilitar la búsqueda o derivación a una persona; el bot respondió "algo salió mal" → **reintentar**.
+- **Logo:** el del auto con red (el de Facebook/Instagram) se guardó en `static/img/logo_agencieros.png` (157×148 px, chico). La app y la landing siguen con la "A" dorada; unificar es un cambio de código aparte (ícono, manifest, encabezado).
+- **Cierre (Msg 21):** el Asistente de ML siguió dando error al reenviar el pedido. **Gestión de IPs no está habilitada para la app** (la doc dice que es exclusiva de integradores whitelisteados; en el menú de la app no figura "Configuración IP") → no hay allowlist. **Chat nuevo: buscar la solución para que ML quede funcionando** (otra vía de contacto con ML: Ayuda de Mercado Libre / Developer Partner Program / Centro de Partners; probar cuenta de ML distinta; evaluar certificación de la app).
+- **Próximos pasos:** (1) reintentar el mensaje al Asistente de ML; si no hay respuesta concreta, dar por cerrada la vía API; (2) sacar/ocultar el bloque de ML y mejorar el texto del 403 en `/ml/` (hoy dice "Conectá la cuenta" aunque ya está conectada); (3) pasar ML a cuenta de servicio por seguridad; (4) seguir con RosarioGarage; (5) controlar y monetizar la Red; Noviembre cuando lleguen las páginas; Enero 2027 manteniendo 2007.
 
 ### Sesión 03/10/2026 (tarde, chat precios revista, Msg 4-5) — cierre del chat
 - **Octubre 2026 completo (53-168) y verificado:** Daniel controló visualmente las págs. 165-168 contra la revista (Excel) y los valores dan bien; el pendiente opcional de control visual queda cerrado.
