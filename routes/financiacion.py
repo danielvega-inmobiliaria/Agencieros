@@ -34,7 +34,7 @@ PERIODICIDAD_LABEL = {"mensual": "Mensual", "semanal": "Semanal"}
 _VENDEDOR_LIBRES = {"financiacion.index", "financiacion.simulador", "financiacion.nuevo", "financiacion.guardar",
                     "financiacion.planes"}
 _VENDEDOR_SOLO_PENDIENTES = {
-    "financiacion.completar_datos", "financiacion.agregar_garante", "financiacion.eliminar_garante",
+    "financiacion.completar_datos", "financiacion.agregar_garante", "financiacion.eliminar_garante", "financiacion.editar_garante",
     "financiacion.confirmar_venta", "financiacion.cancelar_reserva", "financiacion.eliminar",
 }
 
@@ -1053,12 +1053,14 @@ def completar_datos(financiacion_id):
 
     execute(
         """UPDATE financiaciones SET cliente_nombre = ?, cliente_telefono = ?,
+           cliente_dni = ?, cliente_domicilio = ?,
            vehiculo_id = ?, precio_venta = ?, anticipo = ?,
            permuta_tasacion_id = ?, permuta_valor = ?, permuta_descripcion = ?,
            permuta_marca = ?, permuta_modelo = ?, permuta_version = ?, permuta_anio = ?, permuta_km = ?,
            entrega_contado = ? WHERE id = ?""",
         (
             f.get("cliente_nombre") or "", f.get("cliente_telefono") or None,
+            (f.get("cliente_dni") or "").strip() or None, (f.get("cliente_domicilio") or "").strip() or None,
             nuevo_vehiculo_id, precio_venta, anticipo,
             p.get("tasacion_id"), p.get("valor"), p.get("desc"),
             p.get("marca"), p.get("modelo"), p.get("version"), p.get("anio"), p.get("km"),
@@ -1092,6 +1094,30 @@ def agregar_garante(financiacion_id):
         ),
     )
     flash("Garante agregado.", "success")
+    return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+
+
+@bp.route("/<int:financiacion_id>/garantes/<int:garante_id>/editar", methods=["POST"])
+def editar_garante(financiacion_id, garante_id):
+    """Corrige o completa los datos de un garante ya cargado (06/10/2026)."""
+    if not _plan_de_agencia(financiacion_id):
+        flash("Plan de financiación no encontrado.", "error")
+        return redirect(url_for("financiacion.index"))
+    nombre = (request.form.get("nombre") or "").strip()
+    if not nombre:
+        flash("El nombre del garante es obligatorio.", "error")
+        return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
+    execute(
+        "UPDATE garantes SET nombre = ?, dni = ?, telefono = ?, domicilio = ? WHERE id = ? AND financiacion_id = ?",
+        (
+            nombre,
+            (request.form.get("dni") or "").strip() or None,
+            (request.form.get("telefono") or "").strip() or None,
+            (request.form.get("domicilio") or "").strip() or None,
+            garante_id, financiacion_id,
+        ),
+    )
+    flash("Garante actualizado.", "success")
     return redirect(url_for("financiacion.detalle", financiacion_id=financiacion_id))
 
 

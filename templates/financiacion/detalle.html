@@ -61,6 +61,16 @@
     </div>
     <div class="grid-2">
       <div>
+        <label>DNI del comprador</label>
+        <input type="text" name="cliente_dni" value="{{ fin.cliente_dni or '' }}" inputmode="numeric">
+      </div>
+      <div>
+        <label>Domicilio del comprador</label>
+        <input type="text" name="cliente_domicilio" value="{{ fin.cliente_domicilio or '' }}">
+      </div>
+    </div>
+    <div class="grid-2">
+      <div>
         <label>Vehículo (al guardar, si está Disponible pasa a "Señado")</label>
         <select name="vehiculo_id">
           <option value="">— Sin vehículo asociado —</option>
@@ -138,19 +148,25 @@
   <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--border);">
     <h3 style="margin:0 0 8px;">Garantes</h3>
     {% if garantes %}
-    <table style="margin-bottom:12px;">
-      <tr class="fila-header"><th>Nombre</th><th>DNI</th><th>Teléfono</th><th>Domicilio</th><th></th></tr>
-      {% for g in garantes %}
-      <tr>
-        <td>{{ g.nombre }}</td><td>{{ g.dni or '-' }}</td><td>{{ g.telefono or '-' }}</td><td>{{ g.domicilio or '-' }}</td>
-        <td>
-          <form method="post" action="{{ url_for('financiacion.eliminar_garante', financiacion_id=fin.id, garante_id=g.id) }}">
-            <button class="btn-eliminar-foto" type="submit" title="Quitar garante">✕</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </table>
+    {% for g in garantes %}
+    <form method="post" action="{{ url_for('financiacion.editar_garante', financiacion_id=fin.id, garante_id=g.id) }}"
+          style="border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:10px;">
+      <div class="grid-2">
+        <div><label>Nombre</label><input type="text" name="nombre" value="{{ g.nombre }}" required></div>
+        <div><label>DNI</label><input type="text" name="dni" value="{{ g.dni or '' }}" inputmode="numeric"></div>
+      </div>
+      <div class="grid-2">
+        <div><label>Teléfono</label><input type="text" name="telefono" value="{{ g.telefono or '' }}"></div>
+        <div><label>Domicilio</label><input type="text" name="domicilio" value="{{ g.domicilio or '' }}"></div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+        <button class="btn btn-secondary btn-sm" type="submit">💾 Guardar garante</button>
+        <button class="btn btn-secondary btn-sm" type="submit" style="color:var(--red); border-color:var(--red);"
+                formaction="{{ url_for('financiacion.eliminar_garante', financiacion_id=fin.id, garante_id=g.id) }}"
+                formnovalidate onclick="return window.confirm('¿Quitar a este garante?');">🗑️ Quitar</button>
+      </div>
+    </form>
+    {% endfor %}
     {% else %}
     <p style="color:var(--text-dim); font-size:13px;">Todavía no cargaste garantes.</p>
     {% endif %}

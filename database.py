@@ -516,6 +516,9 @@ def _migrar_financiaciones(conn):
         "periodicidad": "TEXT NOT NULL DEFAULT 'mensual'",
         "plazo_meses": "INTEGER NOT NULL DEFAULT 0",
         "tasa_interes_punitorio": "REAL NOT NULL DEFAULT 0",
+        # 06/10/2026: datos del comprador editables en el trámite de firma.
+        "cliente_dni": "TEXT",
+        "cliente_domicilio": "TEXT",
     }
     for columna, tipo in nuevas_columnas.items():
         if columna not in columnas_actuales:

@@ -156,9 +156,12 @@
     {% endif %}
     {% if venta_abierta.observaciones %}<p style="color:var(--text-dim); font-size:13px;">{{ venta_abierta.observaciones }}</p>{% endif %}
     {% elif plan_pendiente %}
-    <p style="margin-top:0;">Este vehículo está señado por un <b>crédito de Financiación en trámite</b>
-      ({{ plan_pendiente.cliente_nombre or 'cliente a cargar' }}) —
-      <a href="{{ url_for('financiacion.detalle', financiacion_id=plan_pendiente.id) }}">ir al plan</a> para cerrar la operación o cancelar la reserva.</p>
+    <a href="{{ url_for('financiacion.detalle', financiacion_id=plan_pendiente.id) }}"
+       style="display:block; border:1px solid var(--gold); border-radius:10px; padding:14px; margin-bottom:6px; color:inherit;">
+      <p style="margin:0 0 10px;">Este vehículo está señado por un <b>crédito de Financiación en trámite</b>
+        ({{ plan_pendiente.cliente_nombre or 'cliente a cargar' }}).</p>
+      <span class="btn btn-primary btn-sm">➡️ Ir al trámite de venta (garantes, cerrar o cancelar)</span>
+    </a>
     {% else %}
     <p style="color:var(--text-dim); font-size:13px; margin-top:0;">Está marcado como Señado a mano, sin seña registrada.</p>
     {% endif %}
