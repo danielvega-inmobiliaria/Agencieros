@@ -507,6 +507,16 @@ def _migrar_demo(conn):
         conn.execute("ALTER TABLE agencias ADD COLUMN es_demo INTEGER NOT NULL DEFAULT 0")
     if "demo_reset_at" not in cols:
         conn.execute("ALTER TABLE agencias ADD COLUMN demo_reset_at TEXT")
+    # 08/10/2026: la demo pasó a ser solo por invitación (link con código).
+    if "demo_codigo" not in cols:
+        conn.execute("ALTER TABLE agencias ADD COLUMN demo_codigo TEXT")
+    # Agencias que se registraron con link de invitación a la demo (vs. landing).
+    if "origen" not in cols:
+        conn.execute("ALTER TABLE agencias ADD COLUMN origen TEXT")
+    if "origen_codigo" not in cols:
+        conn.execute("ALTER TABLE agencias ADD COLUMN origen_codigo TEXT")
+    if "demo_ultimo_ingreso" not in cols:
+        conn.execute("ALTER TABLE agencias ADD COLUMN demo_ultimo_ingreso TEXT")
 
 
 def _migrar_financiaciones(conn):

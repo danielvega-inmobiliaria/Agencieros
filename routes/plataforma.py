@@ -67,7 +67,7 @@ def _armar_filas():
     agencias_rows = query(
         """SELECT a.id, a.nombre_agencia, a.email, a.telefono AS telefono_registro,
                   a.contacto_referencia, a.email_verificado, a.activo, a.plan,
-                  a.created_at, a.ultima_actividad,
+                  a.created_at, a.ultima_actividad, a.origen, a.demo_ultimo_ingreso,
                   c.telefono AS telefono_comercial, c.direccion, c.ciudad, c.provincia
            FROM agencias a
            LEFT JOIN agencia_config c ON c.agencia_id = a.id
@@ -125,6 +125,8 @@ def _armar_filas():
             "direccion": a["direccion"],
             "ciudad": a["ciudad"],
             "provincia": a["provincia"],
+            "por_invitacion": a["origen"] == "invitacion",
+            "demo_ultimo_ingreso_fmt": _formatear_fecha(a["demo_ultimo_ingreso"]),
             "verificada": bool(a["email_verificado"]),
             "activa": bool(a["activo"]),
             "alta": a["created_at"],
@@ -184,6 +186,7 @@ def agencias():
     return render_template(
         "plataforma/agencias.html",
         filas=filas, resumen=resumen,
+        demo_codigo=(query("SELECT demo_codigo FROM agencias WHERE es_demo = 1 ORDER BY id LIMIT 1", one=True) or {"demo_codigo": None})["demo_codigo"],
         q=q, orden=orden, direccion=direccion, orden_opciones=ORDEN_OPCIONES,
     )
 
@@ -284,3 +287,15 @@ def responder_mensaje(agencia_id):
         )
     execute("UPDATE mensajes_admin SET respondida = 1, leido = 1 WHERE agencia_id = ? AND respondida = 0", (agencia_id,))
     return redirect(url_for("plataforma.mensajes"))
+
+
+@bp.route("/demo/codigo", methods=["POST"])
+def renovar_codigo_demo():
+    """Genera un código nuevo para el link de la demo (08/10/2026). Corta el
+    acceso a quien tenía el link anterior y a las sesiones demo abiertas."""
+    import secrets
+    from demo_agencia import reiniciar_demo
+    reiniciar_demo()  # asegura que la agencia demo exista
+    execute("UPDATE agencias SET demo_codigo = ? WHERE es_demo = 1", (secrets.token_urlsafe(6),))
+    flash("Código de demo renovado: el link anterior dejó de funcionar y se cerraron las sesiones abiertas.", "success")
+    return redirect(url_for("plataforma.agencias"))

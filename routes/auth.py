@@ -52,21 +52,50 @@ def _loguear_superadmin(admin):
     session["superadmin_nombre"] = admin["nombre"] or "Admin AGENCIEROS"
 
 
-@bp.route("/demo")
-def demo():
-    """Entrada a la agencia DEMO sin mail ni contraseña (06/10/2026). La
-    primera entrada de cada día reinicia los datos de ejemplo."""
+def _agencia_demo():
+    return query("SELECT * FROM agencias WHERE es_demo = 1 ORDER BY id LIMIT 1", one=True)
+
+
+def _codigo_demo_valido(codigo):
+    ag = _agencia_demo()
+    return bool(codigo and ag and codigo == (ag["demo_codigo"] or ""))
+
+
+def _entrar_demo(codigo, visitante_id=None):
+    """Loguea en la agencia DEMO. La primera entrada de cada día reinicia
+    los datos de ejemplo. `visitante_id` = agencia real (registrada por
+    invitación) que está mirando la demo."""
     from demo_agencia import reiniciar_demo, _hoy_ar
-    agencia = query("SELECT * FROM agencias WHERE es_demo = 1 ORDER BY id LIMIT 1", one=True)
+    agencia = _agencia_demo()
     vacia = agencia and not query("SELECT 1 FROM vehiculos WHERE agencia_id = ? LIMIT 1", (agencia["id"],), one=True)
     if not agencia or vacia or agencia["demo_reset_at"] != str(_hoy_ar()):
         reiniciar_demo()
-        agencia = query("SELECT * FROM agencias WHERE es_demo = 1 ORDER BY id LIMIT 1", one=True)
+        agencia = _agencia_demo()
     usuario = query("SELECT * FROM agencia_usuarios WHERE agencia_id = ? AND rol = 'dueno' ORDER BY id LIMIT 1",
                     (agencia["id"],), one=True)
     _loguear(agencia, usuario)
     session["es_demo"] = True
+    session["demo_codigo"] = codigo
+    if visitante_id:
+        session["demo_visitante_id"] = visitante_id
+        execute("UPDATE agencias SET demo_ultimo_ingreso = datetime('now') WHERE id = ?", (visitante_id,))
     return redirect(url_for("dashboard.index"))
+
+
+@bp.route("/demo")
+def demo():
+    """Demo por invitación (08/10/2026). El link lleva ?c=CODIGO (se genera y
+    renueva desde el Panel de Agencias). Quien lo abre tiene que registrar
+    su agencia con todos sus datos y recién ahí entra a la demo; en el Panel
+    queda marcado "Por invitación". El administrador entra directo."""
+    codigo = (request.args.get("c") or "").strip()
+    if not _codigo_demo_valido(codigo):
+        return render_template("auth/demo_invitacion.html"), 403
+    if session.get("superadmin_id"):
+        return _entrar_demo(codigo)
+    session["invitacion_demo"] = codigo
+    flash("Te invitaron a ver la demo de AGENCIEROS: completá los datos de tu agencia y entrás.", "success")
+    return redirect(url_for("auth.registro"))
 
 
 @bp.route("/login", methods=["GET", "POST"])
@@ -110,6 +139,8 @@ def login():
             session["agencia_pendiente_id"] = agencia["id"]
             flash("Todavía no validaste tu mail -- te mandamos un código nuevo.", "error")
             return redirect(url_for("auth.verificar"))
+        if agencia["origen"] == "invitacion" and _codigo_demo_valido(agencia["origen_codigo"]):
+            return _entrar_demo(agencia["origen_codigo"], agencia["id"])
         _loguear(agencia, usuario)
         return redirect(url_for("precios.index"))
     return render_template("auth/login.html")
@@ -117,6 +148,7 @@ def login():
 
 @bp.route("/registro", methods=["GET", "POST"])
 def registro():
+    invitacion = session.get("invitacion_demo") if _codigo_demo_valido(session.get("invitacion_demo")) else None
     if request.method == "POST":
         nombre_agencia = request.form.get("nombre_agencia", "").strip()
         email = request.form.get("email", "").strip().lower()
@@ -138,32 +170,34 @@ def registro():
                 "Completá nombre de la agencia, teléfono, dirección, ciudad, provincia, contacto de referencia, email y contraseña.",
                 "error",
             )
-            return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR)
+            return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR, invitacion=bool(invitacion))
         if not telefono.isdigit() or not 8 <= len(telefono) <= 15:
             flash(
                 "El teléfono tiene que tener solo números, con código de área (ej: 3413017371).",
                 "error",
             )
-            return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR)
+            return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR, invitacion=bool(invitacion))
         if provincia not in PROVINCIAS_AR:
             flash("Elegí una provincia de la lista.", "error")
-            return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR)
+            return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR, invitacion=bool(invitacion))
         if len(password) < 6:
             flash("La contraseña tiene que tener al menos 6 caracteres.", "error")
-            return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR)
+            return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR, invitacion=bool(invitacion))
         if password != password2:
             flash("Las contraseñas no coinciden.", "error")
-            return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR)
+            return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR, invitacion=bool(invitacion))
         from database import get_db, mail_ocupado
         if mail_ocupado(get_db(), email):
             flash("Ya hay una cuenta registrada con ese email.", "error")
-            return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR)
+            return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR, invitacion=bool(invitacion))
 
         agencia_id = execute(
             """INSERT INTO agencias
-               (nombre_agencia, email, password_hash, telefono, contacto_referencia, email_verificado, activo)
-               VALUES (?, ?, ?, ?, ?, 0, 1)""",
-            (nombre_agencia, email, generate_password_hash(password), telefono, contacto_referencia),
+               (nombre_agencia, email, password_hash, telefono, contacto_referencia, email_verificado, activo,
+                origen, origen_codigo)
+               VALUES (?, ?, ?, ?, ?, 0, 1, ?, ?)""",
+            (nombre_agencia, email, generate_password_hash(password), telefono, contacto_referencia,
+             "invitacion" if invitacion else "landing", invitacion),
         )
         # Usuario dueño de la agencia (28/09/2026): mismo mail y contraseña.
         execute(
@@ -186,7 +220,7 @@ def registro():
         try:
             from utils.notificaciones import notificar_admin
             notificar_admin(
-                f"Nueva agencia registrada: {nombre_agencia}",
+                f"Nueva agencia registrada{' (POR INVITACIÓN A LA DEMO)' if invitacion else ''}: {nombre_agencia}",
                 f"{nombre_agencia} — {ciudad}, {provincia}\nTeléfono: {telefono}\nMail: {email}\n"
                 f"Contacto: {contacto_referencia}\n(Falta que valide el código del mail.)",
                 ruta=f"/plataforma/agencias/{agencia_id}",
@@ -202,7 +236,7 @@ def registro():
             # queda en la consola del servidor.
             flash("No se pudo enviar el mail todavía (revisá la consola del servidor para el código).", "error")
         return redirect(url_for("auth.verificar"))
-    return render_template("auth/registro.html", prev={}, provincias=PROVINCIAS_AR)
+    return render_template("auth/registro.html", prev={}, provincias=PROVINCIAS_AR, invitacion=bool(invitacion))
 
 
 @bp.route("/verificar", methods=["GET", "POST"])
@@ -220,6 +254,10 @@ def verificar():
         if validar_codigo(agencia_id, codigo):
             session.pop("agencia_pendiente_id", None)
             agencia = query("SELECT * FROM agencias WHERE id = ?", (agencia_id,), one=True)
+            if agencia["origen"] == "invitacion" and _codigo_demo_valido(agencia["origen_codigo"]):
+                # Registrada por invitación: entra a la demo (sin evento del Pixel).
+                flash("Cuenta verificada -- te dejamos recorrer la demo.", "success")
+                return _entrar_demo(agencia["origen_codigo"], agencia["id"])
             _loguear(agencia)
             # Meta Pixel (21/09/2026): CompleteRegistration se dispara recién
             # acá, con el mail ya validado -- no por un parametro de URL como

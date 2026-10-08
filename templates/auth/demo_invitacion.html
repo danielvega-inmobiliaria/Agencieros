@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo por invitación — Agencieros</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="brand auth-brand">AGENCIEROS<span>Consultá, tasá, comprá, vendé.</span></div>
+    <div class="auth-card" style="text-align:center;">
+      <h2>La demo es por invitación</h2>
+      <p style="color:var(--text-dim);">Este link no es válido o ya venció. Si querés ver cómo funciona AGENCIEROS, pedinos un link de invitación o registrá tu agencia y probala gratis 30 días.</p>
+      <a class="btn btn-primary" style="width:100%; margin-top:14px;" href="{{ url_for('auth.registro') }}">Registrar mi agencia</a>
+      <a class="btn btn-secondary" style="width:100%; margin-top:10px;" href="{{ url_for('auth.login') }}">Ya tengo cuenta</a>
+    </div>
+  </div>
+</body>
+</html>

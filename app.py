@@ -144,6 +144,14 @@ def create_app():
 
     @app.before_request
     def _proteger_demo():
+        # Si se renovó el código de la demo, se corta a quien la estaba usando.
+        if session.get("es_demo") and request.endpoint not in ("static", "auth.demo", "auth.logout"):
+            from database import query as _q
+            ag = _q("SELECT demo_codigo FROM agencias WHERE id = ?", (session.get("agencia_id"),), one=True)
+            if not ag or not ag["demo_codigo"] or ag["demo_codigo"] != session.get("demo_codigo"):
+                session.clear()
+                flash("La demo se cerró. Ingresá con tu email y contraseña.", "error")
+                return redirect(url_for("auth.login"))
         if session.get("es_demo") and request.method == "POST" and (request.endpoint or "") in DEMO_BLOQUEADOS:
             flash("En la demo esta acción está desactivada. ¡Registrá tu agencia para usarla!", "error")
             return redirect(request.referrer or url_for("dashboard.index"))
