@@ -291,6 +291,60 @@
   {% endif %}
 </div>
 
+{# Garantes y datos del comprador en créditos ya firmados (08/10/2026): antes solo se veían mientras estaba pendiente de firma. #}
+{% if fin.estado != 'pendiente_firma' %}
+<div class="panel">
+  <h2>Comprador y garantes</h2>
+  <p style="margin:0 0 10px; font-size:14px;">
+    <b style="color:var(--text);">Comprador:</b> {{ fin.cliente_nombre or '-' }}
+    {% if fin.cliente_dni %} · DNI {{ fin.cliente_dni }}{% endif %}
+    {% if fin.cliente_telefono %} · {{ fin.cliente_telefono }}{% endif %}
+    {% if fin.cliente_domicilio %} · {{ fin.cliente_domicilio }}{% endif %}
+  </p>
+  {% if garantes %}
+  {% for g in garantes %}
+  {% if es_vendedor %}
+  <div style="border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:10px; font-size:14px;">
+    <b style="color:var(--text);">Garante:</b> {{ g.nombre }}{% if g.dni %} · DNI {{ g.dni }}{% endif %}{% if g.telefono %} · {{ g.telefono }}{% endif %}{% if g.domicilio %} · {{ g.domicilio }}{% endif %}
+  </div>
+  {% else %}
+  <form method="post" action="{{ url_for('financiacion.editar_garante', financiacion_id=fin.id, garante_id=g.id) }}"
+        style="border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:10px;">
+    <div class="grid-2">
+      <div><label>Nombre</label><input type="text" name="nombre" value="{{ g.nombre }}" required></div>
+      <div><label>DNI</label><input type="text" name="dni" value="{{ g.dni or '' }}" inputmode="numeric"></div>
+    </div>
+    <div class="grid-2">
+      <div><label>Teléfono</label><input type="text" name="telefono" value="{{ g.telefono or '' }}"></div>
+      <div><label>Domicilio</label><input type="text" name="domicilio" value="{{ g.domicilio or '' }}"></div>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+      <button class="btn btn-secondary btn-sm" type="submit">💾 Guardar garante</button>
+      <button class="btn btn-secondary btn-sm" type="submit" style="color:var(--red); border-color:var(--red);"
+              formaction="{{ url_for('financiacion.eliminar_garante', financiacion_id=fin.id, garante_id=g.id) }}"
+              formnovalidate onclick="return window.confirm('¿Quitar a este garante?');">🗑️ Quitar</button>
+    </div>
+  </form>
+  {% endif %}
+  {% endfor %}
+  {% else %}
+  <p style="color:var(--text-dim); font-size:13px;">Este crédito no tiene garantes cargados.</p>
+  {% endif %}
+  {% if not es_vendedor %}
+  <details style="margin-top:6px;">
+    <summary style="cursor:pointer; font-size:14px;">+ Agregar garante</summary>
+    <form method="post" action="{{ url_for('financiacion.agregar_garante', financiacion_id=fin.id) }}" style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-top:10px;">
+      <label style="font-size:13px; color:var(--text-dim);">Nombre<input type="text" name="nombre" required style="display:block; padding:6px; margin-top:4px;"></label>
+      <label style="font-size:13px; color:var(--text-dim);">DNI<input type="text" name="dni" style="display:block; padding:6px; margin-top:4px;"></label>
+      <label style="font-size:13px; color:var(--text-dim);">Teléfono<input type="text" name="telefono" style="display:block; padding:6px; margin-top:4px;"></label>
+      <label style="font-size:13px; color:var(--text-dim);">Domicilio<input type="text" name="domicilio" style="display:block; padding:6px; margin-top:4px;"></label>
+      <button class="btn btn-secondary btn-sm" type="submit">Agregar</button>
+    </form>
+  </details>
+  {% endif %}
+</div>
+{% endif %}
+
 {# Cuotas compactas (01/10/2026, pedido de Daniel desde el celu). #}
 {% macro fecha(f) %}{% if f and f|length >= 10 %}{{ f[8:10] }}/{{ f[5:7] }}/{{ f[:4] }}{% else %}{{ f or '-' }}{% endif %}{% endmacro %}
 {% macro pesos(n) %}${{ "{:,.0f}".format(n or 0).replace(",", ".") }}{% endmacro %}
