@@ -608,7 +608,7 @@ def detalle(financiacion_id):
     # (si no, al recargar la página desaparecería del <select>).
     garantes = query(
         "SELECT * FROM garantes WHERE financiacion_id = ? ORDER BY id", (financiacion_id,)
-    ) if fin["estado"] == "pendiente_firma" else []
+    )  # 08/10/2026: también en créditos activos/finalizados (antes quedaba [] y parecía que se perdían)
     vehiculos_disponibles = query(
         "SELECT * FROM vehiculos WHERE (estado = 'disponible' OR id = ?) AND agencia_id = ? ORDER BY created_at DESC",
         (fin["vehiculo_id"] or 0, session["agencia_id"]),

@@ -171,7 +171,7 @@
     <p style="color:var(--text-dim); font-size:13px;">Todavía no cargaste garantes.</p>
     {% endif %}
     <form method="post" action="{{ url_for('financiacion.agregar_garante', financiacion_id=fin.id) }}" style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
-      <label style="font-size:13px; color:var(--text-dim);">Nombre<input type="text" name="nombre" required style="display:block; padding:6px; margin-top:4px;"></label>
+      <label style="font-size:13px; color:var(--text-dim);">Nombre<input type="text" name="nombre" id="g-nombre-nuevo" required style="display:block; padding:6px; margin-top:4px;"></label>
       <label style="font-size:13px; color:var(--text-dim);">DNI<input type="text" name="dni" style="display:block; padding:6px; margin-top:4px;"></label>
       <label style="font-size:13px; color:var(--text-dim);">Teléfono<input type="text" name="telefono" style="display:block; padding:6px; margin-top:4px;"></label>
       <label style="font-size:13px; color:var(--text-dim);">Domicilio<input type="text" name="domicilio" style="display:block; padding:6px; margin-top:4px;"></label>
@@ -193,6 +193,21 @@
     <span style="color:var(--gold-light); font-size:12px;">Para cerrar la operación necesitás cargar cliente y vehículo.</span>
     {% endif %}
   </div>
+<script>
+// Aviso: si quedó un garante escrito sin tocar "+ Agregar garante", no se guarda.
+(function(){
+  var fc=document.getElementById('form-confirmar-venta'), n=document.getElementById('g-nombre-nuevo');
+  if(!fc||!n) return;
+  fc.addEventListener('submit',function(e){
+    if(n.value.trim()){
+      e.preventDefault();
+      alert('Escribiste un garante ("'+n.value.trim()+'") pero todavía no lo agregaste. Tocá "+ Agregar garante" primero y después cerrá la operación.');
+      n.scrollIntoView({behavior:'smooth',block:'center'}); n.focus();
+    }
+  });
+})();
+</script>
+
 </div>
 {% endif %}
 
