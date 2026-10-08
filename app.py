@@ -16,6 +16,10 @@ from storage import uploads_dir
 LANDING_HOSTS = {"agencieros.net.ar", "www.agencieros.net.ar"}
 APP_URL = os.environ.get("APP_URL", "https://app.agencieros.net.ar").rstrip("/")
 LANDING_URL = os.environ.get("LANDING_URL", "https://agencieros.net.ar").rstrip("/")
+# Redes de AGENCIEROS (07/10/2026): botones "Seguinos" de la landing y del menú.
+# Instagram queda oculto hasta cargar su link (acá o en la variable REDES_INSTAGRAM_URL en Railway).
+REDES_FACEBOOK_URL = os.environ.get("REDES_FACEBOOK_URL", "https://www.facebook.com/share/1JCNAbynix/?mibextid=wwXIfr").strip()
+REDES_INSTAGRAM_URL = os.environ.get("REDES_INSTAGRAM_URL", "https://www.instagram.com/agencieros.app/").strip()
 
 # Meta Pixel (21/09/2026) -- ver 05_MARKETING/META_ADS/CAMPANA_AGENCIEROS.md.
 # Sin META_PIXEL_ID cargada en el entorno, el Pixel simplemente no se
@@ -125,6 +129,10 @@ def create_app():
     def _inject_rol():
         from utils.permisos import es_vendedor, es_dueno
         return {"es_vendedor": es_vendedor(), "es_dueno": es_dueno()}
+
+    @app.context_processor
+    def _inject_redes():
+        return {"redes_facebook": REDES_FACEBOOK_URL, "redes_instagram": REDES_INSTAGRAM_URL}
 
     @app.context_processor
     def _inject_demo():

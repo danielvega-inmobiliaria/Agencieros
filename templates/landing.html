@@ -180,6 +180,10 @@
     .final p { color: var(--dim); margin: 0 auto 30px; max-width: 30em; }
     .final .cta-row { justify-content: center; }
 
+    .seguinos { text-align: center; padding: 8px 0 40px; }
+    .seguinos h3 { margin: 0 0 6px; font-size: 1.15rem; }
+    .seguinos p { margin: 0 0 14px; color: var(--dim); font-size: .95rem; }
+    .seguinos .cta-row { justify-content: center; }
     footer { border-top: 1px solid var(--border); padding: 32px 0 44px; color: var(--dim); font-size: .85rem; }
     footer .wrap { display: flex; justify-content: center; text-align: center; }
     footer .flogo { font-weight: 800; letter-spacing: .06em; color: var(--gold-light); }
@@ -456,9 +460,25 @@
     </div>
   </main>
 
+  {% if redes_facebook or redes_instagram %}
+  <section class="seguinos">
+    <div class="wrap">
+      <h3>Seguinos en redes</h3>
+      <p>Novedades de la app, tips para tu agencia y nuevas funciones.</p>
+      <div class="cta-row">
+        {% if redes_instagram %}<a class="btn btn-ghost" href="{{ redes_instagram }}" target="_blank" rel="noopener">Instagram</a>{% endif %}
+        {% if redes_facebook %}<a class="btn btn-ghost" href="{{ redes_facebook }}" target="_blank" rel="noopener">Facebook</a>{% endif %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
   <footer>
     <div class="wrap">
-      <div><span class="flogo">AGENCIEROS</span> &nbsp;·&nbsp; Consultá, tasá, comprá, vendé.</div>
+      <div><span class="flogo">AGENCIEROS</span> &nbsp;·&nbsp; Consultá, tasá, comprá, vendé.
+        {% if redes_facebook %}&nbsp;·&nbsp; <a href="{{ redes_facebook }}" target="_blank" rel="noopener">Facebook</a>{% endif %}
+        {% if redes_instagram %}&nbsp;·&nbsp; <a href="{{ redes_instagram }}" target="_blank" rel="noopener">Instagram</a>{% endif %}
+      </div>
     </div>
   </footer>
 

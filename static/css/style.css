@@ -883,3 +883,7 @@ html, body { max-width: 100%; overflow-x: hidden; overflow-x: clip; } /* clip: n
 .banner-demo { background: rgba(217,164,65,.14); border: 1px solid var(--gold); color: var(--gold-light);
   border-radius: 10px; padding: 9px 12px; font-size: 13px; margin-bottom: 14px; line-height: 1.4; }
 .banner-demo a { color: var(--text); text-decoration: underline; white-space: nowrap; }
+
+/* "Seguinos" en el menú (07/10/2026) */
+.sidebar-seguinos { margin-top: 10px; font-size: 13px; color: var(--text-dim); display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.sidebar-seguinos a { color: var(--gold-light); padding: 8px 0; }
