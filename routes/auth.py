@@ -98,13 +98,37 @@ def demo():
     return redirect(url_for("auth.registro"))
 
 
+def _clave_ok(hash_guardado, password):
+    """Compara la contraseña. Tolera espacios sobrantes al principio/final
+    (el teclado del celu a veces los agrega al autocompletar): si la clave
+    tal cual no coincide, prueba sin esos espacios."""
+    if not hash_guardado:
+        return False
+    if check_password_hash(hash_guardado, password):
+        return True
+    limpia = password.strip()
+    return limpia != password and bool(limpia) and check_password_hash(hash_guardado, limpia)
+
+
+def _log_fallo_login(email, motivo, password):
+    """Deja en los logs de Railway por qué falló un ingreso (10/10/2026,
+    ingresos que 'rebotaban' un par de veces). NUNCA se escribe la clave:
+    solo su largo y si tenía espacios o caracteres raros, para distinguir
+    'el mail no existe' de 'la clave no coincide' de 'viene mal tipeada'."""
+    print(f"[login] fallo email={email!r} motivo={motivo} largo_clave={len(password)} "
+          f"espacios_borde={password != password.strip()} no_ascii={not password.isascii()}", flush=True)
+
+
 @bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         admin = query("SELECT * FROM plataforma_admins WHERE email = ? AND activo = 1", (email,), one=True)
-        if admin and check_password_hash(admin["password_hash"], password):
+        admin_ok = bool(admin) and _clave_ok(admin["password_hash"], password)
+        if admin and not admin_ok:
+            _log_fallo_login(email, "clave_no_coincide_admin", password)
+        if admin_ok:
             _loguear_superadmin(admin)
             return redirect(url_for("plataforma.agencias"))
         # Login por usuario de agencia (28/09/2026). Si el mail no es de
@@ -112,24 +136,26 @@ def login():
         # cada agencia) se prueba con el mail de la agencia como antes.
         usuario = query("SELECT * FROM agencia_usuarios WHERE lower(email) = ?", (email,), one=True)
         if usuario:
-            if not check_password_hash(usuario["password_hash"], password):
+            if not _clave_ok(usuario["password_hash"], password):
+                _log_fallo_login(email, "clave_no_coincide_usuario", password)
                 flash("Email o contraseña incorrectos.", "error")
-                return render_template("auth/login.html")
+                return render_template("auth/login.html", email=email)
             if not usuario["activo"]:
                 flash("Tu usuario está desactivado. Consultá con el dueño de la agencia.", "error")
-                return render_template("auth/login.html")
+                return render_template("auth/login.html", email=email)
             agencia = query("SELECT * FROM agencias WHERE id = ?", (usuario["agencia_id"],), one=True)
         else:
             agencia = query("SELECT * FROM agencias WHERE email = ?", (email,), one=True)
-            if not agencia or not check_password_hash(agencia["password_hash"], password):
+            if not agencia or not _clave_ok(agencia["password_hash"], password):
+                _log_fallo_login(email, "mail_no_existe" if not agencia else "clave_no_coincide_agencia", password)
                 flash("Email o contraseña incorrectos.", "error")
-                return render_template("auth/login.html")
+                return render_template("auth/login.html", email=email)
         if not agencia or not agencia["activo"]:
             flash("Esta cuenta está desactivada.", "error")
-            return render_template("auth/login.html")
+            return render_template("auth/login.html", email=email)
         if not agencia["email_verificado"] and usuario and usuario["rol"] == "vendedor":
             flash("La agencia todavía no validó su mail. Pedile al dueño que entre primero.", "error")
-            return render_template("auth/login.html")
+            return render_template("auth/login.html", email=email)
         if not agencia["email_verificado"]:
             # Sin validar todavía -- manda un código nuevo y lo lleva
             # directo a la pantalla de verificación en vez de dejarlo
