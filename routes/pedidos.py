@@ -53,7 +53,7 @@ def _buscar_matches_permuta(agencia_id, marca, modelo, excluir_pedido_id=None):
     return propios, red
 
 
-def _buscar_oferta_para_pedido(marca, modelo, anio_desde=None, precio_maximo=None):
+def _buscar_oferta_para_pedido(marca, modelo, anio_desde=None, precio_maximo=None, anio_hasta=None):
     """Qué se le podría ofrecer ya a un cliente que busca marca/modelo:
     Disponible + Por ingresar + En reparación (Stock) + Red · Ofrece +
     Posible entrega (el vehículo de permuta de otro pedido activo) — usa el
@@ -70,9 +70,31 @@ def _buscar_oferta_para_pedido(marca, modelo, anio_desde=None, precio_maximo=Non
     filtros = {"marca": marca}
     if modelo:
         filtros["modelo"] = modelo
-    if anio_desde:
-        filtros["anio"] = anio_desde
-    return [r for r in buscar_combinado(filtros, session["agencia_id"]) if r["origen"] != "red_busca"]
+    # Rango de años del pedido (Desde-Hasta, ±1 de margen): antes se usaba solo
+    # "Desde" ±1, y un auto dentro del rango pero más nuevo no matcheaba
+    # (Kwid 2019–2022 con un 2021 en stock: avisaba al ingresarlo pero no
+    # aparecía en Matches).
+    try:
+        desde = int(anio_desde) if anio_desde else None
+        hasta = int(anio_hasta) if anio_hasta else None
+    except (TypeError, ValueError):
+        desde = hasta = None
+    if desde and not hasta:
+        hasta = desde
+    if hasta and not desde:
+        desde = hasta
+
+    def _anio_ok(r):
+        a = r.get("anio")
+        if not (desde and a):
+            return True
+        try:
+            return desde - 1 <= int(a) <= hasta + 1
+        except (TypeError, ValueError):
+            return True
+
+    return [r for r in buscar_combinado(filtros, session["agencia_id"])
+            if r["origen"] != "red_busca" and _anio_ok(r)]
 
 
 def _con_fecha_y_dias(pedido):
@@ -168,7 +190,8 @@ def nuevo():
         # 26): así se avisa de una si ya hay una coincidencia, sin esperar a
         # que entre stock nuevo.
         ofertas = _buscar_oferta_para_pedido(
-            f.get("marca"), f.get("modelo"), anio_desde_int, precio_maximo_val
+            f.get("marca"), f.get("modelo"), anio_desde_int, precio_maximo_val,
+            anio_hasta=f.get("anio_hasta")
         )
         sin_coincidencias = False
         if ofertas:
@@ -231,7 +254,8 @@ def detalle(pedido_id):
     # Por ingresar, En reparación, Red Ofrece y Posible entrega — pedido de
     # Daniel 15/09/2026, continuación 26).
     ofertas = _buscar_oferta_para_pedido(
-        pedido.get("marca"), pedido.get("modelo"), pedido.get("anio_desde"), pedido.get("precio_maximo")
+        pedido.get("marca"), pedido.get("modelo"), pedido.get("anio_desde"), pedido.get("precio_maximo"),
+        anio_hasta=pedido.get("anio_hasta")
     )
 
     from routes.red import publicacion_de_pedido

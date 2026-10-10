@@ -39,7 +39,8 @@ def _matches_por_pedido():
     for p_raw in pedidos:
         p = _con_fecha_y_dias(p_raw)
         ofertas = _buscar_oferta_para_pedido(
-            p.get("marca"), p.get("modelo"), p.get("anio_desde"), p.get("precio_maximo")
+            p.get("marca"), p.get("modelo"), p.get("anio_desde"), p.get("precio_maximo"),
+            anio_hasta=p.get("anio_hasta")
         )
         matches_propios, matches_red = [], []
         if p.get("forma_pago") == "permuta" and p.get("permuta_marca"):
