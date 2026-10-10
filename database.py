@@ -597,6 +597,8 @@ def _migrar_tomas_checklist_ampliado(conn):
             conn.execute(f"ALTER TABLE tomas_vehiculo ADD COLUMN comentario_{codigo} TEXT")
     if "codigo_falla" not in columnas_actuales:
         conn.execute("ALTER TABLE tomas_vehiculo ADD COLUMN codigo_falla TEXT")
+    if "levantavidrios_tipo" not in columnas_actuales:
+        conn.execute("ALTER TABLE tomas_vehiculo ADD COLUMN levantavidrios_tipo TEXT")
     if "ultimo_service" not in columnas_actuales:
         conn.execute("ALTER TABLE tomas_vehiculo ADD COLUMN ultimo_service TEXT")
 

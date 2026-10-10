@@ -271,8 +271,10 @@ def _texto_equipamiento(toma):
     lineas = []
     for codigo, label in GRUPO_ACCESORIOS:
         calificacion = toma[codigo]
-        if not calificacion:
-            continue
+        if not calificacion or calificacion == "No posee":
+            continue  # lo que el auto no tiene no se muestra
+        if codigo == "levantavidrios" and toma["levantavidrios_tipo"]:
+            label = "Lev. vidr. " + ("Man." if toma["levantavidrios_tipo"] == "Manual" else "Elect.")
         linea = f"{label} ({calificacion})"
         comentario = toma[f"comentario_{codigo}"]
         if comentario:
@@ -503,6 +505,8 @@ def nueva():
                 *[(f.get(f"comentario_{codigo}") or "").strip() or None for codigo, _ in PUNTOS],
             ),
         )
+        if f.get("levantavidrios_tipo") in ("Manual", "Eléctrico"):
+            execute("UPDATE tomas_vehiculo SET levantavidrios_tipo = ? WHERE id = ?", (f["levantavidrios_tipo"], toma_id))
         flash("Toma registrada. Ahora sumá las fotos y marcá los daños de la carrocería.", "success")
         return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
     return render_template(

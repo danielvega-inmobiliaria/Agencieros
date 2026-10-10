@@ -68,10 +68,18 @@
       <div class="punto-check">
         <div class="punto-check-fila">
           <span class="punto-check-label">{{ label }}</span>
+          {% if key == 'levantavidrios' %}<span style="display:flex; gap:6px;">
+          <select name="levantavidrios_tipo" title="Tipo de levantavidrios">
+            <option value="">Man./Elect.</option>
+            <option value="Manual">Manual</option>
+            <option value="Eléctrico">Eléctrico</option>
+          </select>
+          {% endif %}
           <select name="{{ key }}" onchange="actualizarPuntoCheck(this)">
             {% for c in calificaciones_punto %}<option value="{{ c }}" {{ 'selected' if c == 'Bueno' }}>{{ c }}</option>{% endfor %}
             <option value="">Sin evaluar</option>
           </select>
+          {% if key == 'levantavidrios' %}</span>{% endif %}
         </div>
         <div class="punto-check-detalle">
           <input type="text" name="comentario_{{ key }}" placeholder="Comentario / detalle de la reparación">
