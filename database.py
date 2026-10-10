@@ -832,7 +832,7 @@ def _corregir_financiacion_cruze_lezcano(conn):
 
 
 def _sumar_meses_simple(fecha, meses):
-    """Igual criterio que \`_sumar_meses\` de routes/financiacion.py (evita
+    """Igual criterio que `_sumar_meses` de routes/financiacion.py (evita
     importar routes desde database.py): suma meses respetando fin de mes."""
     mes_total = fecha.month - 1 + meses
     anio = fecha.year + mes_total // 12

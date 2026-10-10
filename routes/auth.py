@@ -31,6 +31,7 @@ def _loguear(agencia, usuario=None):
             "SELECT * FROM agencia_usuarios WHERE agencia_id = ? AND rol = 'dueno' AND activo = 1 ORDER BY id LIMIT 1",
             (agencia["id"],), one=True,
         )
+    print(f"[login] ok email={agencia['email']!r} {_instancia()}", flush=True)
     session.clear()
     session["agencia_id"] = agencia["id"]
     session["agencia_nombre"] = agencia["nombre_agencia"]
@@ -46,6 +47,7 @@ def _loguear(agencia, usuario=None):
 def _loguear_superadmin(admin):
     # Admin de la plataforma (28/09/2026): sesión sin agencia_id, así no
     # puede ver ni cargar datos de negocio de ninguna agencia.
+    print(f"[login] ok admin email={admin['email']!r} {_instancia()}", flush=True)
     session.clear()
     session["superadmin_id"] = admin["id"]
     session["superadmin_email"] = admin["email"]
@@ -110,13 +112,28 @@ def _clave_ok(hash_guardado, password):
     return limpia != password and bool(limpia) and check_password_hash(hash_guardado, limpia)
 
 
+def _instancia():
+    """Qué proceso/despliegue atendió el pedido y con qué base. Si los
+    ingresos fallan 'a veces', comparando estas marcas entre un fallo y un
+    ingreso OK se ve si hay dos instancias (o dos bases) respondiendo."""
+    import os
+    from database import DB_PATH
+    try:
+        tam = os.path.getsize(DB_PATH)
+        n_ag = query("SELECT COUNT(*) AS n FROM agencias", one=True)["n"]
+    except Exception:
+        tam, n_ag = "?", "?"
+    return (f"pid={os.getpid()} deploy={os.environ.get('RAILWAY_DEPLOYMENT_ID', '-')[:8]} "
+            f"replica={os.environ.get('RAILWAY_REPLICA_ID', '-')[:8]} db={DB_PATH} db_bytes={tam} agencias={n_ag}")
+
+
 def _log_fallo_login(email, motivo, password):
     """Deja en los logs de Railway por qué falló un ingreso (10/10/2026,
     ingresos que 'rebotaban' un par de veces). NUNCA se escribe la clave:
     solo su largo y si tenía espacios o caracteres raros, para distinguir
     'el mail no existe' de 'la clave no coincide' de 'viene mal tipeada'."""
     print(f"[login] fallo email={email!r} motivo={motivo} largo_clave={len(password)} "
-          f"espacios_borde={password != password.strip()} no_ascii={not password.isascii()}", flush=True)
+          f"espacios_borde={password != password.strip()} no_ascii={not password.isascii()} {_instancia()}", flush=True)
 
 
 @bp.route("/login", methods=["GET", "POST"])
