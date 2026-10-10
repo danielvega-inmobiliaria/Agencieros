@@ -106,3 +106,43 @@ def enviar_codigo_email(email, nombre_agencia, codigo):
     except Exception as e:
         print(f"[verificacion] Error enviando email a {email}: {e} -- código: {codigo}")
         return False
+
+
+def enviar_email_reset(email, codigo):
+    """Manda por Resend el código para elegir una contraseña nueva
+    (¿Olvidaste tu contraseña?, 10/10/2026). Mismo criterio que
+    `enviar_codigo_email`: sin RESEND_API_KEY el código solo queda en el
+    log del servidor. Devuelve True si se mandó de verdad."""
+    api_key = os.environ.get("RESEND_API_KEY")
+    if not api_key:
+        print(f"[reset] Sin RESEND_API_KEY -- código para {email}: {codigo}")
+        return False
+    try:
+        import resend
+
+        resend.api_key = api_key
+        remitente = os.environ.get("RESEND_FROM", "Agencieros <noreply@agencieros.net.ar>")
+        resend.Emails.send(
+            {
+                "from": remitente,
+                "to": [email],
+                "subject": f"Código para cambiar tu contraseña: {codigo}",
+                "html": (
+                    '<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;'
+                    'padding:24px;color:#222">'
+                    '<h2 style="color:#0d1e3c">Cambiá tu contraseña de AGENCIEROS</h2>'
+                    "<p>Hola,</p>"
+                    "<p>Pediste elegir una contraseña nueva. Tu código es:</p>"
+                    '<div style="text-align:center;margin:28px 0">'
+                    f'<span style="font-size:32px;font-weight:bold;letter-spacing:6px;'
+                    f'color:#0d1e3c">{codigo}</span></div>'
+                    f'<p style="color:#888;font-size:.85rem">Vence en {CODIGO_EXPIRA_MIN} minutos. '
+                    "Si no lo pediste vos, ignorá este mensaje: tu contraseña actual sigue igual.</p>"
+                    "</div>"
+                ),
+            }
+        )
+        return True
+    except Exception as e:
+        print(f"[reset] Error enviando email a {email}: {e} -- código: {codigo}")
+        return False

@@ -8,12 +8,17 @@ negocio y el filtro por sesión en cada ruta. La agencia de Daniel
 `_migrar_multi_tenant_agencias` en `database.py`, con el mismo email y
 contraseña que ya tenía.
 """
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+import hashlib
+import hmac
+import secrets
+from datetime import datetime, timedelta
+
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from database import query, execute
 from routes.admin import PROVINCIAS_AR
-from utils.verificacion import crear_codigo, validar_codigo, enviar_codigo_email
+from utils.verificacion import crear_codigo, validar_codigo, enviar_codigo_email, enviar_email_reset
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -337,3 +342,141 @@ def reenviar_codigo():
 def logout():
     session.clear()
     return redirect(url_for("auth.login"))
+
+
+# --- ¿Olvidaste tu contraseña? (10/10/2026) -------------------------------
+# Flujo: el usuario pone su mail -> se le manda un código de 6 dígitos (vence
+# en 15 min, máx. 5 intentos, máx. 3 pedidos por hora por mail) -> con el
+# código elige una contraseña nueva. Siempre se responde lo mismo exista o no
+# el mail, para no revelar qué mails tienen cuenta. Los códigos se guardan
+# con hash (HMAC), nunca en texto plano.
+RESET_EXPIRA_MIN = 15
+RESET_MAX_INTENTOS = 5
+RESET_MAX_POR_HORA = 3
+RESET_MIN_CLAVE = 6
+
+
+def _asegurar_tabla_reset():
+    execute(
+        """CREATE TABLE IF NOT EXISTS reset_clave_codigos (
+               id INTEGER PRIMARY KEY AUTOINCREMENT,
+               tipo TEXT NOT NULL,
+               usuario_id INTEGER NOT NULL,
+               email TEXT NOT NULL,
+               codigo_hash TEXT NOT NULL,
+               expira_at TEXT NOT NULL,
+               usado INTEGER DEFAULT 0,
+               intentos INTEGER DEFAULT 0,
+               created_at TEXT DEFAULT (datetime('now'))
+           )"""
+    )
+
+
+def _hash_reset(email, codigo):
+    clave = (current_app.secret_key or "").encode("utf-8")
+    return hmac.new(clave, f"{email}|{codigo}".encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def _cuenta_por_mail(email):
+    """(tipo, id) de la cuenta a la que corresponde el mail, o None. La
+    agencia DEMO no se puede restablecer."""
+    admin = query("SELECT id FROM plataforma_admins WHERE lower(email) = ? AND activo = 1", (email,), one=True)
+    if admin:
+        return ("admin", admin["id"])
+    u = query(
+        """SELECT u.id FROM agencia_usuarios u JOIN agencias a ON a.id = u.agencia_id
+           WHERE lower(u.email) = ? AND u.activo = 1 AND a.activo = 1 AND COALESCE(a.es_demo, 0) = 0""",
+        (email,), one=True,
+    )
+    if u:
+        return ("usuario", u["id"])
+    ag = query("SELECT id FROM agencias WHERE lower(email) = ? AND activo = 1 AND COALESCE(es_demo, 0) = 0",
+               (email,), one=True)
+    if ag:
+        return ("agencia", ag["id"])
+    return None
+
+
+@bp.route("/olvide", methods=["GET", "POST"])
+def olvide():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        if email:
+            _asegurar_tabla_reset()
+            cuenta = _cuenta_por_mail(email)
+            if not cuenta:
+                print(f"[reset] pedido para un mail sin cuenta: {email!r}", flush=True)
+            else:
+                recientes = query(
+                    "SELECT COUNT(*) AS n FROM reset_clave_codigos WHERE email = ? AND created_at > datetime('now', '-1 hour')",
+                    (email,), one=True,
+                )["n"]
+                if recientes >= RESET_MAX_POR_HORA:
+                    print(f"[reset] demasiados pedidos para {email!r}: no se manda otro código", flush=True)
+                else:
+                    codigo = f"{secrets.randbelow(1_000_000):06d}"
+                    execute("UPDATE reset_clave_codigos SET usado = 1 WHERE email = ? AND usado = 0", (email,))
+                    expira = (datetime.utcnow() + timedelta(minutes=RESET_EXPIRA_MIN)).isoformat()
+                    execute(
+                        "INSERT INTO reset_clave_codigos (tipo, usuario_id, email, codigo_hash, expira_at) VALUES (?, ?, ?, ?, ?)",
+                        (cuenta[0], cuenta[1], email, _hash_reset(email, codigo), expira),
+                    )
+                    enviado = enviar_email_reset(email, codigo)
+                    print(f"[reset] código generado para {email!r} tipo={cuenta[0]} enviado={enviado}", flush=True)
+        session["reset_email"] = email
+        flash(f"Si {email or 'ese mail'} tiene una cuenta, te mandamos un código de 6 dígitos. Vence en {RESET_EXPIRA_MIN} minutos.", "success")
+        return redirect(url_for("auth.restablecer"))
+    return render_template("auth/olvide.html", email=request.args.get("email", ""))
+
+
+@bp.route("/restablecer", methods=["GET", "POST"])
+def restablecer():
+    email = (request.form.get("email") or session.get("reset_email") or "").strip().lower()
+    if request.method == "POST":
+        codigo = request.form.get("codigo", "").strip()
+        nueva = request.form.get("nueva", "")
+        nueva2 = request.form.get("nueva2", "")
+        if len(nueva) < RESET_MIN_CLAVE:
+            flash(f"La contraseña nueva tiene que tener al menos {RESET_MIN_CLAVE} caracteres.", "error")
+            return render_template("auth/restablecer.html", email=email)
+        if nueva != nueva2:
+            flash("Las contraseñas nuevas no coinciden.", "error")
+            return render_template("auth/restablecer.html", email=email)
+        _asegurar_tabla_reset()
+        fila = query(
+            "SELECT * FROM reset_clave_codigos WHERE email = ? AND usado = 0 ORDER BY id DESC LIMIT 1",
+            (email,), one=True,
+        ) if email else None
+        vencido = True
+        if fila:
+            try:
+                vencido = datetime.utcnow() > datetime.fromisoformat(fila["expira_at"])
+            except ValueError:
+                vencido = True
+        if not fila or vencido or fila["intentos"] >= RESET_MAX_INTENTOS:
+            flash("Código incorrecto o vencido. Pedí uno nuevo.", "error")
+            return render_template("auth/restablecer.html", email=email)
+        if not hmac.compare_digest(fila["codigo_hash"], _hash_reset(email, codigo)):
+            usado = 1 if fila["intentos"] + 1 >= RESET_MAX_INTENTOS else 0
+            execute("UPDATE reset_clave_codigos SET intentos = intentos + 1, usado = ? WHERE id = ?", (usado, fila["id"]))
+            flash("Código incorrecto o vencido. Pedí uno nuevo." if usado else "Código incorrecto.", "error")
+            return render_template("auth/restablecer.html", email=email)
+        h = generate_password_hash(nueva)
+        tipo, uid = fila["tipo"], fila["usuario_id"]
+        if tipo == "admin":
+            execute("UPDATE plataforma_admins SET password_hash = ? WHERE id = ?", (h, uid))
+        elif tipo == "usuario":
+            u = query("SELECT * FROM agencia_usuarios WHERE id = ?", (uid,), one=True)
+            execute("UPDATE agencia_usuarios SET password_hash = ? WHERE id = ?", (h, uid))
+            if u:
+                # El mail "de la agencia" queda con la misma clave que su dueño (igual que Mi cuenta).
+                execute("UPDATE agencias SET password_hash = ? WHERE id = ? AND lower(email) = lower(?)",
+                        (h, u["agencia_id"], u["email"]))
+        else:
+            execute("UPDATE agencias SET password_hash = ? WHERE id = ?", (h, uid))
+        execute("UPDATE reset_clave_codigos SET usado = 1 WHERE id = ?", (fila["id"],))
+        session.pop("reset_email", None)
+        print(f"[reset] contraseña cambiada para {email!r} tipo={tipo}", flush=True)
+        flash("Listo, tu contraseña quedó cambiada. Ya podés ingresar.", "success")
+        return redirect(url_for("auth.login"))
+    return render_template("auth/restablecer.html", email=email)

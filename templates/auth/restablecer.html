@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elegí tu contraseña nueva — Agencieros</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% include "partials/meta_pixel.html" %}
+</head>
+<body>
+  <div style="max-width:380px; margin:80px auto; padding:0 16px;">
+    <div class="brand" style="border:none; text-align:center; margin-bottom:24px;">AGENCIEROS<span>Elegí tu contraseña nueva</span></div>
+    <div class="panel">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
+      <form method="post">
+        <label>Email</label>
+        <input type="email" name="email" required value="{{ email }}" autocomplete="username"
+               autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email">
+        <label>Código que te llegó por mail</label>
+        <input type="text" name="codigo" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required
+               autocomplete="one-time-code" {% if email %}autofocus{% endif %}
+               style="letter-spacing:8px; font-size:1.4rem; text-align:center;">
+        <label>Contraseña nueva</label>
+        <input type="password" name="nueva" id="nueva" required minlength="6" autocomplete="new-password"
+               autocapitalize="none" autocorrect="off" spellcheck="false">
+        <label>Repetí la contraseña nueva</label>
+        <input type="password" name="nueva2" id="nueva2" required minlength="6" autocomplete="new-password"
+               autocapitalize="none" autocorrect="off" spellcheck="false">
+        <label style="display:flex; align-items:center; gap:8px; margin-top:10px; font-size:.9rem; cursor:pointer;">
+          <input type="checkbox" style="width:auto; margin:0;"
+                 onchange="var t=this.checked?'text':'password';document.getElementById('nueva').type=t;document.getElementById('nueva2').type=t;">
+          Mostrar contraseñas
+        </label>
+        <button class="btn btn-primary" style="width:100%; margin-top:20px;" type="submit">Cambiar contraseña</button>
+      </form>
+      <p style="text-align:center; margin-top:18px; font-size:.9rem;">
+        ¿No te llegó? <a href="{{ url_for('auth.olvide', email=email) }}">Pedir un código nuevo</a>
+        · <a href="{{ url_for('auth.login') }}">Volver</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

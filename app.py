@@ -226,6 +226,7 @@ def create_app():
         # 16/09/2026).
         publicas = {
             "auth.login", "auth.registro", "auth.verificar", "auth.reenviar_codigo", "auth.demo",
+            "auth.olvide", "auth.restablecer",
             "static", "stock.ficha",
             # Fotos y logos subidos: la ficha compartida es pública y sin
             # esto quien la abre sin sesión (el cliente) no veía las fotos.

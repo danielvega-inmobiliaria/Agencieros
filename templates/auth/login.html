@@ -28,6 +28,9 @@
         </label>
         <button class="btn btn-primary" style="width:100%; margin-top:20px;" type="submit">Ingresar</button>
       </form>
+      <p style="text-align:center; margin-top:14px; font-size:.9rem;">
+        <a href="{{ url_for('auth.olvide', email=email) }}">¿Olvidaste tu contraseña?</a>
+      </p>
       <p style="text-align:center; margin-top:18px; font-size:.9rem;">
         ¿Tu agencia todavía no tiene cuenta?
         <a href="{{ url_for('auth.registro') }}">Registrate acá</a>
