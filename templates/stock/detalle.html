@@ -87,6 +87,33 @@
       <div class="stat"><div class="n">${{ "{:,.0f}".format(vehiculo.valor_publicado or 0).replace(",", ".") }}</div><div class="l">Precio publicado{% if vehiculo.condiciones_pago %}<br>{{ vehiculo.condiciones_pago }}{% endif %}</div></div>
       {% if vehiculo.valor_vendido %}<div class="stat"><div class="n">${{ "{:,.0f}".format(vehiculo.valor_vendido).replace(",", ".") }}</div><div class="l">Precio vendido</div></div>{% endif %}
     </div>
+    {% if not es_vendedor %}
+    <hr style="border-color:var(--border); margin:18px 0;">
+    <h3 style="margin:0 0 8px; font-size:15px;">Gastos / reparaciones</h3>
+    {% if lista_gastos %}
+    <table>
+      {% for g in lista_gastos %}
+      <tr>
+        <td style="white-space:nowrap;">{{ (g.fecha or '')[8:10] ~ '/' ~ (g.fecha or '')[5:7] ~ '/' ~ (g.fecha or '')[0:4] if g.fecha else '-' }}</td>
+        <td>{{ g.concepto }}{% if g.proveedor %} <span style="color:var(--text-dim);">· {{ g.proveedor }}</span>{% endif %}</td>
+        <td style="text-align:right; white-space:nowrap;">${{ "{:,.0f}".format(g.monto).replace(",", ".") }}</td>
+        <td style="text-align:right;">
+          <form method="post" action="{{ url_for('stock.quitar_gasto', vehiculo_id=vehiculo.id, gasto_id=g.id) }}" onsubmit="return confirm('¿Quitar este gasto?');">
+            <button class="btn btn-secondary btn-sm" type="submit">Quitar</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+    <form method="post" action="{{ url_for('stock.agregar_gasto', vehiculo_id=vehiculo.id) }}" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;">
+      <input type="text" name="concepto" placeholder="Concepto (ej. cambio de embrague)" required style="flex:2; min-width:180px;">
+      <input type="number" step="0.01" min="0" name="monto" placeholder="Monto $" required style="flex:1; min-width:110px;">
+      <input type="date" name="fecha" value="{{ hoy }}" style="flex:1; min-width:130px;">
+      <input type="text" name="proveedor" placeholder="Taller / proveedor (opcional)" style="flex:1; min-width:150px;">
+      <button class="btn btn-sm" type="submit">+ Agregar gasto</button>
+    </form>
+    {% endif %}
     <hr style="border-color:var(--border); margin:18px 0;">
     <div class="stat-row">
       {% if not es_vendedor %}

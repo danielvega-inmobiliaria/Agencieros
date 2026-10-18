@@ -380,8 +380,12 @@ def detalle(vehiculo_id, solo_venta=False):
             "anterior": ids[i - 1] if i > 0 else None,
             "siguiente": ids[i + 1] if i < len(ids) - 1 else None,
         }
+    lista_gastos = [] if es_vendedor() else query(
+        "SELECT * FROM vehiculo_gastos WHERE vehiculo_id = ? AND agencia_id = ? ORDER BY fecha DESC, id DESC",
+        (vehiculo_id, session["agencia_id"]),
+    )
     return render_template(
-        "stock/detalle.html", vehiculo=vehiculo, rent=_rentabilidad(vehiculo), estado_label=ESTADO_LABEL, fotos=fotos,
+        "stock/detalle.html", vehiculo=vehiculo, rent=_rentabilidad(vehiculo), lista_gastos=lista_gastos, estado_label=ESTADO_LABEL, fotos=fotos,
         solo_venta=solo_venta, foto_portada=foto_principal(vehiculo_id),
         volver_listado=url_for("stock.index", estado=request.args.get("estado") or "todos"),
         cargado_por=nombres.get(vehiculo["cargado_por_id"]), vendido_por=nombres.get(vehiculo["vendido_por_id"]),
@@ -397,6 +401,50 @@ def detalle(vehiculo_id, solo_venta=False):
         precio_sugerido=_entero(vehiculo["valor_publicado"]),
         origenes_credito=_origenes_credito(session["agencia_id"]),
     )
+
+
+@bp.route("/<int:vehiculo_id>/gastos", methods=["POST"])
+def agregar_gasto(vehiculo_id):
+    """Suma un gasto / reparación a un vehículo ya cargado (18/10/2026): queda
+    el detalle (concepto, monto, fecha, proveedor) y se suma a `gastos`."""
+    vehiculo = query(
+        "SELECT * FROM vehiculos WHERE id = ? AND agencia_id = ?", (vehiculo_id, session["agencia_id"]), one=True
+    )
+    if not vehiculo or es_vendedor():
+        flash("No se pudo cargar el gasto.", "error")
+        return redirect(url_for("stock.index"))
+    f = request.form
+    concepto = (f.get("concepto") or "").strip()
+    try:
+        monto = float((f.get("monto") or "").replace(",", "."))
+    except ValueError:
+        monto = 0
+    if not concepto or monto <= 0:
+        flash("Completá el concepto y un monto mayor a 0.", "error")
+        return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
+    execute(
+        "INSERT INTO vehiculo_gastos (vehiculo_id, agencia_id, concepto, monto, fecha, proveedor) VALUES (?,?,?,?,?,?)",
+        (vehiculo_id, session["agencia_id"], concepto, monto, f.get("fecha") or str(date.today()),
+         (f.get("proveedor") or "").strip() or None),
+    )
+    execute("UPDATE vehiculos SET gastos = COALESCE(gastos, 0) + ? WHERE id = ?", (monto, vehiculo_id))
+    flash("Gasto agregado.", "success")
+    return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
+
+
+@bp.route("/<int:vehiculo_id>/gastos/<int:gasto_id>/quitar", methods=["POST"])
+def quitar_gasto(vehiculo_id, gasto_id):
+    g = query(
+        "SELECT * FROM vehiculo_gastos WHERE id = ? AND vehiculo_id = ? AND agencia_id = ?",
+        (gasto_id, vehiculo_id, session["agencia_id"]), one=True,
+    )
+    if not g or es_vendedor():
+        flash("Gasto no encontrado.", "error")
+    else:
+        execute("DELETE FROM vehiculo_gastos WHERE id = ?", (gasto_id,))
+        execute("UPDATE vehiculos SET gastos = MAX(0, COALESCE(gastos, 0) - ?) WHERE id = ?", (g["monto"], vehiculo_id))
+        flash("Gasto quitado.", "success")
+    return redirect(url_for("stock.detalle", vehiculo_id=vehiculo_id))
 
 
 @bp.route("/<int:vehiculo_id>/fotos", methods=["POST"])

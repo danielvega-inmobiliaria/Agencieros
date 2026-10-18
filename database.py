@@ -72,6 +72,20 @@ CREATE TABLE IF NOT EXISTS vehiculo_fotos (
     FOREIGN KEY (vehiculo_id) REFERENCES vehiculos(id)
 );
 
+-- Gastos / reparaciones cargados de a uno sobre un vehículo ya en Stock (18/10/2026).
+-- vehiculos.gastos sigue siendo el total: cada alta/baja lo suma/resta.
+CREATE TABLE IF NOT EXISTS vehiculo_gastos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vehiculo_id INTEGER NOT NULL,
+    agencia_id INTEGER NOT NULL,
+    concepto TEXT NOT NULL,
+    monto REAL NOT NULL,
+    fecha TEXT,
+    proveedor TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_vehiculo_gastos_veh ON vehiculo_gastos (vehiculo_id);
+
 CREATE TABLE IF NOT EXISTS pedidos_clientes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     cliente_nombre TEXT NOT NULL,
