@@ -22,12 +22,46 @@ _MARCAS_ROSARIOGARAGE = {
 }
 
 
+# RosarioGarage separa los camiones en su propia categoría (rbrId=128,
+# "Camiones y Grúas") con otra lista de marcas (relevado 19/10/2026). Buscar
+# un camión en Autos no devuelve nada: ahí no existen Iveco, Scania, etc.
+_RBR_CAMIONES = 128
+_MARCAS_CAMIONES_RG = {
+    "agrale": 2061, "dongfeng": 2140, "ford": 1037, "foton": 2089, "hino": 2098,
+    "hyundai": 1048, "isuzu": 1052, "iveco": 1053, "jac": 1055, "jmc": 2090,
+    "kama": 2125, "kia": 1058, "landking": 2136, "mercedes benz": 1071,
+    "mercedes-benz": 1071, "renault": 1095, "scania": 1101, "shacman": 2139,
+    "volkswagen": 1118, "vw": 1118, "volvo": 1119, "toyota": 1114,
+}
+# Marcas de la revista que son solo de camiones aunque no digan "Camiones".
+_SOLO_CAMIONES = {"iveco", "scania", "hino", "agrale", "shacman"}
+
+
+def _es_camion(marca):
+    m = (marca or "").strip().lower()
+    return m.endswith(" camiones") or m in _SOLO_CAMIONES
+
+
 def _url_rosariogarage(marca, modelo, anio):
     """Búsqueda en RosarioGarage con los mismos parámetros que usa su
     formulario (probado 24/09/2026: Toyota + "etios" + 2017-2019 = 43
     avisos; Toyota + "hilux" = también trae camionetas). Sin marca conocida
     se busca solo por modelo."""
     params = {"action": "finder/search", "o": 0}
+    if _es_camion(marca):
+        base = (marca or "").strip().lower()
+        base = base[:-len(" camiones")].strip() if base.endswith(" camiones") else base
+        params["rbrId"] = _RBR_CAMIONES
+        marca_id = _MARCAS_CAMIONES_RG.get(base)
+        if marca_id:
+            params["mrkId"] = marca_id
+        texto = (modelo or "") if marca_id else " ".join(p for p in [base, modelo] if p)
+        if texto:
+            params["itmModelDesc"] = texto.strip().lower()
+        if anio:
+            params["year[from]"] = anio
+            params["year[to]"] = anio
+        return "https://www.rosariogarage.com/index.php?" + urlencode(params)
     marca_id = _MARCAS_ROSARIOGARAGE.get((marca or "").strip().lower())
     if marca_id:
         params["mrkId"] = marca_id
