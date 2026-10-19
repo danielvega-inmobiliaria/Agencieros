@@ -30,6 +30,7 @@ import urllib.request
 from datetime import datetime, timedelta
 
 from publicaciones_rg import _SUBMODELOS, _palabras
+from comparables import _es_camion
 
 CACHE_HORAS = 24
 TIMEOUT = 8
@@ -425,7 +426,7 @@ def _cache_set(clave, avisos, execute):
 
 # ------------------------------------------------------------- selección
 
-def _filtrar(avisos, marca, modelo, version, anio):
+def _filtrar(avisos, marca, modelo, version, anio, tol=1):
     pedidas_modelo = _palabras(modelo)
     pedidas_version = _palabras(version) - pedidas_modelo - _palabras(marca)
     salida = []
@@ -438,7 +439,7 @@ def _filtrar(avisos, marca, modelo, version, anio):
         if any(s in palabras and s not in pedidas_modelo for s in _SUBMODELOS):
             continue
         dif_anio = abs(a["anio"] - int(anio)) if (anio and a.get("anio")) else 0
-        if anio and a.get("anio") and dif_anio > 1:
+        if anio and a.get("anio") and dif_anio > tol:
             continue
         salida.append(dict(a, dif_anio=dif_anio, coincide=len(pedidas_version & palabras)))
     return salida
@@ -522,6 +523,120 @@ def _origen(modo, origen_txt, res):
     return origen, True
 
 
+# ------------------------------------------------------- Agrofy (camiones)
+# 19/10/2026: DeAutos y Autocosmos no tienen camiones. Agrofy sí (194 usados
+# solo en Rosario/Santa Fe) y deja los avisos como JSON dentro de la página
+# (__NEXT_DATA__), mucho más estable que leer el HTML. Su robots.txt no
+# bloquea /camiones/. Mismos cuidados: 1 consulta por búsqueda cada 24 h
+# (rg_cache, clave "agrofy|"), User-Agent que se identifica, link al aviso
+# original y, si el sitio cambia o no responde, la pantalla sigue andando.
+
+AGROFY_BASE = "https://www.agrofy.com.ar"
+
+
+def _base_camion(marca):
+    m = (marca or "").strip()
+    return re.sub(r"\s+camiones$", "", m, flags=re.I).strip()
+
+
+def _canon(texto):
+    """'17.210' y '17-210' pasan a '17210' para que coincidan entre sí."""
+    return re.sub(r"(?<=\d)[.\-/](?=\d)", "", str(texto or ""))
+
+
+def url_agrofy(marca, origen=None):
+    base = f"{AGROFY_BASE}/camiones/usado/{_slug(_base_camion(marca))}"
+    if origen and origen.get("nombre") and origen.get("provincia"):
+        return f"{base}/{_slug(origen['nombre'])}/{_slug(origen['provincia'])}"
+    return base
+
+
+def parsear_agrofy(pagina):
+    """[{titulo, version, anio, km, precio, moneda, fuente, loc, url, foto}]
+    desde el JSON __NEXT_DATA__ de un listado de Agrofy."""
+    m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', pagina, re.S)
+    if not m:
+        return []
+    try:
+        hits = json.loads(m.group(1))["props"]["pageProps"]["listing"]["Hits"]
+    except (KeyError, TypeError, ValueError):
+        return []
+    avisos = []
+    for h in hits:
+        attrs = h.get("highlightedAttributes") or {}
+        if isinstance(attrs, str):
+            try:
+                attrs = json.loads(attrs)
+            except ValueError:
+                attrs = {}
+        moneda_txt = str(h.get("currency") or "")
+        moneda = "USD" if "U$" in moneda_txt.upper() or "USD" in moneda_txt.upper() else ("ARS" if "$" in moneda_txt else None)
+        precio = h.get("price")
+        try:
+            precio = int(float(precio)) if precio else None
+        except (TypeError, ValueError):
+            precio = None
+        try:
+            anio = int(str(attrs.get("ano_fabricacion") or "")[:4])
+        except ValueError:
+            anio = None
+        try:
+            km = int(float(attrs.get("kilometros"))) if attrs.get("kilometros") is not None else None
+        except (TypeError, ValueError):
+            km = None
+        ciudad, prov = (h.get("city") or "").strip(), (h.get("province") or h.get("state") or "").strip()
+        if not h.get("url") or not h.get("name"):
+            continue
+        avisos.append({
+            "titulo": str(h["name"]).strip(),
+            "version": "",
+            "anio": anio,
+            "km": km,
+            "precio": precio if moneda else None,
+            "moneda": moneda,
+            "fuente": "Agrofy",
+            "vendedor": h.get("merchant") or "",
+            "loc": ", ".join(x for x in (ciudad, prov) if x),
+            "url": AGROFY_BASE + h["url"],
+            "foto": h.get("image") or None,
+        })
+    return avisos
+
+
+def _buscar_agrofy(marca, modelo, version, anio, modo, region, origen, radio_km, res, query, execute):
+    res["ac_pedidos"] = []  # Autocosmos no tiene camiones
+    res["fuente_unica"] = "Agrofy"
+    url = url_agrofy(marca, origen)
+    res["url_busqueda"] = url
+    try:
+        avisos = _cache_get("agrofy|v1|" + url, query)
+        if avisos is None:
+            try:
+                avisos = parsear_agrofy(_bajar(url))
+            except urllib.error.HTTPError as e:
+                if e.code != 404 or url == url_agrofy(marca):
+                    raise
+                url = url_agrofy(marca)  # sin localidad
+                res["url_busqueda"] = url
+                avisos = parsear_agrofy(_bajar(url))
+            _cache_set("agrofy|v1|" + url_agrofy(marca, origen), avisos, execute)
+    except Exception as e:
+        print(f"[zona_agrofy] No se pudo leer {url}: {e}")
+        res["motivo"] = "Agrofy no respondió."
+        return res
+    res["leidos"] = len(avisos)
+    originales = {a["url"]: a["titulo"] for a in avisos}
+    canon = [dict(a, titulo=_canon(a["titulo"])) for a in avisos]
+    candidatos = _filtrar(canon, _base_camion(marca), _canon(modelo), _canon(version), anio, tol=3)
+    for c in candidatos:
+        c["titulo"] = originales.get(c["url"], c["titulo"])
+    en = _aplicar_zona(candidatos, modo, region, origen, radio_km, res)
+    _ordenar_y_cortar(en, res)
+    if not res["ok"]:
+        res["motivo"] = "Sin camiones de ese modelo en Agrofy para esa zona."
+    return res
+
+
 def buscar(marca, modelo, version, anio, modo, region, origen_txt, radio_km, query, execute, fuente=None):
     """DeAutos: resultado para la pantalla. Nunca levanta error."""
     url = url_listado(marca, modelo)
@@ -532,6 +647,8 @@ def buscar(marca, modelo, version, anio, modo, region, origen_txt, radio_km, que
     if not modelo:
         res["motivo"] = "Falta el modelo."
         return res
+    if _es_camion(marca):
+        return _buscar_agrofy(marca, modelo, version, anio, modo, region, origen, radio_km, res, query, execute)
     res["ac_pedidos"] = pedidos_autocosmos(modo, region, origen)
     try:
         avisos = _cache_get("deautos|v2|" + url, query)

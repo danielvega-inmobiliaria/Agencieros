@@ -104,7 +104,7 @@
       + `<option value="radio"${regSel === 'radio' ? ' selected' : ''}>Cerca de una localidad…</option>`;
     cont.innerHTML = `
       <div class="rango-mercado">
-        <div class="rm-titulo">Publicaciones por zona · DeAutos + Autocosmos (prueba)</div>
+        <div class="rm-titulo">Publicaciones por zona (prueba)</div>
         <div class="zona-bar">
           <label class="zona-pill"><span>Región</span><select class="zona-reg">${opcReg}</select></label>
           <label class="zona-pill"><span>Tu ubicación</span>
@@ -136,14 +136,14 @@
       const mediana = ars.length >= 3 ? ars[Math.floor(ars.length / 2)] : null;
       const nota = [];
       if (d.sin_origen) nota.push('Elegí «Tu ubicación» (ciudad de la agencia) para ordenar por cercanía');
-      nota.push(`${d.leidos} avisos leídos en DeAutos`);
+      nota.push(`${d.leidos} avisos leídos en ${d.fuente_unica || 'DeAutos'}`);
       if (d.fuera_de_radio) nota.push(`${d.fuera_de_radio} de otras zonas`);
       if (d.sin_ubicar) nota.push(`${d.sin_ubicar} sin ubicación reconocida`);
       res.innerHTML = `${avisos.length ? tarjetas : `<div class="rm-nota">${esc(estado.fin ? (d.motivo || 'Sin resultados.') : 'Sin resultados todavía…')}</div>`}
         ${mediana ? `<div class="rm-nota">Mediana de los avisos en pesos del mismo año: <strong>${pesos(mediana)}</strong></div>` : ''}
         ${estado.msg ? `<div class="rm-cargando">${esc(estado.msg)}</div>` : ''}
-        <div class="rm-nota">${nota.join(' · ')}${estado.ac ? ' · ' + esc(estado.ac) : ''}. Ordenados por cercanía a la agencia. Precio que pide cada vendedor; se incluyen años ±1. Autocosmos: solo la primera página de la marca por provincia.
-          ${d.url_busqueda ? `<a href="${esc(d.url_busqueda)}" target="_blank" rel="noopener">Ver en DeAutos</a>` : ''}</div>`;
+        <div class="rm-nota">${nota.join(' · ')}${estado.ac ? ' · ' + esc(estado.ac) : ''}. Ordenados por cercanía a la agencia. Precio que pide cada vendedor; se incluyen años ${d.fuente_unica ? '±3' : '±1'}.${d.fuente_unica ? '' : ' Autocosmos: solo la primera página de la marca por provincia.'}
+          ${d.url_busqueda ? `<a href="${esc(d.url_busqueda)}" target="_blank" rel="noopener">Ver en ${d.fuente_unica || 'DeAutos'}</a>` : ''}</div>`;
     }
 
     async function buscar() {
