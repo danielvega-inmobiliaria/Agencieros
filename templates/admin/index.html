@@ -2,6 +2,10 @@
 {% block title %}Admin — Agencieros{% endblock %}
 {% block header %}Admin — Datos de la agencia{% endblock %}
 {% block content %}
+<div class="panel" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+  <span>🌐 <b>Mi web</b>: página pública con tu stock disponible.</span>
+  <a class="btn btn-sm" href="{{ url_for('web_agencia.config') }}">Configurar mi web</a>
+</div>
 <div class="panel">
   <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
     Estos datos se muestran en la ficha comercial de cada vehículo (la que se comparte por WhatsApp o historias) y, a futuro, en cualquier otro lugar de cara al cliente. Mientras no completes un dato, simplemente no se muestra -- no se inventa nada.

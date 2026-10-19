@@ -513,6 +513,21 @@ def _migrar_tomas_tipo_carroceria(conn):
         conn.execute("ALTER TABLE tomas_vehiculo ADD COLUMN tipo_carroceria TEXT")
 
 
+def _migrar_web_agencia(conn):
+    """Web propia por agencia (19/10/2026): agencias.web_slug (link
+    /a/<slug>), agencias.web_activa (opt-in) y vehiculos.web_visible (1 = se
+    muestra en la web si está disponible)."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(agencias)")}
+    if "web_slug" not in cols:
+        conn.execute("ALTER TABLE agencias ADD COLUMN web_slug TEXT")
+    if "web_activa" not in cols:
+        conn.execute("ALTER TABLE agencias ADD COLUMN web_activa INTEGER NOT NULL DEFAULT 0")
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_agencias_web_slug ON agencias(web_slug) WHERE web_slug IS NOT NULL")
+    vcols = {r[1] for r in conn.execute("PRAGMA table_info(vehiculos)")}
+    if "web_visible" not in vcols:
+        conn.execute("ALTER TABLE vehiculos ADD COLUMN web_visible INTEGER NOT NULL DEFAULT 1")
+
+
 def _migrar_demo(conn):
     """Agencia demo (06/10/2026): `es_demo` = 1 la agencia demo, 2 las agencias
     ficticias de su Red; `demo_reset_at` = día (Argentina) del último reinicio."""
@@ -1675,6 +1690,7 @@ def init_db():
     _migrar_agencia_config_multi_tenant(conn)
     _migrar_agencia_config_ciudad_provincia(conn)
     _migrar_demo(conn)
+    _migrar_web_agencia(conn)
     _migrar_agencia_config_contacto_margen(conn)
     _migrar_tasaciones_margen_objetivo(conn)
     _migrar_agencias_ultima_actividad(conn)

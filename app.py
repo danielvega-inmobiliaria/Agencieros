@@ -64,6 +64,7 @@ def create_app():
     from routes.ml import bp as ml_bp
     from routes.mensajes import bp as mensajes_bp
     from routes.cuenta import bp as cuenta_bp
+    from routes.web_agencia import bp as web_agencia_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -82,6 +83,7 @@ def create_app():
     app.register_blueprint(ml_bp)
     app.register_blueprint(mensajes_bp)
     app.register_blueprint(cuenta_bp)
+    app.register_blueprint(web_agencia_bp)
 
     @app.template_filter("fecha_ar")
     def _fecha_ar(valor):
@@ -100,7 +102,7 @@ def create_app():
         # estáticos; el resto se manda a la app (mismo path y query).
         if not _es_host_landing():
             return None
-        if request.endpoint in {"index", "inicio", "robots_txt", "static"}:
+        if request.endpoint in {"index", "inicio", "robots_txt", "static", "web_agencia.pagina", "uploads_estaticas"}:
             return None
         destino = APP_URL + request.full_path
         if destino.endswith("?"):
@@ -227,7 +229,7 @@ def create_app():
         publicas = {
             "auth.login", "auth.registro", "auth.verificar", "auth.reenviar_codigo", "auth.demo",
             "auth.olvide", "auth.restablecer",
-            "static", "stock.ficha",
+            "static", "stock.ficha", "web_agencia.pagina",
             # Fotos y logos subidos: la ficha compartida es pública y sin
             # esto quien la abre sin sesión (el cliente) no veía las fotos.
             "uploads_estaticas",

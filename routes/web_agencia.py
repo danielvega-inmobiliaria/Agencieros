@@ -1,0 +1,138 @@
+"""Web propia de cada agencia (19/10/2026, pedido de Daniel):
+agencieros.net.ar/a/<nombre-agencia> -- una página pública con todo el stock
+DISPONIBLE de la agencia, siempre al día porque lee directo de Stock.
+
+Reglas de privacidad: solo se publican datos de cara al comprador (marca,
+modelo, versión, año, km, combustible, caja, precio publicado y fotos).
+Nunca costo, gastos, ganancia ni consignante. La agencia tiene que activarla
+(opt-in) y puede ocultar autos puntuales desde "Mi web".
+
+Dos rutas:
+- GET /a/<slug>        pública (sin login), también en el dominio raíz.
+- GET/POST /mi-web     la agencia activa su web, elige el nombre del link y
+                       marca qué autos se muestran.
+"""
+import os
+import re
+import unicodedata
+from urllib.parse import quote_plus
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, abort
+
+from database import query, execute, foto_principal, obtener_config_agencia
+
+bp = Blueprint("web_agencia", __name__)
+
+LANDING_URL = os.environ.get("LANDING_URL", "https://agencieros.net.ar").rstrip("/")
+APP_URL = os.environ.get("APP_URL", "https://app.agencieros.net.ar").rstrip("/")
+RESERVADOS = {"admin", "api", "app", "www", "demo", "configurar", "static", "agencieros"}
+
+
+def slugify(texto):
+    t = unicodedata.normalize("NFKD", str(texto or "").lower())
+    t = "".join(c for c in t if not unicodedata.combining(c))
+    return re.sub(r"[^a-z0-9]+", "-", t).strip("-")[:40]
+
+
+def _slug_valido(slug):
+    return bool(re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", slug or "")) and 3 <= len(slug) <= 40 and slug not in RESERVADOS
+
+
+def _pesos(n):
+    return "$" + "{:,.0f}".format(n or 0).replace(",", ".")
+
+
+def _items(agencia_id):
+    """Autos a mostrar: disponibles y no ocultados, con solo datos públicos."""
+    filas = query(
+        """SELECT id, marca, modelo, version, anio, km, combustible, caja, valor_publicado, tipo_carroceria
+           FROM vehiculos
+           WHERE agencia_id = ? AND estado = 'disponible' AND COALESCE(web_visible, 1) = 1
+           ORDER BY id DESC""", (agencia_id,))
+    items = []
+    for v in filas:
+        titulo = " ".join(str(x) for x in [v["marca"], v["modelo"]] if x)
+        items.append({
+            "id": v["id"], "titulo": titulo, "version": v["version"] or "", "marca": v["marca"] or "",
+            "anio": v["anio"], "km": v["km"],
+            "km_txt": f"{int(v['km']):,} km".replace(",", ".") if v["km"] else "",
+            "combustible": v["combustible"] or "", "caja": v["caja"] or "",
+            "precio": v["valor_publicado"] or 0,
+            "precio_txt": _pesos(v["valor_publicado"]) if v["valor_publicado"] else "Consultar",
+            "foto": foto_principal(v["id"]),
+            "ficha": f"{APP_URL}/stock/{v['id']}/ficha?wa=0",
+        })
+    return items
+
+
+@bp.route("/a/<slug>")
+def pagina(slug):
+    from routes.stock import _whatsapp_ar, _redes_ordenadas
+    ag = query("SELECT id, nombre_agencia, activo, web_activa FROM agencias WHERE web_slug = ?",
+               (slug.lower(),), one=True)
+    if not ag or ag["activo"] == 0:
+        abort(404)
+    es_dueno = session.get("agencia_id") == ag["id"]
+    if not ag["web_activa"] and not es_dueno:
+        abort(404)
+    cfg = _redes_ordenadas(dict(obtener_config_agencia(ag["id"])))
+    nombre = cfg.get("nombre_agencia") or ag["nombre_agencia"]
+    items = _items(ag["id"])
+    numero = _whatsapp_ar(cfg.get("telefono"))
+    wa_base = f"https://wa.me/{numero}" if numero else None
+    for it in items:
+        if wa_base:
+            msg = f"Hola! Te escribo por el {it['titulo']} {it['version']} ({it['anio'] or 's/d'}) que vi en tu web."
+            it["wa"] = f"{wa_base}?text={quote_plus(msg)}"
+    lugar = ", ".join(x for x in [cfg.get("ciudad"), cfg.get("provincia")] if x)
+    og_img = items[0]["foto"] if items else cfg.get("logo_url")
+    if og_img and og_img.startswith("/"):
+        og_img = APP_URL + og_img
+    return render_template(
+        "web_agencia/pagina.html", nombre=nombre, cfg=cfg, lugar=lugar, items=items,
+        marcas=sorted({i["marca"] for i in items if i["marca"]}),
+        wa_general=(f"{wa_base}?text={quote_plus('Hola! Vi tu web y quiero consultar por un auto.')}" if wa_base else None),
+        url_canonica=f"{LANDING_URL}/a/{slug.lower()}", og_img=og_img,
+        vista_previa=(es_dueno and not ag["web_activa"]), activa=bool(ag["web_activa"]),
+    )
+
+
+@bp.route("/mi-web", methods=["GET", "POST"])
+def config():
+    agencia_id = session.get("agencia_id")
+    if not agencia_id:
+        flash("Entrá con la cuenta de una agencia para configurar su web.", "error")
+        return redirect(url_for("precios.index"))
+    ag = query("SELECT id, nombre_agencia, web_slug, web_activa FROM agencias WHERE id = ?", (agencia_id,), one=True)
+    cfg = obtener_config_agencia(agencia_id)
+    sugerido = slugify(cfg.get("nombre_agencia") or ag["nombre_agencia"])
+    if request.method == "POST":
+        from utils.demo import _es_demo
+        if _es_demo(agencia_id):
+            flash("En la demo no se puede publicar una web.", "error")
+            return redirect(url_for("web_agencia.config"))
+        slug = slugify(request.form.get("slug"))
+        activa = 1 if request.form.get("activa") else 0
+        if not _slug_valido(slug):
+            flash("El nombre del link tiene que tener entre 3 y 40 letras o números (se pueden usar guiones), y no ser una palabra reservada.", "error")
+            return redirect(url_for("web_agencia.config"))
+        otro = query("SELECT id FROM agencias WHERE web_slug = ? AND id <> ?", (slug, agencia_id), one=True)
+        if otro:
+            flash("Ese nombre de link ya lo usa otra agencia. Probá con otro.", "error")
+            return redirect(url_for("web_agencia.config"))
+        if activa and not (cfg.get("telefono") or "").strip():
+            flash("Antes de activar la web cargá tu WhatsApp comercial en Admin: es el botón para que te consulten.", "error")
+            return redirect(url_for("web_agencia.config"))
+        execute("UPDATE agencias SET web_slug = ?, web_activa = ? WHERE id = ?", (slug, activa, agencia_id))
+        visibles = {int(x) for x in request.form.getlist("visible") if x.isdigit()}
+        for v in query("SELECT id FROM vehiculos WHERE agencia_id = ? AND estado = 'disponible'", (agencia_id,)):
+            execute("UPDATE vehiculos SET web_visible = ? WHERE id = ?", (1 if v["id"] in visibles else 0, v["id"]))
+        flash("Web guardada." + (" Ya está publicada." if activa else " Todavía está oculta al público."), "success")
+        return redirect(url_for("web_agencia.config"))
+    vehiculos = query(
+        """SELECT id, marca, modelo, version, anio, valor_publicado, COALESCE(web_visible, 1) AS web_visible
+           FROM vehiculos WHERE agencia_id = ? AND estado = 'disponible' ORDER BY id DESC""", (agencia_id,))
+    return render_template(
+        "web_agencia/config.html", ag=ag, cfg=cfg, sugerido=sugerido, vehiculos=vehiculos,
+        landing_url=LANDING_URL, tiene_telefono=bool((cfg.get("telefono") or "").strip()),
+    )
