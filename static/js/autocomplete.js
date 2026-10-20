@@ -145,9 +145,22 @@ function attachAutocomplete(input, obtenerValores, onSeleccionar, opciones) {
     if (!mantenerAbierto) setTimeout(cerrar, 120);
   });
   if (mantenerAbierto) {
+    // Se cierra solo con un TOQUE fuera del buscador, no al arrastrar: antes
+    // cerraba en "pointerdown", y en el celu tocar la pantalla para subirla y
+    // ver la lista completa la hacía desaparecer (20/10/2026). Al arrastrar,
+    // el navegador cancela el puntero (no hay "pointerup") o el dedo se mueve,
+    // y la lista queda abierta.
+    var inicio = null;
     document.addEventListener("pointerdown", function (e) {
-      if (!wrap.contains(e.target)) cerrar();
+      inicio = wrap.contains(e.target) ? null : { x: e.clientX, y: e.clientY, id: e.pointerId };
     });
+    document.addEventListener("pointercancel", function () { inicio = null; });
+    document.addEventListener("pointerup", function (e) {
+      var i = inicio; inicio = null;
+      if (!i || i.id !== e.pointerId || wrap.contains(e.target)) return;
+      if (Math.abs(e.clientX - i.x) < 10 && Math.abs(e.clientY - i.y) < 10) cerrar();
+    });
+    // Respaldo: si la página se scrollea con la rueda o el dedo, no cerrar.
   }
   input.addEventListener("keydown", function (e) {
     if (dd.style.display === "none") return;
