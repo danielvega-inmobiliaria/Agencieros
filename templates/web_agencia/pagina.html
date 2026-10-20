@@ -67,11 +67,11 @@
   .nota-consultar b { color:var(--acc); font-size:17px; }
   .nota-consultar span { color:var(--dim); font-size:14px; line-height:1.4; }
   .badge-cero { position:absolute; bottom:10px; left:10px; background:var(--acc); color:var(--acc-txt); font-size:12px; font-weight:800; padding:4px 10px; border-radius:999px; box-shadow:0 2px 6px rgba(0,0,0,.25); }
-  .hero.con-tabs { padding-bottom:104px; }
-  .tabs { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
-  .tabs button { border:2px solid rgba(255,255,255,.7); background:transparent; color:var(--acc-txt); font-weight:800; font-size:16px; padding:9px 20px; border-radius:999px; cursor:pointer; }
-  .tabs button.on { background:#fff; color:var(--acc); border-color:#fff; }
-  .tabs button small { font-weight:600; opacity:.85; }
+  .ver-todos { margin-top:12px; background:rgba(255,255,255,.18); color:var(--acc-txt); border:1.5px solid rgba(255,255,255,.7); border-radius:999px; padding:7px 16px; font-weight:700; font-size:14px; cursor:pointer; }
+  nav.menu a.on { text-decoration:underline; text-underline-offset:6px; text-decoration-thickness:2px; }
+  .menu-m { display:none; gap:6px; overflow-x:auto; padding-top:0; padding-bottom:10px; -webkit-overflow-scrolling:touch; }
+  .menu-m a { flex:none; border:1.5px solid var(--line); border-radius:999px; padding:7px 14px; font-size:14px; font-weight:700; color:var(--acc); background:#fff; white-space:nowrap; }
+  .menu-m a.on { background:var(--acc); color:var(--acc-txt); border-color:var(--acc); }
   .franja-dest { padding-top:26px; }
   .franja-dest h2 { margin:0 0 12px; font-size:21px; color:var(--acc); }
   .carril { display:flex; gap:16px; overflow-x:auto; padding:2px 2px 14px; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; }
@@ -105,7 +105,7 @@
   footer a { color:#fff; font-weight:700; }
   .flot { position:fixed; right:16px; bottom:16px; z-index:30; box-shadow:0 6px 20px rgba(0,0,0,.3); border-radius:999px; padding:13px 20px; }
 
-  @media (max-width:900px) { .grid { grid-template-columns:repeat(2, 1fr); } .buscador { grid-template-columns:repeat(2, 1fr); } nav.menu a.txt { display:none; } }
+  @media (max-width:900px) { .grid { grid-template-columns:repeat(2, 1fr); } .buscador { grid-template-columns:repeat(2, 1fr); } nav.menu a.txt { display:none; } .menu-m { display:flex; } }
   @media (max-width:560px) {
     .grid { grid-template-columns:1fr; } .hero h1 { font-size:24px; } .buscador { grid-template-columns:1fr; margin-top:-40px; }
     .marca b { font-size:16px; } .head .btn-wa { padding:8px 12px; }
@@ -137,23 +137,26 @@
     <b>{{ nombre }}{% if lugar %}<small>{{ lugar }}</small>{% endif %}</b>
   </a>
   <nav class="menu">
-    <a class="txt" href="#autos">Usados</a>
+    {% if hay_usados or not hay_cero %}<a class="txt" href="#autos"{% if hay_cero %} data-tab="usados"{% endif %}>Usados</a>{% endif %}
+    {% if hay_cero %}<a class="txt" href="#autos" data-tab="cero">0 Km</a>{% endif %}
     <a class="txt" href="#contacto">Contacto</a>
     <a class="btn-resalta" href="#compramos">Compramos tu auto</a>
     {% if wa_general %}<a class="btn btn-wa" href="{{ wa_general }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}
   </nav>
-</div></header>
+</div>
+<nav class="menu-m wrap">
+  {% if hay_usados or not hay_cero %}<a href="#autos"{% if hay_cero %} data-tab="usados"{% endif %}>Usados</a>{% endif %}
+  {% if hay_cero %}<a href="#autos" data-tab="cero">0 Km</a>{% endif %}
+  <a href="#compramos">Compramos tu auto</a>
+  <a href="#contacto">Contacto</a>
+</nav>
+</header>
 
-{% set con_tabs = hay_cero and items %}
-<section class="hero{{ ' con-tabs' if con_tabs else '' }}" id="top"><div class="wrap">
-  <h1 id="hero-t" data-ciudad="{{ ' en ' ~ cfg.ciudad if cfg.ciudad else '' }}">{{ 'Autos' if con_tabs else 'Autos usados' }}{% if cfg.ciudad %} en {{ cfg.ciudad }}{% endif %}</h1>
-  <p id="hero-s">{{ items|length }} {{ 'auto disponible' if items|length == 1 else 'autos disponibles' }} · Financiación y toma de tu usado</p>
-  {% if con_tabs %}
-  <div class="tabs" role="tablist">
-    {% if hay_usados %}<button type="button" data-tab="usados" role="tab">Usados <small id="n-usados"></small></button>{% endif %}
-    <button type="button" data-tab="cero" role="tab">0 Km <small id="n-cero"></small></button>
-  </div>
-  {% endif %}
+{% set ambos = hay_cero and hay_usados %}
+<section class="hero" id="top"><div class="wrap">
+  <h1 id="hero-t" data-ciudad="{{ ' en ' ~ cfg.ciudad if cfg.ciudad else '' }}">{% if ambos %}0 Km y Usados{% elif hay_cero %}Autos 0 Km{% else %}Autos usados{% endif %}{% if cfg.ciudad %} en {{ cfg.ciudad }}{% endif %}</h1>
+  <p id="hero-s">{{ items|length }} {{ 'auto disponible' if items|length == 1 else 'autos disponibles' }} · {% if hay_cero and not hay_usados %}Entrega inmediata y financiación{% else %}Financiación y toma de tu usado{% endif %}</p>
+  {% if ambos %}<button type="button" class="ver-todos" id="ver-todos" style="display:none;">‹ Ver todos los autos</button>{% endif %}
 </div></section>
 
 <main class="wrap" id="autos">
@@ -239,15 +242,9 @@
   var grid = document.getElementById('grid'); if (!grid) return;
   var $ = function (id) { return document.getElementById(id); };
   var cards = [].slice.call(grid.children), modelosDe = {};
-  var botones = [].slice.call(document.querySelectorAll('.tabs button')), tab = null;
-  var hayUsados = cards.some(function (c) { return c.dataset.cero !== '1'; });
-  if (botones.length) {
-    tab = (location.hash === '#0km' || !hayUsados) ? 'cero' : 'usados';
-    var nU = cards.filter(function (c) { return c.dataset.cero !== '1'; }).length;
-    var eu = $('n-usados'), ec = $('n-cero');
-    if (eu) eu.textContent = '(' + nU + ')';
-    if (ec) ec.textContent = '(' + (cards.length - nU) + ')';
-  }
+  var botones = [].slice.call(document.querySelectorAll('[data-tab]')), tab = null;
+  var verTodos = document.getElementById('ver-todos');
+  if (botones.length) tab = location.hash === '#0km' ? 'cero' : (location.hash === '#usados' ? 'usados' : null);
   function enTab(c) { return !tab || (tab === 'cero') === (c.dataset.cero === '1'); }
   function llenarMarcas() {
     var set = {}, sel = $('f-marca'), previo = sel.value;
@@ -296,10 +293,12 @@
     var n = principal.length;
     $('cuenta').textContent = n + (n === 1 ? ' auto disponible' : ' autos disponibles');
     $('bloque-consultar').style.display = consultar.length ? '' : 'none';
-    if (tab) {
+    if (verTodos) {
       botones.forEach(function (b) { b.classList.toggle('on', b.dataset.tab === tab); });
-      $('hero-t').textContent = 'Autos ' + (tab === 'cero' ? '0 Km' : 'usados') + ($('hero-t').dataset.ciudad || '');
+      var ciudad = $('hero-t').dataset.ciudad || '';
+      $('hero-t').textContent = (tab === 'cero' ? 'Autos 0 Km' : (tab === 'usados' ? 'Autos usados' : '0 Km y Usados')) + ciudad;
       $('hero-s').textContent = n + (n === 1 ? ' auto disponible' : ' autos disponibles') + (tab === 'cero' ? ' · Entrega inmediata y financiación' : ' · Financiación y toma de tu usado');
+      verTodos.style.display = tab ? '' : 'none';
     }
     var fd = document.getElementById('franja-dest');
     if (fd) { var vis = 0; [].slice.call(fd.querySelectorAll('.card')).forEach(function (c) { var ok = enTab(c); c.style.display = ok ? '' : 'none'; if (ok) vis++; }); fd.dataset.vacia = vis ? '' : '1'; }
@@ -315,12 +314,17 @@
     ['f-marca', 'f-modelo', 'f-anio-d', 'f-anio-h', 'f-pre-d', 'f-pre-h', 'f-km-d', 'f-km-h', 'f-q'].forEach(function (id) { $(id).value = ''; });
     llenarModelos(); aplicar();
   });
+  function irA(nuevo) {
+    tab = nuevo; llenarMarcas(); $('f-marca').value = ''; llenarModelos(); aplicar();
+    try { history.replaceState(null, '', nuevo === 'cero' ? '#0km' : (nuevo === 'usados' ? '#usados' : location.pathname + location.search)); } catch (e) {}
+  }
   botones.forEach(function (b) {
-    b.addEventListener('click', function () {
-      tab = b.dataset.tab; llenarMarcas(); $('f-marca').value = ''; llenarModelos(); aplicar();
-      try { history.replaceState(null, '', tab === 'cero' ? '#0km' : location.pathname + location.search); } catch (e) {}
+    b.addEventListener('click', function (e) {
+      e.preventDefault(); irA(b.dataset.tab);
+      var r = document.getElementById('autos'); if (r && r.scrollIntoView) r.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
+  if (verTodos) verTodos.addEventListener('click', function () { irA(null); });
   llenarMarcas(); llenarModelos(); aplicar();
 })();
 
