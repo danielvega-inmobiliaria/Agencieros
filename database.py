@@ -528,6 +528,8 @@ def _migrar_web_agencia(conn):
     vcols = {r[1] for r in conn.execute("PRAGMA table_info(vehiculos)")}
     if "web_visible" not in vcols:
         conn.execute("ALTER TABLE vehiculos ADD COLUMN web_visible INTEGER NOT NULL DEFAULT 1")
+    if "web_ocultar_precio" not in vcols:
+        conn.execute("ALTER TABLE vehiculos ADD COLUMN web_ocultar_precio INTEGER NOT NULL DEFAULT 0")
 
 
 def _migrar_demo(conn):

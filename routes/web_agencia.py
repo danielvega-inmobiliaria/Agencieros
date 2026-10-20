@@ -58,7 +58,8 @@ def _pesos(n):
 def _items(agencia_id, slug):
     """Autos a mostrar: disponibles y no ocultados, con solo datos públicos."""
     filas = query(
-        """SELECT id, marca, modelo, version, anio, km, combustible, caja, valor_publicado, tipo_carroceria
+        """SELECT id, marca, modelo, version, anio, km, combustible, caja, valor_publicado, tipo_carroceria,
+                  COALESCE(web_ocultar_precio, 0) AS ocultar_precio
            FROM vehiculos
            WHERE agencia_id = ? AND estado = 'disponible' AND COALESCE(web_visible, 1) = 1
            ORDER BY id DESC""", (agencia_id,))
@@ -70,8 +71,8 @@ def _items(agencia_id, slug):
             "anio": v["anio"], "km": v["km"],
             "km_txt": f"{int(v['km']):,} km".replace(",", ".") if v["km"] else "",
             "combustible": v["combustible"] or "", "caja": v["caja"] or "",
-            "precio": v["valor_publicado"] or 0,
-            "precio_txt": _pesos(v["valor_publicado"]) if v["valor_publicado"] else "Consultar",
+            "precio": 0 if v["ocultar_precio"] else (v["valor_publicado"] or 0),
+            "precio_txt": _pesos(v["valor_publicado"]) if (v["valor_publicado"] and not v["ocultar_precio"]) else "Consultar",
             "foto": foto_principal(v["id"]),
             "ficha": f"{APP_URL}/stock/{v['id']}/ficha?wa=0&web={slug}",
         })
@@ -140,12 +141,15 @@ def config():
         color = color_valido(request.form.get("color"))
         execute("UPDATE agencias SET web_slug = ?, web_activa = ?, web_color = ? WHERE id = ?", (slug, activa, color, agencia_id))
         visibles = {int(x) for x in request.form.getlist("visible") if x.isdigit()}
+        sin_precio = {int(x) for x in request.form.getlist("sin_precio") if x.isdigit()}
         for v in query("SELECT id FROM vehiculos WHERE agencia_id = ? AND estado = 'disponible'", (agencia_id,)):
-            execute("UPDATE vehiculos SET web_visible = ? WHERE id = ?", (1 if v["id"] in visibles else 0, v["id"]))
+            execute("UPDATE vehiculos SET web_visible = ?, web_ocultar_precio = ? WHERE id = ?",
+                    (1 if v["id"] in visibles else 0, 1 if v["id"] in sin_precio else 0, v["id"]))
         flash("Web guardada." + (" Ya está publicada." if activa else " Todavía está oculta al público."), "success")
         return redirect(url_for("web_agencia.config"))
     vehiculos = [dict(v, foto=foto_principal(v["id"])) for v in query(
-        """SELECT id, marca, modelo, version, anio, valor_publicado, COALESCE(web_visible, 1) AS web_visible
+        """SELECT id, marca, modelo, version, anio, valor_publicado, COALESCE(web_visible, 1) AS web_visible,
+                  COALESCE(web_ocultar_precio, 0) AS ocultar_precio
            FROM vehiculos WHERE agencia_id = ? AND estado = 'disponible' ORDER BY id DESC""", (agencia_id,))]
     return render_template(
         "web_agencia/config.html", ag=ag, cfg=cfg, sugerido=sugerido, vehiculos=vehiculos,
