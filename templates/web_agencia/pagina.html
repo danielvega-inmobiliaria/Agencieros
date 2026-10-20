@@ -148,14 +148,14 @@
 <section class="contacto" id="contacto"><div class="wrap">
   <div>
     <h3>{{ nombre }}</h3>
-    {% if cfg.direccion or lugar %}<p>📍 {{ cfg.direccion or '' }}{{ ' · ' if cfg.direccion and lugar else '' }}{{ lugar }}</p>{% endif %}
+    {% set dir_repite = cfg.direccion and cfg.ciudad and (cfg.ciudad|lower|replace('á','a')|replace('é','e')|replace('í','i')|replace('ó','o')|replace('ú','u')) in (cfg.direccion|lower|replace('á','a')|replace('é','e')|replace('í','i')|replace('ó','o')|replace('ú','u')) %}
+    {% if cfg.direccion or lugar %}<p>📍 {% if dir_repite %}{{ cfg.direccion }}{% if cfg.provincia %}, {{ cfg.provincia }}{% endif %}{% else %}{{ cfg.direccion or '' }}{{ ' · ' if cfg.direccion and lugar else '' }}{{ lugar }}{% endif %}</p>{% endif %}
     {% if cfg.nombre_contacto %}<p>Atiende: {{ cfg.nombre_contacto }}</p>{% endif %}
   </div>
   <div class="redes">
     {% if wa_general %}<a class="btn btn-wa" href="{{ wa_general }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}
     {% if cfg.instagram %}<a class="btn btn-line" href="{{ cfg.instagram }}" target="_blank" rel="noopener">Instagram</a>{% endif %}
     {% if cfg.facebook %}<a class="btn btn-line" href="{{ cfg.facebook }}" target="_blank" rel="noopener">Facebook</a>{% endif %}
-    {% if cfg.sitio_web %}<a class="btn btn-line" href="{{ cfg.sitio_web }}" target="_blank" rel="noopener">Sitio web</a>{% endif %}
   </div>
 </div></section>
 <footer>Precios en pesos, sujetos a cambio sin previo aviso. · Web hecha con <a href="{{ url_canonica.rsplit('/a/', 1)[0] }}">AGENCIEROS</a></footer>
