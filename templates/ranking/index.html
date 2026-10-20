@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Ranking de vendedores — Agencieros{% endblock %}
+{% block header %}Ranking de vendedores{% endblock %}
+{% block content %}
+{% include "partials/selector_sucursal.html" %}
+{% macro money(n) %}${{ "{:,.0f}".format(n or 0).replace(",", ".") }}{% endmacro %}
+<div class="tabs rk-tabs">
+  {% for clave, nombre in periodos %}
+  <a class="tab {{ 'active' if periodo == clave else '' }}" href="{{ url_for('ranking.index', p=clave) }}">{{ nombre }}</a>
+  {% endfor %}
+</div>
+
+{% if r.mejor %}
+<div class="rk-mejor">
+  <div class="rk-trofeo">🏆</div>
+  <div>
+    <div class="rk-mejor-t">{{ 'Mejor vendedor del mes' if periodo == 'mes' else ('Mejor vendedor del mes anterior' if periodo == 'mes_ant' else 'Mejor vendedor · ' ~ periodo_nombre|lower) }}</div>
+    <div class="rk-mejor-n">{{ r.mejor.nombre }}</div>
+    <div class="rk-mejor-s">{{ r.mejor.unidades }} unidad{{ '' if r.mejor.unidades == 1 else 'es' }} · {{ money(r.mejor.monto) }} vendidos</div>
+  </div>
+</div>
+{% endif %}
+
+<div class="cards rk-totales">
+  <div class="card"><div class="label">Unidades vendidas</div><div class="value">{{ r.total_unidades }}</div></div>
+  <div class="card"><div class="label">Monto vendido</div><div class="value">{{ money(r.total_monto) }}</div></div>
+  <div class="card"><div class="label">Ganancia generada</div><div class="value">{{ money(r.total_ganancia) }}</div></div>
+</div>
+
+{% if r.filas %}
+<div class="rk-lista">
+  {% for f in r.filas %}
+  <div class="rk-item {{ 'rk-sin' if f.sin_asignar else '' }}">
+    <div class="rk-cab">
+      <div class="rk-pos">{% if f.sin_asignar %}–{% elif f.unidades > 0 %}{{ loop.index }}{% else %}·{% endif %}</div>
+      <div class="rk-nom"><b>{{ f.nombre }}</b>
+        {% if f.rol == 'dueno' %}<span class="rk-tag">Dueño</span>{% endif %}
+        {% if not f.activo %}<span class="rk-tag rk-tag-off">Desactivado</span>{% endif %}
+      </div>
+      <div class="rk-uni"><b>{{ f.unidades }}</b><span>vendido{{ '' if f.unidades == 1 else 's' }}</span></div>
+    </div>
+    <div class="rk-barra"><i style="width: {{ f.barra }}%"></i></div>
+    <div class="rk-datos">
+      <div><span>Monto vendido</span><b>{{ money(f.monto) }}</b></div>
+      <div><span>Ganancia</span><b>{{ money(f.ganancia) }}</b></div>
+      <div><span>Financiadas</span><b>{{ f.financiadas }}</b></div>
+      <div><span>Señas tomadas</span><b>{{ f.senas }}</b></div>
+      <div><span>Señas → venta</span><b>{% if f.conversion is not none %}{{ f.conversion }}%{% else %}–{% endif %}</b></div>
+    </div>
+    {% if f.senas %}<div class="rk-nota">{{ f.senas_vendidas }} terminaron en venta · {{ f.senas_tramite }} en trámite · {{ f.senas_perdidas }} perdida{{ '' if f.senas_perdidas == 1 else 's' }}</div>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="panel"><p style="margin:0;color:var(--text-dim);">No hay ventas ni señas en este período{% if sucursal_sel_nombre %} para {{ sucursal_sel_nombre }}{% endif %}.</p></div>
+{% endif %}
+
+<p class="rk-ayuda">Cómo se cuenta: <b>vendidas</b> = unidades vendidas en el período. <b>Señas → venta</b> = señas tomadas por la persona que hoy están vendidas, sobre las que ya se cerraron (las que siguen en trámite no cuentan). <b>Sin asignar</b> = ventas anteriores a que cada usuario tuviera su cuenta. La ganancia es valor vendido menos compra y gastos. Solo el dueño ve esta pantalla.</p>
+
+<style>
+.rk-tabs { margin-bottom: 16px; }
+.rk-mejor { display:flex; align-items:center; gap:14px; padding:16px 18px; margin-bottom:18px; border-radius:12px;
+  background: linear-gradient(135deg, rgba(217,164,65,.22), rgba(217,164,65,.06)); border:1px solid var(--gold); }
+.rk-trofeo { font-size:40px; line-height:1; }
+.rk-mejor-t { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--gold-light); }
+.rk-mejor-n { font-size:24px; font-weight:800; margin:2px 0; }
+.rk-mejor-s { font-size:13px; color:var(--text-dim); }
+.rk-totales { grid-template-columns: repeat(3, 1fr); gap:12px; }
+.rk-lista { display:grid; gap:12px; margin-bottom:16px; }
+.rk-item { background:var(--navy-card); border:1px solid var(--border); border-radius:12px; padding:14px 16px; }
+.rk-sin { opacity:.8; border-style:dashed; }
+.rk-cab { display:flex; align-items:center; gap:12px; }
+.rk-pos { width:32px; height:32px; border-radius:50%; background:var(--gold); color:#17202e; font-weight:800;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.rk-sin .rk-pos { background:var(--navy-card-2); color:var(--text-dim); }
+.rk-nom { flex:1; min-width:0; font-size:16px; overflow-wrap:anywhere; }
+.rk-tag { margin-left:6px; font-size:11px; padding:2px 8px; border-radius:10px; background:rgba(217,164,65,.18); color:var(--gold-light); }
+.rk-tag-off { background:rgba(255,255,255,.08); color:var(--text-dim); }
+.rk-uni { text-align:right; line-height:1.1; flex-shrink:0; }
+.rk-uni b { display:block; font-size:26px; color:var(--gold-light); }
+.rk-uni span { font-size:11px; color:var(--text-dim); }
+.rk-barra { height:6px; border-radius:4px; background:var(--navy-card-2); margin:10px 0 12px; overflow:hidden; }
+.rk-barra i { display:block; height:100%; background:var(--gold); border-radius:4px; }
+.rk-datos { display:grid; grid-template-columns: repeat(5, 1fr); gap:8px; }
+.rk-datos div { min-width:0; }
+.rk-datos span { display:block; font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.03em; }
+.rk-datos b { font-size:14px; overflow-wrap:anywhere; }
+.rk-nota { margin-top:10px; font-size:12px; color:var(--text-dim); }
+.rk-ayuda { font-size:12px; color:var(--text-dim); line-height:1.5; }
+@media (max-width: 700px) {
+  .rk-totales { grid-template-columns: 1fr; }
+  .rk-datos { grid-template-columns: repeat(2, 1fr); }
+  .rk-mejor-n { font-size:20px; }
+}
+</style>
+{% endblock %}

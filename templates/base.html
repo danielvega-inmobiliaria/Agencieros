@@ -90,6 +90,10 @@
         {% if respuestas_nuevas %}<span class="nav-badge">{{ respuestas_nuevas }}</span>{% endif %}
       </a>
       {% if not es_vendedor %}
+      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('ranking.') else '' }}" href="{{ url_for('ranking.index') }}">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"></path><path d="M12 17v4"></path><path d="M7 4h10v5a5 5 0 0 1-10 0z"></path><path d="M17 5h3v2a3 3 0 0 1-3 3"></path><path d="M7 5H4v2a3 3 0 0 0 3 3"></path></svg>
+        Ranking de vendedores
+      </a>
       <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('cuenta.usuario') else '' }}" href="{{ url_for('cuenta.usuarios') }}">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
         Usuarios

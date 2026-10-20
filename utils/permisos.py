@@ -9,7 +9,7 @@ from flask import session
 ROLES = {"dueno": "Dueño", "vendedor": "Vendedor"}
 
 # Blueprints / endpoints que un vendedor no puede abrir.
-BLUEPRINTS_SOLO_DUENO = {"finanzas", "admin"}
+BLUEPRINTS_SOLO_DUENO = {"finanzas", "admin", "ranking"}
 ENDPOINTS_SOLO_DUENO = {"cuenta.usuarios", "cuenta.usuario_nuevo", "cuenta.usuario_editar",
                         "cuenta.sucursales", "cuenta.sucursal_nueva", "cuenta.sucursal_editar"}
 

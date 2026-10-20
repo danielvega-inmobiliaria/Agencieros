@@ -65,6 +65,7 @@ def create_app():
     from routes.mensajes import bp as mensajes_bp
     from routes.cuenta import bp as cuenta_bp
     from routes.web_agencia import bp as web_agencia_bp
+    from routes.ranking import bp as ranking_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -84,6 +85,7 @@ def create_app():
     app.register_blueprint(mensajes_bp)
     app.register_blueprint(cuenta_bp)
     app.register_blueprint(web_agencia_bp)
+    app.register_blueprint(ranking_bp)
 
     @app.template_filter("fecha_ar")
     def _fecha_ar(valor):

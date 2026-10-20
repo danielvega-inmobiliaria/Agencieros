@@ -289,9 +289,14 @@ def index():
                 (agencia_id, uid), one=True)["c"],
         }
     selector = contexto_selector()
+    top_vendedores = []
+    if not session.get("usuario_rol") == "vendedor":
+        from routes.ranking import top3
+        top_vendedores = top3(agencia_id)
     return render_template(
         "dashboard.html",
         **selector,
+        top_vendedores=top_vendedores,
         suc_endpoint="dashboard.index",
         suc_args={},
         por_sucursal=_resumen_por_sucursal(agencia_id) if selector["sucursales_sel"] and selector["sucursal_sel"] is None else [],
