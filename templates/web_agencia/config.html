@@ -13,7 +13,8 @@
   .mw-item .mw-t small { color:var(--text-dim); font-size:12px; }
   .mw-item .mw-t b { font-size:14px; }
   .mw-item .mw-p { color:var(--gold-light); font-weight:700; font-size:14px; }
-  .mw-op { margin-left:auto; display:flex; align-items:center; gap:6px; flex:none; padding-left:8px; border-left:1px solid var(--border); }
+  .mw-op1 { display:flex; align-items:center; gap:6px; }
+  .mw-op { margin-left:auto; display:flex; flex-direction:column; align-items:flex-start; gap:6px; flex:none; padding-left:8px; border-left:1px solid var(--border); }
   .mw-op small { color:var(--text-dim); font-size:12px; }
   .mw form .mw-op input[type=checkbox] { width:18px; height:18px; min-width:18px; }
   .mw-slug { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
@@ -48,7 +49,7 @@
 
     <h3 style="margin:18px 0 6px;">Autos que se muestran</h3>
     {% if vehiculos %}
-    <p style="color:var(--text-dim); font-size:12px; margin-top:0;">Destildá los que no quieras mostrar en la web. Con «Ocultar precio» la web muestra «Consultar» en vez del precio. Los autos señados o vendidos se sacan solos.</p>
+    <p style="color:var(--text-dim); font-size:12px; margin-top:0;">Destildá los que no quieras mostrar en la web. Con «Ocultar precio» la web muestra «Consultar» en vez del precio. «Destacar» los pone en una franja arriba de todo (hasta {{ max_destacados }}). Los autos señados o vendidos se sacan solos.</p>
     <div class="mw-lista">
       {% for v in vehiculos %}
       <label class="mw-item">
@@ -59,9 +60,9 @@
           <small>{{ v.version or '' }} · {{ v.anio or 's/d' }}</small>
           {% if v.valor_publicado %}<span class="mw-p">${{ '{:,.0f}'.format(v.valor_publicado).replace(',', '.') }}</span>{% else %}<small><i>Sin precio cargado</i></small>{% endif %}
         </span>
-        <span class="mw-op" title="En la web se muestra &quot;Consultar&quot; en vez del precio">
-          <input type="checkbox" name="sin_precio" value="{{ v.id }}" {{ 'checked' if v.ocultar_precio else '' }}>
-          <small>Ocultar precio</small>
+        <span class="mw-op">
+          <span class="mw-op1" title="En la web se muestra &quot;Consultar&quot; en vez del precio"><input type="checkbox" name="sin_precio" value="{{ v.id }}" {{ 'checked' if v.ocultar_precio else '' }}><small>Ocultar precio</small></span>
+          <span class="mw-op1" title="Aparece en la franja de destacados, arriba de la web"><input type="checkbox" name="destacado" value="{{ v.id }}" {{ 'checked' if v.destacado else '' }}><small>⭐ Destacar</small></span>
         </span>
       </label>
       {% endfor %}
@@ -71,6 +72,9 @@
     {% endif %}
     <button class="btn btn-primary btn-sm" type="submit" style="margin-top:14px;">Guardar</button>
   </form>
+  <p style="margin-top:16px;">
+    <a class="btn btn-sm btn-secondary" href="{{ url_for('web_agencia.consultas') }}">📩 Consultas de la web{% if consultas_nuevas %} ({{ consultas_nuevas }} nuevas){% endif %}</a>
+  </p>
   {% if ag.web_slug %}
   <p style="margin-top:16px;">
     <a class="btn btn-sm" href="{{ url_for('web_agencia.pagina', slug=ag.web_slug) }}" target="_blank" rel="noopener">{{ 'Ver mi web' if ag.web_activa else 'Ver vista previa (solo la ves vos)' }} ↗</a>

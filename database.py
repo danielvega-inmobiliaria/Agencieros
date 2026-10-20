@@ -528,6 +528,18 @@ def _migrar_web_agencia(conn):
     vcols = {r[1] for r in conn.execute("PRAGMA table_info(vehiculos)")}
     if "web_visible" not in vcols:
         conn.execute("ALTER TABLE vehiculos ADD COLUMN web_visible INTEGER NOT NULL DEFAULT 1")
+    if "web_destacado" not in vcols:
+        conn.execute("ALTER TABLE vehiculos ADD COLUMN web_destacado INTEGER NOT NULL DEFAULT 0")
+    # Consultas que llegan desde la web pública ("Compramos tu auto").
+    conn.execute("""CREATE TABLE IF NOT EXISTS web_consultas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        agencia_id INTEGER NOT NULL,
+        tipo TEXT NOT NULL DEFAULT 'compramos',
+        nombre TEXT, telefono TEXT, marca TEXT, modelo TEXT, anio INTEGER, km INTEGER, comentario TEXT,
+        estado TEXT NOT NULL DEFAULT 'nuevo',
+        ip TEXT,
+        created_at TEXT DEFAULT (datetime('now')))""")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_web_consultas_ag ON web_consultas(agencia_id, estado)")
     if "web_ocultar_precio" not in vcols:
         conn.execute("ALTER TABLE vehiculos ADD COLUMN web_ocultar_precio INTEGER NOT NULL DEFAULT 0")
 

@@ -66,6 +66,27 @@
   .nota-consultar { background:#fff; border:1.5px dashed var(--acc); border-radius:12px; padding:14px 18px; margin:6px 0 18px; display:flex; flex-direction:column; gap:4px; }
   .nota-consultar b { color:var(--acc); font-size:17px; }
   .nota-consultar span { color:var(--dim); font-size:14px; line-height:1.4; }
+  .franja-dest { padding-top:26px; }
+  .franja-dest h2 { margin:0 0 12px; font-size:21px; color:var(--acc); }
+  .carril { display:flex; gap:16px; overflow-x:auto; padding:2px 2px 14px; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; }
+  .carril .card { flex:0 0 min(300px, 82%); scroll-snap-align:start; }
+  .badge-dest { position:absolute; top:10px; left:10px; background:#f59e0b; color:#1a1200; font-size:12px; font-weight:800; padding:4px 10px; border-radius:999px; box-shadow:0 2px 6px rgba(0,0,0,.25); }
+  .card .foto { display:block; }
+  .compramos { background:#fff; border-top:1px solid var(--line); padding:34px 0; }
+  .compramos .caja { display:grid; grid-template-columns:1fr 1.3fr; gap:30px; align-items:start; }
+  .compramos h2 { margin:0 0 8px; font-size:26px; color:var(--acc); }
+  .compramos .txt p { color:var(--dim); font-size:16px; line-height:1.5; margin:0 0 10px; }
+  .compramos ul { color:var(--text); padding-left:20px; line-height:1.7; margin:10px 0 0; }
+  .compramos form { background:var(--bg); border-radius:14px; padding:18px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .compramos form label { font-size:12px; font-weight:700; color:var(--dim); text-transform:uppercase; letter-spacing:.4px; display:block; margin-bottom:4px; }
+  .compramos form input, .compramos form textarea { width:100%; border:1px solid #d1d5db; border-radius:8px; padding:11px 12px; font-size:15px; background:#fff; font-family:inherit; color:var(--text); min-width:0; }
+  .compramos form .full { grid-column:1 / -1; }
+  .compramos .trampa { position:absolute; left:-9999px; }
+  .compramos .msg { grid-column:1 / -1; font-size:15px; display:none; border-radius:8px; padding:12px 14px; }
+  .compramos .msg.ok { display:block; background:#dcfce7; color:#14532d; }
+  .compramos .msg.err { display:block; background:#fee2e2; color:#7f1d1d; }
+  .btn-resalta { background:var(--acc); color:var(--acc-txt) !important; border-radius:8px; padding:9px 14px; }
+  @media (max-width:760px) { .compramos .caja { grid-template-columns:1fr; } .compramos form { grid-template-columns:1fr; } }
   .vacio { text-align:center; color:var(--dim); padding:60px 10px; font-size:16px; }
 
   /* contacto + pie */
@@ -86,6 +107,23 @@
 </style>
 </head>
 <body>
+{% macro tarjeta(it, datos=True, destacada=False) -%}
+    <article class="card{{ ' dest' if destacada else '' }}"{% if datos %} data-t="{{ (it.titulo ~ ' ' ~ it.version)|lower }}" data-marca="{{ it.marca }}" data-modelo="{{ it.modelo }}"
+             data-precio="{{ it.precio }}" data-anio="{{ it.anio or 0 }}" data-km="{{ it.km or 0 }}" data-i="{{ it.idx }}"{% endif %}>
+      <a class="foto" href="{{ it.ficha }}"><img src="{{ it.foto }}" alt="{{ it.titulo }}" loading="lazy">{% if it.destacado %}<span class="badge-dest">⭐ Destacado</span>{% endif %}</a>
+      <div class="cuerpo">
+        <h3>{{ it.titulo }}</h3>
+        {% if it.version %}<div class="ver">{{ it.version }}</div>{% endif %}
+        <div class="precio">{{ it.precio_txt }}</div>
+        <div class="meta">{{ [it.km_txt, it.anio|string if it.anio else '', it.combustible, it.caja]|select|join(' | ') }}</div>
+        {% if lugar %}<div class="lugar">📍 {{ lugar }}</div>{% endif %}
+        <div class="acc">
+          <a class="btn-line" href="{{ it.ficha }}">Ver ficha</a>
+          {% if it.wa %}<a class="btn-wa" href="{{ it.wa }}" target="_blank" rel="noopener">Consultar</a>{% endif %}
+        </div>
+      </div>
+    </article>
+{%- endmacro %}
 {% if vista_previa %}<div class="prev">Vista previa: tu web todavía no está publicada, solo la ves vos.</div>{% endif %}
 <header class="top"><div class="wrap head">
   <a class="marca" href="#top">
@@ -95,6 +133,7 @@
   <nav class="menu">
     <a class="txt" href="#autos">Usados</a>
     <a class="txt" href="#contacto">Contacto</a>
+    <a class="btn-resalta" href="#compramos">Compramos tu auto</a>
     {% if wa_general %}<a class="btn btn-wa" href="{{ wa_general }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}
   </nav>
 </div></header>
@@ -116,6 +155,13 @@
     <div class="acciones"><button type="button" class="limpiar" id="f-limpiar">Limpiar filtros</button></div>
   </div>
 
+  {% if destacados %}
+  <section class="franja-dest" id="franja-dest">
+    <h2>⭐ Destacados</h2>
+    <div class="carril">{% for it in destacados %}{{ tarjeta(it, False, True) }}{% endfor %}</div>
+  </section>
+  {% endif %}
+
   <div class="barra">
     <h2 id="cuenta"></h2>
     <select id="orden" aria-label="Ordenar por">
@@ -124,23 +170,7 @@
     </select>
   </div>
   <div class="grid" id="grid">
-    {% for it in items %}
-    <article class="card" data-t="{{ (it.titulo ~ ' ' ~ it.version)|lower }}" data-marca="{{ it.marca }}" data-modelo="{{ it.modelo }}"
-             data-precio="{{ it.precio }}" data-anio="{{ it.anio or 0 }}" data-km="{{ it.km or 0 }}" data-i="{{ loop.index0 }}">
-      <a class="foto" href="{{ it.ficha }}"><img src="{{ it.foto }}" alt="{{ it.titulo }}" loading="lazy"></a>
-      <div class="cuerpo">
-        <h3>{{ it.titulo }}</h3>
-        {% if it.version %}<div class="ver">{{ it.version }}</div>{% endif %}
-        <div class="precio">{{ it.precio_txt }}</div>
-        <div class="meta">{{ [it.km_txt, it.anio|string if it.anio else '', it.combustible, it.caja]|select|join(' | ') }}</div>
-        {% if lugar %}<div class="lugar">📍 {{ lugar }}</div>{% endif %}
-        <div class="acc">
-          <a class="btn-line" href="{{ it.ficha }}">Ver ficha</a>
-          {% if it.wa %}<a class="btn-wa" href="{{ it.wa }}" target="_blank" rel="noopener">Consultar</a>{% endif %}
-        </div>
-      </div>
-    </article>
-    {% endfor %}
+    {% for it in items %}{% set _ = it.update({"idx": loop.index0}) %}{{ tarjeta(it) }}{% endfor %}
   </div>
   <div class="vacio" id="vacio" style="display:none;"></div>
   <section id="bloque-consultar" style="display:none;">
@@ -154,6 +184,26 @@
   <div class="vacio" style="padding-top:70px;">Por ahora no tenemos autos publicados. Escribinos por WhatsApp y te contamos qué hay.</div>
   {% endif %}
 </main>
+
+<section class="compramos" id="compramos"><div class="wrap caja">
+  <div class="txt">
+    <h2>Compramos tu auto</h2>
+    <p>¿Querés vender el tuyo? Contanos qué auto es y te hacemos una oferta, sin vueltas ni compromiso.</p>
+    <ul><li>Tasación rápida y transparente</li><li>Pago al momento de cerrar</li><li>Lo recibimos en parte de pago por otro de nuestro stock</li></ul>
+  </div>
+  <form id="form-compramos" novalidate>
+    <div><label for="c-nombre">Tu nombre</label><input id="c-nombre" name="nombre" required maxlength="80" autocomplete="name"></div>
+    <div><label for="c-tel">Teléfono / WhatsApp</label><input id="c-tel" name="telefono" required maxlength="30" inputmode="tel" autocomplete="tel"></div>
+    <div><label for="c-marca">Marca</label><input id="c-marca" name="marca" required maxlength="40" placeholder="Ej: Renault"></div>
+    <div><label for="c-modelo">Modelo y versión</label><input id="c-modelo" name="modelo" required maxlength="60" placeholder="Ej: Kwid 1.0 Zen"></div>
+    <div><label for="c-anio">Año</label><input id="c-anio" name="anio" type="number" required min="1980" max="2030" inputmode="numeric"></div>
+    <div><label for="c-km">Kilómetros</label><input id="c-km" name="km" inputmode="numeric" placeholder="Aproximado"></div>
+    <div class="full"><label for="c-com">Comentario (opcional)</label><textarea id="c-com" name="comentario" rows="3" maxlength="500" placeholder="Estado, service al día, deuda, lo que quieras contarnos"></textarea></div>
+    <input class="trampa" type="text" name="sitio" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <div class="full"><button class="btn btn-acc" type="submit" id="c-enviar" style="width:100%; padding:13px;">Quiero que me coticen mi auto</button></div>
+    <div class="msg" id="c-msg"></div>
+  </form>
+</div></section>
 
 <section class="contacto" id="contacto"><div class="wrap">
   <div>
@@ -218,6 +268,8 @@
     var n = principal.length;
     $('cuenta').textContent = n + (n === 1 ? ' auto disponible' : ' autos disponibles');
     $('bloque-consultar').style.display = consultar.length ? '' : 'none';
+    var fd = document.getElementById('franja-dest');
+    if (fd) fd.style.display = (t || marca || modelo || ad !== null || ah !== null || pd !== null || ph !== null || kd !== null || kh !== null) ? 'none' : '';
     var v = $('vacio');
     v.style.display = n ? 'none' : '';
     v.textContent = filtraPrecio && consultar.length ? 'No hay autos con precio publicado en ese rango.' : 'No hay autos con esos filtros.';
@@ -230,6 +282,27 @@
     llenarModelos(); aplicar();
   });
   llenarModelos(); aplicar();
+})();
+
+(function () {
+  var f = document.getElementById('form-compramos'); if (!f) return;
+  var msg = document.getElementById('c-msg'), btn = document.getElementById('c-enviar');
+  f.addEventListener('submit', function (e) {
+    e.preventDefault(); msg.className = 'msg';
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    fetch('{{ url_for("web_agencia.compramos", slug=slug) }}', { method: 'POST', body: new FormData(f) })
+      .then(function (r) { return r.json().catch(function () { return { ok: false, error: 'No pudimos enviar la consulta.' }; }); })
+      .then(function (d) {
+        if (d.ok) {
+          msg.className = 'msg ok';
+          msg.innerHTML = '¡Gracias! Recibimos tu consulta y te vamos a contactar a la brevedad.' +
+            ({{ 'true' if wa_compramos else 'false' }} ? ' Si es urgente, <a href="{{ wa_compramos }}" target="_blank" rel="noopener"><b>escribinos por WhatsApp</b></a>.' : '');
+          f.reset();
+        } else { msg.className = 'msg err'; msg.textContent = d.error || 'No pudimos enviar la consulta.'; }
+      })
+      .catch(function () { msg.className = 'msg err'; msg.textContent = 'No pudimos enviar la consulta. Probá de nuevo o escribinos por WhatsApp.'; })
+      .then(function () { btn.disabled = false; btn.textContent = 'Quiero que me coticen mi auto'; });
+  });
 })();
 </script>
 </body>
