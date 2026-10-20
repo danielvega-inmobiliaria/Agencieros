@@ -63,6 +63,9 @@
   .card .lugar { color:var(--dim); font-size:13px; margin-top:8px; }
   .card .acc { display:flex; gap:8px; margin-top:12px; }
   .card .acc a { flex:1; text-align:center; padding:10px 6px; border-radius:8px; font-size:14px; font-weight:700; }
+  .nota-consultar { background:#fff; border:1.5px dashed var(--acc); border-radius:12px; padding:14px 18px; margin:6px 0 18px; display:flex; flex-direction:column; gap:4px; }
+  .nota-consultar b { color:var(--acc); font-size:17px; }
+  .nota-consultar span { color:var(--dim); font-size:14px; line-height:1.4; }
   .vacio { text-align:center; color:var(--dim); padding:60px 10px; font-size:16px; }
 
   /* contacto + pie */
@@ -139,7 +142,14 @@
     </article>
     {% endfor %}
   </div>
-  <div class="vacio" id="vacio" style="display:none;">No hay autos con esos filtros.</div>
+  <div class="vacio" id="vacio" style="display:none;"></div>
+  <section id="bloque-consultar" style="display:none;">
+    <div class="nota-consultar">
+      <b>También tenemos estos autos con precio a consultar</b>
+      <span>No publicamos su precio en la web, pero puede que alguno entre en lo que estás buscando. Echales un vistazo y escribinos por WhatsApp.</span>
+    </div>
+    <div class="grid" id="grid-consultar"></div>
+  </section>
   {% else %}
   <div class="vacio" style="padding-top:70px;">Por ahora no tenemos autos publicados. Escribinos por WhatsApp y te contamos qué hay.</div>
   {% endif %}
@@ -174,31 +184,44 @@
     sel.innerHTML = '<option value="">Todos los modelos</option>' + Object.keys(set).sort().map(function (x) { return '<option>' + x + '</option>'; }).join('');
     if (set[previo]) sel.value = previo;
   }
-  function aplicar() {
-    var t = $('f-q').value.trim().toLowerCase(), marca = $('f-marca').value, modelo = $('f-modelo').value,
-        ad = num('f-anio-d'), ah = num('f-anio-h'), pd = num('f-pre-d'), ph = num('f-pre-h'), kd = num('f-km-d'), kh = num('f-km-h'), n = 0;
-    cards.forEach(function (c) {
-      var d = c.dataset, a = +d.anio, p = +d.precio, k = +d.km;
-      var ok = (!t || d.t.indexOf(t) >= 0) && (!marca || d.marca === marca) && (!modelo || d.modelo === modelo) &&
-        (ad === null || a >= ad) && (ah === null || a <= ah) && (pd === null || p >= pd) && (ph === null || (p > 0 && p <= ph)) &&
-        (kd === null || k >= kd) && (kh === null || k <= kh);
-      c.style.display = ok ? '' : 'none'; if (ok) n++;
-    });
-    var o = $('orden').value;
-    cards.slice().sort(function (a, b) {
+  var grid2 = $('grid-consultar');
+  function orden(o) {
+    return function (a, b) {
       var x = a.dataset, y = b.dataset;
-      // Sin precio ("Consultar"): primero al ordenar de menor a mayor, último de mayor a menor.
-      // Si empatan (p. ej. todos sin precio), por marca y modelo.
       if (o === 'menor' || o === 'mayor') {
+        // Sin precio ("Consultar"): primero de menor a mayor, último de mayor a menor; si empatan, marca y modelo.
         var d = o === 'menor' ? (+x.precio) - (+y.precio) : (+y.precio) - (+x.precio);
         return d || x.marca.localeCompare(y.marca, 'es') || x.modelo.localeCompare(y.modelo, 'es') || (+x.i) - (+y.i);
       }
       if (o === 'anio') return (+y.anio) - (+x.anio);
       if (o === 'km') return (+x.km || 9e15) - (+y.km || 9e15);
       return (+x.i) - (+y.i);
-    }).forEach(function (c) { grid.appendChild(c); });
+    };
+  }
+  function aplicar() {
+    var t = $('f-q').value.trim().toLowerCase(), marca = $('f-marca').value, modelo = $('f-modelo').value,
+        ad = num('f-anio-d'), ah = num('f-anio-h'), pd = num('f-pre-d'), ph = num('f-pre-h'), kd = num('f-km-d'), kh = num('f-km-h'),
+        filtraPrecio = pd !== null || ph !== null, principal = [], consultar = [];
+    cards.forEach(function (c) {
+      var d = c.dataset, a = +d.anio, p = +d.precio, k = +d.km;
+      var ok = (!t || d.t.indexOf(t) >= 0) && (!marca || d.marca === marca) && (!modelo || d.modelo === modelo) &&
+        (ad === null || a >= ad) && (ah === null || a <= ah) && (kd === null || k >= kd) && (kh === null || k <= kh);
+      if (!ok) { c.style.display = 'none'; return; }
+      c.style.display = '';
+      if (!p) { (filtraPrecio ? consultar : principal).push(c); return; }
+      if ((pd === null || p >= pd) && (ph === null || p <= ph)) principal.push(c); else c.style.display = 'none';
+    });
+    var o = $('orden').value;
+    principal.sort(orden(o)).forEach(function (c) { grid.appendChild(c); });
+    consultar.sort(orden(o)).forEach(function (c) { grid2.appendChild(c); });
+    cards.forEach(function (c) { if (c.style.display === 'none' && c.parentNode === grid2) grid.appendChild(c); });
+    var n = principal.length;
     $('cuenta').textContent = n + (n === 1 ? ' auto disponible' : ' autos disponibles');
-    $('vacio').style.display = n ? 'none' : '';
+    $('bloque-consultar').style.display = consultar.length ? '' : 'none';
+    var v = $('vacio');
+    v.style.display = n ? 'none' : '';
+    v.textContent = filtraPrecio && consultar.length ? 'No hay autos con precio publicado en ese rango.' : 'No hay autos con esos filtros.';
+    if (!n && !(filtraPrecio && consultar.length)) v.style.display = '';
   }
   ['f-modelo', 'f-anio-d', 'f-anio-h', 'f-pre-d', 'f-pre-h', 'f-km-d', 'f-km-h', 'f-q', 'orden'].forEach(function (id) { $(id).addEventListener('input', aplicar); });
   $('f-marca').addEventListener('change', function () { llenarModelos(); aplicar(); });
