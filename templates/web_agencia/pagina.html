@@ -3,125 +3,206 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ nombre }}{% if lugar %} · {{ lugar }}{% endif %} — Autos en venta</title>
-<meta name="description" content="{{ items|length }} autos disponibles en {{ nombre }}{% if lugar %}, {{ lugar }}{% endif %}. Consultá por WhatsApp.">
+<title>{{ nombre }}{% if lugar %} · {{ lugar }}{% endif %} — Autos usados</title>
+<meta name="description" content="{{ items|length }} autos usados disponibles en {{ nombre }}{% if lugar %}, {{ lugar }}{% endif %}. Consultá por WhatsApp.">
 <link rel="canonical" href="{{ url_canonica }}">
 {% if vista_previa %}<meta name="robots" content="noindex">{% endif %}
 <meta property="og:type" content="website">
-<meta property="og:title" content="{{ nombre }} — Autos en venta">
+<meta property="og:title" content="{{ nombre }} — Autos usados">
 <meta property="og:description" content="{{ items|length }} autos disponibles{% if lugar %} · {{ lugar }}{% endif %}">
 <meta property="og:url" content="{{ url_canonica }}">
 {% if og_img %}<meta property="og:image" content="{{ og_img }}">{% endif %}
 <style>
-  :root { --bg:#0b1420; --card:#131e2e; --card2:#1a2740; --gold:#d9a441; --gold2:#f0c76b; --text:#eef2f7; --dim:#9aa7bb; --border:#22314a; --green:#25d366; }
+  :root { --acc:{{ color }}; --acc-txt:{{ color_txt }}; --bg:#f3f4f6; --card:#fff; --text:#1f2937; --dim:#6b7280; --line:#e5e7eb; --wa:#25d366; }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif; }
   a { color:inherit; text-decoration:none; }
-  .wrap { max-width:1100px; margin:0 auto; padding:0 16px; }
-  .prev { background:var(--gold); color:#1a1200; text-align:center; font-size:13px; font-weight:700; padding:8px 12px; }
-  header.top { border-bottom:1px solid var(--border); background:var(--card); }
-  .head { display:flex; align-items:center; gap:14px; padding:16px 0; flex-wrap:wrap; }
-  .head img.logo { height:56px; max-width:140px; object-fit:contain; border-radius:8px; background:#fff; padding:4px; }
-  .head h1 { margin:0; font-size:22px; }
-  .head .sub { color:var(--dim); font-size:13px; margin-top:2px; }
-  .head .redes { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
-  .chip { border:1px solid var(--border); border-radius:999px; padding:6px 12px; font-size:13px; color:var(--text); background:var(--card2); }
-  .btn-wa { background:var(--green); color:#04210f; font-weight:800; border-radius:999px; padding:8px 16px; font-size:14px; }
-  .filtros { display:flex; gap:8px; flex-wrap:wrap; padding:16px 0 4px; }
-  .filtros input, .filtros select { background:var(--card); color:var(--text); border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-size:15px; min-width:0; flex:1 1 150px; }
-  .cuenta { color:var(--dim); font-size:13px; padding:6px 0 12px; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:14px; padding-bottom:30px; }
-  .card { background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; }
-  .card img { width:100%; height:180px; object-fit:cover; display:block; background:var(--card2); }
-  .card .cuerpo { padding:12px 14px 14px; display:flex; flex-direction:column; gap:4px; flex:1; }
-  .card h2 { margin:0; font-size:16px; line-height:1.25; }
-  .card .ver { color:var(--dim); font-size:13px; }
-  .card .meta { color:var(--dim); font-size:13px; }
-  .card .precio { color:var(--gold2); font-weight:800; font-size:20px; margin-top:4px; }
-  .card .acc { display:flex; gap:8px; margin-top:auto; padding-top:10px; }
-  .card .acc a { flex:1; text-align:center; border-radius:10px; padding:9px 6px; font-size:14px; font-weight:700; }
-  .acc .a1 { background:var(--card2); border:1px solid var(--border); }
-  .acc .a2 { background:var(--green); color:#04210f; }
-  .vacio { text-align:center; color:var(--dim); padding:50px 10px; }
-  footer { border-top:1px solid var(--border); color:var(--dim); font-size:12px; text-align:center; padding:18px 12px 90px; }
-  footer a { color:var(--gold2); }
-  .flot { position:fixed; right:16px; bottom:16px; z-index:5; box-shadow:0 6px 20px rgba(0,0,0,.45); }
+  .wrap { max-width:1180px; margin:0 auto; padding:0 16px; }
+  .prev { background:#f59e0b; color:#1a1200; text-align:center; font-size:13px; font-weight:700; padding:8px 12px; }
+
+  /* encabezado */
+  header.top { background:#fff; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:20; }
+  .head { display:flex; align-items:center; gap:18px; min-height:68px; }
+  .marca { display:flex; align-items:center; gap:12px; min-width:0; }
+  .marca img { height:44px; max-width:120px; object-fit:contain; }
+  .marca b { font-size:19px; letter-spacing:.2px; color:var(--acc); line-height:1.1; }
+  .marca small { display:block; color:var(--dim); font-size:12px; font-weight:400; }
+  nav.menu { margin-left:auto; display:flex; gap:22px; align-items:center; font-weight:600; font-size:15px; color:var(--acc); }
+  nav.menu a:hover { text-decoration:underline; }
+  .btn { display:inline-block; border-radius:8px; padding:10px 18px; font-weight:700; font-size:14px; border:0; cursor:pointer; }
+  .btn-acc { background:var(--acc); color:var(--acc-txt); }
+  .btn-wa { background:var(--wa); color:#052e16; }
+  .btn-line { background:#fff; color:var(--acc); border:1.5px solid var(--acc); }
+
+  /* portada con buscador */
+  .hero { background:linear-gradient(135deg, var(--acc) 0%, color-mix(in srgb, var(--acc) 70%, #000) 100%); color:var(--acc-txt); padding:34px 0 70px; }
+  .hero h1 { margin:0 0 4px; font-size:30px; line-height:1.15; }
+  .hero p { margin:0; opacity:.9; font-size:16px; }
+  .buscador { background:#fff; color:var(--text); border-radius:14px; box-shadow:0 12px 34px rgba(0,0,0,.18); padding:18px; margin-top:-48px; display:grid; gap:12px;
+              grid-template-columns:repeat(4, 1fr); position:relative; }
+  .buscador label { font-size:12px; font-weight:700; color:var(--dim); text-transform:uppercase; letter-spacing:.4px; display:block; margin-bottom:4px; }
+  .buscador select, .buscador input { width:100%; border:1px solid #d1d5db; border-radius:8px; padding:11px 12px; font-size:15px; background:#fff; color:var(--text); min-width:0; }
+  .buscador .par { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .buscador .acciones { grid-column:1 / -1; display:flex; gap:10px; justify-content:flex-end; align-items:center; }
+  .buscador .limpiar { background:none; border:0; color:var(--dim); font-size:14px; cursor:pointer; text-decoration:underline; }
+
+  /* resultados */
+  .barra { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:26px 0 14px; flex-wrap:wrap; }
+  .barra h2 { margin:0; font-size:21px; color:var(--acc); }
+  .barra select { border:1.5px solid var(--acc); color:var(--acc); background:#fff; border-radius:8px; padding:9px 12px; font-size:14px; font-weight:600; }
+  .grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:20px; padding-bottom:40px; }
+  .card { background:var(--card); border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.08); display:flex; flex-direction:column; transition:box-shadow .15s, transform .15s; }
+  .card:hover { box-shadow:0 10px 26px rgba(0,0,0,.14); transform:translateY(-2px); }
+  .card .foto { position:relative; aspect-ratio:4/3; background:#e5e7eb; }
+  .card .foto img { width:100%; height:100%; object-fit:cover; display:block; }
+  .card .cuerpo { padding:14px 16px 16px; display:flex; flex-direction:column; gap:3px; flex:1; }
+  .card h3 { margin:0; font-size:16px; text-transform:uppercase; line-height:1.25; }
+  .card .ver { color:var(--dim); font-size:13px; text-transform:uppercase; }
+  .card .precio { font-size:24px; font-weight:800; color:var(--acc); margin-top:6px; }
+  .card .meta { color:var(--text); font-size:14px; margin-top:2px; }
+  .card .lugar { color:var(--dim); font-size:13px; margin-top:8px; }
+  .card .acc { display:flex; gap:8px; margin-top:12px; }
+  .card .acc a { flex:1; text-align:center; padding:10px 6px; border-radius:8px; font-size:14px; font-weight:700; }
+  .vacio { text-align:center; color:var(--dim); padding:60px 10px; font-size:16px; }
+
+  /* contacto + pie */
+  .contacto { background:#fff; border-top:1px solid var(--line); padding:30px 0; }
+  .contacto .wrap { display:flex; gap:30px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
+  .contacto h3 { margin:0 0 6px; color:var(--acc); font-size:20px; }
+  .contacto p { margin:2px 0; color:var(--dim); font-size:15px; }
+  .redes { display:flex; gap:8px; flex-wrap:wrap; }
+  footer { background:#111827; color:#9ca3af; font-size:12px; text-align:center; padding:16px 12px 86px; }
+  footer a { color:#fff; font-weight:700; }
+  .flot { position:fixed; right:16px; bottom:16px; z-index:30; box-shadow:0 6px 20px rgba(0,0,0,.3); border-radius:999px; padding:13px 20px; }
+
+  @media (max-width:900px) { .grid { grid-template-columns:repeat(2, 1fr); } .buscador { grid-template-columns:repeat(2, 1fr); } nav.menu a.txt { display:none; } }
+  @media (max-width:560px) {
+    .grid { grid-template-columns:1fr; } .hero h1 { font-size:24px; } .buscador { grid-template-columns:1fr; margin-top:-40px; }
+    .marca b { font-size:16px; } .head .btn-wa { padding:8px 12px; }
+  }
 </style>
 </head>
 <body>
 {% if vista_previa %}<div class="prev">Vista previa: tu web todavía no está publicada, solo la ves vos.</div>{% endif %}
 <header class="top"><div class="wrap head">
-  {% if cfg.logo_url %}<img class="logo" src="{{ cfg.logo_url }}" alt="Logo de {{ nombre }}">{% endif %}
-  <div>
-    <h1>{{ nombre }}</h1>
-    <div class="sub">{{ lugar }}{% if cfg.direccion %}{{ ' · ' if lugar else '' }}{{ cfg.direccion }}{% endif %}</div>
-  </div>
-  <div class="redes">
-    {% if cfg.instagram %}<a class="chip" href="{{ cfg.instagram }}" target="_blank" rel="noopener">Instagram</a>{% endif %}
-    {% if cfg.facebook %}<a class="chip" href="{{ cfg.facebook }}" target="_blank" rel="noopener">Facebook</a>{% endif %}
-    {% if wa_general %}<a class="btn-wa" href="{{ wa_general }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}
-  </div>
+  <a class="marca" href="#top">
+    {% if cfg.logo_url %}<img src="{{ cfg.logo_url }}" alt="Logo de {{ nombre }}">{% endif %}
+    <b>{{ nombre }}{% if lugar %}<small>{{ lugar }}</small>{% endif %}</b>
+  </a>
+  <nav class="menu">
+    <a class="txt" href="#autos">Usados</a>
+    <a class="txt" href="#contacto">Contacto</a>
+    {% if wa_general %}<a class="btn btn-wa" href="{{ wa_general }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}
+  </nav>
 </div></header>
 
-<main class="wrap">
+<section class="hero" id="top"><div class="wrap">
+  <h1>Autos usados{% if cfg.ciudad %} en {{ cfg.ciudad }}{% endif %}</h1>
+  <p>{{ items|length }} {{ 'auto disponible' if items|length == 1 else 'autos disponibles' }} · Financiación y toma de tu usado</p>
+</div></section>
+
+<main class="wrap" id="autos">
   {% if items %}
-  <div class="filtros">
-    <input type="search" id="q" placeholder="Buscar marca o modelo…">
-    <select id="marca"><option value="">Todas las marcas</option>{% for m in marcas %}<option>{{ m }}</option>{% endfor %}</select>
-    <select id="orden">
-      <option value="nuevo">Más nuevos en la web</option><option value="menor">Menor precio</option>
-      <option value="mayor">Mayor precio</option><option value="anio">Año más reciente</option>
+  <div class="buscador">
+    <div><label for="f-marca">Marca</label><select id="f-marca"><option value="">Todas las marcas</option>{% for m in marcas %}<option>{{ m }}</option>{% endfor %}</select></div>
+    <div><label for="f-modelo">Modelo</label><select id="f-modelo"><option value="">Todos los modelos</option></select></div>
+    <div><label>Año</label><div class="par"><input type="number" id="f-anio-d" placeholder="Desde" inputmode="numeric"><input type="number" id="f-anio-h" placeholder="Hasta" inputmode="numeric"></div></div>
+    <div><label>Precio ($)</label><div class="par"><input type="number" id="f-pre-d" placeholder="Desde" inputmode="numeric"><input type="number" id="f-pre-h" placeholder="Hasta" inputmode="numeric"></div></div>
+    <div><label>Kilómetros</label><div class="par"><input type="number" id="f-km-d" placeholder="Desde" inputmode="numeric"><input type="number" id="f-km-h" placeholder="Hasta" inputmode="numeric"></div></div>
+    <div style="grid-column:span 2;"><label for="f-q">Buscar</label><input type="search" id="f-q" placeholder="Marca, modelo o versión…"></div>
+    <div class="acciones"><button type="button" class="limpiar" id="f-limpiar">Limpiar filtros</button></div>
+  </div>
+
+  <div class="barra">
+    <h2 id="cuenta"></h2>
+    <select id="orden" aria-label="Ordenar por">
+      <option value="nuevo">Ordenar: recientes</option><option value="menor">Menor precio</option>
+      <option value="mayor">Mayor precio</option><option value="anio">Año más reciente</option><option value="km">Menos kilómetros</option>
     </select>
   </div>
-  <div class="cuenta" id="cuenta"></div>
   <div class="grid" id="grid">
     {% for it in items %}
-    <article class="card" data-t="{{ (it.titulo ~ ' ' ~ it.version)|lower }}" data-marca="{{ it.marca }}" data-precio="{{ it.precio }}" data-anio="{{ it.anio or 0 }}" data-i="{{ loop.index0 }}">
-      <a href="{{ it.ficha }}"><img src="{{ it.foto }}" alt="{{ it.titulo }}" loading="lazy"></a>
+    <article class="card" data-t="{{ (it.titulo ~ ' ' ~ it.version)|lower }}" data-marca="{{ it.marca }}" data-modelo="{{ it.modelo }}"
+             data-precio="{{ it.precio }}" data-anio="{{ it.anio or 0 }}" data-km="{{ it.km or 0 }}" data-i="{{ loop.index0 }}">
+      <a class="foto" href="{{ it.ficha }}"><img src="{{ it.foto }}" alt="{{ it.titulo }}" loading="lazy"></a>
       <div class="cuerpo">
-        <h2>{{ it.titulo }}</h2>
+        <h3>{{ it.titulo }}</h3>
         {% if it.version %}<div class="ver">{{ it.version }}</div>{% endif %}
-        <div class="meta">{{ [it.anio|string if it.anio else '', it.km_txt, it.combustible, it.caja]|select|join(' · ') }}</div>
         <div class="precio">{{ it.precio_txt }}</div>
+        <div class="meta">{{ [it.km_txt, it.anio|string if it.anio else '', it.combustible, it.caja]|select|join(' | ') }}</div>
+        {% if lugar %}<div class="lugar">📍 {{ lugar }}</div>{% endif %}
         <div class="acc">
-          <a class="a1" href="{{ it.ficha }}">Ver ficha</a>
-          {% if it.wa %}<a class="a2" href="{{ it.wa }}" target="_blank" rel="noopener">Consultar</a>{% endif %}
+          <a class="btn-line" href="{{ it.ficha }}">Ver ficha</a>
+          {% if it.wa %}<a class="btn-wa" href="{{ it.wa }}" target="_blank" rel="noopener">Consultar</a>{% endif %}
         </div>
       </div>
     </article>
     {% endfor %}
   </div>
-  <div class="vacio" id="vacio" style="display:none;">No hay autos con ese filtro.</div>
+  <div class="vacio" id="vacio" style="display:none;">No hay autos con esos filtros.</div>
   {% else %}
-  <div class="vacio">Por ahora no tenemos autos publicados. Escribinos por WhatsApp y te contamos qué hay.</div>
+  <div class="vacio" style="padding-top:70px;">Por ahora no tenemos autos publicados. Escribinos por WhatsApp y te contamos qué hay.</div>
   {% endif %}
 </main>
 
-{% if wa_general %}<a class="btn-wa flot" href="{{ wa_general }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}
-<footer>Web de {{ nombre }} · Precios en pesos, sujetos a cambio. <br>Hecha con <a href="{{ url_canonica.rsplit('/a/', 1)[0] }}">AGENCIEROS</a></footer>
+<section class="contacto" id="contacto"><div class="wrap">
+  <div>
+    <h3>{{ nombre }}</h3>
+    {% if cfg.direccion or lugar %}<p>📍 {{ cfg.direccion or '' }}{{ ' · ' if cfg.direccion and lugar else '' }}{{ lugar }}</p>{% endif %}
+    {% if cfg.nombre_contacto %}<p>Atiende: {{ cfg.nombre_contacto }}</p>{% endif %}
+  </div>
+  <div class="redes">
+    {% if wa_general %}<a class="btn btn-wa" href="{{ wa_general }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}
+    {% if cfg.instagram %}<a class="btn btn-line" href="{{ cfg.instagram }}" target="_blank" rel="noopener">Instagram</a>{% endif %}
+    {% if cfg.facebook %}<a class="btn btn-line" href="{{ cfg.facebook }}" target="_blank" rel="noopener">Facebook</a>{% endif %}
+    {% if cfg.sitio_web %}<a class="btn btn-line" href="{{ cfg.sitio_web }}" target="_blank" rel="noopener">Sitio web</a>{% endif %}
+  </div>
+</div></section>
+<footer>Precios en pesos, sujetos a cambio sin previo aviso. · Web hecha con <a href="{{ url_canonica.rsplit('/a/', 1)[0] }}">AGENCIEROS</a></footer>
+{% if wa_general %}<a class="btn btn-wa flot" href="{{ wa_general }}" target="_blank" rel="noopener">💬 WhatsApp</a>{% endif %}
 
 <script>
 (function () {
   var grid = document.getElementById('grid'); if (!grid) return;
-  var cards = [].slice.call(grid.children), q = document.getElementById('q'), m = document.getElementById('marca'),
-      o = document.getElementById('orden'), cuenta = document.getElementById('cuenta'), vacio = document.getElementById('vacio');
+  var $ = function (id) { return document.getElementById(id); };
+  var cards = [].slice.call(grid.children), modelosDe = {};
+  cards.forEach(function (c) { var m = c.dataset.marca; (modelosDe[m] = modelosDe[m] || {})[c.dataset.modelo] = 1; });
+  function num(id) { var v = parseFloat($(id).value); return isNaN(v) ? null : v; }
+  function llenarModelos() {
+    var marca = $('f-marca').value, sel = $('f-modelo'), previo = sel.value, set = {};
+    (marca ? [marca] : Object.keys(modelosDe)).forEach(function (m) { Object.keys(modelosDe[m] || {}).forEach(function (x) { if (x) set[x] = 1; }); });
+    sel.innerHTML = '<option value="">Todos los modelos</option>' + Object.keys(set).sort().map(function (x) { return '<option>' + x + '</option>'; }).join('');
+    if (set[previo]) sel.value = previo;
+  }
   function aplicar() {
-    var t = q.value.trim().toLowerCase(), marca = m.value, n = 0;
+    var t = $('f-q').value.trim().toLowerCase(), marca = $('f-marca').value, modelo = $('f-modelo').value,
+        ad = num('f-anio-d'), ah = num('f-anio-h'), pd = num('f-pre-d'), ph = num('f-pre-h'), kd = num('f-km-d'), kh = num('f-km-h'), n = 0;
     cards.forEach(function (c) {
-      var ok = (!t || c.dataset.t.indexOf(t) >= 0) && (!marca || c.dataset.marca === marca);
+      var d = c.dataset, a = +d.anio, p = +d.precio, k = +d.km;
+      var ok = (!t || d.t.indexOf(t) >= 0) && (!marca || d.marca === marca) && (!modelo || d.modelo === modelo) &&
+        (ad === null || a >= ad) && (ah === null || a <= ah) && (pd === null || p >= pd) && (ph === null || (p > 0 && p <= ph)) &&
+        (kd === null || k >= kd) && (kh === null || k <= kh);
       c.style.display = ok ? '' : 'none'; if (ok) n++;
     });
-    var k = o.value, v = cards.slice().sort(function (a, b) {
-      if (k === 'menor') return (+a.dataset.precio || 9e15) - (+b.dataset.precio || 9e15);
-      if (k === 'mayor') return (+b.dataset.precio) - (+a.dataset.precio);
-      if (k === 'anio') return (+b.dataset.anio) - (+a.dataset.anio);
-      return (+a.dataset.i) - (+b.dataset.i);
-    });
-    v.forEach(function (c) { grid.appendChild(c); });
-    cuenta.textContent = n + (n === 1 ? ' auto disponible' : ' autos disponibles');
-    vacio.style.display = n ? 'none' : '';
+    var o = $('orden').value;
+    cards.slice().sort(function (a, b) {
+      var x = a.dataset, y = b.dataset;
+      if (o === 'menor') return (+x.precio || 9e15) - (+y.precio || 9e15);
+      if (o === 'mayor') return (+y.precio) - (+x.precio);
+      if (o === 'anio') return (+y.anio) - (+x.anio);
+      if (o === 'km') return (+x.km || 9e15) - (+y.km || 9e15);
+      return (+x.i) - (+y.i);
+    }).forEach(function (c) { grid.appendChild(c); });
+    $('cuenta').textContent = n + (n === 1 ? ' auto disponible' : ' autos disponibles');
+    $('vacio').style.display = n ? 'none' : '';
   }
-  q.addEventListener('input', aplicar); m.addEventListener('change', aplicar); o.addEventListener('change', aplicar); aplicar();
+  ['f-modelo', 'f-anio-d', 'f-anio-h', 'f-pre-d', 'f-pre-h', 'f-km-d', 'f-km-h', 'f-q', 'orden'].forEach(function (id) { $(id).addEventListener('input', aplicar); });
+  $('f-marca').addEventListener('change', function () { llenarModelos(); aplicar(); });
+  $('f-limpiar').addEventListener('click', function () {
+    ['f-marca', 'f-modelo', 'f-anio-d', 'f-anio-h', 'f-pre-d', 'f-pre-h', 'f-km-d', 'f-km-h', 'f-q'].forEach(function (id) { $(id).value = ''; });
+    llenarModelos(); aplicar();
+  });
+  llenarModelos(); aplicar();
 })();
 </script>
 </body>

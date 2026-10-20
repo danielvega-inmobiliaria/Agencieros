@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 from datetime import date
 
@@ -1401,6 +1402,13 @@ def ficha(vehiculo_id):
         propio = (vehiculo["agencia_id"] or 1) == agencia_sesion
         por_defecto = url_for("stock.detalle", vehiculo_id=vehiculo_id) if propio else url_for("stock.index")
         volver_url = _volver_seguro(request.args.get("volver"), por_defecto)
+
+    # Si se llegó desde la web pública de la agencia (?web=<slug>), "Volver"
+    # regresa a esa web (aunque haya sesión iniciada) -- 19/10/2026.
+    web = (request.args.get("web") or "").lower()
+    if re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", web) and query(
+            "SELECT 1 FROM agencias WHERE web_slug = ? AND id = ?", (web, vehiculo["agencia_id"] or 1), one=True):
+        volver_url = os.environ.get("LANDING_URL", "https://agencieros.net.ar").rstrip("/") + "/a/" + web
 
     datos = _datos_ficha(vehiculo)
     # Vista previa del link en WhatsApp / redes (Open Graph): datos del auto y

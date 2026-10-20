@@ -522,6 +522,8 @@ def _migrar_web_agencia(conn):
         conn.execute("ALTER TABLE agencias ADD COLUMN web_slug TEXT")
     if "web_activa" not in cols:
         conn.execute("ALTER TABLE agencias ADD COLUMN web_activa INTEGER NOT NULL DEFAULT 0")
+    if "web_color" not in cols:
+        conn.execute("ALTER TABLE agencias ADD COLUMN web_color TEXT")
     conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_agencias_web_slug ON agencias(web_slug) WHERE web_slug IS NOT NULL")
     vcols = {r[1] for r in conn.execute("PRAGMA table_info(vehiculos)")}
     if "web_visible" not in vcols:

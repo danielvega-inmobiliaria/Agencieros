@@ -38,11 +38,24 @@ def _slug_valido(slug):
     return bool(re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", slug or "")) and 3 <= len(slug) <= 40 and slug not in RESERVADOS
 
 
+COLOR_DEFECTO = "#1f4fa8"
+
+
+def color_valido(c):
+    return c if re.fullmatch(r"#[0-9a-fA-F]{6}", c or "") else COLOR_DEFECTO
+
+
+def _texto_sobre(color):
+    """Blanco u oscuro según el brillo del color de acento."""
+    r, g, b = (int(color[i:i + 2], 16) for i in (1, 3, 5))
+    return "#ffffff" if (0.299 * r + 0.587 * g + 0.114 * b) < 160 else "#111827"
+
+
 def _pesos(n):
     return "$" + "{:,.0f}".format(n or 0).replace(",", ".")
 
 
-def _items(agencia_id):
+def _items(agencia_id, slug):
     """Autos a mostrar: disponibles y no ocultados, con solo datos públicos."""
     filas = query(
         """SELECT id, marca, modelo, version, anio, km, combustible, caja, valor_publicado, tipo_carroceria
@@ -53,14 +66,14 @@ def _items(agencia_id):
     for v in filas:
         titulo = " ".join(str(x) for x in [v["marca"], v["modelo"]] if x)
         items.append({
-            "id": v["id"], "titulo": titulo, "version": v["version"] or "", "marca": v["marca"] or "",
+            "id": v["id"], "titulo": titulo, "modelo": v["modelo"] or "", "version": v["version"] or "", "marca": v["marca"] or "",
             "anio": v["anio"], "km": v["km"],
             "km_txt": f"{int(v['km']):,} km".replace(",", ".") if v["km"] else "",
             "combustible": v["combustible"] or "", "caja": v["caja"] or "",
             "precio": v["valor_publicado"] or 0,
             "precio_txt": _pesos(v["valor_publicado"]) if v["valor_publicado"] else "Consultar",
             "foto": foto_principal(v["id"]),
-            "ficha": f"{APP_URL}/stock/{v['id']}/ficha?wa=0",
+            "ficha": f"{APP_URL}/stock/{v['id']}/ficha?wa=0&web={slug}",
         })
     return items
 
@@ -68,7 +81,7 @@ def _items(agencia_id):
 @bp.route("/a/<slug>")
 def pagina(slug):
     from routes.stock import _whatsapp_ar, _redes_ordenadas
-    ag = query("SELECT id, nombre_agencia, activo, web_activa FROM agencias WHERE web_slug = ?",
+    ag = query("SELECT id, nombre_agencia, activo, web_activa, web_color FROM agencias WHERE web_slug = ?",
                (slug.lower(),), one=True)
     if not ag or ag["activo"] == 0:
         abort(404)
@@ -77,7 +90,7 @@ def pagina(slug):
         abort(404)
     cfg = _redes_ordenadas(dict(obtener_config_agencia(ag["id"])))
     nombre = cfg.get("nombre_agencia") or ag["nombre_agencia"]
-    items = _items(ag["id"])
+    items = _items(ag["id"], slug.lower())
     numero = _whatsapp_ar(cfg.get("telefono"))
     wa_base = f"https://wa.me/{numero}" if numero else None
     for it in items:
@@ -93,6 +106,7 @@ def pagina(slug):
         marcas=sorted({i["marca"] for i in items if i["marca"]}),
         wa_general=(f"{wa_base}?text={quote_plus('Hola! Vi tu web y quiero consultar por un auto.')}" if wa_base else None),
         url_canonica=f"{LANDING_URL}/a/{slug.lower()}", og_img=og_img,
+        color=color_valido(ag["web_color"]), color_txt=_texto_sobre(color_valido(ag["web_color"])),
         vista_previa=(es_dueno and not ag["web_activa"]), activa=bool(ag["web_activa"]),
     )
 
@@ -103,7 +117,7 @@ def config():
     if not agencia_id:
         flash("Entrá con la cuenta de una agencia para configurar su web.", "error")
         return redirect(url_for("precios.index"))
-    ag = query("SELECT id, nombre_agencia, web_slug, web_activa FROM agencias WHERE id = ?", (agencia_id,), one=True)
+    ag = query("SELECT id, nombre_agencia, web_slug, web_activa, web_color FROM agencias WHERE id = ?", (agencia_id,), one=True)
     cfg = obtener_config_agencia(agencia_id)
     sugerido = slugify(cfg.get("nombre_agencia") or ag["nombre_agencia"])
     if request.method == "POST":
@@ -123,7 +137,8 @@ def config():
         if activa and not (cfg.get("telefono") or "").strip():
             flash("Antes de activar la web cargá tu WhatsApp comercial en Admin: es el botón para que te consulten.", "error")
             return redirect(url_for("web_agencia.config"))
-        execute("UPDATE agencias SET web_slug = ?, web_activa = ? WHERE id = ?", (slug, activa, agencia_id))
+        color = color_valido(request.form.get("color"))
+        execute("UPDATE agencias SET web_slug = ?, web_activa = ?, web_color = ? WHERE id = ?", (slug, activa, color, agencia_id))
         visibles = {int(x) for x in request.form.getlist("visible") if x.isdigit()}
         for v in query("SELECT id FROM vehiculos WHERE agencia_id = ? AND estado = 'disponible'", (agencia_id,)):
             execute("UPDATE vehiculos SET web_visible = ? WHERE id = ?", (1 if v["id"] in visibles else 0, v["id"]))
@@ -134,5 +149,5 @@ def config():
            FROM vehiculos WHERE agencia_id = ? AND estado = 'disponible' ORDER BY id DESC""", (agencia_id,))
     return render_template(
         "web_agencia/config.html", ag=ag, cfg=cfg, sugerido=sugerido, vehiculos=vehiculos,
-        landing_url=LANDING_URL, tiene_telefono=bool((cfg.get("telefono") or "").strip()),
+        landing_url=LANDING_URL, color=color_valido(ag["web_color"]), tiene_telefono=bool((cfg.get("telefono") or "").strip()),
     )

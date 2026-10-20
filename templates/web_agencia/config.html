@@ -16,6 +16,10 @@
     </div>
     <p style="color:var(--text-dim); font-size:12px;">Solo letras minúsculas, números y guiones. Si lo cambiás, el link anterior deja de funcionar.</p>
 
+    <label style="margin-top:12px; display:block;">Color de tu web</label>
+    <input type="color" name="color" value="{{ color }}" style="width:70px;height:38px;padding:2px;">
+    <p style="color:var(--text-dim); font-size:12px;">Es el color de la franja de arriba, los botones y los precios. Elegí el de tu marca.</p>
+
     <label style="display:flex; align-items:center; gap:8px; margin:12px 0;">
       <input type="checkbox" name="activa" value="1" {{ 'checked' if ag.web_activa else '' }}>
       <span>Publicar mi web (visible para cualquier persona con el link)</span>
