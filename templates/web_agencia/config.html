@@ -2,7 +2,22 @@
 {% block title %}Mi web — Agencieros{% endblock %}
 {% block header %}Mi web{% endblock %}
 {% block content %}
-<div class="panel">
+<style>
+  .mw form label.mw-check, .mw form label.mw-item { display:flex; align-items:center; gap:12px; margin:0; color:var(--text); font-size:15px; cursor:pointer; }
+  .mw form input[type=checkbox] { width:22px; height:22px; min-width:22px; padding:0; margin:0; accent-color:var(--gold); flex:none; }
+  .mw form label.mw-check { margin:14px 0; font-weight:600; }
+  .mw-lista { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:10px; }
+  .mw form label.mw-item { background:var(--navy-bg); border:1px solid var(--border); border-radius:10px; padding:8px 12px 8px 10px; }
+  .mw-item img { width:76px; height:56px; object-fit:cover; border-radius:6px; flex:none; background:var(--navy-card-2); }
+  .mw-item .mw-t { display:flex; flex-direction:column; gap:2px; min-width:0; line-height:1.25; }
+  .mw-item .mw-t small { color:var(--text-dim); font-size:12px; }
+  .mw-item .mw-t b { font-size:14px; }
+  .mw-item .mw-p { color:var(--gold-light); font-weight:700; font-size:14px; }
+  .mw-slug { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .mw form .mw-slug input { width:auto; flex:1 1 200px; max-width:300px; }
+  @media (max-width:560px) { .mw-lista { grid-template-columns:1fr; } }
+</style>
+<div class="panel mw">
   <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
     Tu agencia tiene una página propia con todo tu stock <b>disponible</b>, siempre al día porque se arma sola desde Stock.
     Solo se muestran marca, modelo, año, km, precio publicado y fotos. <b>Nunca</b> se muestra costo, gastos ni ganancia.
@@ -10,9 +25,9 @@
   </p>
   <form method="post">
     <label>Nombre del link</label>
-    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+    <div class="mw-slug">
       <span style="color:var(--text-dim);">{{ landing_url.replace('https://','') }}/a/</span>
-      <input type="text" name="slug" value="{{ ag.web_slug or sugerido }}" maxlength="40" style="max-width:260px;" placeholder="nombre-de-tu-agencia">
+      <input type="text" name="slug" value="{{ ag.web_slug or sugerido }}" maxlength="40" placeholder="nombre-de-tu-agencia">
     </div>
     <p style="color:var(--text-dim); font-size:12px;">Solo letras minúsculas, números y guiones. Si lo cambiás, el link anterior deja de funcionar.</p>
 
@@ -20,7 +35,7 @@
     <input type="color" name="color" value="{{ color }}" style="width:70px;height:38px;padding:2px;">
     <p style="color:var(--text-dim); font-size:12px;">Es el color de la franja de arriba, los botones y los precios. Elegí el de tu marca.</p>
 
-    <label style="display:flex; align-items:center; gap:8px; margin:12px 0;">
+    <label class="mw-check">
       <input type="checkbox" name="activa" value="1" {{ 'checked' if ag.web_activa else '' }}>
       <span>Publicar mi web (visible para cualquier persona con el link)</span>
     </label>
@@ -31,12 +46,16 @@
     <h3 style="margin:18px 0 6px;">Autos que se muestran</h3>
     {% if vehiculos %}
     <p style="color:var(--text-dim); font-size:12px; margin-top:0;">Destildá los que no quieras mostrar en la web. Los autos señados o vendidos se sacan solos.</p>
-    <div style="display:grid; gap:6px;">
+    <div class="mw-lista">
       {% for v in vehiculos %}
-      <label style="display:flex; align-items:center; gap:8px;">
+      <label class="mw-item">
         <input type="checkbox" name="visible" value="{{ v.id }}" {{ 'checked' if v.web_visible else '' }}>
-        <span>{{ v.marca }} {{ v.modelo }} {{ v.version or '' }} · {{ v.anio or 's/d' }}
-          {% if v.valor_publicado %}· ${{ '{:,.0f}'.format(v.valor_publicado).replace(',', '.') }}{% else %}· <i>sin precio publicado (se muestra "Consultar")</i>{% endif %}</span>
+        <img src="{{ v.foto }}" alt="" loading="lazy">
+        <span class="mw-t">
+          <b>{{ v.marca }} {{ v.modelo }}</b>
+          <small>{{ v.version or '' }} · {{ v.anio or 's/d' }}</small>
+          {% if v.valor_publicado %}<span class="mw-p">${{ '{:,.0f}'.format(v.valor_publicado).replace(',', '.') }}</span>{% else %}<small><i>Sin precio: se muestra "Consultar"</i></small>{% endif %}
+        </span>
       </label>
       {% endfor %}
     </div>

@@ -144,9 +144,9 @@ def config():
             execute("UPDATE vehiculos SET web_visible = ? WHERE id = ?", (1 if v["id"] in visibles else 0, v["id"]))
         flash("Web guardada." + (" Ya está publicada." if activa else " Todavía está oculta al público."), "success")
         return redirect(url_for("web_agencia.config"))
-    vehiculos = query(
+    vehiculos = [dict(v, foto=foto_principal(v["id"])) for v in query(
         """SELECT id, marca, modelo, version, anio, valor_publicado, COALESCE(web_visible, 1) AS web_visible
-           FROM vehiculos WHERE agencia_id = ? AND estado = 'disponible' ORDER BY id DESC""", (agencia_id,))
+           FROM vehiculos WHERE agencia_id = ? AND estado = 'disponible' ORDER BY id DESC""", (agencia_id,))]
     return render_template(
         "web_agencia/config.html", ag=ag, cfg=cfg, sugerido=sugerido, vehiculos=vehiculos,
         landing_url=LANDING_URL, color=color_valido(ag["web_color"]), tiene_telefono=bool((cfg.get("telefono") or "").strip()),
