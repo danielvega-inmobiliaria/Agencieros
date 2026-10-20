@@ -70,7 +70,10 @@ def _items(agencia_id, slug):
         items.append({
             "id": v["id"], "titulo": titulo, "modelo": v["modelo"] or "", "version": v["version"] or "", "marca": v["marca"] or "",
             "anio": v["anio"], "km": v["km"],
-            "km_txt": f"{int(v['km']):,} km".replace(",", ".") if v["km"] else "",
+            # km == 0 cargado a propósito = 0 Km (km vacío = no se sabe, es usado).
+            "cero_km": v["km"] is not None and int(v["km"]) == 0,
+            "km_txt": "0 km" if (v["km"] is not None and int(v["km"]) == 0)
+                      else (f"{int(v['km']):,} km".replace(",", ".") if v["km"] else ""),
             "combustible": v["combustible"] or "", "caja": v["caja"] or "",
             "precio": 0 if v["ocultar_precio"] else (v["valor_publicado"] or 0),
             "precio_txt": _pesos(v["valor_publicado"]) if (v["valor_publicado"] and not v["ocultar_precio"]) else "Consultar",
@@ -109,6 +112,7 @@ def pagina(slug):
         wa_general=(f"{wa_base}?text={quote_plus('Hola! Vi tu web y quiero consultar por un auto.')}" if wa_base else None),
         url_canonica=f"{LANDING_URL}/a/{slug.lower()}", og_img=og_img,
         destacados=[i for i in items if i["destacado"]][:MAX_DESTACADOS], slug=slug.lower(),
+        hay_cero=any(i["cero_km"] for i in items), hay_usados=any(not i["cero_km"] for i in items),
         wa_compramos=(f"{wa_base}?text={quote_plus('Hola! Quiero vender mi auto, vi que lo compran en tu web.')}" if wa_base else None),
         color=color_valido(ag["web_color"]), color_txt=_texto_sobre(color_valido(ag["web_color"])),
         vista_previa=(es_dueno and not ag["web_activa"]), activa=bool(ag["web_activa"]),
@@ -153,7 +157,7 @@ def config():
         flash("Web guardada." + (" Ya está publicada." if activa else " Todavía está oculta al público."), "success")
         return redirect(url_for("web_agencia.config"))
     vehiculos = [dict(v, foto=foto_principal(v["id"])) for v in query(
-        """SELECT id, marca, modelo, version, anio, valor_publicado, COALESCE(web_visible, 1) AS web_visible,
+        """SELECT id, marca, modelo, version, anio, km, valor_publicado, COALESCE(web_visible, 1) AS web_visible,
                   COALESCE(web_ocultar_precio, 0) AS ocultar_precio, COALESCE(web_destacado, 0) AS destacado
            FROM vehiculos WHERE agencia_id = ? AND estado = 'disponible' ORDER BY id DESC""", (agencia_id,))]
     return render_template(

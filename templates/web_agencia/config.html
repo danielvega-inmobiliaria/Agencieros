@@ -49,7 +49,7 @@
 
     <h3 style="margin:18px 0 6px;">Autos que se muestran</h3>
     {% if vehiculos %}
-    <p style="color:var(--text-dim); font-size:12px; margin-top:0;">Destildá los que no quieras mostrar en la web. Con «Ocultar precio» la web muestra «Consultar» en vez del precio. «Destacar» los pone en una franja arriba de todo (hasta {{ max_destacados }}). Los autos señados o vendidos se sacan solos.</p>
+    <p style="color:var(--text-dim); font-size:12px; margin-top:0;">Destildá los que no quieras mostrar en la web. Con «Ocultar precio» la web muestra «Consultar» en vez del precio. «Destacar» los pone en una franja arriba de todo (hasta {{ max_destacados }}). Los autos señados o vendidos se sacan solos. Los que cargaste con 0 kilómetros van a la pestaña «0 Km» de tu web.</p>
     <div class="mw-lista">
       {% for v in vehiculos %}
       <label class="mw-item">
@@ -57,7 +57,7 @@
         <img src="{{ v.foto }}" alt="" loading="lazy">
         <span class="mw-t">
           <b>{{ v.marca }} {{ v.modelo }}</b>
-          <small>{{ v.version or '' }} · {{ v.anio or 's/d' }}</small>
+          <small>{{ v.version or '' }} · {{ v.anio or 's/d' }}{% if v.km is not none and v.km == 0 %} · <b style="color:var(--gold-light);">0 Km</b>{% endif %}</small>
           {% if v.valor_publicado %}<span class="mw-p">${{ '{:,.0f}'.format(v.valor_publicado).replace(',', '.') }}</span>{% else %}<small><i>Sin precio cargado</i></small>{% endif %}
         </span>
         <span class="mw-op">

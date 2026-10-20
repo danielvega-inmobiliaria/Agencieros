@@ -66,6 +66,12 @@
   .nota-consultar { background:#fff; border:1.5px dashed var(--acc); border-radius:12px; padding:14px 18px; margin:6px 0 18px; display:flex; flex-direction:column; gap:4px; }
   .nota-consultar b { color:var(--acc); font-size:17px; }
   .nota-consultar span { color:var(--dim); font-size:14px; line-height:1.4; }
+  .badge-cero { position:absolute; bottom:10px; left:10px; background:var(--acc); color:var(--acc-txt); font-size:12px; font-weight:800; padding:4px 10px; border-radius:999px; box-shadow:0 2px 6px rgba(0,0,0,.25); }
+  .hero.con-tabs { padding-bottom:104px; }
+  .tabs { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
+  .tabs button { border:2px solid rgba(255,255,255,.7); background:transparent; color:var(--acc-txt); font-weight:800; font-size:16px; padding:9px 20px; border-radius:999px; cursor:pointer; }
+  .tabs button.on { background:#fff; color:var(--acc); border-color:#fff; }
+  .tabs button small { font-weight:600; opacity:.85; }
   .franja-dest { padding-top:26px; }
   .franja-dest h2 { margin:0 0 12px; font-size:21px; color:var(--acc); }
   .carril { display:flex; gap:16px; overflow-x:auto; padding:2px 2px 14px; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; }
@@ -108,9 +114,9 @@
 </head>
 <body>
 {% macro tarjeta(it, datos=True, destacada=False) -%}
-    <article class="card{{ ' dest' if destacada else '' }}"{% if datos %} data-t="{{ (it.titulo ~ ' ' ~ it.version)|lower }}" data-marca="{{ it.marca }}" data-modelo="{{ it.modelo }}"
-             data-precio="{{ it.precio }}" data-anio="{{ it.anio or 0 }}" data-km="{{ it.km or 0 }}" data-i="{{ it.idx }}"{% endif %}>
-      <a class="foto" href="{{ it.ficha }}"><img src="{{ it.foto }}" alt="{{ it.titulo }}" loading="lazy">{% if it.destacado %}<span class="badge-dest">⭐ Destacado</span>{% endif %}</a>
+    <article class="card{{ ' dest' if destacada else '' }}" data-cero="{{ 1 if it.cero_km else 0 }}"{% if datos %} data-t="{{ (it.titulo ~ ' ' ~ it.version)|lower }}" data-marca="{{ it.marca }}" data-modelo="{{ it.modelo }}"
+             data-precio="{{ it.precio }}" data-anio="{{ it.anio or 0 }}" data-km="{{ it.km if it.km is not none else -1 }}" data-i="{{ it.idx }}"{% endif %}>
+      <a class="foto" href="{{ it.ficha }}"><img src="{{ it.foto }}" alt="{{ it.titulo }}" loading="lazy">{% if it.destacado %}<span class="badge-dest">⭐ Destacado</span>{% endif %}{% if it.cero_km %}<span class="badge-cero">0 Km</span>{% endif %}</a>
       <div class="cuerpo">
         <h3>{{ it.titulo }}</h3>
         {% if it.version %}<div class="ver">{{ it.version }}</div>{% endif %}
@@ -138,9 +144,16 @@
   </nav>
 </div></header>
 
-<section class="hero" id="top"><div class="wrap">
-  <h1>Autos usados{% if cfg.ciudad %} en {{ cfg.ciudad }}{% endif %}</h1>
-  <p>{{ items|length }} {{ 'auto disponible' if items|length == 1 else 'autos disponibles' }} · Financiación y toma de tu usado</p>
+{% set con_tabs = hay_cero and items %}
+<section class="hero{{ ' con-tabs' if con_tabs else '' }}" id="top"><div class="wrap">
+  <h1 id="hero-t" data-ciudad="{{ ' en ' ~ cfg.ciudad if cfg.ciudad else '' }}">{{ 'Autos' if con_tabs else 'Autos usados' }}{% if cfg.ciudad %} en {{ cfg.ciudad }}{% endif %}</h1>
+  <p id="hero-s">{{ items|length }} {{ 'auto disponible' if items|length == 1 else 'autos disponibles' }} · Financiación y toma de tu usado</p>
+  {% if con_tabs %}
+  <div class="tabs" role="tablist">
+    {% if hay_usados %}<button type="button" data-tab="usados" role="tab">Usados <small id="n-usados"></small></button>{% endif %}
+    <button type="button" data-tab="cero" role="tab">0 Km <small id="n-cero"></small></button>
+  </div>
+  {% endif %}
 </div></section>
 
 <main class="wrap" id="autos">
@@ -226,11 +239,26 @@
   var grid = document.getElementById('grid'); if (!grid) return;
   var $ = function (id) { return document.getElementById(id); };
   var cards = [].slice.call(grid.children), modelosDe = {};
-  cards.forEach(function (c) { var m = c.dataset.marca; (modelosDe[m] = modelosDe[m] || {})[c.dataset.modelo] = 1; });
+  var botones = [].slice.call(document.querySelectorAll('.tabs button')), tab = null;
+  var hayUsados = cards.some(function (c) { return c.dataset.cero !== '1'; });
+  if (botones.length) {
+    tab = (location.hash === '#0km' || !hayUsados) ? 'cero' : 'usados';
+    var nU = cards.filter(function (c) { return c.dataset.cero !== '1'; }).length;
+    var eu = $('n-usados'), ec = $('n-cero');
+    if (eu) eu.textContent = '(' + nU + ')';
+    if (ec) ec.textContent = '(' + (cards.length - nU) + ')';
+  }
+  function enTab(c) { return !tab || (tab === 'cero') === (c.dataset.cero === '1'); }
+  function llenarMarcas() {
+    var set = {}, sel = $('f-marca'), previo = sel.value;
+    cards.forEach(function (c) { if (enTab(c) && c.dataset.marca) set[c.dataset.marca] = 1; });
+    sel.innerHTML = '<option value="">Todas las marcas</option>' + Object.keys(set).sort().map(function (x) { return '<option>' + x + '</option>'; }).join('');
+    if (set[previo]) sel.value = previo;
+  }
   function num(id) { var v = parseFloat($(id).value); return isNaN(v) ? null : v; }
   function llenarModelos() {
     var marca = $('f-marca').value, sel = $('f-modelo'), previo = sel.value, set = {};
-    (marca ? [marca] : Object.keys(modelosDe)).forEach(function (m) { Object.keys(modelosDe[m] || {}).forEach(function (x) { if (x) set[x] = 1; }); });
+    cards.forEach(function (c) { if (enTab(c) && (!marca || c.dataset.marca === marca) && c.dataset.modelo) set[c.dataset.modelo] = 1; });
     sel.innerHTML = '<option value="">Todos los modelos</option>' + Object.keys(set).sort().map(function (x) { return '<option>' + x + '</option>'; }).join('');
     if (set[previo]) sel.value = previo;
   }
@@ -244,7 +272,7 @@
         return d || x.marca.localeCompare(y.marca, 'es') || x.modelo.localeCompare(y.modelo, 'es') || (+x.i) - (+y.i);
       }
       if (o === 'anio') return (+y.anio) - (+x.anio);
-      if (o === 'km') return (+x.km || 9e15) - (+y.km || 9e15);
+      if (o === 'km') return (+x.km < 0 ? 9e15 : +x.km) - (+y.km < 0 ? 9e15 : +y.km);
       return (+x.i) - (+y.i);
     };
   }
@@ -254,8 +282,8 @@
         filtraPrecio = pd !== null || ph !== null, principal = [], consultar = [];
     cards.forEach(function (c) {
       var d = c.dataset, a = +d.anio, p = +d.precio, k = +d.km;
-      var ok = (!t || d.t.indexOf(t) >= 0) && (!marca || d.marca === marca) && (!modelo || d.modelo === modelo) &&
-        (ad === null || a >= ad) && (ah === null || a <= ah) && (kd === null || k >= kd) && (kh === null || k <= kh);
+      var ok = enTab(c) && (!t || d.t.indexOf(t) >= 0) && (!marca || d.marca === marca) && (!modelo || d.modelo === modelo) &&
+        (ad === null || a >= ad) && (ah === null || a <= ah) && ((kd === null && kh === null) || (k >= 0 && (kd === null || k >= kd) && (kh === null || k <= kh)));
       if (!ok) { c.style.display = 'none'; return; }
       c.style.display = '';
       if (!p) { (filtraPrecio ? consultar : principal).push(c); return; }
@@ -268,8 +296,14 @@
     var n = principal.length;
     $('cuenta').textContent = n + (n === 1 ? ' auto disponible' : ' autos disponibles');
     $('bloque-consultar').style.display = consultar.length ? '' : 'none';
+    if (tab) {
+      botones.forEach(function (b) { b.classList.toggle('on', b.dataset.tab === tab); });
+      $('hero-t').textContent = 'Autos ' + (tab === 'cero' ? '0 Km' : 'usados') + ($('hero-t').dataset.ciudad || '');
+      $('hero-s').textContent = n + (n === 1 ? ' auto disponible' : ' autos disponibles') + (tab === 'cero' ? ' · Entrega inmediata y financiación' : ' · Financiación y toma de tu usado');
+    }
     var fd = document.getElementById('franja-dest');
-    if (fd) fd.style.display = (t || marca || modelo || ad !== null || ah !== null || pd !== null || ph !== null || kd !== null || kh !== null) ? 'none' : '';
+    if (fd) { var vis = 0; [].slice.call(fd.querySelectorAll('.card')).forEach(function (c) { var ok = enTab(c); c.style.display = ok ? '' : 'none'; if (ok) vis++; }); fd.dataset.vacia = vis ? '' : '1'; }
+    if (fd) fd.style.display = (fd.dataset.vacia || t || marca || modelo || ad !== null || ah !== null || pd !== null || ph !== null || kd !== null || kh !== null) ? 'none' : '';
     var v = $('vacio');
     v.style.display = n ? 'none' : '';
     v.textContent = filtraPrecio && consultar.length ? 'No hay autos con precio publicado en ese rango.' : 'No hay autos con esos filtros.';
@@ -281,7 +315,13 @@
     ['f-marca', 'f-modelo', 'f-anio-d', 'f-anio-h', 'f-pre-d', 'f-pre-h', 'f-km-d', 'f-km-h', 'f-q'].forEach(function (id) { $(id).value = ''; });
     llenarModelos(); aplicar();
   });
-  llenarModelos(); aplicar();
+  botones.forEach(function (b) {
+    b.addEventListener('click', function () {
+      tab = b.dataset.tab; llenarMarcas(); $('f-marca').value = ''; llenarModelos(); aplicar();
+      try { history.replaceState(null, '', tab === 'cero' ? '#0km' : location.pathname + location.search); } catch (e) {}
+    });
+  });
+  llenarMarcas(); llenarModelos(); aplicar();
 })();
 
 (function () {
