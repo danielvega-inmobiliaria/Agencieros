@@ -187,8 +187,12 @@
     var o = $('orden').value;
     cards.slice().sort(function (a, b) {
       var x = a.dataset, y = b.dataset;
-      if (o === 'menor') return (+x.precio || 9e15) - (+y.precio || 9e15);
-      if (o === 'mayor') return (+y.precio) - (+x.precio);
+      // Sin precio ("Consultar"): primero al ordenar de menor a mayor, último de mayor a menor.
+      // Si empatan (p. ej. todos sin precio), por marca y modelo.
+      if (o === 'menor' || o === 'mayor') {
+        var d = o === 'menor' ? (+x.precio) - (+y.precio) : (+y.precio) - (+x.precio);
+        return d || x.marca.localeCompare(y.marca, 'es') || x.modelo.localeCompare(y.modelo, 'es') || (+x.i) - (+y.i);
+      }
       if (o === 'anio') return (+y.anio) - (+x.anio);
       if (o === 'km') return (+x.km || 9e15) - (+y.km || 9e15);
       return (+x.i) - (+y.i);
