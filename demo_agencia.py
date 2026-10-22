@@ -430,6 +430,122 @@ def _cargar(conn, demo_id, red_ids):
                    VALUES (?,?, 'ofrezco', ?,?,?,?,?,?, 'Unidad de la agencia demo.', ?, 'activo', ?)""",
                 (demo_id, NOMBRE_DEMO, marca, modelo, version, anio, km, v[13], f"{NOMBRE_DEMO} · 5493410000000", vid[clave]))
 
+    # Vendedores ficticios + ventas del mes para el Ranking de vendedores
+    _cargar_ranking(conn, demo_id, suc_ids, vid, hoy)
+
+
+# --------------------------------------------------------------------------
+# Ranking de vendedores de ejemplo (22/10/2026)
+# --------------------------------------------------------------------------
+# Vendedores ficticios de la demo (sin mails reales; no pueden loguearse).
+VENDEDORES_DEMO = [("Martín", "vendedor1.demo@agencieros.net.ar", 0),
+                   ("Lucía", "vendedor2.demo@agencieros.net.ar", 1),
+                   ("Gonzalo", "vendedor3.demo@agencieros.net.ar", 0)]
+# (marca, modelo, version, año, km, compra, gastos, vendido, vendedor 0-2, sucursal, financiada, con_seña)
+VENTAS_RANKING = [
+    ("Toyota", "Corolla", "1.8 XEi CVT", 2018, 72000, 16200000, 350000, 20400000, 0, 0, False, True),
+    ("Chevrolet", "Onix", "1.2 LT 5P", 2019, 54000, 10800000, 220000, 13900000, 0, 0, True, True),
+    ("Toyota", "Hilux", "2.4 DX 4x2 CD", 2017, 118000, 26000000, 700000, 32500000, 0, 0, True, True),
+    ("Volkswagen", "Polo", "1.6 MSI Track", 2020, 38000, 13200000, 280000, 16800000, 0, 0, False, False),
+    ("Fiat", "Argo", "1.3 Drive", 2019, 47000, 11000000, 200000, 14000000, 0, 0, False, False),
+    ("Renault", "Sandero", "1.6 Life", 2018, 66000, 8600000, 180000, 11200000, 0, 0, False, True),
+    ("Peugeot", "208", "1.6 Active 5P", 2020, 41000, 12500000, 250000, 15900000, 1, 1, True, True),
+    ("Citroën", "C3", "1.6 Feel", 2019, 58000, 9400000, 200000, 12200000, 1, 1, False, True),
+    ("Jeep", "Renegade", "1.8 Sport", 2018, 79000, 17800000, 400000, 22500000, 1, 1, True, False),
+    ("Nissan", "Kicks", "1.6 Sense", 2019, 52000, 18500000, 350000, 23000000, 2, 0, True, True),
+    ("Volkswagen", "Amarok", "2.0 TDI Trendline", 2016, 142000, 29000000, 800000, 35500000, 2, 0, False, True),
+    ("Honda", "Fit", "1.5 LX", 2017, 89000, 11500000, 300000, 14300000, 2, 0, False, False),
+]
+# Señas que se cayeron: unidad vuelve a la venta (marca, modelo, version, año, km, compra, publicado, vendedor, foto)
+SENAS_PERDIDAS = [
+    ("Toyota", "Etios", "1.5 X 5P", 2017, 76000, 10500000, 13900000, 0, "etios"),
+    ("Volkswagen", "Gol Trend", "1.6 Trendline", 2016, 91000, 7900000, 10400000, 1, "gol"),
+    ("Fiat", "Cronos", "1.3 Like", 2019, 58000, 13500000, 17000000, 2, "cronos"),
+    ("Renault", "Duster", "1.6 Confort", 2018, 71000, 15800000, 19900000, 2, "duster"),
+]
+
+
+def _cargar_ranking(conn, demo_id, suc_ids, vid, hoy):
+    """Vendedores ficticios + ventas del mes para que el Ranking de vendedores
+    se vea completo en la demo. Idempotente: los vendedores se buscan por mail
+    dentro de la agencia demo y las ventas se cargan después de _borrar_datos.
+    Solo toca la agencia demo."""
+    iso = lambda d: str(d)
+    uids = []
+    for nombre, email, suc in VENDEDORES_DEMO:
+        fila = conn.execute("SELECT id FROM agencia_usuarios WHERE agencia_id = ? AND lower(email) = lower(?)",
+                            (demo_id, email)).fetchone()
+        if fila:
+            conn.execute("UPDATE agencia_usuarios SET nombre = ?, rol = 'vendedor', activo = 1, sucursal_id = ? WHERE id = ?",
+                         (nombre, suc_ids[suc], fila[0]))
+            uids.append(fila[0])
+        else:
+            uids.append(conn.execute(
+                """INSERT INTO agencia_usuarios (agencia_id, nombre, email, password_hash, rol, sucursal_id, activo)
+                   VALUES (?,?,?,?, 'vendedor', ?, 1)""",
+                (demo_id, nombre, email, generate_password_hash(os.urandom(16).hex()), suc_ids[suc])).lastrowid)
+
+    primero = hoy.replace(day=1)
+    clientes = ["Julián Acosta", "Paula Benítez", "Ramiro Sosa", "Daniela Ríos", "Federico Luna", "Carolina Vega",
+                "Sebastián Paz", "Natalia Cruz", "Hernán Ibarra", "Valeria Molina", "Diego Peralta", "Romina Ledesma"]
+    for i, (marca, modelo, version, anio, km, compra, gastos, vendido, quien, suc, fin, sena) in enumerate(VENTAS_RANKING):
+        fecha = primero + timedelta(days=(i * 5 + 3) % hoy.day)       # dentro del mes actual, hasta hoy
+        publicado = int(vendido * 1.04)
+        vid_n = conn.execute(
+            """INSERT INTO vehiculos (marca, modelo, version, anio, km, combustible, caja, estado, valor_compra, gastos,
+                   valor_publicado, valor_vendido, fecha_ingreso, fecha_venta, agencia_id, sucursal_id, propiedad,
+                   vendido_por_id, senado_por_id, cargado_por_id, observaciones)
+               VALUES (?,?,?,?,?, 'Nafta', 'Manual', 'vendido', ?,?,?,?,?,?,?,?, 'propio', ?,?,?, 'Venta de ejemplo de la demo.')""",
+            (marca, modelo, version, anio, km, compra, gastos, publicado, vendido, iso(fecha - timedelta(days=30)),
+             iso(fecha), demo_id, suc_ids[suc], uids[quien], uids[quien] if sena else None, uids[quien])).lastrowid
+        f_sena = max(primero, fecha - timedelta(days=2))
+        conn.execute(
+            """INSERT INTO ventas (agencia_id, vehiculo_id, estado, estado_previo, cliente_nombre, precio_venta, sena,
+                   fecha_sena, efectivo_cobrado, fecha_venta, sucursal_id)
+               VALUES (?,?, 'cerrada', 'disponible', ?,?,?,?,?,?,?)""",
+            (demo_id, vid_n, clientes[i], vendido, int(vendido * 0.1) if sena else 0, iso(f_sena),
+             vendido - (vendido // 3 if fin else 0), iso(fecha), suc_ids[suc]))
+        if fin:
+            monto, n = vendido // 3, 12
+            cuota = round((monto + monto * 0.04 * n) / n)
+            inicio = _meses(fecha, 1)
+            fid = conn.execute(
+                """INSERT INTO financiaciones (agencia_id, vehiculo_id, cliente_nombre, precio_venta, anticipo,
+                       monto_financiado, tasa_interes_mensual, tasa_interes_punitorio, metodo_interes, periodicidad,
+                       plazo_meses, cantidad_cuotas, valor_cuota, fecha_inicio, estado, creado_por_id, sucursal_id)
+                   VALUES (?,?,?,?,?,?,?,?, 'simple', 'mensual', ?,?,?,?, 'activo', ?,?)""",
+                (demo_id, vid_n, clientes[i], vendido, vendido - monto, monto, 4, 10, n, n, cuota, iso(inicio),
+                 uids[quien], suc_ids[suc])).lastrowid
+            for numero in range(1, n + 1):
+                conn.execute(
+                    """INSERT INTO financiacion_cuotas (financiacion_id, numero, fecha_vencimiento, monto, monto_pagado, estado)
+                       VALUES (?,?,?,?,0,'pendiente')""", (fid, numero, iso(_meses(inicio, numero - 1)), cuota))
+
+    for j, (marca, modelo, version, anio, km, compra, publicado, quien, foto) in enumerate(SENAS_PERDIDAS):
+        fecha = primero + timedelta(days=(j * 6 + 2) % hoy.day)
+        v = conn.execute(
+            """INSERT INTO vehiculos (marca, modelo, version, anio, km, combustible, caja, estado, valor_compra, gastos,
+                   valor_publicado, fecha_ingreso, agencia_id, sucursal_id, propiedad, senado_por_id, cargado_por_id,
+                   observaciones)
+               VALUES (?,?,?,?,?, 'Nafta', 'Manual', 'disponible', ?, 150000, ?, ?, ?, ?, 'propio', ?, ?,
+                       'Se cayó una seña: volvió a la venta (ejemplo de la demo).')""",
+            (marca, modelo, version, anio, km, compra, publicado, iso(fecha - timedelta(days=25)), demo_id,
+             suc_ids[0], uids[quien], uids[quien])).lastrowid
+        conn.execute("INSERT INTO vehiculo_fotos (vehiculo_id, url, orden) VALUES (?,?,0)", (v, f"/static/demo/{foto}.jpg"))
+        conn.execute(
+            """INSERT INTO ventas (agencia_id, vehiculo_id, estado, estado_previo, cliente_nombre, precio_venta, sena,
+                   fecha_sena, sucursal_id)
+               VALUES (?,?, 'cancelada', 'disponible', ?,?,?,?,?)""",
+            (demo_id, v, clientes[(j + 6) % len(clientes)], publicado, 500000, iso(fecha), suc_ids[0]))
+
+    # Unidades vendidas que ya traía la demo: se les asigna vendedor.
+    conn.execute("UPDATE vehiculos SET vendido_por_id = ?, senado_por_id = ? WHERE id = ? AND agencia_id = ?",
+                 (uids[1], uids[1], vid["hrv"], demo_id))
+    conn.execute("UPDATE vehiculos SET vendido_por_id = ? WHERE id = ? AND agencia_id = ?",
+                 (uids[0], vid["frontier"], demo_id))
+    conn.execute("UPDATE financiaciones SET creado_por_id = ? WHERE vehiculo_id = ? AND agencia_id = ?",
+                 (uids[0], vid["frontier"], demo_id))
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "fotos":

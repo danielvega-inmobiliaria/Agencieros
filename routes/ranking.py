@@ -103,9 +103,10 @@ def calcular(agencia_id, clave="mes", hoy=None):
                 else:
                     f["senas_perdidas"] += 1
 
-    # Usuarios activos sin movimiento en el período: aparecen con 0.
+    # Vendedores activos sin movimiento en el período: aparecen con 0.
+    # (El dueño sin movimiento no se lista.)
     for uid, u in usuarios.items():
-        if u["activo"]:
+        if u["activo"] and u["rol"] != "dueno":
             fila(uid)
     lista = list(filas.values())
     for f in lista:
