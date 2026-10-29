@@ -7,3 +7,8 @@ desktop.ini
 *.db-journal
 static/uploads/
 data/prueba_actividad/
+
+desktop.ini
+.fuse_hidden*
+*.bak*
+~$*
