@@ -12,3 +12,6 @@ desktop.ini
 .fuse_hidden*
 *.bak*
 ~$*
+
+# Material de trabajo (precios, revistas)
+INFOAUTO/
