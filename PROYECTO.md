@@ -6,6 +6,8 @@
 
 ---
 
+_02/11/2026 — AJUSTE RANKING DEMO: en `VENTAS_RANKING` (demo_agencia.py) la venta del Honda Fit pasó de Gonzalo a Lucía (sucursal Norte). Queda Martín 6, Lucía 4, Gonzalo 2 (antes Lucía y Gonzalo empataban en 3 porque la HR-V de la demo no cae en el mes en curso). Verificado en producción el 02/11 que el ranking ya se ve (deploy OK). PENDIENTE: push y Panel de Agencias → Reiniciar demo._
+
 _24/10/2026 — IDEA: RED DE PROMOTORES DENTRO DE AGENCIEROS (solo anotada, sin código). Daniel armó el MVP de `APP_RED_PROMOTORES` (promotores externos que promocionan autos con enlace único y cobran por visitas/ventas que confirma la agencia) y quiere que, a futuro, cada agencia de AGENCIEROS tenga la opción "Promotores" incluida: el catálogo saldría del stock de Agencieros y la agencia configuraría WhatsApp, premios y ventana. Antes: validar el piloto con Italia Automotores (30-60 días). Detalle y opciones en `..\..\APP_RED_PROMOTORES\PROYECTO.md` (sección Ideas futuras)._
 
 _23/10/2026 — IDEAS PARA PRÓXIMAS IMPLEMENTACIONES (solo anotadas, sin código): (1) TOMA Y TASACIÓN: catálogo de reparaciones con precio estándar; en la tasación solo se tilda la reparación y el precio queda fijado y sumado al costo (a definir: catálogo editable por agencia, lista base sugerida, ajuste puntual del precio). (2) PÁGINA PÚBLICA DE LA RED: portal con toda la oferta de los agencieros, estilo RosarioGarage, para publicitar y dar promoción (se relaciona con monetizar la Red y las webs /a/<slug>). (3) PROMO DE LANZAMIENTO: los primeros 10/25 suscriptores con beneficios especiales (meses gratis, bonificaciones); definir cupo exacto, contador de lugares, marca en agencias y vencimiento. Copia en el proyecto de claude.ai: claude/IDEAS_PROXIMAS_IMPLEMENTACIONES.md._
@@ -1329,3 +1331,6 @@ Se implementaron los 5 pendientes 🟡 de la sesión anterior sobre Tasación (q
 - Paleta visual tomada del prototipo subido por Daniel: fondo navy oscuro, acentos dorados, tarjetas navy más claro, texto blanco.
 - **(14/09/2026) Fuente de precios:** carga manual de `precios_base` por ahora, sin integración por API con InfoAuto.
 - **(14/09/2026) Modelo de negocio:** va a ser con planes de suscripción (no definidos todavía en cantidad/contenido/precio — ver pendiente 🔴).
+30/10/2026: `INFOAUTO/` agregado a `.gitignore` y pusheado (`f7c6c7a`). GitHub avisa que el repo se mudó a `https://github.com/danielvega-inmobiliaria/Agencieros.git` (actualizar el remoto local con `git remote set-url origin <nueva URL>`).
+
+01/11/2026: [auditoría automática] archivos modificados desde la última actualización: `templates/landing.html` (01/11 13:15 ART, +3 líneas: pie «Desarrollado por DanguiApps» con enlace a `danguiapps.com.ar?utm_source=agencieros`) y `static/img/pie-danguiapps.webp` nuevo (sin versionar). Sin commitear.

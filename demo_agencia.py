@@ -454,7 +454,7 @@ VENTAS_RANKING = [
     ("Jeep", "Renegade", "1.8 Sport", 2018, 79000, 17800000, 400000, 22500000, 1, 1, True, False),
     ("Nissan", "Kicks", "1.6 Sense", 2019, 52000, 18500000, 350000, 23000000, 2, 0, True, True),
     ("Volkswagen", "Amarok", "2.0 TDI Trendline", 2016, 142000, 29000000, 800000, 35500000, 2, 0, False, True),
-    ("Honda", "Fit", "1.5 LX", 2017, 89000, 11500000, 300000, 14300000, 2, 0, False, False),
+    ("Honda", "Fit", "1.5 LX", 2017, 89000, 11500000, 300000, 14300000, 1, 1, False, False),
 ]
 # Señas que se cayeron: unidad vuelve a la venta (marca, modelo, version, año, km, compra, publicado, vendedor, foto)
 SENAS_PERDIDAS = [
