@@ -1334,3 +1334,5 @@ Se implementaron los 5 pendientes 🟡 de la sesión anterior sobre Tasación (q
 30/10/2026: `INFOAUTO/` agregado a `.gitignore` y pusheado (`f7c6c7a`). GitHub avisa que el repo se mudó a `https://github.com/danielvega-inmobiliaria/Agencieros.git` (actualizar el remoto local con `git remote set-url origin <nueva URL>`).
 
 01/11/2026: [auditoría automática] archivos modificados desde la última actualización: `templates/landing.html` (01/11 13:15 ART, +3 líneas: pie «Desarrollado por DanguiApps» con enlace a `danguiapps.com.ar?utm_source=agencieros`) y `static/img/pie-danguiapps.webp` nuevo (sin versionar). Sin commitear.
+
+03/11/2026: [auditoría automática] verificado con `git log`/`git status`: el pie «Desarrollado por DanguiApps» ya está commiteado y pusheado (commit `7df0155`, 01/11/2026), y el ajuste del ranking de la demo (Honda Fit → Lucía) también (`cb3052b`, 02/11/2026; el encabezado dice «PENDIENTE: push», ya hecho; falta solo Panel de Agencias → Reiniciar demo si no se hizo). Archivos de trabajo sin versionar: Excel/PDF/mp4 en la raíz.
