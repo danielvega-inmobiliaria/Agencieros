@@ -540,6 +540,15 @@ def _migrar_web_agencia(conn):
         ip TEXT,
         created_at TEXT DEFAULT (datetime('now')))""")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_web_consultas_ag ON web_consultas(agencia_id, estado)")
+    # 05/11/2026: bandeja propia. Origen (form / wa_ficha / wa_web), auto consultado,
+    # nota y fecha de seguimiento. Estados: nuevo, contactado, seguimiento, cerrado.
+    wccols = {r[1] for r in conn.execute("PRAGMA table_info(web_consultas)")}
+    for _col, _ddl in (("vehiculo_id", "INTEGER"), ("vehiculo_txt", "TEXT"), ("origen", "TEXT"),
+                       ("nota", "TEXT"), ("seguimiento", "TEXT"), ("updated_at", "TEXT")):
+        if _col not in wccols:
+            conn.execute(f"ALTER TABLE web_consultas ADD COLUMN {_col} {_ddl}")
+    conn.execute("UPDATE web_consultas SET estado = 'contactado' WHERE estado = 'atendido'")
+    conn.execute("UPDATE web_consultas SET origen = 'form' WHERE origen IS NULL AND tipo = 'compramos'")
     if "web_ocultar_precio" not in vcols:
         conn.execute("ALTER TABLE vehiculos ADD COLUMN web_ocultar_precio INTEGER NOT NULL DEFAULT 0")
     # 05/11/2026: qué vende la agencia (usados / 0km / ambos) y baja de precio

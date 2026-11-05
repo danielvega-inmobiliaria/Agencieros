@@ -15,6 +15,7 @@ Dos rutas:
 import os
 import re
 import unicodedata
+from datetime import datetime, timedelta
 from urllib.parse import quote_plus
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, abort, jsonify
@@ -236,8 +237,8 @@ def compramos(slug):
     por_dia = query("SELECT COUNT(*) AS c FROM web_consultas WHERE agencia_id = ? AND created_at > datetime('now', '-1 day')", (ag["id"],), one=True)["c"]
     if por_ip >= 3 or por_dia >= 40:
         return jsonify({"ok": False, "error": "Recibimos varias consultas seguidas. Probá de nuevo en un rato o escribinos por WhatsApp."}), 429
-    execute("""INSERT INTO web_consultas (agencia_id, tipo, nombre, telefono, marca, modelo, anio, km, comentario, ip)
-               VALUES (?, 'compramos', ?, ?, ?, ?, ?, ?, ?, ?)""",
+    execute("""INSERT INTO web_consultas (agencia_id, tipo, origen, nombre, telefono, marca, modelo, anio, km, comentario, ip)
+               VALUES (?, 'compramos', 'form', ?, ?, ?, ?, ?, ?, ?, ?)""",
             (ag["id"], nombre, tel, marca, modelo, anio, km or None, comentario or None, ip))
     try:
         from utils.notificaciones import avisar_agencia
@@ -251,24 +252,135 @@ def compramos(slug):
     return jsonify({"ok": True})
 
 
+ESTADOS = ("nuevo", "contactado", "seguimiento", "cerrado")
+ESTADO_TXT = {"nuevo": "Nueva", "contactado": "Contactada", "seguimiento": "En seguimiento", "cerrado": "Cerrada"}
+
+
+def _hoy_ar():
+    return (datetime.utcnow() - timedelta(hours=3)).strftime("%Y-%m-%d")
+
+
+def _registrar_clic(ag_id, vehiculo, origen):
+    """Clic en un botón de WhatsApp de la web o la ficha: queda en la bandeja
+    como interés sin datos de contacto. Anónimo, sin mail. Los clics de la
+    propia agencia no cuentan; un mismo visitante cuenta una vez por auto cada 6 h."""
+    if session.get("agencia_id") == ag_id or session.get("superadmin_id"):
+        return
+    ip = (request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip())[:45]
+    vid = vehiculo["id"] if vehiculo else None
+    if query("SELECT COUNT(*) AS c FROM web_consultas WHERE ip = ? AND tipo = 'wa_clic' AND created_at > datetime('now', '-1 hour')",
+             (ip,), one=True)["c"] >= 30:
+        return
+    if query("""SELECT 1 FROM web_consultas WHERE ip = ? AND tipo = 'wa_clic' AND agencia_id = ? AND COALESCE(vehiculo_id, 0) = ?
+                AND created_at > datetime('now', '-6 hours')""", (ip, ag_id, vid or 0), one=True):
+        return
+    txt = None
+    if vehiculo:
+        txt = " ".join(str(x) for x in [vehiculo["marca"], vehiculo["modelo"], vehiculo["version"]] if x)
+        if vehiculo["anio"]:
+            txt += f" ({vehiculo['anio']})"
+    execute("""INSERT INTO web_consultas (agencia_id, tipo, origen, marca, modelo, anio, vehiculo_id, vehiculo_txt, ip)
+               VALUES (?, 'wa_clic', ?, ?, ?, ?, ?, ?, ?)""",
+            (ag_id, origen, vehiculo["marca"] if vehiculo else None, vehiculo["modelo"] if vehiculo else None,
+             vehiculo["anio"] if vehiculo else None, vid, txt, ip))
+
+
+@bp.route("/clic/<int:vid>", methods=["POST"])
+def clic_auto(vid):
+    v = query("SELECT id, agencia_id, marca, modelo, version, anio FROM vehiculos WHERE id = ? AND estado = 'disponible'", (vid,), one=True)
+    if v:
+        try:
+            _registrar_clic(v["agencia_id"] or 1, v, "wa_ficha" if request.args.get("o") == "ficha" else "wa_web")
+        except Exception as e:
+            print(f"[web_agencia] No se pudo registrar el clic: {e}")
+    return ("", 204)
+
+
+@bp.route("/a/<slug>/clic", methods=["POST"])
+def clic_web(slug):
+    ag = query("SELECT id FROM agencias WHERE web_slug = ? AND activo != 0 AND web_activa = 1", (slug.lower(),), one=True)
+    if ag:
+        try:
+            _registrar_clic(ag["id"], None, "wa_web")
+        except Exception as e:
+            print(f"[web_agencia] No se pudo registrar el clic: {e}")
+    return ("", 204)
+
+
 @bp.route("/mi-web/consultas")
 def consultas():
     from routes.stock import _whatsapp_ar
     agencia_id = session.get("agencia_id")
     if not agencia_id:
         return redirect(url_for("precios.index"))
+    ver = request.args.get("ver", "nuevas")
+    if ver not in ("nuevas", "curso", "cerradas", "todas"):
+        ver = "nuevas"
+    tipo = request.args.get("tipo", "todas")
+    if tipo not in ("todas", "compramos", "interes"):
+        tipo = "todas"
+    cuentas = {r["k"]: r["c"] for r in query(
+        """SELECT CASE WHEN estado = 'nuevo' THEN 'nuevas' WHEN estado = 'cerrado' THEN 'cerradas' ELSE 'curso' END AS k, COUNT(*) AS c
+           FROM web_consultas WHERE agencia_id = ? GROUP BY k""", (agencia_id,))}
+    cuentas["todas"] = sum(cuentas.values())
+    where, params = ["agencia_id = ?"], [agencia_id]
+    if ver == "nuevas":
+        where.append("estado = 'nuevo'")
+    elif ver == "curso":
+        where.append("estado IN ('contactado', 'seguimiento')")
+    elif ver == "cerradas":
+        where.append("estado = 'cerrado'")
+    if tipo == "compramos":
+        where.append("tipo = 'compramos'")
+    elif tipo == "interes":
+        where.append("tipo = 'wa_clic'")
+    hoy = _hoy_ar()
     filas = []
-    for c in query("SELECT * FROM web_consultas WHERE agencia_id = ? ORDER BY (estado = 'nuevo') DESC, id DESC LIMIT 200", (agencia_id,)):
+    for c in query(f"""SELECT * FROM web_consultas WHERE {' AND '.join(where)}
+                       ORDER BY (COALESCE(seguimiento, '') != '' AND seguimiento <= ? AND estado != 'cerrado') DESC, id DESC LIMIT 300""",
+                   params + [hoy]):
         num = _whatsapp_ar(re.sub(r"[^\d]", "", c["telefono"] or ""))
         msg = f"Hola {c['nombre']}! Te escribo por tu {c['marca']} {c['modelo']} {c['anio']} que quisiste vender."
-        filas.append(dict(c, wa=(f"https://wa.me/{num}?text={quote_plus(msg)}" if num else None)))
-    return render_template("web_agencia/consultas.html", consultas=filas)
+        filas.append(dict(c, wa=(f"https://wa.me/{num}?text={quote_plus(msg)}" if num else None),
+                          vencida=bool(c["seguimiento"] and c["seguimiento"] <= hoy and c["estado"] != "cerrado")))
+    top = query("""SELECT vehiculo_id, vehiculo_txt, COUNT(*) AS c FROM web_consultas
+                   WHERE agencia_id = ? AND tipo = 'wa_clic' AND vehiculo_id IS NOT NULL AND created_at > datetime('now', '-7 days')
+                   GROUP BY vehiculo_id ORDER BY c DESC, vehiculo_id DESC LIMIT 5""", (agencia_id,))
+    vencidas = query("""SELECT COUNT(*) AS c FROM web_consultas WHERE agencia_id = ? AND estado != 'cerrado'
+                        AND COALESCE(seguimiento, '') != '' AND seguimiento <= ?""", (agencia_id, hoy), one=True)["c"]
+    return render_template("web_agencia/consultas.html", consultas=filas, ver=ver, tipo=tipo, cuentas=cuentas,
+                           top=top, vencidas=vencidas, hoy=hoy, estado_txt=ESTADO_TXT)
+
+
+@bp.route("/mi-web/consultas/<int:cid>/actualizar", methods=["POST"])
+def consulta_actualizar(cid):
+    agencia_id = session.get("agencia_id")
+    if not agencia_id:
+        abort(403)
+    c = query("SELECT * FROM web_consultas WHERE id = ? AND agencia_id = ?", (cid, agencia_id), one=True)
+    if not c:
+        abort(404)
+    f = request.form
+    estado = f.get("estado") if f.get("estado") in ESTADOS else c["estado"]
+    nota = _limpiar(f.get("nota"), 500) if "nota" in f else (c["nota"] or "")
+    seg = c["seguimiento"] or ""
+    if "seguimiento" in f:
+        seg = f.get("seguimiento", "").strip()
+        seg = seg if re.fullmatch(r"\d{4}-\d{2}-\d{2}", seg) else ""
+    if estado == "seguimiento" and not seg:
+        seg = (datetime.utcnow() - timedelta(hours=3) + timedelta(days=1)).strftime("%Y-%m-%d")
+    if estado == "cerrado":
+        seg = ""
+    execute("UPDATE web_consultas SET estado = ?, nota = ?, seguimiento = ?, updated_at = datetime('now') WHERE id = ? AND agencia_id = ?",
+            (estado, nota or None, seg or None, cid, agencia_id))
+    return redirect(url_for("web_agencia.consultas", ver=f.get("ver") or "nuevas", tipo=f.get("tipo") or "todas") + f"#c{cid}")
 
 
 @bp.route("/mi-web/consultas/<int:cid>/atendida", methods=["POST"])
 def consulta_atendida(cid):
+    """Compatibilidad con el botón anterior: nuevo <-> contactado."""
     agencia_id = session.get("agencia_id")
     if not agencia_id:
         abort(403)
-    execute("UPDATE web_consultas SET estado = CASE estado WHEN 'nuevo' THEN 'atendido' ELSE 'nuevo' END WHERE id = ? AND agencia_id = ?", (cid, agencia_id))
+    execute("UPDATE web_consultas SET estado = CASE estado WHEN 'nuevo' THEN 'contactado' ELSE 'nuevo' END, updated_at = datetime('now') WHERE id = ? AND agencia_id = ?", (cid, agencia_id))
     return redirect(url_for("web_agencia.consultas"))

@@ -133,7 +133,7 @@
         {% if lugar %}<div class="lugar">📍 {{ lugar }}</div>{% endif %}
         <div class="acc">
           <a class="btn-line" href="{{ it.ficha }}">Ver ficha</a>
-          {% if it.wa %}<a class="btn-wa" href="{{ it.wa }}" target="_blank" rel="noopener">Consultar</a>{% endif %}
+          {% if it.wa %}<a class="btn-wa" href="{{ it.wa }}" target="_blank" rel="noopener" onclick="try{navigator.sendBeacon('/clic/{{ it.id }}?o=web')}catch(e){}">Consultar</a>{% endif %}
         </div>
       </div>
     </article>
@@ -149,7 +149,7 @@
     {% if hay_cero %}<a class="txt" href="#autos" data-tab="cero">0 Km</a>{% endif %}
     <a class="txt" href="#contacto">Contacto</a>
     <a class="btn-resalta" href="#compramos">Compramos tu auto</a>
-    {% if wa_general %}<a class="btn btn-wa" href="{{ wa_general }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}
+    {% if wa_general %}<a class="btn btn-wa" href="{{ wa_general }}" target="_blank" rel="noopener" onclick="try{navigator.sendBeacon('/a/{{ slug }}/clic')}catch(e){}">WhatsApp</a>{% endif %}
   </nav>
 </div>
 <nav class="menu-m wrap">
@@ -245,13 +245,13 @@
     {% if cfg.nombre_contacto %}<p>Atiende: {{ cfg.nombre_contacto }}</p>{% endif %}
   </div>
   <div class="redes">
-    {% if wa_general %}<a class="btn btn-wa" href="{{ wa_general }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}
+    {% if wa_general %}<a class="btn btn-wa" href="{{ wa_general }}" target="_blank" rel="noopener" onclick="try{navigator.sendBeacon('/a/{{ slug }}/clic')}catch(e){}">WhatsApp</a>{% endif %}
     {% if cfg.instagram %}<a class="btn btn-line" href="{{ cfg.instagram }}" target="_blank" rel="noopener">Instagram</a>{% endif %}
     {% if cfg.facebook %}<a class="btn btn-line" href="{{ cfg.facebook }}" target="_blank" rel="noopener">Facebook</a>{% endif %}
   </div>
 </div></section>
 <footer>Precios en pesos, sujetos a cambio sin previo aviso. · Web hecha con <a href="{{ url_canonica.rsplit('/a/', 1)[0] }}">AGENCIEROS</a></footer>
-{% if wa_general %}<a class="btn btn-wa flot" href="{{ wa_general }}" target="_blank" rel="noopener">💬 WhatsApp</a>{% endif %}
+{% if wa_general %}<a class="btn btn-wa flot" href="{{ wa_general }}" target="_blank" rel="noopener" onclick="try{navigator.sendBeacon('/a/{{ slug }}/clic')}catch(e){}">💬 WhatsApp</a>{% endif %}
 
 <script>
 (function () {

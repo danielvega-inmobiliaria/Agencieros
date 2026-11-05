@@ -73,7 +73,7 @@
   {% endif %}
 
   {% if d.whatsapp_link %}
-  <a class="btn-whatsapp" href="{{ d.whatsapp_link }}" target="_blank" rel="noopener">💬 Consultar por WhatsApp</a>
+  <a class="btn-whatsapp" href="{{ d.whatsapp_link }}" target="_blank" rel="noopener" onclick="try{navigator.sendBeacon('/clic/{{ d.vehiculo.id }}?o=ficha')}catch(e){}">💬 Consultar por WhatsApp</a>
   {% endif %}
 
   {% if d.agencia and (d.agencia.nombre_agencia or d.agencia.logo_url or d.agencia.direccion or d.agencia.instagram or d.agencia.facebook or d.agencia.sitio_web) %}

@@ -83,7 +83,7 @@
     <div class="mw-guardar"><button class="btn btn-primary btn-sm" type="submit">Guardar</button></div>
   </form>
   <p style="margin-top:16px;">
-    <a class="btn btn-sm btn-secondary" href="{{ url_for('web_agencia.consultas') }}">📩 Consultas de la web{% if consultas_nuevas %} ({{ consultas_nuevas }} nuevas){% endif %}</a>
+    <a class="btn btn-sm btn-secondary" href="{{ url_for('web_agencia.consultas') }}">📩 Bandeja de consultas{% if consultas_nuevas %} ({{ consultas_nuevas }} nuevas){% endif %}</a>
   </p>
   {% if ag.web_slug %}
   <p style="margin-top:16px;">
