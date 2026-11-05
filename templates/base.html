@@ -66,6 +66,11 @@
         Matches
         {% if matches_pendientes %}<span class="nav-badge">{{ matches_pendientes }}</span>{% endif %}
       </a>
+      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('web_agencia.consulta') else '' }}" href="{{ url_for('web_agencia.consultas') }}">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        Consultas
+        {% if consultas_web_nuevas %}<span class="nav-badge">{{ consultas_web_nuevas }}</span>{% endif %}
+      </a>
       <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('tomas.') else '' }}" href="{{ url_for('tomas.index') }}">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="9" y="2" width="6" height="4" rx="1" ry="1"></rect><polyline points="9 14 11.5 16.5 16 11.5"></polyline></svg>
         Toma y tasación

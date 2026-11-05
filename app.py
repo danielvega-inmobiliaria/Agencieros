@@ -206,6 +206,18 @@ def create_app():
         return {"fb_eventos_pendientes": session.pop("fb_eventos_pendientes", [])}
 
     @app.context_processor
+    def _inject_consultas_web():
+        # Consultas nuevas de la web (bandeja) para el badge del menú.
+        try:
+            from flask import session as _s
+            from database import query as _q
+            if not _s.get("agencia_id"):
+                return {"consultas_web_nuevas": 0}
+            return {"consultas_web_nuevas": _q("SELECT COUNT(*) AS c FROM web_consultas WHERE agencia_id = ? AND estado = 'nuevo'", (_s["agencia_id"],), one=True)["c"]}
+        except Exception:
+            return {"consultas_web_nuevas": 0}
+
+    @app.context_processor
     def _inject_matches_pendientes():
         # Contador de matches pendientes de revisar, disponible en todos los
         # templates para el badge del menú (ver templates/base.html) — así
