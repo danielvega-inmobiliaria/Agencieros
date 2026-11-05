@@ -40,6 +40,9 @@ def _slug_valido(slug):
 
 COLOR_DEFECTO = "#1f4fa8"
 MAX_DESTACADOS = 6
+DIAS_NUEVO = 15   # "Recién ingresados": autos cargados en los últimos N días
+DIAS_BAJA = 30    # "Bajaron de precio": baja de precio en los últimos N días
+VENDE_OPCIONES = ("usados", "0km", "ambos")
 
 
 def color_valido(c):
@@ -60,10 +63,15 @@ def _items(agencia_id, slug):
     """Autos a mostrar: disponibles y no ocultados, con solo datos públicos."""
     filas = query(
         """SELECT id, marca, modelo, version, anio, km, combustible, caja, valor_publicado, tipo_carroceria,
-                  COALESCE(web_ocultar_precio, 0) AS ocultar_precio, COALESCE(web_destacado, 0) AS destacado
+                  COALESCE(web_ocultar_precio, 0) AS ocultar_precio, COALESCE(web_destacado, 0) AS destacado,
+                  CASE WHEN COALESCE(fecha_ingreso, '') >= date('now', '-%d day') THEN 1 ELSE 0 END AS es_nuevo,
+                  CASE WHEN COALESCE(precio_baja_fecha, '') >= date('now', '-%d day')
+                            AND COALESCE(precio_anterior, 0) > COALESCE(valor_publicado, 0) AND COALESCE(valor_publicado, 0) > 0
+                       THEN 1 ELSE 0 END AS es_baja,
+                  precio_anterior
            FROM vehiculos
            WHERE agencia_id = ? AND estado = 'disponible' AND COALESCE(web_visible, 1) = 1
-           ORDER BY id DESC""", (agencia_id,))
+           ORDER BY id DESC""" % (DIAS_NUEVO, DIAS_BAJA), (agencia_id,))
     items = []
     for v in filas:
         titulo = " ".join(str(x) for x in [v["marca"], v["modelo"]] if x)
@@ -78,6 +86,10 @@ def _items(agencia_id, slug):
             "precio": 0 if v["ocultar_precio"] else (v["valor_publicado"] or 0),
             "precio_txt": _pesos(v["valor_publicado"]) if (v["valor_publicado"] and not v["ocultar_precio"]) else "Consultar",
             "foto": foto_principal(v["id"]), "destacado": bool(v["destacado"]),
+            "nuevo": bool(v["es_nuevo"]),
+            # "Bajó de precio" solo si el precio se muestra (si está oculto no se delata la baja).
+            "baja": bool(v["es_baja"]) and not v["ocultar_precio"],
+            "precio_ant_txt": _pesos(v["precio_anterior"]) if (v["es_baja"] and not v["ocultar_precio"]) else "",
             "ficha": f"{APP_URL}/stock/{v['id']}/ficha?wa=0&web={slug}",
         })
     return items
@@ -86,7 +98,7 @@ def _items(agencia_id, slug):
 @bp.route("/a/<slug>")
 def pagina(slug):
     from routes.stock import _whatsapp_ar, _redes_ordenadas
-    ag = query("SELECT id, nombre_agencia, activo, web_activa, web_color FROM agencias WHERE web_slug = ?",
+    ag = query("SELECT id, nombre_agencia, activo, web_activa, web_color, web_vende FROM agencias WHERE web_slug = ?",
                (slug.lower(),), one=True)
     if not ag or ag["activo"] == 0:
         abort(404)
@@ -103,6 +115,18 @@ def pagina(slug):
             msg = f"Hola! Te escribo por el {it['titulo']} {it['version']} ({it['anio'] or 's/d'}) que vi en tu web."
             it["wa"] = f"{wa_base}?text={quote_plus(msg)}"
     lugar = ", ".join(x for x in [cfg.get("ciudad"), cfg.get("provincia")] if x)
+    # Qué vende la agencia manda sobre cómo se arma la web. Sin definir
+    # (agencias anteriores): se deduce de los autos cargados, como antes.
+    vende = ag["web_vende"] if ag["web_vende"] in VENDE_OPCIONES else None
+    if vende == "usados":
+        hay_cero, hay_usados = False, True
+    elif vende == "0km":
+        hay_cero, hay_usados = True, False
+    elif vende == "ambos":
+        hay_cero, hay_usados = True, True
+    else:
+        hay_cero, hay_usados = any(i["cero_km"] for i in items), any(not i["cero_km"] for i in items)
+    tipo_titulo = ("Autos 0 Km y usados" if (hay_cero and hay_usados) else ("Autos 0 Km" if hay_cero else "Autos usados"))
     og_img = items[0]["foto"] if items else cfg.get("logo_url")
     if og_img and og_img.startswith("/"):
         og_img = APP_URL + og_img
@@ -112,7 +136,9 @@ def pagina(slug):
         wa_general=(f"{wa_base}?text={quote_plus('Hola! Vi tu web y quiero consultar por un auto.')}" if wa_base else None),
         url_canonica=f"{LANDING_URL}/a/{slug.lower()}", og_img=og_img,
         destacados=[i for i in items if i["destacado"]][:MAX_DESTACADOS], slug=slug.lower(),
-        hay_cero=any(i["cero_km"] for i in items), hay_usados=any(not i["cero_km"] for i in items),
+        hay_cero=hay_cero, hay_usados=hay_usados, tipo_titulo=tipo_titulo, solo_cero=(hay_cero and not hay_usados),
+        n_nuevos=sum(1 for i in items if i["nuevo"]), n_bajas=sum(1 for i in items if i["baja"]),
+        dias_nuevo=DIAS_NUEVO, dias_baja=DIAS_BAJA,
         wa_compramos=(f"{wa_base}?text={quote_plus('Hola! Quiero vender mi auto, vi que lo compran en tu web.')}" if wa_base else None),
         color=color_valido(ag["web_color"]), color_txt=_texto_sobre(color_valido(ag["web_color"])),
         vista_previa=(es_dueno and not ag["web_activa"]), activa=bool(ag["web_activa"]),
@@ -125,7 +151,7 @@ def config():
     if not agencia_id:
         flash("Entrá con la cuenta de una agencia para configurar su web.", "error")
         return redirect(url_for("precios.index"))
-    ag = query("SELECT id, nombre_agencia, web_slug, web_activa, web_color FROM agencias WHERE id = ?", (agencia_id,), one=True)
+    ag = query("SELECT id, nombre_agencia, web_slug, web_activa, web_color, web_vende FROM agencias WHERE id = ?", (agencia_id,), one=True)
     cfg = obtener_config_agencia(agencia_id)
     sugerido = slugify(cfg.get("nombre_agencia") or ag["nombre_agencia"])
     if request.method == "POST":
@@ -145,8 +171,14 @@ def config():
         if activa and not (cfg.get("telefono") or "").strip():
             flash("Antes de activar la web cargá tu WhatsApp comercial en Admin: es el botón para que te consulten.", "error")
             return redirect(url_for("web_agencia.config"))
+        vende = request.form.get("vende")
+        vende = vende if vende in VENDE_OPCIONES else (ag["web_vende"] if ag["web_vende"] in VENDE_OPCIONES else None)
+        if activa and not vende:
+            flash("Antes de publicar tu web contanos qué vendés: solo usados, solo 0 Km o ambos. Así la armamos como corresponde.", "error")
+            return redirect(url_for("web_agencia.config"))
         color = color_valido(request.form.get("color"))
-        execute("UPDATE agencias SET web_slug = ?, web_activa = ?, web_color = ? WHERE id = ?", (slug, activa, color, agencia_id))
+        execute("UPDATE agencias SET web_slug = ?, web_activa = ?, web_color = ?, web_vende = ? WHERE id = ?",
+                (slug, activa, color, vende, agencia_id))
         visibles = {int(x) for x in request.form.getlist("visible") if x.isdigit()}
         sin_precio = {int(x) for x in request.form.getlist("sin_precio") if x.isdigit()}
         destacados = [int(x) for x in request.form.getlist("destacado") if x.isdigit()][:MAX_DESTACADOS]

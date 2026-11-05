@@ -576,6 +576,14 @@ def editar(vehiculo_id):
                 vehiculo_id,
             ),
         )
+        # Baja de precio (para "Bajaron de precio" en la web de la agencia):
+        # se guarda el precio anterior y la fecha; si el precio vuelve a subir, se borra.
+        precio_nuevo, precio_viejo = float(f.get("valor_publicado") or 0), float(vehiculo["valor_publicado"] or 0)
+        if precio_viejo > 0 and 0 < precio_nuevo < precio_viejo:
+            execute("UPDATE vehiculos SET precio_anterior = ?, precio_baja_fecha = ? WHERE id = ?",
+                    (precio_viejo, str(date.today()), vehiculo_id))
+        elif precio_nuevo > precio_viejo:
+            execute("UPDATE vehiculos SET precio_anterior = NULL, precio_baja_fecha = NULL WHERE id = ?", (vehiculo_id,))
         nueva_suc = _sucursal_del_form(f)
         if nueva_suc and nueva_suc != vehiculo["sucursal_id"]:
             # Mover la unidad de sucursal: una seña/plan abierto se va con ella;

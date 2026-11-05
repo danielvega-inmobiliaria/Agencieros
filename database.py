@@ -542,6 +542,14 @@ def _migrar_web_agencia(conn):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_web_consultas_ag ON web_consultas(agencia_id, estado)")
     if "web_ocultar_precio" not in vcols:
         conn.execute("ALTER TABLE vehiculos ADD COLUMN web_ocultar_precio INTEGER NOT NULL DEFAULT 0")
+    # 05/11/2026: qué vende la agencia (usados / 0km / ambos) y baja de precio
+    # para los accesos rápidos "Bajaron de precio" de la web.
+    if "web_vende" not in cols:
+        conn.execute("ALTER TABLE agencias ADD COLUMN web_vende TEXT")
+    if "precio_anterior" not in vcols:
+        conn.execute("ALTER TABLE vehiculos ADD COLUMN precio_anterior REAL")
+    if "precio_baja_fecha" not in vcols:
+        conn.execute("ALTER TABLE vehiculos ADD COLUMN precio_baja_fecha TEXT")
 
 
 def _migrar_demo(conn):

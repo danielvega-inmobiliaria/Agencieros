@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ nombre }}{% if lugar %} · {{ lugar }}{% endif %} — Autos usados</title>
-<meta name="description" content="{{ items|length }} autos usados disponibles en {{ nombre }}{% if lugar %}, {{ lugar }}{% endif %}. Consultá por WhatsApp.">
+<title>{{ nombre }}{% if lugar %} · {{ lugar }}{% endif %} — {{ tipo_titulo }}</title>
+<meta name="description" content="{{ items|length }} {{ tipo_titulo|lower }} disponibles en {{ nombre }}{% if lugar %}, {{ lugar }}{% endif %}. Consultá por WhatsApp.">
 <link rel="canonical" href="{{ url_canonica }}">
 {% if vista_previa %}<meta name="robots" content="noindex">{% endif %}
 <meta property="og:type" content="website">
-<meta property="og:title" content="{{ nombre }} — Autos usados">
+<meta property="og:title" content="{{ nombre }} — {{ tipo_titulo }}">
 <meta property="og:description" content="{{ items|length }} autos disponibles{% if lugar %} · {{ lugar }}{% endif %}">
 <meta property="og:url" content="{{ url_canonica }}">
 {% if og_img %}<meta property="og:image" content="{{ og_img }}">{% endif %}
@@ -93,6 +93,13 @@
   .compramos .msg.err { display:block; background:#fee2e2; color:#7f1d1d; }
   .btn-resalta { background:var(--acc); color:var(--acc-txt) !important; border-radius:8px; padding:9px 14px; }
   @media (max-width:760px) { .compramos .caja { grid-template-columns:1fr; } .compramos form { grid-template-columns:1fr; } }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; padding:20px 0 0; }
+  .chip { border:1.5px solid var(--acc); background:#fff; color:var(--acc); border-radius:999px; padding:8px 16px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .chip span { background:var(--acc); color:var(--acc-txt); border-radius:999px; padding:1px 8px; font-size:12px; margin-left:4px; }
+  .chip.on { background:var(--acc); color:var(--acc-txt); } .chip.on span { background:#fff; color:var(--acc); }
+  .badge-nuevo { position:absolute; top:10px; right:10px; background:#16a34a; color:#fff; font-size:12px; font-weight:800; padding:4px 10px; border-radius:999px; box-shadow:0 2px 6px rgba(0,0,0,.25); }
+  .badge-baja { position:absolute; bottom:10px; right:10px; background:#dc2626; color:#fff; font-size:12px; font-weight:800; padding:4px 10px; border-radius:999px; box-shadow:0 2px 6px rgba(0,0,0,.25); }
+  .card .ant { color:var(--dim); font-size:13px; text-decoration:line-through; margin-top:-2px; }
   .vacio { text-align:center; color:var(--dim); padding:60px 10px; font-size:16px; }
 
   /* contacto + pie */
@@ -114,13 +121,14 @@
 </head>
 <body>
 {% macro tarjeta(it, datos=True, destacada=False) -%}
-    <article class="card{{ ' dest' if destacada else '' }}" data-cero="{{ 1 if it.cero_km else 0 }}"{% if datos %} data-t="{{ (it.titulo ~ ' ' ~ it.version)|lower }}" data-marca="{{ it.marca }}" data-modelo="{{ it.modelo }}"
+    <article class="card{{ ' dest' if destacada else '' }}" data-cero="{{ 1 if it.cero_km else 0 }}" data-nuevo="{{ 1 if it.nuevo else 0 }}" data-baja="{{ 1 if it.baja else 0 }}"{% if datos %} data-t="{{ (it.titulo ~ ' ' ~ it.version)|lower }}" data-marca="{{ it.marca }}" data-modelo="{{ it.modelo }}"
              data-precio="{{ it.precio }}" data-anio="{{ it.anio or 0 }}" data-km="{{ it.km if it.km is not none else -1 }}" data-i="{{ it.idx }}"{% endif %}>
-      <a class="foto" href="{{ it.ficha }}"><img src="{{ it.foto }}" alt="{{ it.titulo }}" loading="lazy">{% if it.destacado %}<span class="badge-dest">⭐ Destacado</span>{% endif %}{% if it.cero_km %}<span class="badge-cero">0 Km</span>{% endif %}</a>
+      <a class="foto" href="{{ it.ficha }}"><img src="{{ it.foto }}" alt="{{ it.titulo }}" loading="lazy">{% if it.destacado %}<span class="badge-dest">⭐ Destacado</span>{% endif %}{% if it.cero_km %}<span class="badge-cero">0 Km</span>{% endif %}{% if it.nuevo %}<span class="badge-nuevo">🆕 Nuevo</span>{% endif %}{% if it.baja %}<span class="badge-baja">⬇ Bajó de precio</span>{% endif %}</a>
       <div class="cuerpo">
         <h3>{{ it.titulo }}</h3>
         {% if it.version %}<div class="ver">{{ it.version }}</div>{% endif %}
         <div class="precio">{{ it.precio_txt }}</div>
+        {% if it.baja and it.precio_ant_txt %}<div class="ant">Antes {{ it.precio_ant_txt }}</div>{% endif %}
         <div class="meta">{{ [it.km_txt, it.anio|string if it.anio else '', it.combustible, it.caja]|select|join(' | ') }}</div>
         {% if lugar %}<div class="lugar">📍 {{ lugar }}</div>{% endif %}
         <div class="acc">
@@ -166,10 +174,18 @@
     <div><label for="f-modelo">Modelo</label><select id="f-modelo"><option value="">Todos los modelos</option></select></div>
     <div><label>Año</label><div class="par"><input type="number" id="f-anio-d" placeholder="Desde" inputmode="numeric"><input type="number" id="f-anio-h" placeholder="Hasta" inputmode="numeric"></div></div>
     <div><label>Precio ($)</label><div class="par"><input type="number" id="f-pre-d" placeholder="Desde" inputmode="numeric"><input type="number" id="f-pre-h" placeholder="Hasta" inputmode="numeric"></div></div>
-    <div><label>Kilómetros</label><div class="par"><input type="number" id="f-km-d" placeholder="Desde" inputmode="numeric"><input type="number" id="f-km-h" placeholder="Hasta" inputmode="numeric"></div></div>
+    <div{% if solo_cero %} style="display:none;"{% endif %}><label>Kilómetros</label><div class="par"><input type="number" id="f-km-d" placeholder="Desde" inputmode="numeric"><input type="number" id="f-km-h" placeholder="Hasta" inputmode="numeric"></div></div>
     <div style="grid-column:span 2;"><label for="f-q">Buscar</label><input type="search" id="f-q" placeholder="Marca, modelo o versión…"></div>
     <div class="acciones"><button type="button" class="limpiar" id="f-limpiar">Limpiar filtros</button></div>
   </div>
+
+  {% if n_nuevos or n_bajas %}
+  <div class="chips" id="chips">
+    <button type="button" class="chip on" data-chip="">Todos</button>
+    {% if n_nuevos %}<button type="button" class="chip" data-chip="nuevo" title="Cargados en los últimos {{ dias_nuevo }} días">🆕 Recién ingresados <span>{{ n_nuevos }}</span></button>{% endif %}
+    {% if n_bajas %}<button type="button" class="chip" data-chip="baja" title="Bajaron de precio en los últimos {{ dias_baja }} días">⬇ Bajaron de precio <span>{{ n_bajas }}</span></button>{% endif %}
+  </div>
+  {% endif %}
 
   {% if destacados %}
   <section class="franja-dest" id="franja-dest">
@@ -244,8 +260,12 @@
   var cards = [].slice.call(grid.children), modelosDe = {};
   var botones = [].slice.call(document.querySelectorAll('[data-tab]')), tab = null;
   var verTodos = document.getElementById('ver-todos');
+  var chip = null, chips = [].slice.call(document.querySelectorAll('[data-chip]'));
   if (botones.length) tab = location.hash === '#0km' ? 'cero' : (location.hash === '#usados' ? 'usados' : null);
-  function enTab(c) { return !tab || (tab === 'cero') === (c.dataset.cero === '1'); }
+  if (location.hash === '#nuevos') chip = 'nuevo'; else if (location.hash === '#bajaron') chip = 'baja';
+  if (!chips.some(function (b) { return b.dataset.chip === chip; })) chip = null;
+  function enTab(c) { return (!tab || (tab === 'cero') === (c.dataset.cero === '1')) && (!chip || c.dataset[chip] === '1'); }
+  function hashActual() { return chip === 'nuevo' ? '#nuevos' : (chip === 'baja' ? '#bajaron' : (tab === 'cero' ? '#0km' : (tab === 'usados' ? '#usados' : ''))); }
   function llenarMarcas() {
     var set = {}, sel = $('f-marca'), previo = sel.value;
     cards.forEach(function (c) { if (enTab(c) && c.dataset.marca) set[c.dataset.marca] = 1; });
@@ -292,6 +312,7 @@
     cards.forEach(function (c) { if (c.style.display === 'none' && c.parentNode === grid2) grid.appendChild(c); });
     var n = principal.length;
     $('cuenta').textContent = n + (n === 1 ? ' auto disponible' : ' autos disponibles');
+    chips.forEach(function (b) { b.classList.toggle('on', (b.dataset.chip || null) === chip); });
     $('bloque-consultar').style.display = consultar.length ? '' : 'none';
     if (verTodos) {
       botones.forEach(function (b) { b.classList.toggle('on', b.dataset.tab === tab); });
@@ -302,7 +323,7 @@
     }
     var fd = document.getElementById('franja-dest');
     if (fd) { var vis = 0; [].slice.call(fd.querySelectorAll('.card')).forEach(function (c) { var ok = enTab(c); c.style.display = ok ? '' : 'none'; if (ok) vis++; }); fd.dataset.vacia = vis ? '' : '1'; }
-    if (fd) fd.style.display = (fd.dataset.vacia || t || marca || modelo || ad !== null || ah !== null || pd !== null || ph !== null || kd !== null || kh !== null) ? 'none' : '';
+    if (fd) fd.style.display = (fd.dataset.vacia || chip || t || marca || modelo || ad !== null || ah !== null || pd !== null || ph !== null || kd !== null || kh !== null) ? 'none' : '';
     var v = $('vacio');
     v.style.display = n ? 'none' : '';
     v.textContent = filtraPrecio && consultar.length ? 'No hay autos con precio publicado en ese rango.' : 'No hay autos con esos filtros.';
@@ -315,9 +336,14 @@
     llenarModelos(); aplicar();
   });
   function irA(nuevo) {
-    tab = nuevo; llenarMarcas(); $('f-marca').value = ''; llenarModelos(); aplicar();
-    try { history.replaceState(null, '', nuevo === 'cero' ? '#0km' : (nuevo === 'usados' ? '#usados' : location.pathname + location.search)); } catch (e) {}
+    tab = nuevo; if (!nuevo) chip = null; llenarMarcas(); $('f-marca').value = ''; llenarModelos(); aplicar();
+    try { history.replaceState(null, '', hashActual() || (location.pathname + location.search)); } catch (e) {}
   }
+  function irChip(v) {
+    chip = (v && chip === v) ? null : v; llenarMarcas(); $('f-marca').value = ''; llenarModelos(); aplicar();
+    try { history.replaceState(null, '', hashActual() || (location.pathname + location.search)); } catch (e) {}
+  }
+  chips.forEach(function (b) { b.addEventListener('click', function () { irChip(b.dataset.chip || null); }); });
   botones.forEach(function (b) {
     b.addEventListener('click', function (e) {
       e.preventDefault(); irA(b.dataset.tab);
