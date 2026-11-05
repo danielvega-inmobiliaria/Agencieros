@@ -54,7 +54,7 @@
     <div class="info-grid">
       <div><div class="etiqueta">Marca / Modelo</div><div class="valor">{{ d.vehiculo.marca }} {{ d.vehiculo.modelo }}</div></div>
       <div><div class="etiqueta">Año</div><div class="valor">{{ d.vehiculo.anio or '-' }}</div></div>
-      <div><div class="etiqueta">Kilometraje</div><div class="valor">{{ "{:,.0f}".format(d.vehiculo.km).replace(",", ".") + " km" if d.vehiculo.km else '-' }}</div></div>
+      {% if d.vehiculo.km == 0 %}<div><div class="etiqueta">Condición</div><div class="valor">0 Km</div></div>{% else %}<div><div class="etiqueta">Kilometraje</div><div class="valor">{{ "{:,.0f}".format(d.vehiculo.km).replace(",", ".") + " km" if d.vehiculo.km else '-' }}</div></div>{% endif %}
       <div><div class="etiqueta">Combustible</div><div class="valor">{{ d.vehiculo.combustible or '-' }}</div></div>
       <div><div class="etiqueta">Transmisión</div><div class="valor">{{ ('Automática' if d.vehiculo.caja == 'Automatica' else d.vehiculo.caja) or '-' }}</div></div>
       {% if d.vehiculo.estado_general %}<div><div class="etiqueta">Estado general</div><div class="valor">{{ d.vehiculo.estado_general }}</div></div>{% endif %}
