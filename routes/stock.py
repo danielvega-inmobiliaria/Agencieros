@@ -131,6 +131,11 @@ def index():
     tomas = {r["vehiculo_id"]: r["id"] for r in query(
         "SELECT vehiculo_id, MAX(id) AS id FROM tomas_vehiculo WHERE agencia_id = ? AND vehiculo_id IS NOT NULL GROUP BY vehiculo_id",
         (agencia_id,))}
+    # Clics de WhatsApp de la web/ficha en los últimos 7 días, por auto.
+    interes = {r["vehiculo_id"]: r["c"] for r in query(
+        """SELECT vehiculo_id, COUNT(*) AS c FROM web_consultas
+           WHERE agencia_id = ? AND tipo = 'wa_clic' AND vehiculo_id IS NOT NULL AND created_at > datetime('now', '-7 days')
+           GROUP BY vehiculo_id""", (agencia_id,))}
     menu = {}
     config_agencia = obtener_config_agencia(agencia_id)
     nombre_agencia = config_agencia.get("nombre_agencia") or session.get("agencia_nombre")
@@ -149,6 +154,7 @@ def index():
             "whatsapp": "https://wa.me/?text=" + quote_plus(texto),
             "red": url_for("stock.red", vehiculo_id=v["id"]),
             "en_red": v["id"] in en_red,
+            "interes": interes.get(v["id"], 0),
             "red_posible": v["estado"] != "vendido",
             "toma": url_for("tomas.detalle", toma_id=tomas[v["id"]], volver=volver_listado) if v["id"] in tomas else None,
         }

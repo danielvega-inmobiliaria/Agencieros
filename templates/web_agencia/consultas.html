@@ -1,63 +1,30 @@
 {% extends "base.html" %}
-{% block title %}Bandeja de consultas — Agencieros{% endblock %}
-{% block header %}Bandeja de consultas{% endblock %}
+{% block title %}Consultas de la web — Agencieros{% endblock %}
+{% block header %}Consultas de la web{% endblock %}
 {% block content %}
-{% macro tab(clave, texto) -%}
-  <a class="btn btn-sm {{ 'btn-primary' if ver == clave else 'btn-secondary' }}" href="{{ url_for('web_agencia.consultas', ver=clave, tipo=tipo) }}">{{ texto }} ({{ cuentas.get(clave, 0) }})</a>
-{%- endmacro %}
 <div class="panel">
-  <p style="color:var(--text-dim); font-size:13px; margin-top:0;">Todo lo que llega de tu web en un solo lugar: quienes quieren vender su auto («Compramos tu auto») y quienes tocaron WhatsApp en un auto o en tu web. Marcá cómo va cada consulta, anotá y dejá una fecha de seguimiento. <a href="{{ url_for('web_agencia.config') }}">‹ Volver a Mi web</a></p>
-
-  {% if vencidas %}<div style="background:rgba(212,175,55,.12); border:1px solid var(--gold-light); border-radius:10px; padding:8px 12px; margin-bottom:10px; font-size:13px;">⏰ Tenés <b>{{ vencidas }}</b> seguimiento{{ 's' if vencidas != 1 }} para hoy o atrasado{{ 's' if vencidas != 1 }}.</div>{% endif %}
-
-  {% if top %}
-  <div style="margin-bottom:12px; font-size:13px;">
-    <b>Autos con más interés (últimos 7 días)</b>
-    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
-      {% for t in top %}<a class="chip" href="{{ url_for('stock.ficha', vehiculo_id=t.vehiculo_id, wa=0) }}" target="_blank" rel="noopener">{{ t.vehiculo_txt or 'Auto' }} · {{ t.c }} clic{{ 's' if t.c != 1 }}</a>{% endfor %}
-    </div>
+  <p style="color:var(--text-dim); font-size:13px; margin-top:0;">Personas que quieren vender su auto y completaron «Compramos tu auto» en tu web. Escribiles por WhatsApp y marcá la consulta como atendida. También te llega un aviso por mail. <a href="{{ url_for('web_agencia.config') }}">‹ Volver a Mi web</a></p>
+  <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">
+    <a class="btn btn-sm {{ 'btn-primary' if ver == 'pendientes' else 'btn-secondary' }}" href="{{ url_for('web_agencia.consultas') }}">Pendientes ({{ cuentas.pendientes }})</a>
+    <a class="btn btn-sm {{ 'btn-primary' if ver == 'atendidas' else 'btn-secondary' }}" href="{{ url_for('web_agencia.consultas', ver='atendidas') }}">Atendidas ({{ cuentas.atendidas }})</a>
   </div>
-  {% endif %}
-
-  <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
-    {{ tab('nuevas', 'Nuevas') }} {{ tab('curso', 'En curso') }} {{ tab('cerradas', 'Cerradas') }} {{ tab('todas', 'Todas') }}
-  </div>
-  <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; font-size:12px;">
-    {% for k, t in (('todas', 'Todos los tipos'), ('compramos', 'Quieren vender'), ('interes', 'Interés en autos / WhatsApp')) %}
-    <a class="chip" style="{{ 'font-weight:700; border-color:var(--gold-light);' if tipo == k else '' }}" href="{{ url_for('web_agencia.consultas', ver=ver, tipo=k) }}">{{ t }}</a>
-    {% endfor %}
-  </div>
-
   {% if consultas %}
   <div style="display:grid; gap:10px;">
     {% for c in consultas %}
-    <div id="c{{ c.id }}" style="border:1px solid {{ 'var(--gold-light)' if c.vencida else 'var(--border)' }}; border-radius:10px; padding:12px 14px; background:var(--navy-bg); {{ 'opacity:.65;' if c.estado == 'cerrado' else '' }}">
+    <div style="border:1px solid var(--border); border-radius:10px; padding:12px 14px; background:var(--navy-bg); {{ '' if c.estado == 'nuevo' else 'opacity:.7;' }}">
       <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;">
-        {% if c.tipo == 'compramos' %}
-        <b>🚗 Quiere vender: {{ c.marca }} {{ c.modelo }} · {{ c.anio }}{% if c.km %} · {{ '{:,}'.format(c.km).replace(',', '.') }} km{% endif %}</b>
-        {% else %}
-        <b>💬 Tocó WhatsApp {{ 'en la ficha de' if c.origen == 'wa_ficha' else ('en' if c.vehiculo_id else 'en tu web') }}{% if c.vehiculo_txt %} {{ c.vehiculo_txt }}{% endif %}</b>
-        {% endif %}
-        <span style="color:var(--text-dim); font-size:12px;">{{ c.created_at|fecha_ar }} · <span style="color:var(--gold-light);">{{ estado_txt[c.estado] if c.estado in estado_txt else c.estado }}</span>{% if c.seguimiento %} · {{ '⏰ ' if c.vencida }}seguir {{ c.seguimiento[8:10] }}/{{ c.seguimiento[5:7] }}{% endif %}</span>
+        <b>{{ c.marca }} {{ c.modelo }} · {{ c.anio }}{% if c.km %} · {{ '{:,}'.format(c.km).replace(',', '.') }} km{% endif %}</b>
+        <span style="color:var(--text-dim); font-size:12px;">{{ c.created_at|fecha_ar }}</span>
       </div>
-      {% if c.tipo == 'compramos' %}<div style="margin-top:4px;">{{ c.nombre }} · {{ c.telefono }}</div>{% else %}<div style="color:var(--text-dim); font-size:13px; margin-top:4px;">No dejó datos: tocó el botón pero todavía no sabés quién es. Si te escribe por WhatsApp, anotá el nombre acá.</div>{% endif %}
+      <div style="margin-top:4px;">{{ c.nombre }} · {{ c.telefono }}</div>
       {% if c.comentario %}<div style="color:var(--text-dim); font-size:13px; margin-top:4px;">“{{ c.comentario }}”</div>{% endif %}
-
-      <form method="post" action="{{ url_for('web_agencia.consulta_actualizar', cid=c.id) }}" style="margin:10px 0 0; display:grid; gap:8px;">
-        <input type="hidden" name="ver" value="{{ ver }}"><input type="hidden" name="tipo" value="{{ tipo }}">
-        <textarea name="nota" rows="2" maxlength="500" placeholder="Nota (qué hablaron, qué falta)" style="width:100%;">{{ c.nota or '' }}</textarea>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-          <label style="font-size:12px; color:var(--text-dim);">Seguimiento <input type="date" name="seguimiento" value="{{ c.seguimiento or '' }}" min="{{ hoy }}"></label>
-          <button class="btn btn-sm btn-secondary" type="submit" name="estado" value="{{ c.estado }}">Guardar nota</button>
-        </div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          {% if c.wa %}<a class="btn btn-sm btn-primary" href="{{ c.wa }}" target="_blank" rel="noopener">Responder por WhatsApp</a>{% endif %}
-          {% if c.tipo == 'compramos' %}<a class="btn btn-sm btn-secondary" href="{{ url_for('tomas.index') }}">Hacer toma</a>{% elif c.vehiculo_id %}<a class="btn btn-sm btn-secondary" href="{{ url_for('stock.ficha', vehiculo_id=c.vehiculo_id, wa=0) }}" target="_blank" rel="noopener">Ver el auto</a>{% endif %}
-          {% if c.estado != 'contactado' %}<button class="btn btn-sm btn-secondary" type="submit" name="estado" value="contactado">Contactada</button>{% endif %}
-          {% if c.estado != 'seguimiento' %}<button class="btn btn-sm btn-secondary" type="submit" name="estado" value="seguimiento">A seguimiento</button>{% endif %}
-          {% if c.estado != 'cerrado' %}<button class="btn btn-sm btn-secondary" type="submit" name="estado" value="cerrado">Cerrar</button>{% else %}<button class="btn btn-sm btn-secondary" type="submit" name="estado" value="nuevo">Reabrir</button>{% endif %}
-        </div>
-      </form>
+      <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+        {% if c.wa %}<a class="btn btn-sm btn-primary" href="{{ c.wa }}" target="_blank" rel="noopener">Responder por WhatsApp</a>{% endif %}
+        <a class="btn btn-sm btn-secondary" href="{{ url_for('tomas.index') }}">Hacer toma</a>
+        <form method="post" action="{{ url_for('web_agencia.consulta_atendida', cid=c.id) }}" style="margin:0;">
+          <button class="btn btn-sm btn-secondary" type="submit">{{ 'Marcar atendida' if c.estado == 'nuevo' else 'Volver a pendiente' }}</button>
+        </form>
+      </div>
     </div>
     {% endfor %}
   </div>

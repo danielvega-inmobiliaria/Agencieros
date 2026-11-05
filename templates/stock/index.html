@@ -62,7 +62,7 @@
       <td data-label="Vehículo">{{ v.marca }} {{ v.modelo }} {{ v.version }}{% if nombres_suc.get(v.sucursal_id) %} <span class="badge badge-sucursal">{{ nombres_suc[v.sucursal_id] }}</span>{% endif %}</td>
       <td data-label="Año">{{ v.anio }}</td>
       <td data-label="Precio">${{ "{:,.0f}".format(v.valor_publicado or 0).replace(",", ".") }}</td>
-      <td data-label="Disponibilidad"><span class="badge {{ v.estado }}">{{ estado_label[v.estado] }}</span>{% if menu[v.id].en_red %} <span class="badge badge-red">En Red</span>{% endif %}</td>
+      <td data-label="Disponibilidad"><span class="badge {{ v.estado }}">{{ estado_label[v.estado] }}</span>{% if menu[v.id].en_red %} <span class="badge badge-red">En Red</span>{% endif %}{% if menu[v.id].interes %} <span class="badge" title="Veces que tocaron WhatsApp en la web o la ficha (7 días)">💬 {{ menu[v.id].interes }} consulta{{ 's' if menu[v.id].interes != 1 }} esta semana</span>{% endif %}</td>
       <td class="fila-compacta">
         <div class="fila-compacta-inner">
           <img class="foto-mini" src="{{ foto_principal(v.id) }}" alt="">

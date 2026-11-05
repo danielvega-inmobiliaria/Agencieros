@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <title>{% block title %}Agencieros{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20261007a">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20261105a">
   {# App instalable (29/09/2026): "Agregar a inicio" abre sin barras del navegador. #}
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
   <meta name="theme-color" content="#131e2e">
@@ -57,6 +57,17 @@
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11"></path><rect x="2" y="11" width="20" height="6" rx="2"></rect><circle cx="7.5" cy="19" r="1.5"></circle><circle cx="16.5" cy="19" r="1.5"></circle></svg>
         Stock de vehículos
       </a>
+      <a class="nav-item {{ 'active' if request.endpoint in ('web_agencia.config',) else '' }}" href="{{ url_for('web_agencia.config') }}">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M2 12h20"></path><path d="M12 2a15 15 0 0 1 0 20a15 15 0 0 1 0-20z"></path></svg>
+        Mi web
+      </a>
+      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('web_agencia.consulta') else '' }}" href="{{ url_for('web_agencia.consultas') }}">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        Consultas de la web
+        {% if consultas_web_nuevas %}<span class="nav-badge">{{ consultas_web_nuevas }}</span>{% endif %}
+      </a>
+      <details class="nav-mas" {% if request.endpoint and request.endpoint.split('.')[0] in ('pedidos','matches','tomas','financiacion','red','finanzas','mensajes','ranking','cuenta') %}open{% endif %}>
+        <summary class="nav-item">Más{% if matches_pendientes or respuestas_nuevas %}<span class="nav-badge">•</span>{% endif %}</summary>
       <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('pedidos.') else '' }}" href="{{ url_for('pedidos.index') }}">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="9" y="2" width="6" height="4" rx="1" ry="1"></rect><line x1="8" y1="11" x2="16" y2="11"></line><line x1="8" y1="15" x2="16" y2="15"></line><line x1="8" y1="19" x2="12" y2="19"></line></svg>
         Banco de pedidos
@@ -65,11 +76,6 @@
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
         Matches
         {% if matches_pendientes %}<span class="nav-badge">{{ matches_pendientes }}</span>{% endif %}
-      </a>
-      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('web_agencia.consulta') else '' }}" href="{{ url_for('web_agencia.consultas') }}">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-        Consultas
-        {% if consultas_web_nuevas %}<span class="nav-badge">{{ consultas_web_nuevas }}</span>{% endif %}
       </a>
       <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('tomas.') else '' }}" href="{{ url_for('tomas.index') }}">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="9" y="2" width="6" height="4" rx="1" ry="1"></rect><polyline points="9 14 11.5 16.5 16 11.5"></polyline></svg>
@@ -107,6 +113,9 @@
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l7-4 7 4v14"></path><path d="M9 21v-6h6v6"></path></svg>
         Sucursales
       </a>
+      {% endif %}
+      </details>
+      {% if not es_vendedor %}
       <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('admin.') else '' }}" href="{{ url_for('admin.index') }}">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         Admin

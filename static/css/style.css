@@ -887,3 +887,10 @@ html, body { max-width: 100%; overflow-x: hidden; overflow-x: clip; } /* clip: n
 /* "Seguinos" en el menú (07/10/2026) */
 .sidebar-seguinos { margin-top: 10px; font-size: 13px; color: var(--text-dim); display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
 .sidebar-seguinos a { color: var(--gold-light); padding: 8px 0; }
+
+/* Menú: lo menos usado queda plegado en «Más» (05/11/2026) */
+.nav-mas > summary { list-style: none; cursor: pointer; opacity: .85; }
+.nav-mas > summary::-webkit-details-marker { display: none; }
+.nav-mas > summary::after { content: '▾'; margin-left: auto; }
+.nav-mas[open] > summary::after { content: '▴'; }
+.nav-mas > .nav-item { margin-left: 10px; }

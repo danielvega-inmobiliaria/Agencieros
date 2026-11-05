@@ -196,7 +196,7 @@ def config():
     return render_template(
         "web_agencia/config.html", ag=ag, cfg=cfg, sugerido=sugerido, vehiculos=vehiculos,
         landing_url=LANDING_URL, color=color_valido(ag["web_color"]), max_destacados=MAX_DESTACADOS,
-        consultas_nuevas=query("SELECT COUNT(*) AS c FROM web_consultas WHERE agencia_id = ? AND estado = 'nuevo'", (agencia_id,), one=True)["c"],
+        consultas_nuevas=query("SELECT COUNT(*) AS c FROM web_consultas WHERE agencia_id = ? AND estado = 'nuevo' AND tipo = 'compramos'", (agencia_id,), one=True)["c"],
         tiene_telefono=bool((cfg.get("telefono") or "").strip()),
     )
 
@@ -309,47 +309,23 @@ def clic_web(slug):
 
 @bp.route("/mi-web/consultas")
 def consultas():
+    """Bandeja simple: quienes quieren vender su auto («Compramos tu auto»).
+    Dos estados: pendiente y atendida. Los clics de WhatsApp no son tarjetas:
+    se ven como contador en cada auto de Stock."""
     from routes.stock import _whatsapp_ar
     agencia_id = session.get("agencia_id")
     if not agencia_id:
         return redirect(url_for("precios.index"))
-    ver = request.args.get("ver", "nuevas")
-    if ver not in ("nuevas", "curso", "cerradas", "todas"):
-        ver = "nuevas"
-    tipo = request.args.get("tipo", "todas")
-    if tipo not in ("todas", "compramos", "interes"):
-        tipo = "todas"
-    cuentas = {r["k"]: r["c"] for r in query(
-        """SELECT CASE WHEN estado = 'nuevo' THEN 'nuevas' WHEN estado = 'cerrado' THEN 'cerradas' ELSE 'curso' END AS k, COUNT(*) AS c
-           FROM web_consultas WHERE agencia_id = ? GROUP BY k""", (agencia_id,))}
-    cuentas["todas"] = sum(cuentas.values())
-    where, params = ["agencia_id = ?"], [agencia_id]
-    if ver == "nuevas":
-        where.append("estado = 'nuevo'")
-    elif ver == "curso":
-        where.append("estado IN ('contactado', 'seguimiento')")
-    elif ver == "cerradas":
-        where.append("estado = 'cerrado'")
-    if tipo == "compramos":
-        where.append("tipo = 'compramos'")
-    elif tipo == "interes":
-        where.append("tipo = 'wa_clic'")
-    hoy = _hoy_ar()
+    ver = "atendidas" if request.args.get("ver") == "atendidas" else "pendientes"
+    cuentas = {"pendientes": 0, "atendidas": 0}
+    for r in query("SELECT estado, COUNT(*) AS c FROM web_consultas WHERE agencia_id = ? AND tipo = 'compramos' GROUP BY estado", (agencia_id,)):
+        cuentas["pendientes" if r["estado"] == "nuevo" else "atendidas"] += r["c"]
     filas = []
-    for c in query(f"""SELECT * FROM web_consultas WHERE {' AND '.join(where)}
-                       ORDER BY (COALESCE(seguimiento, '') != '' AND seguimiento <= ? AND estado != 'cerrado') DESC, id DESC LIMIT 300""",
-                   params + [hoy]):
+    for c in query("SELECT * FROM web_consultas WHERE agencia_id = ? AND tipo = 'compramos' AND estado " + ("!=" if ver == "atendidas" else "=") + " 'nuevo' ORDER BY id DESC LIMIT 200", (agencia_id,)):
         num = _whatsapp_ar(re.sub(r"[^\d]", "", c["telefono"] or ""))
         msg = f"Hola {c['nombre']}! Te escribo por tu {c['marca']} {c['modelo']} {c['anio']} que quisiste vender."
-        filas.append(dict(c, wa=(f"https://wa.me/{num}?text={quote_plus(msg)}" if num else None),
-                          vencida=bool(c["seguimiento"] and c["seguimiento"] <= hoy and c["estado"] != "cerrado")))
-    top = query("""SELECT vehiculo_id, vehiculo_txt, COUNT(*) AS c FROM web_consultas
-                   WHERE agencia_id = ? AND tipo = 'wa_clic' AND vehiculo_id IS NOT NULL AND created_at > datetime('now', '-7 days')
-                   GROUP BY vehiculo_id ORDER BY c DESC, vehiculo_id DESC LIMIT 5""", (agencia_id,))
-    vencidas = query("""SELECT COUNT(*) AS c FROM web_consultas WHERE agencia_id = ? AND estado != 'cerrado'
-                        AND COALESCE(seguimiento, '') != '' AND seguimiento <= ?""", (agencia_id, hoy), one=True)["c"]
-    return render_template("web_agencia/consultas.html", consultas=filas, ver=ver, tipo=tipo, cuentas=cuentas,
-                           top=top, vencidas=vencidas, hoy=hoy, estado_txt=ESTADO_TXT)
+        filas.append(dict(c, wa=(f"https://wa.me/{num}?text={quote_plus(msg)}" if num else None)))
+    return render_template("web_agencia/consultas.html", consultas=filas, ver=ver, cuentas=cuentas)
 
 
 @bp.route("/mi-web/consultas/<int:cid>/actualizar", methods=["POST"])

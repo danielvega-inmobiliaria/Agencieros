@@ -213,7 +213,7 @@ def create_app():
             from database import query as _q
             if not _s.get("agencia_id"):
                 return {"consultas_web_nuevas": 0}
-            return {"consultas_web_nuevas": _q("SELECT COUNT(*) AS c FROM web_consultas WHERE agencia_id = ? AND estado = 'nuevo'", (_s["agencia_id"],), one=True)["c"]}
+            return {"consultas_web_nuevas": _q("SELECT COUNT(*) AS c FROM web_consultas WHERE agencia_id = ? AND estado = 'nuevo' AND tipo = 'compramos'", (_s["agencia_id"],), one=True)["c"]}
         except Exception:
             return {"consultas_web_nuevas": 0}
 
