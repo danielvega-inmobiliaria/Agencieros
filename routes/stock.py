@@ -1515,7 +1515,6 @@ def ficha(vehiculo_id):
             "en_red": bool(pub),
             "whatsapp": "https://wa.me/?text=" + quote_plus(texto_wa),
             "publicar": url_for("stock.ficha", vehiculo_id=vehiculo_id, publicar=1, volver=ficha_actual),
-            "interna": None if es_vendedor() else url_for("stock.detalle", vehiculo_id=vehiculo_id),
             "volver": ficha_actual,
         }
     if request.args.get("wa") == "0" or publicar:
