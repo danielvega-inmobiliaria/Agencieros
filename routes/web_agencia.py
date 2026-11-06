@@ -9,7 +9,7 @@ Nunca costo, gastos, ganancia ni consignante. La agencia tiene que activarla
 
 Dos rutas:
 - GET /a/<slug>        pública (sin login), también en el dominio raíz.
-- GET/POST /mi-web     la agencia activa su web, elige el nombre del link y
+- GET/POST /mi-web/configuracion  la agencia activa su web (configuración); /mi-web = autos que se muestran. Antes: la agencia activa su web, elige el nombre del link y
                        marca qué autos se muestran.
 """
 import os
@@ -146,13 +146,31 @@ def pagina(slug):
     )
 
 
-@bp.route("/mi-web", methods=["GET", "POST"])
-def config():
+def _agencia_web():
+    """Agencia logueada + su fila; None si no hay sesión de agencia."""
     agencia_id = session.get("agencia_id")
     if not agencia_id:
-        flash("Entrá con la cuenta de una agencia para configurar su web.", "error")
-        return redirect(url_for("precios.index"))
+        return None, None
     ag = query("SELECT id, nombre_agencia, web_slug, web_activa, web_color, web_vende FROM agencias WHERE id = ?", (agencia_id,), one=True)
+    return agencia_id, ag
+
+
+def _sin_agencia():
+    flash("Entrá con la cuenta de una agencia para configurar su web.", "error")
+    return redirect(url_for("precios.index"))
+
+
+def _consultas_nuevas(agencia_id):
+    return query("SELECT COUNT(*) AS c FROM web_consultas WHERE agencia_id = ? AND estado = 'nuevo' AND tipo = 'compramos'", (agencia_id,), one=True)["c"]
+
+
+@bp.route("/mi-web/configuracion", methods=["GET", "POST"])
+def config():
+    """Configuración de la web (menú → Configuración): link, qué vendés, color y publicar.
+    Los autos que se muestran se eligen en /mi-web (`autos`) -- separado el 05/11/2026."""
+    agencia_id, ag = _agencia_web()
+    if not agencia_id:
+        return _sin_agencia()
     cfg = obtener_config_agencia(agencia_id)
     sugerido = slugify(cfg.get("nombre_agencia") or ag["nombre_agencia"])
     if request.method == "POST":
@@ -180,6 +198,23 @@ def config():
         color = color_valido(request.form.get("color"))
         execute("UPDATE agencias SET web_slug = ?, web_activa = ?, web_color = ?, web_vende = ? WHERE id = ?",
                 (slug, activa, color, vende, agencia_id))
+        flash("Configuración guardada." + (" Tu web ya está publicada." if activa else " Todavía está oculta al público."), "success")
+        return redirect(url_for("web_agencia.config"))
+    return render_template(
+        "web_agencia/config.html", ag=ag, cfg=cfg, sugerido=sugerido,
+        landing_url=LANDING_URL, color=color_valido(ag["web_color"]),
+        consultas_nuevas=_consultas_nuevas(agencia_id),
+        tiene_telefono=bool((cfg.get("telefono") or "").strip()),
+    )
+
+
+@bp.route("/mi-web", methods=["GET", "POST"])
+def autos():
+    """Autos que se muestran en la web (menú → Día a día → Mi web): cuáles, sin precio, destacados."""
+    agencia_id, ag = _agencia_web()
+    if not agencia_id:
+        return _sin_agencia()
+    if request.method == "POST":
         visibles = {int(x) for x in request.form.getlist("visible") if x.isdigit()}
         sin_precio = {int(x) for x in request.form.getlist("sin_precio") if x.isdigit()}
         destacados = [int(x) for x in request.form.getlist("destacado") if x.isdigit()][:MAX_DESTACADOS]
@@ -187,17 +222,15 @@ def config():
             execute("UPDATE vehiculos SET web_visible = ?, web_ocultar_precio = ?, web_destacado = ? WHERE id = ?",
                     (1 if v["id"] in visibles else 0, 1 if v["id"] in sin_precio else 0,
                      1 if v["id"] in destacados else 0, v["id"]))
-        flash("Web guardada." + (" Ya está publicada." if activa else " Todavía está oculta al público."), "success")
-        return redirect(url_for("web_agencia.config"))
+        flash("Listo: los autos que se muestran quedaron guardados.", "success")
+        return redirect(url_for("web_agencia.autos"))
     vehiculos = [dict(v, foto=foto_principal(v["id"])) for v in query(
         """SELECT id, marca, modelo, version, anio, km, valor_publicado, COALESCE(web_visible, 1) AS web_visible,
                   COALESCE(web_ocultar_precio, 0) AS ocultar_precio, COALESCE(web_destacado, 0) AS destacado
            FROM vehiculos WHERE agencia_id = ? AND estado = 'disponible' ORDER BY id DESC""", (agencia_id,))]
     return render_template(
-        "web_agencia/config.html", ag=ag, cfg=cfg, sugerido=sugerido, vehiculos=vehiculos,
-        landing_url=LANDING_URL, color=color_valido(ag["web_color"]), max_destacados=MAX_DESTACADOS,
-        consultas_nuevas=query("SELECT COUNT(*) AS c FROM web_consultas WHERE agencia_id = ? AND estado = 'nuevo' AND tipo = 'compramos'", (agencia_id,), one=True)["c"],
-        tiene_telefono=bool((cfg.get("telefono") or "").strip()),
+        "web_agencia/autos.html", ag=ag, vehiculos=vehiculos, max_destacados=MAX_DESTACADOS,
+        consultas_nuevas=_consultas_nuevas(agencia_id),
     )
 
 

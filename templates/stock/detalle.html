@@ -127,6 +127,8 @@
 </div>
 {% endif %}
 
+{# 05/11/2026: la venta vive en «Acción» de la ficha; acá solo se ve si el auto ya se vendió (resumen de la operación). #}
+{% if solo_venta or vehiculo.estado == 'vendido' %}
 <div class="panel">
   <h2>{{ 'Señar / vender' if solo_venta else 'Venta' }}</h2>
   {% set m = "{:,.0f}" %}
@@ -406,6 +408,7 @@
     </script>
   {% endif %}
 </div>
+{% endif %}
 
 {% if not solo_venta %}
 <div class="panel">

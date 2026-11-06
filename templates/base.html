@@ -57,7 +57,7 @@
       {{ item(url_for('stock.index'), ep.startswith('stock.') and not ep_permutas and not interna, i_stock, 'Stock') }}
       {{ item(url_for('tomas.index'), ep.startswith('tomas.') or ep_permutas, i_tasa, 'Tasación') }}
       {{ item(url_for('financiacion.index'), ep.startswith('financiacion.'), i_fin, 'Financiación') }}
-      {{ item(url_for('web_agencia.config'), ep == 'web_agencia.config', i_web, 'Mi web') }}
+      {{ item(url_for('web_agencia.autos'), ep == 'web_agencia.autos', i_web, 'Mi web') }}
       <div class="nav-seccion">Avisos</div>
       {{ item(url_for('web_agencia.consultas'), ep.startswith('web_agencia.consulta'), i_msg, 'Consultas de la web', consultas_web_nuevas) }}
       {{ item(url_for('matches.index'), ep.startswith('matches.'), i_match, 'Matches', matches_pendientes) }}
@@ -73,8 +73,9 @@
         {{ item(url_for('mensajes.index'), ep.startswith('mensajes.'), i_msg, 'Mensajes de Agencieros', respuestas_nuevas) }}
       </details>
       {% if not es_vendedor %}
-      <details class="nav-mas" {% if ep.startswith('admin.') or ep.startswith('cuenta.usuario') or ep.startswith('cuenta.sucursal') %}open{% endif %}>
+      <details class="nav-mas" {% if ep.startswith('admin.') or ep == 'web_agencia.config' or ep.startswith('cuenta.usuario') or ep.startswith('cuenta.sucursal') %}open{% endif %}>
         <summary class="nav-item">Configuración</summary>
+        {{ item(url_for('web_agencia.config'), ep == 'web_agencia.config', i_web, 'Mi web (configuración)') }}
         {{ item(url_for('admin.index'), ep.startswith('admin.'), i_conf, 'Admin') }}
         {{ item(url_for('cuenta.usuarios'), ep.startswith('cuenta.usuario'), i_user, 'Usuarios') }}
         {{ item(url_for('cuenta.sucursales'), ep.startswith('cuenta.sucursal'), i_suc, 'Sucursales') }}
