@@ -1,10 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Toma y tasación — Agencieros{% endblock %}
-{% block header %}Toma y tasación{% endblock %}
+{% block title %}Tasación — Agencieros{% endblock %}
+{% block header %}Tasación{% endblock %}
 {% block content %}
 <div class="tabs sticky-movil">
   <a class="tab {{ 'active' if vista == 'pendientes' else '' }}" href="{{ url_for('tomas.index', vista='pendientes') }}">Pendientes ({{ pendientes_count }})</a>
   <a class="tab {{ 'active' if vista == 'en_stock' else '' }}" href="{{ url_for('tomas.index', vista='en_stock') }}">En Stock ({{ en_stock_count }})</a>
+  <a class="tab" href="{{ url_for('stock.permutas') }}">Permutas pendientes ({{ permutas_count }})</a>
   <span style="color:var(--text-dim); font-size:13px; align-self:center; margin-left:8px;">Datos técnicos → Fotos y chapa → Tasación, en un mismo flujo.</span>
   <a class="btn btn-primary btn-sm" style="margin-left:auto;" href="{{ url_for('tomas.nueva') }}">+ Nueva toma</a>
 </div>

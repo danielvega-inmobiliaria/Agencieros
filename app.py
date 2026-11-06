@@ -218,6 +218,18 @@ def create_app():
             return {"consultas_web_nuevas": 0}
 
     @app.context_processor
+    def _inject_agencia_logo():
+        # Logo de la agencia para el bloque de abajo del menú (05/11/2026).
+        try:
+            from flask import session as _s
+            if not _s.get("agencia_id"):
+                return {"agencia_logo": None}
+            from database import obtener_config_agencia as _cfg
+            return {"agencia_logo": (_cfg(_s["agencia_id"]) or {}).get("logo_url")}
+        except Exception:
+            return {"agencia_logo": None}
+
+    @app.context_processor
     def _inject_matches_pendientes():
         # Contador de matches pendientes de revisar, disponible en todos los
         # templates para el badge del menú (ver templates/base.html) — así

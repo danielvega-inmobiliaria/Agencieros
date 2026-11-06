@@ -103,6 +103,10 @@ def _vehiculos_de_pestana(agencia_id, estado_filtro):
 def index():
     estado_filtro = request.args.get("estado", "todos")
     filtros = parsear_filtros(request.args)
+    # «Toma y datos internos» (menú, 05/11/2026): el mismo listado, pero cada auto
+    # abre la ficha interna (costos, gastos, tomas). No disponible para vendedores.
+    interna = request.args.get("vista") == "interna" and not es_vendedor()
+    vista_arg = {"vista": "interna"} if interna else {}
 
     # Con algún filtro cargado, el buscador deja de depender de la pestaña:
     # busca en simultáneo Disponible + Por ingresar + En reparación + Red de
@@ -163,7 +167,10 @@ def index():
         "stock/index.html",
         **selector,
         suc_endpoint="stock.index",
-        suc_args={"estado": estado_filtro, **filtros},
+        suc_args={"estado": estado_filtro, **filtros, **vista_arg},
+        interna=interna,
+        vista_arg=vista_arg,
+        filtros_url={**filtros, **vista_arg},
         # Con "Todas" y varias sucursales, cada fila muestra de qué sucursal es.
         nombres_suc=nombres_sucursales(agencia_id) if selector["sucursales_sel"] and selector["sucursal_sel"] is None else {},
         menu=menu,
@@ -177,7 +184,7 @@ def index():
         mostrar_km=True,
         filtro_tab_nombre="estado",
         filtro_tab_valor=estado_filtro,
-        limpiar_url=url_for("stock.index", estado=estado_filtro),
+        limpiar_url=url_for("stock.index", estado=estado_filtro, **vista_arg),
         foto_principal=foto_principal,
     )
 
@@ -1406,6 +1413,7 @@ def ficha(vehiculo_id):
     usuario de la app): vuelve a la ficha interna del vehículo (o a lo que
     diga `?volver=`). Quien recibe el link por WhatsApp no lo ve (pedido de
     Daniel 19/09/2026: desde el celular no había cómo volver)."""
+    from routes.red import publicacion_de_vehiculo
     vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (vehiculo_id,), one=True)
     if not vehiculo:
         abort(404)
@@ -1487,6 +1495,29 @@ def ficha(vehiculo_id):
             "fotos": [f["url"] for f in datos.get("fotos") or []],
             "facebook": "https://www.facebook.com/sharer/sharer.php?u=" + quote_plus(link_ficha),
         }
+    # Botón «Acción» (05/11/2026): solo con sesión de la agencia dueña, fuera del
+    # panel Publicar. Junta lo que antes estaba en el menú de la tarjeta de Stock.
+    acciones = None
+    if (session.get("agencia_id") and (vehiculo["agencia_id"] or 1) == session["agencia_id"] and not publicar):
+        ficha_actual = request.full_path.rstrip("?")
+        link_pub = og["url"]
+        texto_wa = (f"{nombre_ag} te comparte: " if nombre_ag else "") + titulo_v \
+            + (f" — {_pesos(vehiculo['valor_publicado'])}" if vehiculo["valor_publicado"] else "") + f"\n{link_pub}"
+        pub = publicacion_de_vehiculo(vehiculo_id)
+        vendido = vehiculo["estado"] == "vendido"
+        acciones = {
+            "titulo": titulo_v,
+            "financiacion": url_for("financiacion.simulador", vehiculo_id=vehiculo_id) if vehiculo["estado"] == "disponible" else None,
+            "operacion": None if vendido else url_for("stock.operacion", vehiculo_id=vehiculo_id, estado=request.args.get("nav") or "todos"),
+            "operacion_txt": ("Ver la operación señada" if vehiculo["estado"] == "senado" else "Señar / vender"),
+            "red": url_for("stock.red", vehiculo_id=vehiculo_id),
+            "red_mostrar": bool(pub) or not vendido,
+            "en_red": bool(pub),
+            "whatsapp": "https://wa.me/?text=" + quote_plus(texto_wa),
+            "publicar": url_for("stock.ficha", vehiculo_id=vehiculo_id, publicar=1, volver=ficha_actual),
+            "interna": None if es_vendedor() else url_for("stock.detalle", vehiculo_id=vehiculo_id),
+            "volver": ficha_actual,
+        }
     if request.args.get("wa") == "0" or publicar:
         # Link compartido por WhatsApp (el cliente ya está en el chat con la
         # agencia) o panel Publicar: la ficha va sin el botón de WhatsApp.
@@ -1498,6 +1529,7 @@ def ficha(vehiculo_id):
         og=og,
         nav=nav,
         publicar=publicar,
+        acciones=acciones,
         estado_label=ESTADO_LABEL,
         volver_url=volver_url,
     )

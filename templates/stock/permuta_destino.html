@@ -5,7 +5,7 @@
 {% set m = "{:,.0f}" %}
 <div class="tabs">
   {% if op.fila.vehiculo_id %}<a class="tab" href="{{ url_for('stock.detalle', vehiculo_id=op.fila.vehiculo_id) }}">← Volver a la venta</a>{% endif %}
-  <a class="tab" href="{{ url_for('stock.permutas') }}">Permutas por ingresar</a>
+  <a class="tab" href="{{ url_for('stock.permutas') }}">Permutas pendientes</a>
 </div>
 
 <div class="panel">

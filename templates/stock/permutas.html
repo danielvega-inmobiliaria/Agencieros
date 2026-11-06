@@ -1,10 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Permutas por ingresar — Agencieros{% endblock %}
-{% block header %}Permutas por ingresar{% endblock %}
+{% block title %}Permutas pendientes — Agencieros{% endblock %}
+{% block header %}Tasación · Permutas pendientes{% endblock %}
 {% block content %}
 {% set m = "{:,.0f}" %}
 <div class="tabs">
-  <a class="tab" href="{{ url_for('stock.index') }}">← Volver a Stock</a>
+  <a class="tab" href="{{ url_for('tomas.index', vista='pendientes') }}">Pendientes</a>
+  <a class="tab" href="{{ url_for('tomas.index', vista='en_stock') }}">En Stock</a>
+  <a class="tab active" href="{{ url_for('stock.permutas') }}">Permutas pendientes ({{ permutas|length }})</a>
+  <a class="btn btn-primary btn-sm" style="margin-left:auto;" href="{{ url_for('tomas.nueva') }}">+ Nueva toma</a>
 </div>
 <div class="panel">
   <p style="color:var(--text-dim); font-size:13px; margin-top:0;">

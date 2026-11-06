@@ -17,7 +17,7 @@
     <div class="value">{{ stock_counts.get('en_reparacion', 0) }}</div>
   </a>
   <a class="card" href="{{ url_for('stock.index', estado='senado') }}">
-    <div class="label">Señados</div>
+    <div class="label">Con seña</div>
     <div class="value">{{ stock_counts.get('senado', 0) }}</div>
     <div class="sub">Reservados, esperando firma de garantes</div>
     {% if es_vendedor and mios %}<div class="sub" style="color:var(--gold-light);">Tuyos: {{ mios.senados }}</div>{% endif %}
@@ -60,7 +60,7 @@
   {% endif %}
   {% if permutas_pendientes %}
   <a class="card" href="{{ url_for('stock.permutas') }}">
-    <div class="label">Permutas por ingresar</div>
+    <div class="label">Permutas pendientes</div>
     <div class="value">{{ permutas_pendientes|length }}</div>
     <div class="sub" style="color:var(--gold-light);">Decidir: Stock o reparación · siguen como Posible entrega</div>
   </a>

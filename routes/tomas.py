@@ -436,12 +436,15 @@ def index():
         vista = "pendientes"
         tomas_mostradas = [d for d in tomas_data if not d["ya_en_stock"]]
 
+    # Permutas pendientes (05/11/2026): viven dentro de Tasación, como pestaña.
+    from routes.stock import _permutas_pendientes
     return render_template(
         "tomas/index.html",
         tomas_data=tomas_mostradas,
         vista=vista,
         pendientes_count=pendientes_count,
         en_stock_count=en_stock_count,
+        permutas_count=len(_permutas_pendientes(_agencia_actual())),
     )
 
 

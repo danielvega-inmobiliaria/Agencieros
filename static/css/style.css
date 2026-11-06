@@ -894,3 +894,15 @@ html, body { max-width: 100%; overflow-x: hidden; overflow-x: clip; } /* clip: n
 .nav-mas > summary::after { content: '▾'; margin-left: auto; }
 .nav-mas[open] > summary::after { content: '▴'; }
 .nav-mas > .nav-item { margin-left: 10px; }
+
+/* Menú por secciones (05/11/2026): títulos chicos y bloque de la agencia con logo */
+.nav-seccion { margin: 14px 12px 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); opacity: .8; }
+.sidebar-user-marca { display: flex; align-items: center; gap: 10px; }
+.sidebar-user-logo { width: 34px; height: 34px; border-radius: 8px; object-fit: contain; background: rgba(255,255,255,.06); flex: 0 0 auto; }
+.nav-mas .nav-badge { margin-left: auto; }
+.nav-mas > summary .nav-badge { margin-left: 6px; }
+
+/* Botón «Acción» de la ficha (05/11/2026) */
+.btn-accion { position: fixed; right: 14px; bottom: 18px; z-index: 30; padding: 12px 18px; border-radius: 999px; border: 0;
+  background: var(--gold); color: #1a1405; font-weight: 700; font-size: 15px; box-shadow: 0 4px 14px rgba(0,0,0,.45); cursor: pointer; font-family: inherit; }
+body:has(.ficha-nav-publica) .btn-accion { bottom: 76px; }
