@@ -6,13 +6,17 @@
   <title>{% block title %}Agencieros{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20261105b">
   {# App instalable (29/09/2026): "Agregar a inicio" abre sin barras del navegador. #}
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  {# Ícono y favicon según quién entra (07/11/2026): Italia Automotores → logo de Italia; admin de la plataforma, demo, login y el resto → logo de Agencieros. #}
+  {% set _ico = 'italia' if zona_deautos else 'agencieros' %}
+  <link rel="icon" type="image/png" sizes="48x48" href="{{ url_for('static', filename='icons/favicon-' ~ _ico ~ '-48.png') }}">
+  <link rel="shortcut icon" href="{{ url_for('static', filename='icons/favicon-' ~ _ico ~ '.ico') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest-' ~ _ico ~ '.webmanifest') }}">
   <meta name="theme-color" content="#131e2e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="Agencieros">
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <meta name="apple-mobile-web-app-title" content="{{ 'Italia' if zona_deautos else 'Agencieros' }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon-' ~ _ico ~ '.png') }}">
   {% include "partials/meta_pixel.html" %}
   <script>window.ZONA_DEAUTOS = {{ "true" if zona_deautos else "false" }};</script>
 </head>
