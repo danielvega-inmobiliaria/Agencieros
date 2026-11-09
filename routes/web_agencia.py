@@ -21,6 +21,7 @@ from urllib.parse import quote_plus
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, abort, jsonify
 
 from utils.iconos import icono_de_agencia
+from utils.antibot import ip_cliente
 from database import query, execute, foto_principal, obtener_config_agencia
 
 bp = Blueprint("web_agencia", __name__)
@@ -100,7 +101,7 @@ def _items(agencia_id, slug):
 @bp.route("/a/<slug>")
 def pagina(slug):
     from routes.stock import _whatsapp_ar, _redes_ordenadas
-    ag = query("SELECT id, nombre_agencia, activo, web_activa, web_color, web_vende FROM agencias WHERE web_slug = ?",
+    ag = query("SELECT id, nombre_agencia, activo, web_activa, web_color, web_vende, web_encabezado FROM agencias WHERE web_slug = ?",
                (slug.lower(),), one=True)
     if not ag or ag["activo"] == 0:
         abort(404)
@@ -133,7 +134,8 @@ def pagina(slug):
     if og_img and og_img.startswith("/"):
         og_img = APP_URL + og_img
     return render_template(
-        "web_agencia/pagina.html", ico=icono_de_agencia(ag["id"]), nombre=nombre, cfg=cfg, lugar=lugar, items=items,
+        "web_agencia/pagina.html", ico=icono_de_agencia(ag["id"]), nombre=nombre, cfg=cfg,
+        solo_logo=bool(cfg.get("logo_url")) and ag["web_encabezado"] == "solo_logo", lugar=lugar, items=items,
         marcas=sorted({i["marca"] for i in items if i["marca"]}),
         wa_general=(f"{wa_base}?text={quote_plus('Hola! Vi tu web y quiero consultar por un auto.')}" if wa_base else None),
         url_canonica=f"{LANDING_URL}/a/{slug.lower()}", og_img=og_img,
@@ -152,7 +154,7 @@ def _agencia_web():
     agencia_id = session.get("agencia_id")
     if not agencia_id:
         return None, None
-    ag = query("SELECT id, nombre_agencia, web_slug, web_activa, web_color, web_vende FROM agencias WHERE id = ?", (agencia_id,), one=True)
+    ag = query("SELECT id, nombre_agencia, web_slug, web_activa, web_color, web_vende, web_encabezado FROM agencias WHERE id = ?", (agencia_id,), one=True)
     return agencia_id, ag
 
 
@@ -197,8 +199,9 @@ def config():
             flash("Antes de publicar tu web contanos qué vendés: solo usados, solo 0 Km o ambos. Así la armamos como corresponde.", "error")
             return redirect(url_for("web_agencia.config"))
         color = color_valido(request.form.get("color"))
-        execute("UPDATE agencias SET web_slug = ?, web_activa = ?, web_color = ?, web_vende = ? WHERE id = ?",
-                (slug, activa, color, vende, agencia_id))
+        encabezado = "solo_logo" if request.form.get("encabezado") == "solo_logo" else "logo_nombre"
+        execute("UPDATE agencias SET web_slug = ?, web_activa = ?, web_color = ?, web_vende = ?, web_encabezado = ? WHERE id = ?",
+                (slug, activa, color, vende, encabezado, agencia_id))
         flash("Configuración guardada." + (" Tu web ya está publicada." if activa else " Todavía está oculta al público."), "success")
         return redirect(url_for("web_agencia.config"))
     return render_template(
@@ -266,7 +269,7 @@ def compramos(slug):
         km = 0
     if len(nombre) < 2 or len(re.sub(r"\D", "", tel)) < 8 or not marca or not modelo or not (1980 <= anio <= 2030):
         return jsonify({"ok": False, "error": "Completá nombre, teléfono, marca, modelo y año."}), 400
-    ip = (request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip())[:45]
+    ip = ip_cliente()  # X-Real-IP / última de X-Forwarded-For (la primera la inventa el cliente)
     por_ip = query("SELECT COUNT(*) AS c FROM web_consultas WHERE ip = ? AND created_at > datetime('now', '-1 hour')", (ip,), one=True)["c"]
     por_dia = query("SELECT COUNT(*) AS c FROM web_consultas WHERE agencia_id = ? AND created_at > datetime('now', '-1 day')", (ag["id"],), one=True)["c"]
     if por_ip >= 3 or por_dia >= 40:
@@ -300,7 +303,7 @@ def _registrar_clic(ag_id, vehiculo, origen):
     propia agencia no cuentan; un mismo visitante cuenta una vez por auto cada 6 h."""
     if session.get("agencia_id") == ag_id or session.get("superadmin_id"):
         return
-    ip = (request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip())[:45]
+    ip = ip_cliente()  # X-Real-IP / última de X-Forwarded-For (la primera la inventa el cliente)
     vid = vehiculo["id"] if vehiculo else None
     if query("SELECT COUNT(*) AS c FROM web_consultas WHERE ip = ? AND tipo = 'wa_clic' AND created_at > datetime('now', '-1 hour')",
              (ip,), one=True)["c"] >= 30:

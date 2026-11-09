@@ -147,7 +147,7 @@
 <header class="top"><div class="wrap head">
   <a class="marca" href="#top">
     {% if cfg.logo_url %}<img src="{{ cfg.logo_url }}" alt="Logo de {{ nombre }}">{% endif %}
-    {% if cfg.logo_url %}{% if lugar %}<b class="solo-lugar">{{ lugar }}</b>{% endif %}{% else %}<b>{{ nombre }}{% if lugar %}<small>{{ lugar }}</small>{% endif %}</b>{% endif %}
+    {% if solo_logo %}{% if lugar %}<b class="solo-lugar">{{ lugar }}</b>{% endif %}{% else %}<b>{{ nombre }}{% if lugar %}<small>{{ lugar }}</small>{% endif %}</b>{% endif %}
   </a>
   <nav class="menu">
     {% if hay_usados or not hay_cero %}<a class="txt" href="#autos"{% if hay_cero %} data-tab="usados"{% endif %}>Usados</a>{% endif %}

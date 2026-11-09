@@ -555,6 +555,12 @@ def _migrar_web_agencia(conn):
     # para los accesos rápidos "Bajaron de precio" de la web.
     if "web_vende" not in cols:
         conn.execute("ALTER TABLE agencias ADD COLUMN web_vende TEXT")
+    # 09/11/2026: encabezado de la web con logo y nombre, o solo el logo (para logos que ya dicen el nombre).
+    if "web_encabezado" not in cols:
+        conn.execute("ALTER TABLE agencias ADD COLUMN web_encabezado TEXT")
+        # Italia Automotores (agencia de Daniel) pidió solo el logo.
+        conn.execute("UPDATE agencias SET web_encabezado = 'solo_logo' WHERE id = ?",
+                     (int(os.environ.get("STOCK_SYNC_AGENCIA_ID", "1")),))
     if "precio_anterior" not in vcols:
         conn.execute("ALTER TABLE vehiculos ADD COLUMN precio_anterior REAL")
     if "precio_baja_fecha" not in vcols:
