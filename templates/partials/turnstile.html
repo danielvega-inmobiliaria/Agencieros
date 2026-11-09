@@ -1,0 +1,5 @@
+{# Cloudflare Turnstile (09/11/2026): solo se dibuja si TURNSTILE_SITE_KEY está cargada. #}
+{% if turnstile_site_key %}
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-language="es" style="margin-top:16px;"></div>
+{% endif %}

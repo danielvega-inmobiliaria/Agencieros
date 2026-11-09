@@ -12,6 +12,7 @@ antes de invitar a una agencia amiga de verdad a registrarse.
 """
 import os
 import secrets
+from html import escape
 from datetime import datetime, timedelta
 
 from database import get_db
@@ -92,7 +93,7 @@ def enviar_codigo_email(email, nombre_agencia, codigo):
                     'padding:24px;color:#222">'
                     '<h2 style="color:#0d1e3c">Confirmá tu cuenta en AGENCIEROS</h2>'
                     f"<p>Hola,</p>"
-                    f"<p>Tu código para validar el registro de <strong>{nombre_agencia}</strong> es:</p>"
+                    f"<p>Tu código para validar el registro de <strong>{escape(nombre_agencia or '')}</strong> es:</p>"
                     f'<div style="text-align:center;margin:28px 0">'
                     f'<span style="font-size:32px;font-weight:bold;letter-spacing:6px;'
                     f'color:#0d1e3c">{codigo}</span></div>'

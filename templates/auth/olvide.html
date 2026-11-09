@@ -24,6 +24,7 @@
         <label>Email</label>
         <input type="email" name="email" required autofocus value="{{ email }}" autocomplete="username"
                autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email">
+        {% include "partials/turnstile.html" %}
         <button class="btn btn-primary" style="width:100%; margin-top:20px;" type="submit">Enviarme el código</button>
       </form>
       <p style="text-align:center; margin-top:18px; font-size:.9rem;">

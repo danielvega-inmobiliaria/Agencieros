@@ -11,6 +11,7 @@ contraseña que ya tenía.
 import hashlib
 import hmac
 import secrets
+import time
 from datetime import datetime, timedelta
 
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app
@@ -19,6 +20,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from database import query, execute
 from routes.admin import PROVINCIAS_AR
 from utils.verificacion import crear_codigo, validar_codigo, enviar_codigo_email, enviar_email_reset
+from utils import antibot
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -182,10 +184,13 @@ def login():
             # Sin validar todavía -- manda un código nuevo y lo lleva
             # directo a la pantalla de verificación en vez de dejarlo
             # entrar (mismo criterio que el registro).
-            codigo = crear_codigo(agencia["id"])
-            enviar_codigo_email(agencia["email"], agencia["nombre_agencia"], codigo)
+            permitido, motivo = antibot.autorizar_envio(agencia["email"], antibot.ip_cliente())
+            if permitido:
+                codigo = crear_codigo(agencia["id"])
+                enviar_codigo_email(agencia["email"], agencia["nombre_agencia"], codigo)
             session["agencia_pendiente_id"] = agencia["id"]
-            flash("Todavía no validaste tu mail -- te mandamos un código nuevo.", "error")
+            flash("Todavía no validaste tu mail -- te mandamos un código nuevo." if permitido
+                  else f"Todavía no validaste tu mail. {motivo} Usá el último código que te llegó.", "error")
             return redirect(url_for("auth.verificar"))
         if agencia["origen"] == "invitacion" and _codigo_demo_valido(agencia["origen_codigo"]):
             return _entrar_demo(agencia["origen_codigo"], agencia["id"])
@@ -194,10 +199,35 @@ def login():
     return render_template("auth/login.html")
 
 
+def _render_registro(prev, invitacion):
+    """Muestra el formulario de registro y marca la hora en la sesión: un
+    envío demasiado rápido (menos de antibot.TIEMPO_MINIMO_FORM segundos) es
+    de un bot. Incluye el desafío de Turnstile si está configurado."""
+    session["reg_t"] = time.time()
+    return render_template("auth/registro.html", prev=prev, provincias=PROVINCIAS_AR,
+                           invitacion=bool(invitacion), turnstile_site_key=antibot.turnstile_site_key())
+
+
 @bp.route("/registro", methods=["GET", "POST"])
 def registro():
     invitacion = session.get("invitacion_demo") if _codigo_demo_valido(session.get("invitacion_demo")) else None
     if request.method == "POST":
+        ip = antibot.ip_cliente()
+        # 1) Trampas: campo oculto lleno o formulario enviado demasiado rápido.
+        t0 = session.get("reg_t")
+        if (request.form.get("alias_interno") or "").strip() or not t0 \
+                or time.time() - float(t0) < antibot.TIEMPO_MINIMO_FORM:
+            print(f"[antibot] registro descartado por trampa ip={ip}", flush=True)
+            flash("No pudimos procesar el formulario. Volvé a completarlo con calma.", "error")
+            return _render_registro(request.form, invitacion)
+        # 2) Tope de intentos por IP (cuenta también los que fallan).
+        if not antibot.permitir("registro_intento", ip, 10, 3600):
+            flash("Demasiados intentos desde tu conexión. Probá de nuevo en una hora.", "error")
+            return _render_registro(request.form, invitacion)
+        # 3) Cloudflare Turnstile.
+        if not antibot.verificar_turnstile(request.form.get("cf-turnstile-response"), ip):
+            flash("No pudimos verificar que sos una persona. Reintentá.", "error")
+            return _render_registro(request.form, invitacion)
         nombre_agencia = request.form.get("nombre_agencia", "").strip()
         email = request.form.get("email", "").strip().lower()
         # Teléfono: se aceptan espacios, guiones, paréntesis y "+" al tipear,
@@ -218,26 +248,45 @@ def registro():
                 "Completá nombre de la agencia, teléfono, dirección, ciudad, provincia, contacto de referencia, email y contraseña.",
                 "error",
             )
-            return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR, invitacion=bool(invitacion))
+            return _render_registro(request.form, invitacion)
         if not telefono.isdigit() or not 8 <= len(telefono) <= 15:
             flash(
                 "El teléfono tiene que tener solo números, con código de área (ej: 3413017371).",
                 "error",
             )
-            return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR, invitacion=bool(invitacion))
+            return _render_registro(request.form, invitacion)
         if provincia not in PROVINCIAS_AR:
             flash("Elegí una provincia de la lista.", "error")
-            return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR, invitacion=bool(invitacion))
+            return _render_registro(request.form, invitacion)
         if len(password) < 6:
             flash("La contraseña tiene que tener al menos 6 caracteres.", "error")
-            return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR, invitacion=bool(invitacion))
+            return _render_registro(request.form, invitacion)
         if password != password2:
             flash("Las contraseñas no coinciden.", "error")
-            return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR, invitacion=bool(invitacion))
+            return _render_registro(request.form, invitacion)
+        # 4) Nombre de la agencia y textos libres sin spam ni links.
+        nombre_agencia, error = antibot.validar_nombre_agencia(nombre_agencia)
+        if not error:
+            direccion, error = antibot.validar_texto_libre(direccion, "La dirección")
+        if not error:
+            ciudad, error = antibot.validar_texto_libre(ciudad, "La ciudad", 60)
+        if not error:
+            contacto_referencia, error = antibot.validar_texto_libre(contacto_referencia, "El contacto de referencia", 80)
+        if not error and not antibot.mail_valido(email):
+            error = "Escribí un email válido."
+        if error:
+            print(f"[antibot] registro rechazado por datos ip={ip} mail={email!r}: {error}", flush=True)
+            flash(error, "error")
+            return _render_registro(request.form, invitacion)
         from database import get_db, mail_ocupado
         if mail_ocupado(get_db(), email):
             flash("Ya hay una cuenta registrada con ese email.", "error")
-            return render_template("auth/registro.html", prev=request.form, provincias=PROVINCIAS_AR, invitacion=bool(invitacion))
+            return _render_registro(request.form, invitacion)
+        # 5) Topes de mails (por mail, por IP y global) ANTES de crear nada.
+        permitido, motivo = antibot.autorizar_envio(email, ip)
+        if not permitido:
+            flash(motivo, "error")
+            return _render_registro(request.form, invitacion)
 
         agencia_id = execute(
             """INSERT INTO agencias
@@ -264,17 +313,6 @@ def registro():
         )
         codigo = crear_codigo(agencia_id)
         enviado = enviar_codigo_email(email, nombre_agencia, codigo)
-        # Aviso al admin de la plataforma (28/09/2026): mail + push.
-        try:
-            from utils.notificaciones import notificar_admin
-            notificar_admin(
-                f"Nueva agencia registrada{' (POR INVITACIÓN A LA DEMO)' if invitacion else ''}: {nombre_agencia}",
-                f"{nombre_agencia} — {ciudad}, {provincia}\nTeléfono: {telefono}\nMail: {email}\n"
-                f"Contacto: {contacto_referencia}\n(Falta que valide el código del mail.)",
-                ruta=f"/plataforma/agencias/{agencia_id}",
-            )
-        except Exception as e:
-            print(f"[auth] No se pudo avisar al admin del registro: {e}")
         session["agencia_pendiente_id"] = agencia_id
         if enviado:
             flash(f"Te mandamos un código de verificación a {email}.", "success")
@@ -284,7 +322,26 @@ def registro():
             # queda en la consola del servidor.
             flash("No se pudo enviar el mail todavía (revisá la consola del servidor para el código).", "error")
         return redirect(url_for("auth.verificar"))
-    return render_template("auth/registro.html", prev={}, provincias=PROVINCIAS_AR, invitacion=bool(invitacion))
+    return _render_registro({}, invitacion)
+
+
+def _avisar_registro_validado(agencia):
+    """Aviso al admin de la plataforma (mail + push). Desde el 09/11/2026 se
+    manda recién cuando la agencia VALIDÓ su mail: así los registros falsos
+    no gastan cuota de Resend ni llenan la casilla del admin."""
+    try:
+        from utils.notificaciones import notificar_admin
+        cfg = query("SELECT ciudad, provincia FROM agencia_config WHERE agencia_id = ?", (agencia["id"],), one=True)
+        ubic = f"{cfg['ciudad']}, {cfg['provincia']}" if cfg else "-"
+        por_inv = agencia["origen"] == "invitacion"
+        notificar_admin(
+            f"Nueva agencia registrada{' (POR INVITACIÓN A LA DEMO)' if por_inv else ''}: {agencia['nombre_agencia']}",
+            f"{agencia['nombre_agencia']} — {ubic}\nTeléfono: {agencia['telefono']}\nMail: {agencia['email']}\n"
+            f"Contacto: {agencia['contacto_referencia']}\n(Mail validado.)",
+            ruta=f"/plataforma/agencias/{agencia['id']}",
+        )
+    except Exception as e:
+        print(f"[auth] No se pudo avisar al admin del registro: {e}")
 
 
 @bp.route("/verificar", methods=["GET", "POST"])
@@ -299,9 +356,13 @@ def verificar():
 
     if request.method == "POST":
         codigo = request.form.get("codigo", "")
+        if not antibot.permitir("verif_intento", str(agencia_id), 8, 3600):
+            flash("Demasiados intentos con el código. Pedí uno nuevo más tarde.", "error")
+            return render_template("auth/verificar.html", email=agencia["email"])
         if validar_codigo(agencia_id, codigo):
             session.pop("agencia_pendiente_id", None)
             agencia = query("SELECT * FROM agencias WHERE id = ?", (agencia_id,), one=True)
+            _avisar_registro_validado(agencia)
             if agencia["origen"] == "invitacion" and _codigo_demo_valido(agencia["origen_codigo"]):
                 # Registrada por invitación: entra a la demo (sin evento del Pixel).
                 flash("Cuenta verificada -- te dejamos recorrer la demo.", "success")
@@ -328,6 +389,10 @@ def reenviar_codigo():
         return redirect(url_for("auth.login"))
     agencia = query("SELECT * FROM agencias WHERE id = ?", (agencia_id,), one=True)
     if agencia:
+        permitido, motivo = antibot.autorizar_envio(agencia["email"], antibot.ip_cliente())
+        if not permitido:
+            flash(motivo, "error")
+            return redirect(url_for("auth.verificar"))
         codigo = crear_codigo(agencia_id)
         enviado = enviar_codigo_email(agencia["email"], agencia["nombre_agencia"], codigo)
         flash(
@@ -401,6 +466,13 @@ def _cuenta_por_mail(email):
 def olvide():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
+        ip = antibot.ip_cliente()
+        if not antibot.permitir("olvide_intento", ip, 8, 3600):
+            flash("Demasiados intentos desde tu conexión. Probá de nuevo en una hora.", "error")
+            return render_template("auth/olvide.html", email=email, turnstile_site_key=antibot.turnstile_site_key())
+        if not antibot.verificar_turnstile(request.form.get("cf-turnstile-response"), ip):
+            flash("No pudimos verificar que sos una persona. Reintentá.", "error")
+            return render_template("auth/olvide.html", email=email, turnstile_site_key=antibot.turnstile_site_key())
         if email:
             _asegurar_tabla_reset()
             cuenta = _cuenta_por_mail(email)
@@ -413,6 +485,8 @@ def olvide():
                 )["n"]
                 if recientes >= RESET_MAX_POR_HORA:
                     print(f"[reset] demasiados pedidos para {email!r}: no se manda otro código", flush=True)
+                elif not antibot.autorizar_envio(email, ip)[0]:
+                    pass  # tope por mail/IP/global: se responde igual, sin mandar
                 else:
                     codigo = f"{secrets.randbelow(1_000_000):06d}"
                     execute("UPDATE reset_clave_codigos SET usado = 1 WHERE email = ? AND usado = 0", (email,))
@@ -426,7 +500,8 @@ def olvide():
         session["reset_email"] = email
         flash(f"Si {email or 'ese mail'} tiene una cuenta, te mandamos un código de 6 dígitos. Vence en {RESET_EXPIRA_MIN} minutos.", "success")
         return redirect(url_for("auth.restablecer"))
-    return render_template("auth/olvide.html", email=request.args.get("email", ""))
+    return render_template("auth/olvide.html", email=request.args.get("email", ""),
+                           turnstile_site_key=antibot.turnstile_site_key())
 
 
 @bp.route("/restablecer", methods=["GET", "POST"])

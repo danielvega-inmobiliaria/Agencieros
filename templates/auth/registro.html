@@ -23,7 +23,7 @@
       {% endif %}
       <form method="post">
         <label>Nombre de tu agencia</label>
-        <input type="text" name="nombre_agencia" value="{{ prev.get('nombre_agencia', '') }}" required autofocus>
+        <input type="text" name="nombre_agencia" value="{{ prev.get('nombre_agencia', '') }}" required autofocus maxlength="60">
         <label>Email</label>
         <input type="email" name="email" value="{{ prev.get('email', '') }}" required>
         <label>Teléfono / WhatsApp</label>
@@ -45,6 +45,12 @@
         <input type="password" name="password" required>
         <label>Repetir contraseña</label>
         <input type="password" name="password2" required>
+        {# Trampa para bots: una persona no ve este campo. #}
+        <div style="position:absolute; left:-5000px; width:1px; height:1px; overflow:hidden;" aria-hidden="true">
+          <label>No completar este campo</label>
+          <input type="text" name="alias_interno" tabindex="-1" autocomplete="off" value="">
+        </div>
+        {% include "partials/turnstile.html" %}
         <button class="btn btn-primary" style="width:100%; margin-top:20px;" type="submit">Crear mi cuenta</button>
         <p style="text-align:center; margin:10px 0 0; font-size:.85rem; color:var(--text-dim);">30 días gratis, sin tarjeta.</p>
       </form>
