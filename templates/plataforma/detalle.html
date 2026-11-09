@@ -22,6 +22,11 @@
       <tr><td>Alta</td><td>{{ f.alta_fmt or "-" }}</td></tr>
       <tr><td>Última actividad</td><td>{{ f.ultima_actividad_fmt or "Nunca" }}</td></tr>
     </table>
+    {% if not f.verificada %}
+    <form method="post" action="{{ url_for('plataforma.conservar', agencia_id=f.id) }}" style="margin-top:12px;">
+      <button class="btn btn-secondary btn-sm" type="submit">{% if f.conservar %}✔ Se conserva (tocá para quitar){% else %}🛟 Conservar: no borrar al limpiar{% endif %}</button>
+    </form>
+    {% endif %}
   </div>
 
   <div class="panel">

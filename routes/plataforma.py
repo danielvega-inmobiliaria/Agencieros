@@ -64,8 +64,10 @@ def _armar_filas():
     en una lista de dicts lista para filtrar/ordenar/mostrar (listado) o
     buscar por id (detalle) -- una sola fuente de verdad para no
     duplicar la lógica de agregación en dos lugares."""
+    from utils.antibot import asegurar_columna_conservar
+    asegurar_columna_conservar()
     agencias_rows = query(
-        """SELECT a.id, a.nombre_agencia, a.email, a.telefono AS telefono_registro,
+        """SELECT a.id, a.conservar, a.nombre_agencia, a.email, a.telefono AS telefono_registro,
                   a.contacto_referencia, a.email_verificado, a.activo, a.plan,
                   a.created_at, a.ultima_actividad, a.origen, a.demo_ultimo_ingreso,
                   c.telefono AS telefono_comercial, c.direccion, c.ciudad, c.provincia
@@ -128,6 +130,7 @@ def _armar_filas():
             "por_invitacion": a["origen"] == "invitacion",
             "demo_ultimo_ingreso_fmt": _formatear_fecha(a["demo_ultimo_ingreso"]),
             "verificada": bool(a["email_verificado"]),
+            "conservar": bool(a["conservar"]),
             "activa": bool(a["activo"]),
             "alta": a["created_at"],
             "alta_fmt": _formatear_fecha(a["created_at"]),
@@ -174,7 +177,11 @@ def agencias():
         "mensajes_sin_responder": query("SELECT COUNT(*) AS c FROM mensajes_admin WHERE respondida = 0", one=True)["c"],
     }
 
-    filas = todas
+    ver_todas = request.args.get("sin_validar") == "1"
+    resumen["sin_validar"] = sum(1 for f in todas if not f["verificada"] and not f["conservar"])
+    # Por defecto solo las que validaron el mail (el listado con miles de
+    # registros de bots era inmanejable); ?sin_validar=1 las muestra todas.
+    filas = todas if ver_todas else [f for f in todas if f["verificada"] or f["conservar"]]
     if q:
         def _matchea(f):
             campos = [f["nombre"], f["email"], f["ciudad"], f["provincia"]]
@@ -187,8 +194,32 @@ def agencias():
         "plataforma/agencias.html",
         filas=filas, resumen=resumen,
         demo_codigo=(query("SELECT demo_codigo FROM agencias WHERE es_demo = 1 ORDER BY id LIMIT 1", one=True) or {"demo_codigo": None})["demo_codigo"],
-        q=q, orden=orden, direccion=direccion, orden_opciones=ORDEN_OPCIONES,
+        q=q, orden=orden, direccion=direccion, orden_opciones=ORDEN_OPCIONES, ver_todas=ver_todas,
     )
+
+
+@bp.route("/agencias/<int:agencia_id>/conservar", methods=["POST"])
+def conservar(agencia_id):
+    """Marca/desmarca una cuenta sin validar para que la limpieza no la borre."""
+    from utils.antibot import asegurar_columna_conservar
+    asegurar_columna_conservar()
+    fila = query("SELECT conservar FROM agencias WHERE id = ?", (agencia_id,), one=True)
+    if fila is None:
+        abort(404)
+    nuevo = 0 if fila["conservar"] else 1
+    execute("UPDATE agencias SET conservar = ? WHERE id = ?", (nuevo, agencia_id))
+    flash("Listo: esta cuenta no se borra al limpiar." if nuevo else "Esta cuenta vuelve a poder borrarse al limpiar.", "success")
+    return redirect(url_for("plataforma.detalle", agencia_id=agencia_id))
+
+
+@bp.route("/agencias/limpiar-sin-validar", methods=["POST"])
+def limpiar_sin_validar():
+    """Borra las cuentas que nunca validaron el mail (bots/abandonadas) con
+    más de 24 horas (09/11/2026)."""
+    from utils.antibot import purgar_sin_validar
+    n = purgar_sin_validar(horas=24)
+    flash(f"Se borraron {n} agencias que nunca validaron su mail.", "success")
+    return redirect(url_for("plataforma.agencias"))
 
 
 @bp.route("/demo/reiniciar", methods=["POST"])

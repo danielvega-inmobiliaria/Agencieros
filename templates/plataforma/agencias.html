@@ -15,6 +15,12 @@
         onsubmit="return window.confirm('¿Generar un código nuevo? El link actual deja de funcionar y se cierran las sesiones de demo abiertas.');">
     <button class="btn btn-secondary btn-sm" type="submit">🔑 Nuevo código</button>
   </form>
+  {% if resumen.sin_validar %}
+  <form method="post" action="{{ url_for('plataforma.limpiar_sin_validar') }}"
+        onsubmit="return window.confirm('¿Borrar las {{ resumen.sin_validar }} cuentas que nunca validaron su mail (de más de 24 horas)? No se puede deshacer.');">
+    <button class="btn btn-secondary btn-sm" type="submit">🧹 Borrar sin validar ({{ resumen.sin_validar }})</button>
+  </form>
+  {% endif %}
   <form method="post" action="{{ url_for('plataforma.reiniciar_demo_ruta') }}"
         onsubmit="return window.confirm('¿Reiniciar la agencia demo? Se borra lo que se haya cargado y vuelve a los datos de ejemplo.');">
     <button class="btn btn-primary btn-sm" type="submit">♻ Reiniciar demo</button>
@@ -76,6 +82,10 @@
   </form>
 
   <h2>Agencias de la Red{% if q %} — resultados para "{{ q }}"{% endif %}</h2>
+  <p style="font-size:.85rem; color:var(--text-dim); margin:-6px 0 12px;">
+    {% if ver_todas %}Mostrando también las que no validaron el mail. <a href="{{ url_for('plataforma.agencias') }}">Ver solo las validadas</a>
+    {% else %}Mostrando solo las que validaron el mail. {% if resumen.sin_validar %}<a href="{{ url_for('plataforma.agencias', sin_validar=1) }}">Ver también las {{ resumen.sin_validar }} sin validar</a>{% endif %}{% endif %}
+  </p>
   <table class="tabla-responsive tabla-agencias-compacta">
     <tr class="fila-header">
       <th>Agencia</th>

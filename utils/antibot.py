@@ -29,7 +29,7 @@ import urllib.request
 
 from flask import request
 
-from database import execute, query
+from database import execute, query, get_db
 
 TURNSTILE_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 
@@ -252,3 +252,51 @@ _RE_MAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$")
 
 def mail_valido(email):
     return bool(email) and len(email) <= 120 and bool(_RE_MAIL.match(email))
+
+
+# --- Limpieza de registros sin validar --------------------------------------
+def asegurar_columna_conservar():
+    """agencias.conservar = 1 protege una cuenta sin validar de la limpieza
+    (09/11/2026). La columna se crea sola la primera vez."""
+    db = get_db()
+    cols = [c[1] for c in db.execute("PRAGMA table_info(agencias)").fetchall()]
+    if "conservar" not in cols:
+        db.execute("ALTER TABLE agencias ADD COLUMN conservar INTEGER DEFAULT 0")
+        db.commit()
+
+
+def purgar_sin_validar(horas=24, limite=None):
+    """Borra las agencias que se registraron y NUNCA validaron el mail
+    (cuentas de bots o abandonadas), junto con sus filas en TODAS las tablas
+    que tengan `agencia_id`. Nunca toca: la agencia 1 (Italia), la demo, las
+    verificadas, ni las que tengan usuarios que alguna vez ingresaron o
+    vehículos cargados. `horas` = antigüedad mínima (así no se borra a quien
+    está validando ahora). Devuelve la cantidad de agencias borradas."""
+    asegurar_columna_conservar()
+    db = get_db()
+    sql = ("SELECT a.id FROM agencias a WHERE COALESCE(a.email_verificado, 0) = 0 AND COALESCE(a.conservar, 0) = 0 "
+           "AND a.id <> 1 AND COALESCE(a.es_demo, 0) = 0 "
+           "AND a.created_at < datetime('now', ?) "
+           "AND NOT EXISTS (SELECT 1 FROM agencia_usuarios u WHERE u.agencia_id = a.id AND u.ultimo_ingreso IS NOT NULL) "
+           "AND NOT EXISTS (SELECT 1 FROM vehiculos v WHERE v.agencia_id = a.id)")
+    args = [f"-{int(horas)} hours"]
+    if limite:
+        sql += " LIMIT ?"
+        args.append(int(limite))
+    ids = [r[0] for r in db.execute(sql, args).fetchall()]
+    if not ids:
+        return 0
+    tablas = []
+    for (t,) in db.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").fetchall():
+        cols = [c[1] for c in db.execute(f'PRAGMA table_info("{t}")').fetchall()]
+        if "agencia_id" in cols and t != "agencias":
+            tablas.append(t)
+    for i in range(0, len(ids), 400):
+        trozo = ids[i:i + 400]
+        marcas = ",".join("?" * len(trozo))
+        for t in tablas:
+            db.execute(f'DELETE FROM "{t}" WHERE agencia_id IN ({marcas})', trozo)
+        db.execute(f"DELETE FROM agencias WHERE id IN ({marcas})", trozo)
+    db.commit()
+    print(f"[antibot] purga: {len(ids)} agencias sin validar borradas", flush=True)
+    return len(ids)

@@ -288,6 +288,10 @@ def registro():
             flash(motivo, "error")
             return _render_registro(request.form, invitacion)
 
+        try:
+            antibot.purgar_sin_validar(horas=48, limite=300)  # limpieza liviana de cuentas abandonadas
+        except Exception as e:
+            print(f"[antibot] no se pudo purgar: {e}", flush=True)
         agencia_id = execute(
             """INSERT INTO agencias
                (nombre_agencia, email, password_hash, telefono, contacto_referencia, email_verificado, activo,
