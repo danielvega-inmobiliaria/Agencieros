@@ -1402,6 +1402,91 @@ def _volver_seguro(destino, por_defecto):
     return por_defecto
 
 
+def _textos_redes(vehiculo, datos, titulo_v, nombre_ag, lugar, link):
+    """Plantillas (sin IA, editables en pantalla) para compartir un auto:
+    historia de WhatsApp, Facebook, Instagram y Marketplace (09/11/2026)."""
+    v = vehiculo
+    precio = _pesos(v["valor_publicado"]) if v["valor_publicado"] else ""
+    km = f"{int(v['km']):,} km".replace(",", ".") if v["km"] else ""
+    equip = (datos.get("equipamiento") or [])[:6]
+    firma = nombre_ag + (f" · {lugar}" if lugar else "")
+    pago = v["condiciones_pago"] or ""
+
+    # Historia de WhatsApp: corta, para leer de un vistazo.
+    h = [f"🚗 {titulo_v}"]
+    if precio:
+        h.append(f"💲 {precio}")
+    if km:
+        h.append(f"🛣️ {km}")
+    if pago:
+        h.append(f"💳 {pago}")
+    h += ["", "Consultame por privado 📲", link]
+    historia = "\n".join(h)
+
+    # Facebook: más completo, con equipamiento y la ficha.
+    f = [f"🚗 {titulo_v}", ""]
+    datos_l = [x for x in [v["combustible"], v["caja"], v["color"], km] if x]
+    if datos_l:
+        f.append("📋 " + " · ".join(str(x) for x in datos_l))
+    if precio:
+        f.append(f"💲 {precio}")
+    if pago:
+        f.append(f"💳 {pago}")
+    if equip:
+        f.append("✅ " + " · ".join(equip))
+    f += ["", "Escribinos y coordinamos una visita 🤝"]
+    if firma:
+        f.append("📍 " + firma)
+    f.append(f"Más fotos y datos: {link}")
+    facebook = "\n".join(f)
+
+    # Instagram: ganchito + datos + hashtags (el link va en la bio/historia).
+    tags = ["#autos", "#autosusados", "#agencia"]
+    for t in (v["marca"], v["modelo"]):
+        t = re.sub(r"[^A-Za-z0-9]", "", str(t or ""))
+        if t:
+            tags.append("#" + t.lower())
+    if lugar:
+        ciudad = re.sub(r"[^A-Za-z0-9]", "", lugar.split(",")[0])
+        if ciudad:
+            tags.append("#" + ciudad.lower())
+    i = [f"🔥 {titulo_v}", ""]
+    if precio:
+        i.append(f"💲 {precio}")
+    if km:
+        i.append(f"🛣️ {km}")
+    if equip:
+        i.append("✅ " + " · ".join(equip[:4]))
+    if pago:
+        i.append(f"💳 {pago}")
+    i += ["", "Escribinos por mensaje directo 📩" + (f"\n📍 {firma}" if firma else ""), "", " ".join(tags)]
+    instagram = "\n".join(i)
+
+    # Marketplace: título + descripción tipo ficha.
+    m = [titulo_v]
+    if precio:
+        m.append(f"Precio: {precio}")
+    for etiqueta, val in (("Kilometraje", km), ("Combustible", v["combustible"]),
+                          ("Transmisión", v["caja"]), ("Color", v["color"])):
+        if val:
+            m.append(f"{etiqueta}: {val}")
+    if equip:
+        m.append("Equipamiento: " + ", ".join(equip))
+    if pago:
+        m.append(f"Formas de pago: {pago}")
+    m += [f"Ver ficha completa: {link}"]
+    if firma:
+        m.append(firma)
+    marketplace = "\n".join(m)
+
+    return [
+        {"clave": "wa", "nombre": "Historia WhatsApp", "texto": historia},
+        {"clave": "fb", "nombre": "Facebook", "texto": facebook},
+        {"clave": "ig", "nombre": "Instagram", "texto": instagram},
+        {"clave": "mp", "nombre": "Marketplace", "texto": marketplace},
+    ]
+
+
 @bp.route("/<int:vehiculo_id>/ficha")
 def ficha(vehiculo_id):
     """Ficha comercial para compartir por WhatsApp o subir a una historia --
@@ -1491,6 +1576,7 @@ def ficha(vehiculo_id):
         lineas.append(f"Más fotos y consultas: {link_ficha}")
         publicar = {
             "texto": "\n".join(lineas),
+            "textos": _textos_redes(vehiculo, datos, titulo_v, nombre_ag, lugar, link_ficha),
             "link": link_ficha,
             "titulo": titulo_v,
             "fotos": [f["url"] for f in datos.get("fotos") or []],
