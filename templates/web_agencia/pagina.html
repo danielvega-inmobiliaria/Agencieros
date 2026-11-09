@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+{% include "partials/favicon_publico.html" %}
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ nombre }}{% if lugar %} · {{ lugar }}{% endif %} — {{ tipo_titulo }}</title>
 <meta name="description" content="{{ items|length }} {{ tipo_titulo|lower }} disponibles en {{ nombre }}{% if lugar %}, {{ lugar }}{% endif %}. Consultá por WhatsApp.">
@@ -24,7 +25,8 @@
   header.top { background:#fff; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:20; }
   .head { display:flex; align-items:center; gap:18px; min-height:68px; }
   .marca { display:flex; align-items:center; gap:12px; min-width:0; }
-  .marca img { height:44px; max-width:120px; object-fit:contain; }
+  .marca img { height:44px; max-width:150px; object-fit:contain; }
+  .marca b.solo-lugar { font-size:14px; font-weight:400; color:var(--dim); letter-spacing:0; }
   .marca b { font-size:19px; letter-spacing:.2px; color:var(--acc); line-height:1.1; }
   .marca small { display:block; color:var(--dim); font-size:12px; font-weight:400; }
   nav.menu { margin-left:auto; display:flex; gap:22px; align-items:center; font-weight:600; font-size:15px; color:var(--acc); }
@@ -118,7 +120,7 @@
     .marca b { font-size:16px; } .head .btn-wa { padding:8px 12px; }
     /* Celu: el nombre de la agencia no se tapa; "Compramos tu auto" ya está en la barra de abajo */
     .head { gap:10px; } .head nav.menu { gap:8px; } .head nav.menu .btn-resalta { display:none; }
-    .marca { flex:1 1 auto; gap:8px; } .marca img { height:38px; max-width:84px; } .marca b { overflow-wrap:anywhere; }
+    .marca { flex:1 1 auto; gap:8px; } .marca img { height:38px; max-width:110px; } .marca b { overflow-wrap:anywhere; }
   }
 </style>
 </head>
@@ -145,7 +147,7 @@
 <header class="top"><div class="wrap head">
   <a class="marca" href="#top">
     {% if cfg.logo_url %}<img src="{{ cfg.logo_url }}" alt="Logo de {{ nombre }}">{% endif %}
-    <b>{{ nombre }}{% if lugar %}<small>{{ lugar }}</small>{% endif %}</b>
+    {% if cfg.logo_url %}{% if lugar %}<b class="solo-lugar">{{ lugar }}</b>{% endif %}{% else %}<b>{{ nombre }}{% if lugar %}<small>{{ lugar }}</small>{% endif %}</b>{% endif %}
   </a>
   <nav class="menu">
     {% if hay_usados or not hay_cero %}<a class="txt" href="#autos"{% if hay_cero %} data-tab="usados"{% endif %}>Usados</a>{% endif %}

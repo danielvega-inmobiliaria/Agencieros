@@ -20,6 +20,7 @@ from urllib.parse import quote_plus
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, abort, jsonify
 
+from utils.iconos import icono_de_agencia
 from database import query, execute, foto_principal, obtener_config_agencia
 
 bp = Blueprint("web_agencia", __name__)
@@ -132,7 +133,7 @@ def pagina(slug):
     if og_img and og_img.startswith("/"):
         og_img = APP_URL + og_img
     return render_template(
-        "web_agencia/pagina.html", nombre=nombre, cfg=cfg, lugar=lugar, items=items,
+        "web_agencia/pagina.html", ico=icono_de_agencia(ag["id"]), nombre=nombre, cfg=cfg, lugar=lugar, items=items,
         marcas=sorted({i["marca"] for i in items if i["marca"]}),
         wa_general=(f"{wa_base}?text={quote_plus('Hola! Vi tu web y quiero consultar por un auto.')}" if wa_base else None),
         url_canonica=f"{LANDING_URL}/a/{slug.lower()}", og_img=og_img,

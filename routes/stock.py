@@ -7,6 +7,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from urllib.parse import quote_plus
 
 from utils.permisos import es_vendedor, nombres_usuarios
+from utils.iconos import icono_de_agencia
 from utils.planes import puede_agregar
 from utils.sucursales import (filtro_sql, sucursal_seleccionada, sucursal_para_alta, contexto_selector,
                                sucursales_de, nombres_sucursales)
@@ -1523,6 +1524,7 @@ def ficha(vehiculo_id):
         datos["whatsapp_link"] = None
     return render_template(
         "stock/ficha.html",
+        ico=icono_de_agencia(vehiculo["agencia_id"] or 1),
         vehiculo=vehiculo,
         datos=datos,
         og=og,
@@ -1563,6 +1565,7 @@ def fichas():
 
     return render_template(
         "stock/fichas.html",
+        ico=icono_de_agencia(session.get("agencia_id")),
         fichas=[_datos_ficha(v) for v in vehiculos],
         estado_label=ESTADO_LABEL,
         volver_url=url_for("stock.index", estado=estado_filtro, **filtros),

@@ -1,0 +1,5 @@
+{# Favicon de las páginas públicas (web de la agencia y fichas). `ico` = 'italia' o 'agencieros'. #}
+{% set _i = ico or 'agencieros' %}
+<link rel="icon" type="image/png" sizes="48x48" href="{{ url_for('static', filename='icons/favicon-' ~ _i ~ '-48.png') }}">
+<link rel="shortcut icon" href="{{ url_for('static', filename='icons/favicon-' ~ _i ~ '.ico') }}">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon-' ~ _i ~ '.png') }}">
