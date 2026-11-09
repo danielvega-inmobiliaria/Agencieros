@@ -217,8 +217,11 @@ def limpiar_sin_validar():
     """Borra las cuentas que nunca validaron el mail (bots/abandonadas) con
     más de 24 horas (09/11/2026)."""
     from utils.antibot import purgar_sin_validar
-    n = purgar_sin_validar(horas=24)
-    flash(f"Se borraron {n} agencias que nunca validaron su mail.", "success")
+    # El código de mail vence a los 15 min: una cuenta sin validar de más de
+    # 1 hora ya no la está validando nadie. Tandas de 3000 por clic.
+    n = purgar_sin_validar(horas=1, limite=3000)
+    flash(f"Se borraron {n} agencias que nunca validaron su mail."
+          + (" Quedan más: tocá el botón de nuevo." if n >= 3000 else ""), "success")
     return redirect(url_for("plataforma.agencias"))
 
 

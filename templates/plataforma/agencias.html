@@ -17,7 +17,7 @@
   </form>
   {% if resumen.sin_validar %}
   <form method="post" action="{{ url_for('plataforma.limpiar_sin_validar') }}"
-        onsubmit="return window.confirm('¿Borrar las {{ resumen.sin_validar }} cuentas que nunca validaron su mail (de más de 24 horas)? No se puede deshacer.');">
+        onsubmit="return window.confirm('¿Borrar las {{ resumen.sin_validar }} cuentas que nunca validaron su mail (de más de 1 hora)? No se puede deshacer.');">
     <button class="btn btn-secondary btn-sm" type="submit">🧹 Borrar sin validar ({{ resumen.sin_validar }})</button>
   </form>
   {% endif %}
