@@ -1,0 +1,225 @@
+<style>
+  .cp-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .cp-chip { padding: 8px 12px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--text); font-size: 13px; cursor: pointer; }
+  .cp-chip.on { background: var(--gold-light); color: #0b1420; border-color: var(--gold-light); font-weight: 700; }
+  .cp-fotos { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+  .cp-foto { position: relative; flex: 0 0 auto; width: 74px; height: 74px; border-radius: 8px; overflow: hidden; border: 2px solid transparent; padding: 0; background: #000; cursor: pointer; }
+  .cp-foto img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .55; }
+  .cp-foto.on { border-color: var(--gold-light); }
+  .cp-foto.on img { opacity: 1; }
+  .cp-foto b { position: absolute; top: 3px; right: 3px; min-width: 20px; height: 20px; border-radius: 10px; background: var(--gold-light); color: #0b1420; font-size: 12px; line-height: 20px; text-align: center; }
+  .cp-campos { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 12px 0; }
+  .cp-campos label { font-size: 12px; color: var(--text-dim); display: block; }
+  .cp-campos input, .cp-campos textarea { width: 100%; box-sizing: border-box; margin-top: 3px; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--border); background: rgba(255,255,255,.05); color: var(--text); font-size: 14px; font-family: inherit; }
+  .cp-vista { text-align: center; margin: 12px 0; }
+  .cp-vista canvas { max-width: 100%; max-height: 70vh; width: auto; height: auto; border-radius: 10px; border: 1px solid var(--border); background: #0b1420; }
+  .cp-sub { font-size: 12px; color: var(--text-dim); margin-top: 8px; }
+</style>
+<div class="publicar-panel" id="publicar-panel">
+  <div class="publicar-titulo">📣 Compartir en redes</div>
+  <div class="publicar-ayuda">Elegí la plantilla, las fotos y ajustá los textos (todo sale de la ficha y se puede cambiar). Después compartí la imagen o bajala.</div>
+
+  <div class="cp-sub">1 · Plantilla</div>
+  <div class="cp-chips" id="cp-plantillas"></div>
+
+  <div class="cp-sub">2 · Fotos (tocá para elegir; el número es el orden)</div>
+  <div class="cp-fotos" id="cp-fotos"></div>
+
+  <div class="cp-sub">3 · Textos</div>
+  <div class="cp-campos">
+    <label>Título<input id="cp-titulo" type="text"></label>
+    <label>Datos<input id="cp-datos" type="text"></label>
+    <label>Precio<input id="cp-precio" type="text"></label>
+    <label>Forma de pago<input id="cp-pago" type="text" placeholder="Ej.: Entrega + cuotas · Aceptamos permuta"></label>
+    <label>Equipamiento<input id="cp-equip" type="text"></label>
+    <label>Información extra (libre)<textarea id="cp-extra" rows="2" placeholder="Ej.: Único dueño, service al día, VTV vigente"></textarea></label>
+    <label>Llamada a la acción<input id="cp-cta" type="text"></label>
+    <label>Contacto<input id="cp-contacto" type="text"></label>
+    <label style="display:flex;align-items:center;gap:8px;"><input id="cp-logo" type="checkbox" checked style="width:auto;margin:0;"> Mostrar logo de la agencia</label>
+  </div>
+
+  <div class="cp-vista"><canvas id="cp-canvas" width="1080" height="1080"></canvas></div>
+
+  <div class="publicar-botones">
+    <button type="button" class="pub-btn pub-principal" id="cp-compartir">📤 Compartir imagen</button>
+    <button type="button" class="pub-btn" id="cp-bajar">⬇️ Descargar imagen</button>
+    <button type="button" class="pub-btn" id="pub-copiar-link">🔗 Copiar link de la ficha</button>
+    <a class="pub-btn" href="{{ publicar.facebook }}" target="_blank" rel="noopener">📘 Compartir link en Facebook</a>
+  </div>
+  <div class="publicar-aviso" id="pub-aviso"></div>
+</div>
+<script>
+(function () {
+  var D = {{ publicar|tojson }};
+  var C = D.campos;
+  var PLANTILLAS = [
+    { id: 'historia', nombre: 'Historia 9:16', w: 1080, h: 1920, fotos: 1 },
+    { id: 'cuadrado', nombre: 'Post cuadrado', w: 1080, h: 1080, fotos: 1 },
+    { id: 'vertical', nombre: 'Post 4:5', w: 1080, h: 1350, fotos: 1 },
+    { id: 'horizontal', nombre: 'Facebook / Marketplace', w: 1200, h: 630, fotos: 1 },
+    { id: 'collage', nombre: 'Collage 3 fotos', w: 1080, h: 1350, fotos: 3 }
+  ];
+  var NAVY = '#0b1420', DORADO = '#e9b44c', TENUE = '#aab4c3';
+  var cv = document.getElementById('cp-canvas'), ctx = cv.getContext('2d');
+  var actual = PLANTILLAS[0], sel = [], cache = {}, pendiente = null;
+  var campo = function (id) { return document.getElementById(id); };
+  var aviso = document.getElementById('pub-aviso');
+  function avisar(m) { aviso.textContent = m; setTimeout(function () { aviso.textContent = ''; }, 3500); }
+
+  // Valores iniciales (desde la ficha)
+  campo('cp-titulo').value = C.titulo; campo('cp-datos').value = C.datos; campo('cp-precio').value = C.precio;
+  campo('cp-pago').value = C.pago; campo('cp-equip').value = C.equip; campo('cp-cta').value = C.cta;
+  campo('cp-contacto').value = C.contacto;
+  campo('cp-logo').checked = !!C.logo;
+  if (!C.logo) campo('cp-logo').parentNode.style.display = 'none';
+
+  function img(url) {
+    if (!url) return Promise.resolve(null);
+    if (!cache[url]) cache[url] = new Promise(function (ok) {
+      var i = new Image(); i.crossOrigin = 'anonymous';
+      i.onload = function () { ok(i); }; i.onerror = function () { ok(null); }; i.src = url;
+    });
+    return cache[url];
+  }
+  function cubrir(i, x, y, w, h) {
+    if (!i) { ctx.fillStyle = '#1b2638'; ctx.fillRect(x, y, w, h); return; }
+    var r = Math.max(w / i.width, h / i.height), sw = w / r, sh = h / r;
+    ctx.drawImage(i, (i.width - sw) / 2, (i.height - sh) / 2, sw, sh, x, y, w, h);
+  }
+  function rr(x, y, w, h, r) {
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+  function lineas(txt, w, maxL) {
+    var pal = String(txt || '').split(/\s+/).filter(Boolean), out = [], l = '';
+    pal.forEach(function (p) {
+      var t = l ? l + ' ' + p : p;
+      if (ctx.measureText(t).width > w && l) { out.push(l); l = p; } else l = t;
+    });
+    if (l) out.push(l);
+    if (out.length > maxL) { out = out.slice(0, maxL); out[maxL - 1] = out[maxL - 1].replace(/\s*\S*$/, '') + '…'; }
+    return out;
+  }
+  // Texto en flujo vertical. Si dibujar es false solo mide.
+  function flujo(x, y, w, s, dibujar) {
+    var v = { titulo: campo('cp-titulo').value.trim(), datos: campo('cp-datos').value.trim(), precio: campo('cp-precio').value.trim(),
+      pago: campo('cp-pago').value.trim(), equip: campo('cp-equip').value.trim(), extra: campo('cp-extra').value.trim(),
+      cta: campo('cp-cta').value.trim(), contacto: campo('cp-contacto').value.trim() };
+    var F = 'Helvetica, Arial, sans-serif';
+    function bloque(txt, px, peso, color, maxL, sep) {
+      if (!txt) return;
+      ctx.font = peso + ' ' + px + 'px ' + F; ctx.fillStyle = color; ctx.textBaseline = 'top';
+      lineas(txt, w, maxL).forEach(function (l) { if (dibujar) ctx.fillText(l, x, y); y += px * 1.22; });
+      y += sep;
+    }
+    bloque(v.titulo, 58 * s, '800', '#fff', 2, 8 * s);
+    bloque(v.datos, 34 * s, '400', TENUE, 2, 14 * s);
+    bloque(v.precio, 96 * s, '800', DORADO, 1, 10 * s);
+    bloque(v.pago, 36 * s, '600', '#fff', 2, 10 * s);
+    bloque(v.equip, 30 * s, '400', '#cdd6e3', 2, 12 * s);
+    bloque(v.extra, 34 * s, '400', '#fff', 3, 14 * s);
+    if (v.cta) {
+      var px = 40 * s; ctx.font = '800 ' + px + 'px ' + F;
+      var tw = Math.min(w, ctx.measureText(v.cta).width + 56 * s), bh = px * 1.9;
+      if (dibujar) {
+        ctx.fillStyle = DORADO; rr(x, y, tw, bh, bh / 2); ctx.fill();
+        ctx.fillStyle = NAVY; ctx.textBaseline = 'middle'; ctx.fillText(lineas(v.cta, tw - 40 * s, 1)[0], x + 28 * s, y + bh / 2 + 2); ctx.textBaseline = 'top';
+      }
+      y += bh + 14 * s;
+    }
+    bloque(v.contacto, 28 * s, '400', TENUE, 2, 0);
+    return y;
+  }
+  function ajustar(x, y, w, h, base) {
+    var s = base;
+    while (s > 0.4 && flujo(x, y, w, s, false) - y > h) s *= 0.93;
+    flujo(x, y, w, s, true);
+  }
+  function logoChip(x, y, alto, logo) {
+    if (!logo || !campo('cp-logo').checked) return;
+    var ancho = Math.min(alto * 3, alto * logo.width / logo.height), p = alto * 0.12;
+    ctx.fillStyle = '#fff'; rr(x, y, ancho + p * 2, alto + p * 2, alto * 0.18); ctx.fill();
+    ctx.drawImage(logo, x + p, y + p, ancho, alto);
+  }
+  function degradado(y0, y1, a0, a1) {
+    var g = ctx.createLinearGradient(0, y0, 0, y1);
+    g.addColorStop(0, 'rgba(11,20,32,' + a0 + ')'); g.addColorStop(1, 'rgba(11,20,32,' + a1 + ')');
+    ctx.fillStyle = g; ctx.fillRect(0, y0, cv.width, y1 - y0);
+  }
+  function dibujar() {
+    var p = actual, W = p.w, H = p.h;
+    cv.width = W; cv.height = H;
+    var urls = sel.length ? sel.map(function (i) { return D.fotos[i]; }) : D.fotos.slice(0, p.fotos);
+    Promise.all([img(urls[0]), img(urls[1]), img(urls[2]), img(D.logo)]).then(function (r) {
+      var f0 = r[0], f1 = r[1] || r[0], f2 = r[2] || r[0], logo = r[3];
+      ctx.fillStyle = NAVY; ctx.fillRect(0, 0, W, H);
+      if (p.id === 'historia') {
+        cubrir(f0, 0, 0, W, H);
+        degradado(H * 0.38, H, 0, 0.94);
+        logoChip(48, 48, 110, logo);
+        var hh = flujo(60, 0, W - 120, 1.1, false);
+        var y0 = Math.max(700, H - 110 - hh);
+        ajustar(60, y0, W - 120, H - y0 - 70, 1.1);
+      } else if (p.id === 'cuadrado') {
+        cubrir(f0, 0, 0, W, 640); logoChip(36, 36, 90, logo);
+        ajustar(50, 670, W - 100, H - 670 - 30, 0.8);
+      } else if (p.id === 'vertical') {
+        cubrir(f0, 0, 0, W, 800); logoChip(36, 36, 100, logo);
+        ajustar(55, 830, W - 110, H - 830 - 30, 0.9);
+      } else if (p.id === 'horizontal') {
+        cubrir(f0, 0, 0, 700, H); logoChip(24, 24, 70, logo);
+        ajustar(730, 30, W - 730 - 30, H - 60, 0.62);
+      } else {
+        cubrir(f0, 0, 0, W, 700); cubrir(f1, 0, 704, W / 2 - 2, 330); cubrir(f2, W / 2 + 2, 704, W / 2 - 2, 330);
+        logoChip(36, 36, 90, logo);
+        ajustar(55, 1060, W - 110, H - 1060 - 20, 0.7);
+      }
+    });
+  }
+  function programar() { clearTimeout(pendiente); pendiente = setTimeout(dibujar, 120); }
+
+  // Plantillas
+  var cont = campo('cp-plantillas');
+  PLANTILLAS.forEach(function (p, i) {
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'cp-chip' + (i === 0 ? ' on' : ''); b.textContent = p.nombre;
+    b.onclick = function () { actual = p; Array.prototype.forEach.call(cont.children, function (o) { o.classList.toggle('on', o === b); }); dibujar(); };
+    cont.appendChild(b);
+  });
+  // Fotos
+  var fc = campo('cp-fotos');
+  function pintarFotos() {
+    fc.innerHTML = '';
+    D.fotos.forEach(function (u, i) {
+      var b = document.createElement('button'); b.type = 'button'; var k = sel.indexOf(i);
+      b.className = 'cp-foto' + (k >= 0 ? ' on' : '');
+      b.innerHTML = '<img src="' + u + '" alt="">' + (k >= 0 ? '<b>' + (k + 1) + '</b>' : '');
+      b.onclick = function () { var j = sel.indexOf(i); if (j >= 0) sel.splice(j, 1); else sel.push(i); pintarFotos(); dibujar(); };
+      fc.appendChild(b);
+    });
+    if (!D.fotos.length) fc.textContent = 'Este vehículo todavía no tiene fotos.';
+  }
+  sel = D.fotos.slice(0, 3).map(function (_, i) { return i; });
+  pintarFotos();
+  ['cp-titulo', 'cp-datos', 'cp-precio', 'cp-pago', 'cp-equip', 'cp-extra', 'cp-cta', 'cp-contacto'].forEach(function (id) { campo(id).addEventListener('input', programar); });
+  campo('cp-logo').addEventListener('change', dibujar);
+
+  function blob() { return new Promise(function (ok) { cv.toBlob(ok, 'image/jpeg', 0.92); }); }
+  function nombreArchivo() { return 'agencieros-' + actual.id + '.jpg'; }
+  campo('cp-bajar').onclick = function () {
+    blob().then(function (b) { var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = nombreArchivo(); document.body.appendChild(a); a.click(); a.remove(); avisar('Imagen descargada.'); });
+  };
+  campo('cp-compartir').onclick = function () {
+    blob().then(function (b) {
+      var f = new File([b], nombreArchivo(), { type: 'image/jpeg' });
+      if (navigator.canShare && navigator.canShare({ files: [f] })) {
+        return navigator.share({ files: [f], title: campo('cp-titulo').value }).catch(function (e) { if (e && e.name !== 'AbortError') avisar('No se pudo compartir: usá «Descargar imagen».'); });
+      }
+      campo('cp-bajar').click(); avisar('Este navegador no comparte directo: la bajé para que la subas.');
+    });
+  };
+  campo('pub-copiar-link').onclick = function () {
+    (navigator.clipboard ? navigator.clipboard.writeText(D.link) : Promise.reject()).then(function () { avisar('Link copiado.'); }, function () { avisar(D.link); });
+  };
+  dibujar();
+})();
+</script>
