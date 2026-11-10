@@ -22,7 +22,7 @@
   .prev { background:#f59e0b; color:#1a1200; text-align:center; font-size:13px; font-weight:700; padding:8px 12px; }
 
   /* encabezado */
-  header.top { background:#fff; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:20; }
+  header.top { background:#fff; border-bottom:1px solid var(--line); }
   .head { display:flex; align-items:center; gap:18px; min-height:68px; }
   .marca { display:flex; align-items:center; gap:12px; min-width:0; }
   .marca img { height:44px; max-width:150px; object-fit:contain; }
@@ -124,7 +124,7 @@
   }
 
   /* menú en dos filas (10/11/2026) */
-  .menu2 { background:#fff; border-bottom:1px solid var(--line); padding:10px 0 12px; }
+  .menu2 { background:#fff; border-bottom:1px solid var(--line); padding:10px 0 12px; position:sticky; top:0; z-index:20; box-shadow:0 2px 6px rgba(0,0,0,.06); }
   .menu2 .fila { display:flex; gap:8px; flex-wrap:wrap; }
   .menu2 .fila + .fila { margin-top:8px; }
   .menu2 a, .menu2 button { border:1.5px solid var(--line); border-radius:999px; padding:8px 16px; font-size:14px; font-weight:700; color:var(--acc); background:#fff; white-space:nowrap; cursor:pointer; font-family:inherit; }
@@ -132,7 +132,10 @@
   .buscador { display:none; margin-top:16px; }
   .buscador.abierto { display:grid; }
   .hero { padding-bottom:30px; }
-  #autos, #compramos, #contacto, #datos { scroll-margin-top:76px; }
+  #autos, #compramos, #contacto, #datos { scroll-margin-top:120px; }
+  .arriba { position:fixed; left:16px; bottom:16px; z-index:30; background:#fff; color:var(--acc); border:1.5px solid var(--acc); border-radius:999px; padding:12px 18px; font-weight:700; font-size:14px; font-family:inherit; cursor:pointer; box-shadow:0 6px 20px rgba(0,0,0,.25); opacity:0; pointer-events:none; transition:opacity .2s; }
+  .arriba.ver { opacity:1; pointer-events:auto; }
+  @media (max-width:560px) { .menu2 { padding:8px 0; } .menu2 a, .menu2 button { padding:6px 12px; font-size:13px; } .menu2 .fila + .fila { margin-top:6px; } #autos, #compramos, #contacto, #datos { scroll-margin-top:100px; } }
   .pagos { display:flex; flex-direction:column; gap:8px; }
   .pagos label.chk { display:flex; gap:10px; align-items:center; text-transform:none; letter-spacing:0; font-size:15px; font-weight:600; color:var(--text); margin:0; }
   .pagos label.chk input { width:20px; height:20px; padding:0; flex:none; accent-color:var(--acc); }
@@ -313,6 +316,7 @@
   </div>
 </div></section>
 <footer>Precios en pesos, sujetos a cambio sin previo aviso. · <a href="{{ url_canonica.rsplit('/a/', 1)[0] }}">App Agencieros</a>, un desarrollo de <a href="https://danguiapps.com.ar/?utm_source=agencieros&utm_medium=pie" target="_blank" rel="noopener">DanguiApps</a></footer>
+<button type="button" class="arriba" id="arriba" aria-label="Volver al inicio">↑ Inicio</button>
 {% if wa_general %}<a class="btn btn-wa flot" href="{{ wa_general }}" target="_blank" rel="noopener" onclick="try{navigator.sendBeacon('/a/{{ slug }}/clic')}catch(e){}">💬 WhatsApp</a>{% endif %}
 
 <script>
@@ -441,6 +445,13 @@
       .catch(function () { msg.className = 'msg err'; msg.textContent = 'No pudimos enviar la consulta. Probá de nuevo o escribinos por WhatsApp.'; })
       .then(function () { btn.disabled = false; btn.textContent = 'Quiero que me coticen mi auto'; });
   });
+})();
+
+(function () {
+  var b = document.getElementById('arriba'); if (!b) return;
+  function ver() { b.classList.toggle('ver', (window.pageYOffset || document.documentElement.scrollTop) > 400); }
+  window.addEventListener('scroll', ver, { passive: true }); ver();
+  b.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
 })();
 
 (function () {
