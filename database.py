@@ -544,7 +544,8 @@ def _migrar_web_agencia(conn):
     # nota y fecha de seguimiento. Estados: nuevo, contactado, seguimiento, cerrado.
     wccols = {r[1] for r in conn.execute("PRAGMA table_info(web_consultas)")}
     for _col, _ddl in (("vehiculo_id", "INTEGER"), ("vehiculo_txt", "TEXT"), ("origen", "TEXT"),
-                       ("nota", "TEXT"), ("seguimiento", "TEXT"), ("updated_at", "TEXT")):
+                       ("nota", "TEXT"), ("seguimiento", "TEXT"), ("updated_at", "TEXT"),
+                       ("detalle", "TEXT")):
         if _col not in wccols:
             conn.execute(f"ALTER TABLE web_consultas ADD COLUMN {_col} {_ddl}")
     conn.execute("UPDATE web_consultas SET estado = 'contactado' WHERE estado = 'atendido'")

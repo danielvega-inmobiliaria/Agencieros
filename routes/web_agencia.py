@@ -12,6 +12,7 @@ Dos rutas:
 - GET/POST /mi-web/configuracion  la agencia activa su web (configuración); /mi-web = autos que se muestran. Antes: la agencia activa su web, elige el nombre del link y
                        marca qué autos se muestran.
 """
+import json
 import os
 import re
 import unicodedata
@@ -164,7 +165,7 @@ def _sin_agencia():
 
 
 def _consultas_nuevas(agencia_id):
-    return query("SELECT COUNT(*) AS c FROM web_consultas WHERE agencia_id = ? AND estado = 'nuevo' AND tipo = 'compramos'", (agencia_id,), one=True)["c"]
+    return query("SELECT COUNT(*) AS c FROM web_consultas WHERE agencia_id = ? AND estado = 'nuevo' AND tipo IN ('compramos', 'busco')", (agencia_id,), one=True)["c"]
 
 
 @bp.route("/mi-web/configuracion", methods=["GET", "POST"])
@@ -289,6 +290,97 @@ def compramos(slug):
     return jsonify({"ok": True})
 
 
+def _num(txt, tope=10**10):
+    """Número entero desde un texto con puntos, comas o signos; 0 si no hay."""
+    try:
+        n = int(re.sub(r"\D", "", str(txt or "")) or 0)
+    except ValueError:
+        n = 0
+    return n if n < tope else 0
+
+
+def _pesos_txt(n):
+    return "$" + "{:,.0f}".format(n or 0).replace(",", ".")
+
+
+@bp.route("/a/<slug>/busco", methods=["POST"])
+def busco(slug):
+    """Formulario público "Contacto / Busco un auto": qué busca, cuánto puede
+    gastar y cómo piensa pagar (contado, entrega + financiación, financiación +
+    permuta). Misma bandeja y mismas defensas anti-spam que «Compramos tu auto»."""
+    ag = query("SELECT id, nombre_agencia, email, activo, web_activa FROM agencias WHERE web_slug = ?",
+               (slug.lower(),), one=True)
+    if not ag or ag["activo"] == 0 or not ag["web_activa"]:
+        return jsonify({"ok": False, "error": "Esta web no está disponible."}), 404
+    f = request.form
+    if f.get("sitio"):  # campo trampa
+        return jsonify({"ok": True})
+    nombre, tel = _limpiar(f.get("nombre"), 80), re.sub(r"[^\d+ ()\-]", "", _limpiar(f.get("telefono"), 30))
+    busca = _limpiar(f.get("busca"), 100)
+    comentario = _limpiar(f.get("comentario"), 500)
+    if len(nombre) < 2 or len(re.sub(r"\D", "", tel)) < 8 or len(busca) < 2:
+        return jsonify({"ok": False, "error": "Completá nombre, teléfono y qué auto buscás."}), 400
+    monto = _num(f.get("monto"))
+    pago = []
+    if f.get("pago_contado"):
+        pago.append("Contado")
+    if f.get("pago_fin"):
+        pago.append("Entrega y financiación")
+    perm = bool(f.get("pago_perm"))
+    if perm:
+        pago.append("Financiación + permuta")
+    detalle = {"monto": monto or None, "pago": pago}
+    if f.get("pago_fin") or perm:
+        detalle["entrega"] = _num(f.get("entrega")) or None
+        detalle["cuota"] = _num(f.get("cuota")) or None
+    if perm:
+        detalle["permuta"] = {
+            "marca": _limpiar(f.get("perm_marca"), 40), "modelo": _limpiar(f.get("perm_modelo"), 60),
+            "anio": _num(f.get("perm_anio"), 3000) or None, "comb": _limpiar(f.get("perm_comb"), 20),
+            "km": _num(f.get("perm_km"), 10**7) or None,
+        }
+    ip = ip_cliente()
+    por_ip = query("SELECT COUNT(*) AS c FROM web_consultas WHERE ip = ? AND created_at > datetime('now', '-1 hour')", (ip,), one=True)["c"]
+    por_dia = query("SELECT COUNT(*) AS c FROM web_consultas WHERE agencia_id = ? AND created_at > datetime('now', '-1 day')", (ag["id"],), one=True)["c"]
+    if por_ip >= 3 or por_dia >= 40:
+        return jsonify({"ok": False, "error": "Recibimos varias consultas seguidas. Probá de nuevo en un rato o escribinos por WhatsApp."}), 429
+    execute("""INSERT INTO web_consultas (agencia_id, tipo, origen, nombre, telefono, modelo, comentario, detalle, ip)
+               VALUES (?, 'busco', 'form', ?, ?, ?, ?, ?, ?)""",
+            (ag["id"], nombre, tel, busca, comentario or None, json.dumps(detalle, ensure_ascii=False), ip))
+    try:
+        from utils.notificaciones import avisar_agencia
+        avisar_agencia(ag["email"], f"Nueva consulta en tu web: {nombre} busca {busca}",
+                       f"{nombre} ({tel}) busca: {busca}" + (f", hasta {_pesos_txt(monto)}" if monto else "") + "."
+                       + (f"\nForma de pago: {', '.join(pago)}" if pago else "")
+                       + (f"\nComentario: {comentario}" if comentario else ""),
+                       ruta="/mi-web/consultas")
+    except Exception as e:
+        print(f"[web_agencia] No se pudo avisar por mail: {e}")
+    return jsonify({"ok": True})
+
+
+def _resumen_busco(c):
+    """Líneas de texto de una consulta «Busco un auto» para la bandeja."""
+    try:
+        d = json.loads(c["detalle"] or "{}")
+    except ValueError:
+        d = {}
+    out = []
+    if d.get("monto"):
+        out.append("Gasta hasta " + _pesos_txt(d["monto"]))
+    if d.get("pago"):
+        out.append("Pago: " + " / ".join(d["pago"]))
+    if d.get("entrega") or d.get("cuota"):
+        out.append(" · ".join(x for x in [("Entrega " + _pesos_txt(d["entrega"])) if d.get("entrega") else "",
+                                           ("Cuota " + _pesos_txt(d["cuota"])) if d.get("cuota") else ""] if x))
+    p = d.get("permuta")
+    if p:
+        t = " ".join(str(x) for x in [p.get("marca"), p.get("modelo"), p.get("anio")] if x)
+        extra = ", ".join(x for x in [p.get("comb"), (f"{p['km']:,} km".replace(",", ".") if p.get("km") else "")] if x)
+        out.append("Permuta: " + (t or "sin datos") + (f" ({extra})" if extra else ""))
+    return out
+
+
 ESTADOS = ("nuevo", "contactado", "seguimiento", "cerrado")
 ESTADO_TXT = {"nuevo": "Nueva", "contactado": "Contactada", "seguimiento": "En seguimiento", "cerrado": "Cerrada"}
 
@@ -346,7 +438,8 @@ def clic_web(slug):
 
 @bp.route("/mi-web/consultas")
 def consultas():
-    """Bandeja simple: quienes quieren vender su auto («Compramos tu auto»).
+    """Bandeja simple: quienes quieren vender su auto («Compramos tu auto») y quienes
+    dejaron qué auto buscan («Contacto»).
     Dos estados: pendiente y atendida. Los clics de WhatsApp no son tarjetas:
     se ven como contador en cada auto de Stock."""
     from routes.stock import _whatsapp_ar
@@ -355,13 +448,17 @@ def consultas():
         return redirect(url_for("precios.index"))
     ver = "atendidas" if request.args.get("ver") == "atendidas" else "pendientes"
     cuentas = {"pendientes": 0, "atendidas": 0}
-    for r in query("SELECT estado, COUNT(*) AS c FROM web_consultas WHERE agencia_id = ? AND tipo = 'compramos' GROUP BY estado", (agencia_id,)):
+    for r in query("SELECT estado, COUNT(*) AS c FROM web_consultas WHERE agencia_id = ? AND tipo IN ('compramos', 'busco') GROUP BY estado", (agencia_id,)):
         cuentas["pendientes" if r["estado"] == "nuevo" else "atendidas"] += r["c"]
     filas = []
-    for c in query("SELECT * FROM web_consultas WHERE agencia_id = ? AND tipo = 'compramos' AND estado " + ("!=" if ver == "atendidas" else "=") + " 'nuevo' ORDER BY id DESC LIMIT 200", (agencia_id,)):
+    for c in query("SELECT * FROM web_consultas WHERE agencia_id = ? AND tipo IN ('compramos', 'busco') AND estado " + ("!=" if ver == "atendidas" else "=") + " 'nuevo' ORDER BY id DESC LIMIT 200", (agencia_id,)):
         num = _whatsapp_ar(re.sub(r"[^\d]", "", c["telefono"] or ""))
-        msg = f"Hola {c['nombre']}! Te escribo por tu {c['marca']} {c['modelo']} {c['anio']} que quisiste vender."
-        filas.append(dict(c, wa=(f"https://wa.me/{num}?text={quote_plus(msg)}" if num else None)))
+        if c["tipo"] == "busco":
+            msg = f"Hola {c['nombre']}! Te escribo por el auto que buscabas ({c['modelo']})."
+        else:
+            msg = f"Hola {c['nombre']}! Te escribo por tu {c['marca']} {c['modelo']} {c['anio']} que quisiste vender."
+        filas.append(dict(c, wa=(f"https://wa.me/{num}?text={quote_plus(msg)}" if num else None),
+                          resumen=_resumen_busco(c) if c["tipo"] == "busco" else []))
     return render_template("web_agencia/consultas.html", consultas=filas, ver=ver, cuentas=cuentas)
 
 

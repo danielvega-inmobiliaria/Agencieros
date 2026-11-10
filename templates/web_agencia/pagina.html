@@ -122,6 +122,26 @@
     .head { gap:10px; } .head nav.menu { gap:8px; } .head nav.menu .btn-resalta { display:none; }
     .marca { flex:1 1 auto; gap:8px; } .marca img { height:38px; max-width:110px; } .marca b { overflow-wrap:anywhere; }
   }
+
+  /* menú en dos filas (10/11/2026) */
+  .menu2 { background:#fff; border-bottom:1px solid var(--line); padding:10px 0 12px; }
+  .menu2 .fila { display:flex; gap:8px; flex-wrap:wrap; }
+  .menu2 .fila + .fila { margin-top:8px; }
+  .menu2 a, .menu2 button { border:1.5px solid var(--line); border-radius:999px; padding:8px 16px; font-size:14px; font-weight:700; color:var(--acc); background:#fff; white-space:nowrap; cursor:pointer; font-family:inherit; }
+  .menu2 a.on, .menu2 button.on { background:var(--acc); color:var(--acc-txt); border-color:var(--acc); }
+  .buscador { display:none; margin-top:16px; }
+  .buscador.abierto { display:grid; }
+  .hero { padding-bottom:30px; }
+  #autos, #compramos, #contacto, #datos { scroll-margin-top:76px; }
+  .pagos { display:flex; flex-direction:column; gap:8px; }
+  .pagos label.chk { display:flex; gap:10px; align-items:center; text-transform:none; letter-spacing:0; font-size:15px; font-weight:600; color:var(--text); margin:0; }
+  .pagos label.chk input { width:20px; height:20px; padding:0; flex:none; accent-color:var(--acc); }
+  .cond { display:none; grid-template-columns:1fr 1fr; gap:12px; background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px; }
+  .cond.on { display:grid; }
+  .cond .tit { grid-column:1 / -1; font-size:13px; font-weight:700; color:var(--acc); }
+  .cond .full { grid-column:1 / -1; }
+  .compramos form select { width:100%; border:1px solid #d1d5db; border-radius:8px; padding:11px 12px; font-size:15px; background:#fff; color:var(--text); min-width:0; font-family:inherit; }
+  @media (max-width:560px) { .cond { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -150,20 +170,21 @@
     {% if solo_logo %}{% if lugar %}<b class="solo-lugar">{{ lugar }}</b>{% endif %}{% else %}<b>{{ nombre }}{% if lugar %}<small>{{ lugar }}</small>{% endif %}</b>{% endif %}
   </a>
   <nav class="menu">
-    {% if hay_usados or not hay_cero %}<a class="txt" href="#autos"{% if hay_cero %} data-tab="usados"{% endif %}>Usados</a>{% endif %}
-    {% if hay_cero %}<a class="txt" href="#autos" data-tab="cero">0 Km</a>{% endif %}
-    <a class="txt" href="#contacto">Contacto</a>
-    <a class="btn-resalta" href="#compramos">Compramos tu auto</a>
     {% if wa_general %}<a class="btn btn-wa" href="{{ wa_general }}" target="_blank" rel="noopener" onclick="try{navigator.sendBeacon('/a/{{ slug }}/clic')}catch(e){}">WhatsApp</a>{% endif %}
   </nav>
 </div>
-<nav class="menu-m wrap">
-  {% if hay_usados or not hay_cero %}<a href="#autos"{% if hay_cero %} data-tab="usados"{% endif %}>Usados</a>{% endif %}
-  {% if hay_cero %}<a href="#autos" data-tab="cero">0 Km</a>{% endif %}
-  <a href="#compramos">Compramos tu auto</a>
-  <a href="#contacto">Contacto</a>
-</nav>
 </header>
+<nav class="menu2"><div class="wrap">
+  <div class="fila">
+    {% if hay_usados or not hay_cero %}<a href="#autos"{% if hay_cero %} data-tab="usados"{% endif %}>Usados</a>{% endif %}
+    {% if hay_cero %}<a href="#autos" data-tab="cero">0 Km</a>{% endif %}
+    <a href="#compramos">Compramos tu auto</a>
+  </div>
+  <div class="fila">
+    {% if items %}<button type="button" id="btn-buscador" aria-expanded="false">🔍 Buscador</button>{% endif %}
+    <a href="#contacto">Contacto</a>
+  </div>
+</div></nav>
 
 {% set ambos = hay_cero and hay_usados %}
 <section class="hero" id="top"><div class="wrap">
@@ -242,7 +263,43 @@
   </form>
 </div></section>
 
-<section class="contacto" id="contacto"><div class="wrap">
+<section class="compramos" id="contacto" style="background:var(--bg);"><div class="wrap caja">
+  <div class="txt">
+    <h2>Contanos qué buscás</h2>
+    <p>Dejanos tus datos, qué auto querés y cuánto pensás gastar. Te avisamos apenas tengamos algo para vos, sin compromiso.</p>
+    <ul><li>Te respondemos por WhatsApp</li><li>Financiación propia y toma de tu usado</li></ul>
+  </div>
+  <form id="form-busco" novalidate>
+    <div><label for="b-nombre">Tu nombre</label><input id="b-nombre" name="nombre" required maxlength="80" autocomplete="name"></div>
+    <div><label for="b-tel">Teléfono / WhatsApp</label><input id="b-tel" name="telefono" required maxlength="30" inputmode="tel" autocomplete="tel"></div>
+    <div class="full"><label for="b-busca">¿Qué auto buscás?</label><input id="b-busca" name="busca" required maxlength="100" placeholder="Ej: Peugeot 208, una pick-up diésel, un SUV usado"></div>
+    <div class="full"><label for="b-monto">Monto a gastar ($)</label><input id="b-monto" name="monto" inputmode="numeric" placeholder="Aproximado"></div>
+    <div class="full pagos">
+      <label>¿Cómo pensás pagarlo?</label>
+      <label class="chk"><input type="checkbox" name="pago_contado" value="1"> Contado</label>
+      <label class="chk"><input type="checkbox" name="pago_fin" id="b-fin" value="1"> Entrega y financiación</label>
+      <label class="chk"><input type="checkbox" name="pago_perm" id="b-perm" value="1"> Financiación + permuta</label>
+    </div>
+    <div class="cond full" id="cond-fin">
+      <div><label for="b-entrega">¿Cuánto podés entregar? ($)</label><input id="b-entrega" name="entrega" inputmode="numeric" placeholder="Efectivo"></div>
+      <div><label for="b-cuota">¿Qué cuota podés pagar? ($)</label><input id="b-cuota" name="cuota" inputmode="numeric" placeholder="Por mes"></div>
+    </div>
+    <div class="cond full" id="cond-perm">
+      <div class="tit">Contame qué tenés para entregar</div>
+      <div><label for="b-pmarca">Marca</label><input id="b-pmarca" name="perm_marca" maxlength="40" placeholder="Ej: Fiat"></div>
+      <div><label for="b-pmodelo">Modelo</label><input id="b-pmodelo" name="perm_modelo" maxlength="60" placeholder="Ej: Palio 1.4"></div>
+      <div><label for="b-panio">Año</label><input id="b-panio" name="perm_anio" inputmode="numeric" maxlength="4"></div>
+      <div><label for="b-pcomb">Combustible</label><select id="b-pcomb" name="perm_comb"><option value="">Elegí</option><option>Nafta</option><option>Diésel</option><option>GNC</option><option>Híbrido</option><option>Eléctrico</option></select></div>
+      <div class="full"><label for="b-pkm">Kilómetros</label><input id="b-pkm" name="perm_km" inputmode="numeric" placeholder="Aproximado"></div>
+    </div>
+    <div class="full"><label for="b-com">Comentarios (opcional)</label><textarea id="b-com" name="comentario" rows="3" maxlength="500" placeholder="Algo más que quieras contarnos"></textarea></div>
+    <input class="trampa" type="text" name="sitio" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <div class="full"><button class="btn btn-acc" type="submit" id="b-enviar" style="width:100%; padding:13px;">Enviar mi consulta</button></div>
+    <div class="msg" id="b-msg"></div>
+  </form>
+</div></section>
+
+<section class="contacto" id="datos"><div class="wrap">
   <div>
     <h3>{{ nombre }}</h3>
     {% set dir_repite = cfg.direccion and cfg.ciudad and (cfg.ciudad|lower|replace('á','a')|replace('é','e')|replace('í','i')|replace('ó','o')|replace('ú','u')) in (cfg.direccion|lower|replace('á','a')|replace('é','e')|replace('í','i')|replace('ó','o')|replace('ú','u')) %}
@@ -356,6 +413,12 @@
     });
   });
   if (verTodos) verTodos.addEventListener('click', function () { irA(null); });
+  var bb = $('btn-buscador'), panel = document.querySelector('.buscador');
+  if (bb && panel) bb.addEventListener('click', function () {
+    var abre = !panel.classList.contains('abierto');
+    panel.classList.toggle('abierto', abre); bb.classList.toggle('on', abre); bb.setAttribute('aria-expanded', abre ? 'true' : 'false');
+    if (abre) { var r = document.getElementById('autos'); if (r && r.scrollIntoView) r.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  });
   llenarMarcas(); llenarModelos(); aplicar();
 })();
 
@@ -377,6 +440,33 @@
       })
       .catch(function () { msg.className = 'msg err'; msg.textContent = 'No pudimos enviar la consulta. Probá de nuevo o escribinos por WhatsApp.'; })
       .then(function () { btn.disabled = false; btn.textContent = 'Quiero que me coticen mi auto'; });
+  });
+})();
+
+(function () {
+  var f = document.getElementById('form-busco'); if (!f) return;
+  var msg = document.getElementById('b-msg'), btn = document.getElementById('b-enviar');
+  var fin = document.getElementById('b-fin'), perm = document.getElementById('b-perm');
+  function condiciones() {
+    document.getElementById('cond-fin').classList.toggle('on', fin.checked || perm.checked);
+    document.getElementById('cond-perm').classList.toggle('on', perm.checked);
+  }
+  fin.addEventListener('change', condiciones); perm.addEventListener('change', condiciones);
+  f.addEventListener('submit', function (e) {
+    e.preventDefault(); msg.className = 'msg';
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    fetch('{{ url_for("web_agencia.busco", slug=slug) }}', { method: 'POST', body: new FormData(f) })
+      .then(function (r) { return r.json().catch(function () { return { ok: false, error: 'No pudimos enviar la consulta.' }; }); })
+      .then(function (d) {
+        if (d.ok) {
+          msg.className = 'msg ok';
+          msg.innerHTML = '¡Gracias! Recibimos tu consulta y te vamos a contactar a la brevedad.' +
+            ({{ 'true' if wa_general else 'false' }} ? ' Si es urgente, <a href="{{ wa_general }}" target="_blank" rel="noopener"><b>escribinos por WhatsApp</b></a>.' : '');
+          f.reset(); condiciones();
+        } else { msg.className = 'msg err'; msg.textContent = d.error || 'No pudimos enviar la consulta.'; }
+      })
+      .catch(function () { msg.className = 'msg err'; msg.textContent = 'No pudimos enviar la consulta. Probá de nuevo o escribinos por WhatsApp.'; })
+      .then(function () { btn.disabled = false; btn.textContent = 'Enviar mi consulta'; });
   });
 })();
 </script>
