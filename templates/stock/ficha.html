@@ -59,6 +59,12 @@
       <button type="submit" class="hoja-op">🤝 {{ 'Quitar de la Red' if acciones.en_red else 'Agregar a la Red' }}</button>
     </form>
     {% endif %}
+    {% if acciones.promotores_mostrar %}
+    <form method="post" action="{{ acciones.promotores }}">
+      <input type="hidden" name="volver" value="{{ acciones.volver }}">
+      <button type="submit" class="hoja-op">📣 {{ 'Quitar de Red de Promotores' if acciones.en_promotores else 'Compartir en Red de Promotores' }} <small>{{ 'ya no lo verán los promotores' if acciones.en_promotores else 'los promotores lo difunden con su enlace y cobran por resultados' }}</small></button>
+    </form>
+    {% endif %}
     <a class="hoja-op" href="{{ acciones.whatsapp }}" target="_blank" rel="noopener">💬 Compartir por WhatsApp <small>la ficha va sin botón de WhatsApp</small></a>
     <a class="hoja-op" href="{{ acciones.publicar }}">📣 Compartir en redes <small>imagen lista para historia, post, Facebook y Marketplace, con tus fotos y textos</small></a>
     <button type="button" class="hoja-op hoja-cancelar" data-cerrar>Cancelar</button>

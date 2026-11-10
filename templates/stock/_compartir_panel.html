@@ -141,6 +141,10 @@
     ctx.fillStyle = '#fff'; rr(x, y, ancho + p * 2, alto + p * 2, alto * 0.18); ctx.fill();
     ctx.drawImage(logo, x + p, y + p, ancho, alto);
   }
+  function credito(x, y, w, px, alinear) {
+    ctx.font = '600 ' + px + 'px Helvetica, Arial, sans-serif'; ctx.textBaseline = 'top'; ctx.fillStyle = 'rgba(205,214,227,0.85)';
+    ctx.textAlign = alinear; ctx.fillText('App Agencieros · un desarrollo de DanguiApps', alinear === 'center' ? x + w / 2 : x, y); ctx.textAlign = 'left';
+  }
   function degradado(y0, y1, a0, a1) {
     var g = ctx.createLinearGradient(0, y0, 0, y1);
     g.addColorStop(0, 'rgba(11,20,32,' + a0 + ')'); g.addColorStop(1, 'rgba(11,20,32,' + a1 + ')');
@@ -154,25 +158,40 @@
       var f0 = r[0], f1 = r[1] || r[0], f2 = r[2] || r[0], logo = r[3];
       ctx.fillStyle = NAVY; ctx.fillRect(0, 0, W, H);
       if (p.id === 'historia') {
-        cubrir(f0, 0, 0, W, H);
-        degradado(H * 0.38, H, 0, 0.94);
-        logoChip(48, 48, 110, logo);
-        var hh = flujo(60, 0, W - 120, 1.1, false);
-        var y0 = Math.max(700, H - 110 - hh);
-        ajustar(60, y0, W - 120, H - y0 - 70, 1.1);
+        // Foto completa (sin recortar) sobre fondo desenfocado de la misma foto.
+        if (f0) {
+          var mini = document.createElement('canvas'); mini.width = 18; mini.height = Math.max(2, Math.round(18 * H / W));
+          var mc = mini.getContext('2d'); var r0 = Math.max(mini.width / f0.width, mini.height / f0.height);
+          mc.drawImage(f0, (mini.width - f0.width * r0) / 2, (mini.height - f0.height * r0) / 2, f0.width * r0, f0.height * r0);
+          ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(mini, 0, 0, W, H);
+          ctx.fillStyle = 'rgba(11,20,32,0.55)'; ctx.fillRect(0, 0, W, H);
+        }
+        var ph = 0, py = 330;
+        if (f0) {
+          var rr0 = Math.min(W / f0.width, 1000 / f0.height), pw = f0.width * rr0; ph = f0.height * rr0;
+          ctx.drawImage(f0, (W - pw) / 2, py, pw, ph);
+        } else { ph = 700; cubrir(null, 0, py, W, ph); }
+        logoChip(48, 150, 110, logo);
+        var y0 = py + ph + 50;
+        ajustar(60, y0, W - 120, H - y0 - 200, 1.1);
+        credito(0, H - 150, W, 28, 'center');
       } else if (p.id === 'cuadrado') {
         cubrir(f0, 0, 0, W, 640); logoChip(36, 36, 90, logo);
-        ajustar(50, 670, W - 100, H - 670 - 30, 0.8);
+        ajustar(50, 670, W - 100, H - 670 - 60, 0.8);
+        credito(0, H - 40, W, 22, 'center');
       } else if (p.id === 'vertical') {
         cubrir(f0, 0, 0, W, 800); logoChip(36, 36, 100, logo);
-        ajustar(55, 830, W - 110, H - 830 - 30, 0.9);
+        ajustar(55, 830, W - 110, H - 830 - 60, 0.9);
+        credito(0, H - 42, W, 22, 'center');
       } else if (p.id === 'horizontal') {
         cubrir(f0, 0, 0, 700, H); logoChip(24, 24, 70, logo);
-        ajustar(730, 30, W - 730 - 30, H - 60, 0.62);
+        ajustar(730, 30, W - 730 - 30, H - 90, 0.62);
+        credito(730, H - 38, W - 760, 15, 'left');
       } else {
         cubrir(f0, 0, 0, W, 700); cubrir(f1, 0, 704, W / 2 - 2, 330); cubrir(f2, W / 2 + 2, 704, W / 2 - 2, 330);
         logoChip(36, 36, 90, logo);
-        ajustar(55, 1060, W - 110, H - 1060 - 20, 0.7);
+        ajustar(55, 1060, W - 110, H - 1060 - 55, 0.7);
+        credito(0, H - 38, W, 20, 'center');
       }
     });
   }
@@ -212,7 +231,7 @@
     blob().then(function (b) {
       var f = new File([b], nombreArchivo(), { type: 'image/jpeg' });
       if (navigator.canShare && navigator.canShare({ files: [f] })) {
-        return navigator.share({ files: [f], title: campo('cp-titulo').value }).catch(function (e) { if (e && e.name !== 'AbortError') avisar('No se pudo compartir: usá «Descargar imagen».'); });
+        return navigator.share({ files: [f], title: campo('cp-titulo').value, text: campo('cp-titulo').value + '\nMás fotos y datos: ' + D.link + '\nApp Agencieros (https://agencieros.net.ar), un desarrollo de DanguiApps (https://danguiapps.com.ar)' }).catch(function (e) { if (e && e.name !== 'AbortError') avisar('No se pudo compartir: usá «Descargar imagen».'); });
       }
       campo('cp-bajar').click(); avisar('Este navegador no comparte directo: la bajé para que la subas.');
     });

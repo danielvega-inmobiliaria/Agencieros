@@ -566,6 +566,9 @@ def _migrar_web_agencia(conn):
         conn.execute("ALTER TABLE vehiculos ADD COLUMN precio_anterior REAL")
     if "precio_baja_fecha" not in vcols:
         conn.execute("ALTER TABLE vehiculos ADD COLUMN precio_baja_fecha TEXT")
+    # 10/11/2026: unidad compartida en la Red de Promotores (app aparte).
+    if "red_promotores" not in vcols:
+        conn.execute("ALTER TABLE vehiculos ADD COLUMN red_promotores INTEGER NOT NULL DEFAULT 0")
 
 
 def _migrar_demo(conn):

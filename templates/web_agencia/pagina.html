@@ -46,7 +46,7 @@
   .buscador select, .buscador input { width:100%; border:1px solid #d1d5db; border-radius:8px; padding:11px 12px; font-size:15px; background:#fff; color:var(--text); min-width:0; }
   .buscador .par { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
   .buscador .acciones { grid-column:1 / -1; display:flex; gap:10px; justify-content:flex-end; align-items:center; }
-  .buscador .limpiar { background:none; border:0; color:var(--dim); font-size:14px; cursor:pointer; text-decoration:underline; }
+  .buscador .limpiar { background:#fff; border:1.5px solid var(--acc); border-radius:999px; padding:8px 16px; color:var(--acc); font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; }
 
   /* resultados */
   .barra { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:26px 0 14px; flex-wrap:wrap; }
@@ -135,6 +135,8 @@
   #autos, #compramos, #contacto, #datos { scroll-margin-top:120px; }
   .arriba { position:fixed; left:16px; bottom:16px; z-index:30; background:#fff; color:var(--acc); border:1.5px solid var(--acc); border-radius:999px; padding:12px 18px; font-weight:700; font-size:14px; font-family:inherit; cursor:pointer; box-shadow:0 6px 20px rgba(0,0,0,.25); opacity:0; pointer-events:none; transition:opacity .2s; }
   .arriba.ver { opacity:1; pointer-events:auto; }
+  .arriba { display:flex; align-items:center; gap:8px; padding:8px 14px 8px 8px; }
+  .arriba img { height:30px; width:auto; max-width:84px; object-fit:contain; border-radius:6px; background:#fff; }
   @media (max-width:560px) { .menu2 { padding:8px 0; } .menu2 a, .menu2 button { padding:6px 12px; font-size:13px; } .menu2 .fila + .fila { margin-top:6px; } #autos, #compramos, #contacto, #datos { scroll-margin-top:100px; } }
   .pagos { display:flex; flex-direction:column; gap:8px; }
   .pagos label.chk { display:flex; gap:10px; align-items:center; text-transform:none; letter-spacing:0; font-size:15px; font-weight:600; color:var(--text); margin:0; }
@@ -172,9 +174,6 @@
     {% if cfg.logo_url %}<img src="{{ cfg.logo_url }}" alt="Logo de {{ nombre }}">{% endif %}
     {% if solo_logo %}{% if lugar %}<b class="solo-lugar">{{ lugar }}</b>{% endif %}{% else %}<b>{{ nombre }}{% if lugar %}<small>{{ lugar }}</small>{% endif %}</b>{% endif %}
   </a>
-  <nav class="menu">
-    {% if wa_general %}<a class="btn btn-wa" href="{{ wa_general }}" target="_blank" rel="noopener" onclick="try{navigator.sendBeacon('/a/{{ slug }}/clic')}catch(e){}">WhatsApp</a>{% endif %}
-  </nav>
 </div>
 </header>
 <nav class="menu2"><div class="wrap">
@@ -205,7 +204,7 @@
     <div><label>Precio ($)</label><div class="par"><input type="number" id="f-pre-d" placeholder="Desde" inputmode="numeric"><input type="number" id="f-pre-h" placeholder="Hasta" inputmode="numeric"></div></div>
     <div{% if solo_cero %} style="display:none;"{% endif %}><label>Kilómetros</label><div class="par"><input type="number" id="f-km-d" placeholder="Desde" inputmode="numeric"><input type="number" id="f-km-h" placeholder="Hasta" inputmode="numeric"></div></div>
     <div style="grid-column:span 2;"><label for="f-q">Buscar</label><input type="search" id="f-q" placeholder="Marca, modelo o versión…"></div>
-    <div class="acciones"><button type="button" class="limpiar" id="f-limpiar">Limpiar filtros</button></div>
+    <div class="acciones"><button type="button" class="limpiar" id="f-limpiar">Limpiar filtros</button><button type="button" class="limpiar" id="f-cerrar">Cerrar</button></div>
   </div>
 
   {% if n_nuevos or n_bajas %}
@@ -250,7 +249,7 @@
   <div class="txt">
     <h2>Compramos tu auto</h2>
     <p>¿Querés vender el tuyo? Contanos qué auto es y te hacemos una oferta, sin vueltas ni compromiso.</p>
-    <ul><li>Tasación rápida y transparente</li><li>Pago al momento de cerrar</li><li>Lo recibimos en parte de pago por otro de nuestro stock</li></ul>
+    <ul><li>Tasación rápida y transparente</li><li>Pago al momento de cerrar</li></ul>
   </div>
   <form id="form-compramos" novalidate>
     <div><label for="c-nombre">Tu nombre</label><input id="c-nombre" name="nombre" required maxlength="80" autocomplete="name"></div>
@@ -270,18 +269,19 @@
   <div class="txt">
     <h2>Contanos qué buscás</h2>
     <p>Dejanos tus datos, qué auto querés y cuánto pensás gastar. Te avisamos apenas tengamos algo para vos, sin compromiso.</p>
-    <ul><li>Te respondemos por WhatsApp</li><li>Financiación propia y toma de tu usado</li></ul>
+    <ul><li>Financiación y toma de usado</li></ul>
   </div>
   <form id="form-busco" novalidate>
     <div><label for="b-nombre">Tu nombre</label><input id="b-nombre" name="nombre" required maxlength="80" autocomplete="name"></div>
     <div><label for="b-tel">Teléfono / WhatsApp</label><input id="b-tel" name="telefono" required maxlength="30" inputmode="tel" autocomplete="tel"></div>
     <div class="full"><label for="b-busca">¿Qué auto buscás?</label><input id="b-busca" name="busca" required maxlength="100" placeholder="Ej: Peugeot 208, una pick-up diésel, un SUV usado"></div>
-    <div class="full"><label for="b-monto">Monto a gastar ($)</label><input id="b-monto" name="monto" inputmode="numeric" placeholder="Aproximado"></div>
+    <div class="full"><label for="b-anio">Año</label><input id="b-anio" name="anio" inputmode="numeric" maxlength="4" placeholder="Ej: 2020 (aproximado)"></div>
+    <div class="full"><label for="b-monto">Valor del auto que buscás ($)</label><input id="b-monto" name="monto" inputmode="numeric" placeholder="Precio aproximado del auto, sin sumar entrega ni permuta"></div>
     <div class="full pagos">
       <label>¿Cómo pensás pagarlo?</label>
-      <label class="chk"><input type="checkbox" name="pago_contado" value="1"> Contado</label>
-      <label class="chk"><input type="checkbox" name="pago_fin" id="b-fin" value="1"> Entrega y financiación</label>
-      <label class="chk"><input type="checkbox" name="pago_perm" id="b-perm" value="1"> Financiación + permuta</label>
+      <label class="chk"><input type="radio" name="pago" value="contado"> Contado</label>
+      <label class="chk"><input type="radio" name="pago" id="b-fin" value="fin"> Entrega y financiación</label>
+      <label class="chk"><input type="radio" name="pago" id="b-perm" value="perm"> Financiación + permuta</label>
     </div>
     <div class="cond full" id="cond-fin">
       <div><label for="b-entrega">¿Cuánto podés entregar? ($)</label><input id="b-entrega" name="entrega" inputmode="numeric" placeholder="Efectivo"></div>
@@ -315,8 +315,8 @@
     {% if cfg.facebook %}<a class="btn btn-line" href="{{ cfg.facebook }}" target="_blank" rel="noopener">Facebook</a>{% endif %}
   </div>
 </div></section>
-<footer>Precios en pesos, sujetos a cambio sin previo aviso. · <a href="{{ url_canonica.rsplit('/a/', 1)[0] }}">App Agencieros</a>, un desarrollo de <a href="https://danguiapps.com.ar/?utm_source=agencieros&utm_medium=pie" target="_blank" rel="noopener">DanguiApps</a></footer>
-<button type="button" class="arriba" id="arriba" aria-label="Volver al inicio">↑ Inicio</button>
+<footer>Precios sujetos a cambio sin previo aviso.<br>Esta página web fue creada con la app <a href="{{ url_canonica.rsplit('/a/', 1)[0] }}?utm_source=web_agencia&utm_medium=pie" target="_blank" rel="noopener">Agencieros</a>, un desarrollo de <a href="https://danguiapps.com.ar/?utm_source=agencieros&utm_medium=pie" target="_blank" rel="noopener">DanguiApps</a>.</footer>
+<button type="button" class="arriba" id="arriba" aria-label="Volver al inicio">{% if cfg.logo_url %}<img src="{{ cfg.logo_url }}" alt="">{% endif %}<span>↑ Inicio</span></button>
 {% if wa_general %}<a class="btn btn-wa flot" href="{{ wa_general }}" target="_blank" rel="noopener" onclick="try{navigator.sendBeacon('/a/{{ slug }}/clic')}catch(e){}">💬 WhatsApp</a>{% endif %}
 
 <script>
@@ -418,11 +418,14 @@
   });
   if (verTodos) verTodos.addEventListener('click', function () { irA(null); });
   var bb = $('btn-buscador'), panel = document.querySelector('.buscador');
-  if (bb && panel) bb.addEventListener('click', function () {
-    var abre = !panel.classList.contains('abierto');
+  function abrirBuscador(abre) {
     panel.classList.toggle('abierto', abre); bb.classList.toggle('on', abre); bb.setAttribute('aria-expanded', abre ? 'true' : 'false');
     if (abre) { var r = document.getElementById('autos'); if (r && r.scrollIntoView) r.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-  });
+  }
+  if (bb && panel) {
+    bb.addEventListener('click', function () { abrirBuscador(!panel.classList.contains('abierto')); });
+    $('f-cerrar').addEventListener('click', function () { abrirBuscador(false); });
+  }
   llenarMarcas(); llenarModelos(); aplicar();
 })();
 
@@ -458,11 +461,16 @@
   var f = document.getElementById('form-busco'); if (!f) return;
   var msg = document.getElementById('b-msg'), btn = document.getElementById('b-enviar');
   var fin = document.getElementById('b-fin'), perm = document.getElementById('b-perm');
+  var contado = f.querySelector('input[name=pago][value=contado]');
+  function limpiar(id) { [].slice.call(document.getElementById(id).querySelectorAll('input, select')).forEach(function (x) { x.value = ''; }); }
   function condiciones() {
     document.getElementById('cond-fin').classList.toggle('on', fin.checked || perm.checked);
     document.getElementById('cond-perm').classList.toggle('on', perm.checked);
   }
-  fin.addEventListener('change', condiciones); perm.addEventListener('change', condiciones);
+  // Al cambiar de opción desaparecen (y se vacían) las preguntas de la anterior.
+  [contado, fin, perm].forEach(function (r) {
+    r.addEventListener('change', function () { limpiar('cond-fin'); limpiar('cond-perm'); condiciones(); });
+  });
   f.addEventListener('submit', function (e) {
     e.preventDefault(); msg.className = 'msg';
     btn.disabled = true; btn.textContent = 'Enviando…';

@@ -321,16 +321,11 @@ def busco(slug):
     if len(nombre) < 2 or len(re.sub(r"\D", "", tel)) < 8 or len(busca) < 2:
         return jsonify({"ok": False, "error": "Completá nombre, teléfono y qué auto buscás."}), 400
     monto = _num(f.get("monto"))
-    pago = []
-    if f.get("pago_contado"):
-        pago.append("Contado")
-    if f.get("pago_fin"):
-        pago.append("Entrega y financiación")
-    perm = bool(f.get("pago_perm"))
-    if perm:
-        pago.append("Financiación + permuta")
-    detalle = {"monto": monto or None, "pago": pago}
-    if f.get("pago_fin") or perm:
+    opcion = f.get("pago") if f.get("pago") in ("contado", "fin", "perm") else ""
+    pago = [{"contado": "Contado", "fin": "Entrega y financiación", "perm": "Financiación + permuta"}[opcion]] if opcion else []
+    perm = opcion == "perm"
+    detalle = {"monto": monto or None, "anio": _num(f.get("anio"), 3000) or None, "pago": pago}
+    if opcion in ("fin", "perm"):
         detalle["entrega"] = _num(f.get("entrega")) or None
         detalle["cuota"] = _num(f.get("cuota")) or None
     if perm:
@@ -350,7 +345,7 @@ def busco(slug):
     try:
         from utils.notificaciones import avisar_agencia
         avisar_agencia(ag["email"], f"Nueva consulta en tu web: {nombre} busca {busca}",
-                       f"{nombre} ({tel}) busca: {busca}" + (f", hasta {_pesos_txt(monto)}" if monto else "") + "."
+                       f"{nombre} ({tel}) busca: {busca}" + (f" {detalle['anio']}" if detalle.get("anio") else "") + (f", valor del auto {_pesos_txt(monto)}" if monto else "") + "."
                        + (f"\nForma de pago: {', '.join(pago)}" if pago else "")
                        + (f"\nComentario: {comentario}" if comentario else ""),
                        ruta="/mi-web/consultas")
@@ -366,8 +361,10 @@ def _resumen_busco(c):
     except ValueError:
         d = {}
     out = []
+    if d.get("anio"):
+        out.append(f"Año: {d['anio']}")
     if d.get("monto"):
-        out.append("Gasta hasta " + _pesos_txt(d["monto"]))
+        out.append("Valor del auto: " + _pesos_txt(d["monto"]))
     if d.get("pago"):
         out.append("Pago: " + " / ".join(d["pago"]))
     if d.get("entrega") or d.get("cuota"):

@@ -1394,6 +1394,48 @@ def red(vehiculo_id):
     return redirect(_volver_seguro(request.form.get("volver"), url_for("stock.index")))
 
 
+@bp.route("/<int:vehiculo_id>/promotores", methods=["POST"])
+def promotores(vehiculo_id):
+    """Compartir / quitar la unidad en la Red de Promotores (app aparte, vía API)."""
+    from utils import red_promotores as rp
+    vehiculo = _vehiculo_propio(vehiculo_id)
+    if not vehiculo:
+        abort(404)
+    destino = _volver_seguro(request.form.get("volver"), url_for("stock.index"))
+    if not rp.habilitado(vehiculo["agencia_id"] or 1):
+        flash("La Red de Promotores no está habilitada para esta agencia.", "error")
+        return redirect(destino)
+    nombre = " ".join(str(x) for x in [vehiculo["marca"], vehiculo["modelo"]] if x)
+    if vehiculo["red_promotores"]:
+        ok, r = rp.enviar({"ref_externa": str(vehiculo_id), "activo": False})
+        if ok:
+            execute("UPDATE vehiculos SET red_promotores = 0 WHERE id = ?", (vehiculo_id,))
+            flash(f"{nombre} quitado de la Red de Promotores.", "success")
+        else:
+            flash(r, "error")
+        return redirect(destino)
+    if vehiculo["estado"] != "disponible":
+        flash("Solo se pueden compartir con promotores unidades disponibles.", "error")
+        return redirect(destino)
+    datos = _datos_ficha(vehiculo)
+    titulo = " ".join(str(x) for x in [vehiculo["marca"], vehiculo["modelo"], vehiculo["version"], vehiculo["anio"]] if x)
+    km = f"{int(vehiculo['km']):,} km".replace(",", ".") if vehiculo["km"] else ""
+    desc = " · ".join(str(x) for x in [km, vehiculo["combustible"], vehiculo["caja"]] if x)
+    equip = " · ".join((datos.get("equipamiento") or [])[:5])
+    fotos = [_url_publica(f["url"]) if f["url"].startswith("/") else f["url"] for f in datos.get("fotos") or []]
+    ok, r = rp.enviar({
+        "ref_externa": str(vehiculo_id), "titulo": titulo, "precio": vehiculo["valor_publicado"] or 0,
+        "descripcion": " · ".join(x for x in [desc, equip] if x)[:500], "fotos": fotos[:10], "activo": True,
+    })
+    if ok:
+        execute("UPDATE vehiculos SET red_promotores = 1 WHERE id = ?", (vehiculo_id,))
+        extra = "" if r.get("fotos") or not fotos else " (las fotos no se pudieron enviar: volvé a intentar)"
+        flash(f"{nombre} compartido en la Red de Promotores{extra}.", "success")
+    else:
+        flash(r, "error")
+    return redirect(destino)
+
+
 def _volver_seguro(destino, por_defecto):
     """Solo rutas internas ("/algo"): evita que el parámetro `volver` sirva
     para mandar a alguien a otro sitio."""
@@ -1423,6 +1465,11 @@ def _campos_compartir(vehiculo, datos, titulo_v, nombre_ag, lugar, agencia_cfg):
         "contacto": contacto,
         "logo": bool(agencia_cfg.get("logo_url")),
     }
+
+
+def rp_habilitado(agencia_id):
+    from utils.red_promotores import habilitado
+    return habilitado(agencia_id)
 
 
 @bp.route("/<int:vehiculo_id>/ficha")
@@ -1539,6 +1586,9 @@ def ficha(vehiculo_id):
             "red": url_for("stock.red", vehiculo_id=vehiculo_id),
             "red_mostrar": bool(pub) or not vendido,
             "en_red": bool(pub),
+            "promotores": url_for("stock.promotores", vehiculo_id=vehiculo_id),
+            "promotores_mostrar": rp_habilitado(vehiculo["agencia_id"] or 1) and (bool(vehiculo["red_promotores"]) or vehiculo["estado"] == "disponible"),
+            "en_promotores": bool(vehiculo["red_promotores"]),
             "whatsapp": "https://wa.me/?text=" + quote_plus(texto_wa),
             "publicar": url_for("stock.ficha", vehiculo_id=vehiculo_id, publicar=1, volver=ficha_actual),
             "volver": ficha_actual,
