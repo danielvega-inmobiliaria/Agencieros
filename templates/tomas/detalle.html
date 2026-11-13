@@ -62,6 +62,12 @@
   </p>
 </a>
 
+<form method="post" action="{{ url_for('tomas.guardar_deudas', toma_id=toma.id) }}">
+  <input type="hidden" name="volver" value="detalle">
+  {% set guardable = true %}
+  {% include "tomas/_deudas.html" %}
+</form>
+
 <div class="panel">
   <h2>Tasación</h2>
   {% if tasacion %}
@@ -71,6 +77,7 @@
     {% if tasacion.valor_referencia %}<div><span>Precio de referencia</span><b>${{ m.format(tasacion.valor_referencia).replace(",", ".") }}</b></div>{% endif %}
     <div class="destacado"><span>Máximo recomendado</span><b>${{ m.format(tasacion.precio_max_recomendado).replace(",", ".") }}</b></div>
     <div><span>Gastos de reparación</span><b>${{ m.format(tasacion.gastos_estimados or 0).replace(",", ".") }}</b></div>
+    {% if tasacion.deudas %}<div><span>Deudas descontadas</span><b>${{ m.format(tasacion.deudas).replace(",", ".") }}</b></div>{% endif %}
     {% if not es_vendedor %}
     <div><span>Margen esperado</span><b>${{ m.format(tasacion.margen_esperado or 0).replace(",", ".") }} <small>({{ tasacion.porcentaje_beneficio }}%)</small></b></div>
     {% endif %}

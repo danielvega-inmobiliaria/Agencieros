@@ -98,6 +98,20 @@
       </div>
       {% endif %}
 
+      <div style="background:var(--navy-bg); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-top:14px;">
+        <p style="color:var(--gold-light); font-size:13px; font-weight:600; margin:0 0 4px;">Deudas del vehículo</p>
+        {% if deudas.total %}
+        <p style="font-size:13px; margin:0;">Se descuentan <b>${{ "{:,.0f}".format(deudas.total).replace(",", ".") }}</b> del valor de toma
+          (patentes ${{ "{:,.0f}".format(deudas.patentes).replace(",", ".") }} · multas ${{ "{:,.0f}".format(deudas.multas).replace(",", ".") }}).</p>
+        {% endif %}
+        {% if deudas.sin_verificar %}
+        <p style="color:var(--gold-light); font-size:12.5px; margin:4px 0 0;">⚠ Hay deudas sin verificar: el valor de toma todavía no las contempla.</p>
+        {% elif not deudas.total %}
+        <p style="color:var(--text-dim); font-size:12.5px; margin:0;">Patentes y multas verificadas, sin deudas.</p>
+        {% endif %}
+        <p style="margin:6px 0 0;"><a href="{{ url_for('tomas.detalle', toma_id=toma.id) }}#deudas" style="font-size:12.5px;">Cargar o editar deudas ›</a></p>
+      </div>
+
       <button type="submit" class="btn btn-primary" style="margin-top:18px;">Calcular tasación</button>
     </form>
   </div>
@@ -117,6 +131,7 @@
     </div>
     <div class="stat-row" style="justify-content:center; margin-top:14px;">
       <div class="stat"><div class="n">${{ "{:,.0f}".format(tasacion_previa.gastos_estimados).replace(",", ".") }}</div><div class="l">Gastos estimados totales</div></div>
+      {% if tasacion_previa.deudas %}<div class="stat"><div class="n">${{ "{:,.0f}".format(tasacion_previa.deudas).replace(",", ".") }}</div><div class="l">Deudas descontadas</div></div>{% endif %}
       {% if not es_vendedor %}
       <div class="stat"><div class="n">${{ "{:,.0f}".format(tasacion_previa.margen_esperado).replace(",", ".") }}</div><div class="l">Margen esperado</div></div>
       <div class="stat"><div class="n">{{ tasacion_previa.porcentaje_beneficio }}%</div><div class="l">Beneficio</div></div>

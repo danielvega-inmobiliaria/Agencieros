@@ -99,6 +99,79 @@ def _toma_o_none(toma_id):
     return toma
 
 
+# --- Deudas del vehículo (12/11/2026) ---
+# Los portales piden captcha: la app no consulta sola, abre cada portal (con el
+# dominio copiado) y la persona carga acá el resultado. Direcciones verificadas
+# el 12/11/2026; si alguna cambia, se corrige acá.
+ESTADOS_DEUDA = [("no_verificada", "No verificada"), ("sin_deuda", "Sin deuda"), ("con_deuda", "Con deuda")]
+PORTALES_DEUDA = [
+    ("Patente única Santa Fe", "patentes", "https://www.santafe.gov.ar/e-pt-liq-deuda/"),
+    ("Multas SINAI (21 provincias)", "multas", "https://consultainfracciones.seguridadvial.gob.ar"),
+    ("Multas CABA", "multas", "https://buenosaires.gob.ar/licenciasdeconducir/consulta-de-infracciones"),
+    ("Multas Prov. de Buenos Aires", "multas", "https://gba.gob.ar/seguridadvial"),
+]
+
+
+def _num(valor):
+    """Número desde texto tipeado (acepta 1.234,50 o 1234.5); None si no es válido."""
+    txt = (valor or "").strip().replace("$", "").replace(" ", "")
+    if not txt:
+        return None
+    if "," in txt:
+        txt = txt.replace(".", "").replace(",", ".")
+    elif txt.count(".") > 1 or (txt.count(".") == 1 and len(txt.split(".")[1]) == 3):
+        txt = txt.replace(".", "")
+    try:
+        v = float(txt)
+    except ValueError:
+        return None
+    return v if v >= 0 else None
+
+
+def _deudas_de_toma(toma):
+    """Resumen de deudas de una toma: total a descontar (solo lo marcado «Con deuda»)
+    y si falta verificar alguna."""
+    def monto(est, m):
+        return float(m or 0) if est == "con_deuda" else 0.0
+    pat_est = toma["deuda_pat_estado"] or "no_verificada"
+    mul_est = toma["deuda_mul_estado"] or "no_verificada"
+    pat = monto(pat_est, toma["deuda_pat_monto"])
+    mul = monto(mul_est, toma["deuda_mul_monto"])
+    return {
+        "patentes": pat, "multas": mul, "total": pat + mul,
+        "sin_verificar": pat_est == "no_verificada" or mul_est == "no_verificada",
+        "pat_estado": pat_est, "mul_estado": mul_est,
+    }
+
+
+def _datos_deudas_form(f):
+    """Valores de deudas del formulario, listos para guardar."""
+    pat_est = f.get("deuda_pat_estado") if f.get("deuda_pat_estado") in dict(ESTADOS_DEUDA) else "no_verificada"
+    mul_est = f.get("deuda_mul_estado") if f.get("deuda_mul_estado") in dict(ESTADOS_DEUDA) else "no_verificada"
+    return {
+        "dominio": "".join((f.get("dominio") or "").split()).upper()[:10] or None,
+        "deuda_pat_estado": pat_est,
+        "deuda_pat_monto": _num(f.get("deuda_pat_monto")) if pat_est == "con_deuda" else None,
+        "deuda_mul_estado": mul_est,
+        "deuda_mul_monto": _num(f.get("deuda_mul_monto")) if mul_est == "con_deuda" else None,
+        "deuda_nota": (f.get("deuda_nota") or "").strip()[:300] or None,
+    }
+
+
+def _valores_deudas_vacios(dominio=""):
+    return {"dominio": dominio, "deuda_pat_estado": "no_verificada", "deuda_pat_monto": None,
+            "deuda_mul_estado": "no_verificada", "deuda_mul_monto": None, "deuda_nota": None}
+
+
+def _guardar_deudas(toma_id, d):
+    execute(
+        """UPDATE tomas_vehiculo SET dominio = ?, deuda_pat_estado = ?, deuda_pat_monto = ?,
+               deuda_mul_estado = ?, deuda_mul_monto = ?, deuda_nota = ?, deuda_fecha = datetime('now', '-3 hours')
+           WHERE id = ?""",
+        (d["dominio"], d["deuda_pat_estado"], d["deuda_pat_monto"], d["deuda_mul_estado"],
+         d["deuda_mul_monto"], d["deuda_nota"], toma_id))
+
+
 def _vehiculo_propio_o_none(valor):
     """Id de un vehículo de Stock de esta agencia (para una Toma que parte de un
     auto ya cargado), o None si no hay o es de otra agencia."""
@@ -457,7 +530,11 @@ def nueva():
         "version": request.args.get("version", ""),
         "anio": request.args.get("anio", ""),
         "tipo_carroceria": request.args.get("tipo_carroceria", ""),
+        "dominio": "",
     }
+    if prefill["vehiculo_id"]:
+        veh_dom = query("SELECT dominio FROM vehiculos WHERE id = ?", (prefill["vehiculo_id"],), one=True)
+        prefill["dominio"] = (veh_dom["dominio"] or "") if veh_dom else ""
     if request.method == "POST":
         f = request.form
         vehiculo_toma_id = None
@@ -510,10 +587,12 @@ def nueva():
         )
         if f.get("levantavidrios_tipo") in ("Manual", "Eléctrico"):
             execute("UPDATE tomas_vehiculo SET levantavidrios_tipo = ? WHERE id = ?", (f["levantavidrios_tipo"], toma_id))
+        _guardar_deudas(toma_id, _datos_deudas_form(f))
         flash("Toma registrada. Ahora sumá las fotos y marcá los daños de la carrocería.", "success")
         return redirect(url_for("tomas.inspeccion", toma_id=toma_id))
     return render_template(
-        "tomas/form.html", grupos_puntos=GRUPOS_PUNTOS, calificaciones_punto=CALIFICACIONES_PUNTO, prefill=prefill,
+        "tomas/form.html", deudas_form=_valores_deudas_vacios(prefill["dominio"]), estados_deuda=ESTADOS_DEUDA,
+        portales_deuda=PORTALES_DEUDA, grupos_puntos=GRUPOS_PUNTOS, calificaciones_punto=CALIFICACIONES_PUNTO, prefill=prefill,
         evaluadores=_evaluadores(), tipos_carroceria=TIPOS_CARROCERIA,
     )
 
@@ -592,6 +671,8 @@ def detalle(toma_id):
         precio_publicado = veh["valor_publicado"] if veh else None
     return render_template(
         "tomas/detalle.html",
+        deudas_form=toma, estados_deuda=ESTADOS_DEUDA, portales_deuda=PORTALES_DEUDA,
+        deudas=_deudas_de_toma(toma), volver="detalle",
         precio_publicado=precio_publicado,
         toma=toma,
         puntos_data=_puntos_con_costo(toma),
@@ -605,6 +686,23 @@ def detalle(toma_id):
         url_agregar_a_stock=url_agregar_a_stock,
         label_agregar_a_stock=label_agregar_a_stock,
     )
+
+
+@bp.route("/<int:toma_id>/deudas", methods=["POST"])
+def guardar_deudas(toma_id):
+    toma = _toma_o_none(toma_id)
+    if not toma:
+        return redirect(url_for("tomas.index"))
+    d = _datos_deudas_form(request.form)
+    if (request.form.get("deuda_pat_estado") == "con_deuda" and d["deuda_pat_monto"] is None) or \
+       (request.form.get("deuda_mul_estado") == "con_deuda" and d["deuda_mul_monto"] is None):
+        flash("Si marcás «Con deuda», cargá el monto (un número). No se guardaron las deudas.", "error")
+    else:
+        _guardar_deudas(toma_id, d)
+        flash("Deudas guardadas. Volvé a calcular la tasación para que se descuenten.", "success")
+    if request.form.get("volver") == "tasacion":
+        return redirect(url_for("tomas.tasacion", toma_id=toma_id))
+    return redirect(url_for("tomas.detalle", toma_id=toma_id) + "#deudas")
 
 
 # ---------------------------------------------------------------------------
@@ -798,6 +896,7 @@ def tasacion(toma_id):
     margen_objetivo_sugerido_pct = round(_margen_objetivo_agencia(toma["agencia_id"]) * 100, 1)
 
     es_nueva = False
+    deudas_toma = _deudas_de_toma(toma)
 
     if request.method == "POST":
         f = request.form
@@ -848,7 +947,10 @@ def tasacion(toma_id):
             # Kwid que con daños mayormente moderados/leves saturaba el
             # algoritmo a "Malo" y el valor de toma salía muy por debajo
             # de lo esperado).
-            precio_max_recomendado = valor_referencia - gastos_estimados - (valor_referencia * margen_objetivo_pct)
+            # Deudas de patentes y multas (12/11/2026, pedido de Daniel): lo marcado
+            # «Con deuda» en la Toma se descuenta del valor de toma, porque lo paga la agencia.
+            deudas_descontadas = deudas_toma["total"]
+            precio_max_recomendado = valor_referencia - gastos_estimados - (valor_referencia * margen_objetivo_pct) - deudas_descontadas
             margen_esperado = valor_referencia * margen_objetivo_pct
 
             # `riesgo` se sigue calculando y guardando (por si sirve a futuro
@@ -866,12 +968,13 @@ def tasacion(toma_id):
             execute(
                 """INSERT INTO tasaciones
                    (toma_id, marca, modelo, version, anio, valor_referencia, estado_mecanico, estado_estetico,
-                    gastos_estimados, precio_max_recomendado, riesgo, margen_esperado, margen_objetivo_pct, agencia_id)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    gastos_estimados, precio_max_recomendado, riesgo, margen_esperado, margen_objetivo_pct, agencia_id, deudas)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     toma_id, toma["marca"], toma["modelo"], toma["version"], toma["anio"],
                     valor_referencia, estado_mecanico, estado_estetico, gastos_estimados,
                     round(precio_max_recomendado), riesgo, round(margen_esperado), margen_objetivo_pct, toma["agencia_id"],
+                    round(deudas_descontadas),
                 ),
             )
             flash("Tasación registrada.", "success")
@@ -897,7 +1000,8 @@ def tasacion(toma_id):
 
     return render_template(
         "tomas/tasacion.html",
-        toma=toma,
+        toma=toma, deudas=deudas_toma,
+        deudas_form=toma, estados_deuda=ESTADOS_DEUDA, portales_deuda=PORTALES_DEUDA, volver="tasacion",
         tasacion_previa=tasacion_previa,
         url_agregar_a_stock=url_agregar_a_stock,
         label_agregar_a_stock=label_agregar_a_stock,
