@@ -1,0 +1,17 @@
+{# Bloque «¿Quién lo ve?». Variables: agencias, elegidas, visibilidad #}
+<div class="panel" style="margin-top:16px;">
+  <label>¿Quién lo ve?</label>
+  <label style="display:flex; gap:10px; align-items:center; font-weight:500;"><input type="radio" name="visibilidad" value="todos" {{ 'checked' if visibilidad != 'solo' else '' }} style="width:auto; margin:0;"> Toda la Red</label>
+  <label style="display:flex; gap:10px; align-items:center; font-weight:500;"><input type="radio" name="visibilidad" value="solo" {{ 'checked' if visibilidad == 'solo' else '' }} style="width:auto; margin:0;"> Solo estas agencias</label>
+  <div id="quien-lista" style="margin-top:10px; display:{{ 'block' if visibilidad == 'solo' else 'none' }};">
+    {% with marcadas=elegidas, nombre='agencias' %}{% include "red/_agencias_check.html" %}{% endwith %}
+  </div>
+  <small style="color:var(--text-dim);">Además, las agencias de «No compartir con» nunca ven lo que publicás.</small>
+</div>
+<script>
+  document.querySelectorAll('input[name=visibilidad]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      document.getElementById('quien-lista').style.display = document.querySelector('input[name=visibilidad][value=solo]').checked ? 'block' : 'none';
+    });
+  });
+</script>

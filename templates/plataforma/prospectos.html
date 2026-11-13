@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Prospectos — Agencieros{% endblock %}
+{% block header %}Prospectos{% endblock %}
+{% block content %}
+<div class="panel">
+  <b>Contactar de a uno</b>
+  <div style="color:var(--text-dim); font-size:13px; margin:4px 0 10px;">Tocá «WhatsApp»: se abre el chat con el mensaje armado y el prospecto pasa a «Contactado». Evitá los envíos masivos (riesgo de bloqueo del número). Podés usar <code>{nombre}</code> y <code>{agencia}</code>.</div>
+  <form method="post" action="{{ url_for('plataforma.prospectos_mensaje') }}">
+    <textarea name="mensaje" rows="4" maxlength="1000">{{ mensaje }}</textarea>
+    <button class="btn btn-secondary btn-sm" style="margin-top:8px;" type="submit">Guardar mensaje base</button>
+  </form>
+</div>
+
+<div class="tabs">
+  <a class="tab {{ 'active' if estado == 'todos' else '' }}" href="{{ url_for('plataforma.prospectos', estado='todos', grupo=grupo, q=q, wa=1 if solo_wa else 0) }}">Todos ({{ total_general }})</a>
+  {% for clave, nombre in estados %}
+  <a class="tab {{ 'active' if estado == clave else '' }}" href="{{ url_for('plataforma.prospectos', estado=clave, grupo=grupo, q=q, wa=1 if solo_wa else 0) }}">{{ nombre }} ({{ conteo.get(clave, 0) }})</a>
+  {% endfor %}
+</div>
+
+<div class="panel">
+  <form method="get" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+    <input type="hidden" name="estado" value="{{ estado }}">
+    <input type="search" name="q" value="{{ q }}" placeholder="Buscar agencia, contacto o ciudad" style="flex:1; min-width:200px;">
+    <select name="grupo">
+      <option value="">Todos los grupos</option>
+      {% for g in grupos %}<option value="{{ g }}" {{ 'selected' if g == grupo else '' }}>{{ g }}</option>{% endfor %}
+    </select>
+    <label style="display:flex; gap:6px; align-items:center; margin:0; font-weight:500;"><input type="checkbox" name="wa" value="1" {{ 'checked' if solo_wa else '' }} style="width:auto; margin:0;"> Solo con WhatsApp</label>
+    <input type="hidden" name="wa" value="0">
+    <button class="btn btn-primary btn-sm" type="submit">Filtrar</button>
+  </form>
+</div>
+
+<div class="panel">
+  <table class="tabla-responsive">
+    <tr class="fila-header"><th>Agencia</th><th>Contacto</th><th>Ciudad</th><th>Grupo</th><th>Estado</th><th></th></tr>
+    {% for it in items %}{% set p = it.p %}
+    <tr id="pros-{{ p.id }}">
+      <td data-label="Agencia"><b>{{ p.agencia or '—' }}</b>{% if p.instagram %}<br><small style="color:var(--text-dim);">{{ p.instagram }}</small>{% endif %}{% if p.notas %}<br><small style="color:var(--text-dim);">{{ p.notas }}</small>{% endif %}</td>
+      <td data-label="Contacto">{{ p.contacto or '—' }}{% if p.whatsapp %}<br><small style="color:var(--text-dim);">{{ p.whatsapp }}</small>{% endif %}</td>
+      <td data-label="Ciudad">{{ p.ciudad or '—' }}</td>
+      <td data-label="Grupo">{{ p.grupo or '—' }}</td>
+      <td data-label="Estado">
+        <form method="post" action="{{ url_for('plataforma.prospecto_estado', pid=p.id) }}">
+          <select name="estado" onchange="this.form.submit()">
+            {% for clave, nombre in estados %}<option value="{{ clave }}" {{ 'selected' if p.estado == clave else '' }}>{{ nombre }}</option>{% endfor %}
+          </select>
+        </form>
+        {% if p.fecha_contacto %}<small style="color:var(--text-dim);">Últ. contacto: {{ p.fecha_contacto[:16] }}</small>{% endif %}
+      </td>
+      <td class="fila-accion">
+        {% if it.wa %}<a class="btn btn-primary btn-sm" href="{{ it.wa }}" target="_blank" rel="noopener" onclick="fetch('{{ url_for('plataforma.prospecto_contactado', pid=p.id) }}', {method:'POST', keepalive:true});">💬 WhatsApp</a>{% else %}<small style="color:var(--text-dim);">Sin WhatsApp</small>{% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6">{% if total_general == 0 %}Todavía no hay prospectos: importá el CSV abajo.{% else %}Ningún prospecto con ese filtro.{% endif %}</td></tr>
+    {% endfor %}
+  </table>
+  {% if paginas > 1 %}
+  <div style="display:flex; gap:10px; align-items:center; justify-content:center; margin-top:12px;">
+    {% if pagina > 1 %}<a class="btn btn-secondary btn-sm" href="{{ url_for('plataforma.prospectos', estado=estado, grupo=grupo, q=q, wa=1 if solo_wa else 0, p=pagina-1) }}">← Anterior</a>{% endif %}
+    <span>Página {{ pagina }} de {{ paginas }} · {{ total }} prospectos</span>
+    {% if pagina < paginas %}<a class="btn btn-secondary btn-sm" href="{{ url_for('plataforma.prospectos', estado=estado, grupo=grupo, q=q, wa=1 if solo_wa else 0, p=pagina+1) }}">Siguiente →</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <b>Importar CSV</b>
+  <div style="color:var(--text-dim); font-size:13px; margin:4px 0 10px;">Columnas: agencia, contacto, whatsapp, ciudad, provincia, grupo, estado, fecha_contacto, notas, mail, instagram, link. UTF-8. No duplica los que ya están (por WhatsApp).</div>
+  <form method="post" action="{{ url_for('plataforma.prospectos_importar') }}" enctype="multipart/form-data" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+    <input type="file" name="archivo" accept=".csv" required>
+    <button class="btn btn-secondary btn-sm" type="submit">Importar</button>
+  </form>
+</div>
+{% endblock %}

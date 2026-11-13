@@ -39,6 +39,46 @@ def _contacto_publicacion(agencia_id):
     return nombre, telefono, texto
 
 
+# ---------------------------------------------------------------------
+# Sub Red (10/11/2026): cada agencia arma su red a gusto, sin grupos ni
+# invitaciones. Por publicación: «Toda la red» o «Solo estas agencias».
+# Para todo lo que publica: «No compartir con» (lista de exclusión).
+# ---------------------------------------------------------------------
+def _agencias_elegibles(agencia_id):
+    """Agencias con las que se puede compartir/no compartir: validadas,
+    activas, del mismo mundo (demo con demo, reales con reales) y distintas
+    de la propia."""
+    from utils.demo import _es_demo
+    cond = "es_demo > 0" if _es_demo(agencia_id) else "COALESCE(es_demo, 0) = 0"
+    return query(
+        f"""SELECT id, nombre_agencia FROM agencias
+            WHERE id != ? AND COALESCE(activo, 1) = 1 AND COALESCE(email_verificado, 0) = 1 AND {cond}
+            ORDER BY LOWER(nombre_agencia)""", (agencia_id,))
+
+
+def _ids_elegidos(nombre="agencias"):
+    ids = set()
+    for x in request.form.getlist(nombre):
+        try:
+            ids.add(int(x))
+        except (TypeError, ValueError):
+            pass
+    return ids
+
+
+def _guardar_visibilidad(pub_id, agencia_id, visibilidad, elegidas):
+    """Guarda quién ve la publicación. Solo se aceptan agencias elegibles."""
+    validas = {a["id"] for a in _agencias_elegibles(agencia_id)}
+    destinos = sorted(elegidas & validas) if visibilidad == "solo" else []
+    if visibilidad == "solo" and not destinos:
+        visibilidad = "todos"  # «Solo estas agencias» sin tildar ninguna = no tiene sentido
+    execute("UPDATE red_publicaciones SET visibilidad = ? WHERE id = ?", (visibilidad, pub_id))
+    execute("DELETE FROM red_destinos WHERE publicacion_id = ?", (pub_id,))
+    for aid in destinos:
+        execute("INSERT OR IGNORE INTO red_destinos (publicacion_id, agencia_id) VALUES (?, ?)", (pub_id, aid))
+    return visibilidad
+
+
 @bp.route("/")
 def index():
     tipo_filtro = request.args.get("tipo", "todos")
@@ -69,7 +109,27 @@ def index():
         filtro_tab_valor=tipo_filtro,
         limpiar_url=url_for("red.index", tipo=tipo_filtro),
         mi_agencia_id=session.get("agencia_id"),
+        destinos_por_pub=_destinos_por_pub(session.get("agencia_id")),
+        cant_bloqueos=_cant_bloqueos(session.get("agencia_id")),
     )
+
+
+def _destinos_por_pub(agencia_id):
+    if not agencia_id:
+        return {}
+    cuenta = {}
+    for r in query("""SELECT d.publicacion_id AS p, COUNT(*) AS n FROM red_destinos d
+                      JOIN red_publicaciones rp ON rp.id = d.publicacion_id
+                      WHERE rp.agencia_id = ? GROUP BY d.publicacion_id""", (agencia_id,)):
+        cuenta[r["p"]] = r["n"]
+    return cuenta
+
+
+def _cant_bloqueos(agencia_id):
+    if not agencia_id:
+        return 0
+    r = query("SELECT COUNT(*) AS n FROM red_bloqueos WHERE agencia_id = ?", (agencia_id,), one=True)
+    return r["n"] if r else 0
 
 
 @bp.route("/nueva", methods=["GET", "POST"])
@@ -92,7 +152,7 @@ def nueva():
             if not permitido:
                 flash(msg, "error")
                 return redirect(url_for("red.index"))
-        execute(
+        pub_id = execute(
             """INSERT INTO red_publicaciones
                (agencia_id, agencia_nombre, tipo, marca, modelo, version, anio, km, precio, descripcion, contacto)
                VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
@@ -103,9 +163,47 @@ def nueva():
                 f.get("descripcion"), contacto,
             ),
         )
-        flash("Publicación creada en la Red de Agencieros.", "success")
+        vis = _guardar_visibilidad(pub_id, agencia_id, f.get("visibilidad", "todos"), _ids_elegidos())
+        flash("Publicación creada en la Red de Agencieros."
+              + (" La ven solo las agencias que elegiste." if vis == "solo" else ""), "success")
         return redirect(url_for("red.index"))
-    return render_template("red/form.html", contacto=contacto)
+    return render_template("red/form.html", contacto=contacto,
+                           agencias=_agencias_elegibles(agencia_id), elegidas=set(), visibilidad="todos")
+
+
+@bp.route("/<int:pub_id>/quien-ve", methods=["GET", "POST"])
+def quien_ve(pub_id):
+    """Cambiar quién ve una publicación propia (también las que salen de Stock o Pedidos)."""
+    agencia_id = session.get("agencia_id")
+    pub = query("SELECT * FROM red_publicaciones WHERE id = ?", (pub_id,), one=True)
+    if not pub or not agencia_id or pub["agencia_id"] != agencia_id:
+        flash("Esa publicación no es de tu agencia.", "error")
+        return redirect(url_for("red.index"))
+    if request.method == "POST":
+        vis = _guardar_visibilidad(pub_id, agencia_id, request.form.get("visibilidad", "todos"), _ids_elegidos())
+        flash("Listo: la ven solo las agencias que elegiste." if vis == "solo" else "Listo: la ve toda la Red.", "success")
+        return redirect(url_for("red.index"))
+    elegidas = {r["agencia_id"] for r in query("SELECT agencia_id FROM red_destinos WHERE publicacion_id = ?", (pub_id,))}
+    return render_template("red/quien_ve.html", pub=pub, agencias=_agencias_elegibles(agencia_id),
+                           elegidas=elegidas, visibilidad=pub["visibilidad"] or "todos")
+
+
+@bp.route("/no-compartir", methods=["GET", "POST"])
+def no_compartir():
+    """«No compartir con»: agencias a las que no se les muestra nada de lo que publicás."""
+    agencia_id = session.get("agencia_id")
+    if not agencia_id:
+        return redirect(url_for("red.index"))
+    if request.method == "POST":
+        validas = {a["id"] for a in _agencias_elegibles(agencia_id)}
+        elegidas = _ids_elegidos("bloqueadas") & validas
+        execute("DELETE FROM red_bloqueos WHERE agencia_id = ?", (agencia_id,))
+        for bid in sorted(elegidas):
+            execute("INSERT OR IGNORE INTO red_bloqueos (agencia_id, bloqueada_id) VALUES (?, ?)", (agencia_id, bid))
+        flash(f"Guardado: no compartís con {len(elegidas)} agencia(s)." if elegidas else "Guardado: compartís con todas las agencias.", "success")
+        return redirect(url_for("red.index"))
+    bloqueadas = {r["bloqueada_id"] for r in query("SELECT bloqueada_id FROM red_bloqueos WHERE agencia_id = ?", (agencia_id,))}
+    return render_template("red/no_compartir.html", agencias=_agencias_elegibles(agencia_id), bloqueadas=bloqueadas)
 
 
 @bp.route("/<int:pub_id>/cerrar")

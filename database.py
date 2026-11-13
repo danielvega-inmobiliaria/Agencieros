@@ -264,6 +264,46 @@ CREATE TABLE IF NOT EXISTS red_publicaciones (
     created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Sub Red (10/11/2026): cada agencia arma su red a gusto, sin grupos ni
+-- invitaciones. `red_publicaciones.visibilidad` = 'todos' (Toda la red) o
+-- 'solo' (Solo estas agencias: las de `red_destinos`). `red_bloqueos` =
+-- "No compartir con": agencias a las que NO se les muestra nada de lo que
+-- publica `agencia_id` (aplica a todas sus publicaciones).
+CREATE TABLE IF NOT EXISTS red_destinos (
+    publicacion_id INTEGER NOT NULL,
+    agencia_id INTEGER NOT NULL,
+    UNIQUE (publicacion_id, agencia_id)
+);
+-- Prospectos (10/11/2026): agencias a las que se les ofrece Agencieros, para
+-- contactarlas de a una por WhatsApp desde el Panel. Los datos NO viven en el
+-- código: se cargan desde el Panel con «Importar CSV».
+CREATE TABLE IF NOT EXISTS prospectos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agencia TEXT,
+    contacto TEXT,
+    whatsapp TEXT,
+    ciudad TEXT,
+    provincia TEXT,
+    grupo TEXT,
+    estado TEXT NOT NULL DEFAULT 'nuevo',
+    fecha_contacto TEXT,
+    notas TEXT,
+    mail TEXT,
+    instagram TEXT,
+    link TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS prospectos_config (
+    clave TEXT PRIMARY KEY,
+    valor TEXT
+);
+
+CREATE TABLE IF NOT EXISTS red_bloqueos (
+    agencia_id INTEGER NOT NULL,
+    bloqueada_id INTEGER NOT NULL,
+    UNIQUE (agencia_id, bloqueada_id)
+);
+
 -- Admin (17/09/2026): datos de perfil de la agencia -- logo, nombre
 -- comercial, dirección, teléfono y redes -- para usar en lo que mira el
 -- cliente final (ficha comercial) y más adelante en cualquier otro lugar
@@ -626,6 +666,22 @@ def _migrar_tasaciones(conn):
     columnas_actuales = {row[1] for row in conn.execute("PRAGMA table_info(tasaciones)")}
     if "toma_id" not in columnas_actuales:
         conn.execute("ALTER TABLE tasaciones ADD COLUMN toma_id INTEGER REFERENCES tomas_vehiculo(id)")
+
+
+def _migrar_deudas_toma(conn):
+    """Deudas del vehículo en la Toma (12/11/2026, pedido de Daniel): patentes y
+    multas verificadas en los portales oficiales (con captcha, a mano). El total
+    con deuda se descuenta del valor de toma en la Tasación; `tasaciones.deudas`
+    guarda lo descontado en esa tasación puntual."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(tomas_vehiculo)")}
+    for nombre, tipo in (("dominio", "TEXT"), ("deuda_pat_estado", "TEXT"), ("deuda_pat_monto", "REAL"),
+                         ("deuda_mul_estado", "TEXT"), ("deuda_mul_monto", "REAL"),
+                         ("deuda_nota", "TEXT"), ("deuda_fecha", "TEXT")):
+        if nombre not in cols:
+            conn.execute(f"ALTER TABLE tomas_vehiculo ADD COLUMN {nombre} {tipo}")
+    tcols = {r[1] for r in conn.execute("PRAGMA table_info(tasaciones)")}
+    if "deudas" not in tcols:
+        conn.execute("ALTER TABLE tasaciones ADD COLUMN deudas REAL")
 
 
 def _migrar_red_publicaciones(conn):
@@ -1577,6 +1633,9 @@ def _migrar_usuarios_agencia(conn):
     if "vehiculo_id" not in rcols:
         # Publicación en la Red atada a una unidad de Stock (check "Red").
         conn.execute("ALTER TABLE red_publicaciones ADD COLUMN vehiculo_id INTEGER")
+    if "visibilidad" not in rcols:
+        # Sub Red: 'todos' (Toda la red) o 'solo' (Solo estas agencias, ver red_destinos).
+        conn.execute("ALTER TABLE red_publicaciones ADD COLUMN visibilidad TEXT DEFAULT 'todos'")
     fcols = {r[1] for r in conn.execute("PRAGMA table_info(financiaciones)")}
     if "creado_por_id" not in fcols:
         conn.execute("ALTER TABLE financiaciones ADD COLUMN creado_por_id INTEGER")
@@ -1722,6 +1781,7 @@ def init_db():
     _migrar_tasaciones(conn)
     _migrar_financiaciones(conn)
     _migrar_red_publicaciones(conn)
+    _migrar_deudas_toma(conn)
     _limpiar_marketing_vehiculo(conn)
     _limpiar_tomas_demo(conn)
     _fusionar_duplicados_stock_manual(conn)

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}¿Quién lo ve? — Red de Agencieros{% endblock %}
+{% block header %}¿Quién ve esta publicación?{% endblock %}
+{% block content %}
+<div class="panel">
+  <p><b>{{ pub.marca }} {{ pub.modelo }} {{ pub.version or '' }} {{ pub.anio or '' }}</b></p>
+  <form method="post">
+    {% include "red/_quien_ve.html" %}
+    <button class="btn btn-primary" style="margin-top:16px;" type="submit">Guardar</button>
+    <a class="btn btn-secondary" style="margin-top:16px;" href="{{ url_for('red.index') }}">Volver</a>
+  </form>
+</div>
+{% endblock %}

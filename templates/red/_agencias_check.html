@@ -1,0 +1,13 @@
+{# Lista de agencias para tildar. Variables: agencias, marcadas (set de ids), nombre (name del input) #}
+{% if agencias %}
+<input type="search" placeholder="Buscar agencia…" oninput="var q=this.value.toLowerCase();this.parentNode.querySelectorAll('label.ag').forEach(function(l){l.style.display=l.textContent.toLowerCase().indexOf(q)<0?'none':'flex';});" style="margin-bottom:8px;">
+<div style="max-height:280px; overflow:auto; border:1px solid var(--border, #ddd); border-radius:8px; padding:6px 10px;">
+  {% for a in agencias %}
+  <label class="ag" style="display:flex; gap:10px; align-items:center; padding:7px 0; font-weight:500;">
+    <input type="checkbox" name="{{ nombre }}" value="{{ a.id }}" {{ 'checked' if a.id in marcadas else '' }} style="width:auto; margin:0;"> {{ a.nombre_agencia }}
+  </label>
+  {% endfor %}
+</div>
+{% else %}
+<p style="color:var(--text-dim);">Todavía no hay otras agencias registradas en la Red.</p>
+{% endif %}

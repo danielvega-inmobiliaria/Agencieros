@@ -90,9 +90,13 @@
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         Consulta de precios
       </a>
-      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('plataforma.') else '' }}" href="{{ url_for('plataforma.agencias') }}">
+      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('plataforma.') and not request.endpoint.startswith('plataforma.prospecto') else '' }}" href="{{ url_for('plataforma.agencias') }}">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
         Panel de Agencias
+      </a>
+      <a class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('plataforma.prospecto') else '' }}" href="{{ url_for('plataforma.prospectos') }}">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"></path><path d="M22 2l-7 20-4-9-9-4z"></path></svg>
+        Prospectos
       </a>
       <a class="nav-item {{ 'active' if request.endpoint in ('plataforma.mensajes',) else '' }}" href="{{ url_for('plataforma.mensajes') }}">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
@@ -124,6 +128,9 @@
           <a class="sidebar-user-logout" href="{{ url_for('cuenta.index') }}">Mi cuenta</a>
           <a class="sidebar-user-logout" href="{{ url_for('auth.logout') }}">Salir</a>
         </div>
+        {# PWA: «Instalar app» aparece solo si el navegador lo permite (Android/Chrome) o en iPhone (con instrucciones); no si ya está instalada. #}
+        <a href="#" id="btn-instalar" class="sidebar-user-logout" hidden style="display:none; margin-top:8px; font-weight:700;">📲 Instalar app</a>
+        <div id="tip-ios" hidden style="display:none; margin-top:6px; font-size:12px; opacity:.85;">En iPhone: tocá <b>Compartir</b> y después <b>Agregar a inicio</b>.</div>
       </div>
       {% elif es_superadmin %}
       <div class="sidebar-user">
@@ -197,5 +204,28 @@
 {% for evento in fb_eventos_pendientes %}
 <script>if (window.fbq) { fbq('track', '{{ evento }}'); }</script>
 {% endfor %}
+<script>
+(function () {
+  // PWA (10/11/2026): service worker (modo básico sin conexión) y botón «Instalar app».
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
+  }
+  var btn = document.getElementById('btn-instalar'), tip = document.getElementById('tip-ios');
+  if (!btn) return;
+  var instalada = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  if (instalada) return;
+  var diferido = null;
+  function mostrar() { btn.hidden = false; btn.style.display = 'block'; }
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); diferido = e; mostrar(); });
+  window.addEventListener('appinstalled', function () { btn.style.display = 'none'; if (tip) tip.style.display = 'none'; });
+  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  if (ios) mostrar();
+  btn.addEventListener('click', function (ev) {
+    ev.preventDefault();
+    if (diferido) { diferido.prompt(); diferido.userChoice.then(function () { diferido = null; btn.style.display = 'none'; }); }
+    else if (ios && tip) { tip.hidden = false; tip.style.display = 'block'; }
+  });
+})();
+</script>
 </body>
 </html>

@@ -15,3 +15,6 @@ desktop.ini
 
 # Material de trabajo (precios, revistas)
 INFOAUTO/
+
+# Datos de prospectos (teléfonos): no subir al repo
+PROSPECTOS_AGENCIEROS*

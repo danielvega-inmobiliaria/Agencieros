@@ -262,7 +262,7 @@ def create_app():
             # Landing pública (21/09/2026): "index" decide solo según el host
             # (landing en agencieros.net.ar, login en la app) e "inicio" es
             # la misma landing para poder verla desde la app.
-            "index", "inicio", "robots_txt",
+            "index", "inicio", "robots_txt", "service_worker",
         }
         if (request.endpoint and request.endpoint not in publicas
                 and "agencia_id" not in session and "superadmin_id" not in session):
@@ -382,6 +382,16 @@ def create_app():
     @app.route("/inicio")
     def inicio():
         return _render_landing()
+
+    @app.route("/sw.js")
+    def service_worker():
+        # PWA (10/11/2026): el service worker tiene que servirse desde la raíz
+        # para controlar toda la app; sin caché del propio archivo para que
+        # las actualizaciones lleguen en el próximo ingreso.
+        resp = send_from_directory(app.static_folder, "sw.js", mimetype="application/javascript")
+        resp.headers["Cache-Control"] = "no-cache"
+        resp.headers["Service-Worker-Allowed"] = "/"
+        return resp
 
     @app.route("/robots.txt")
     def robots_txt():

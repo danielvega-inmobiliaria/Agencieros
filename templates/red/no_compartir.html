@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}No compartir con — Red de Agencieros{% endblock %}
+{% block header %}No compartir con{% endblock %}
+{% block content %}
+<div class="panel">
+  <p>Tildá las agencias a las que <b>no</b> querés mostrarles nada de lo que publicás en la Red (ni ofertas ni búsquedas, ni en sus matches). Aplica a todas tus publicaciones, las de ahora y las que vengan.</p>
+  <form method="post">
+    {% with marcadas=bloqueadas, nombre='bloqueadas' %}{% include "red/_agencias_check.html" %}{% endwith %}
+    <button class="btn btn-primary" style="margin-top:16px;" type="submit">Guardar</button>
+    <a class="btn btn-secondary" style="margin-top:16px;" href="{{ url_for('red.index') }}">Volver</a>
+  </form>
+</div>
+{% endblock %}

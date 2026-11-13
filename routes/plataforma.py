@@ -333,3 +333,167 @@ def renovar_codigo_demo():
     execute("UPDATE agencias SET demo_codigo = ? WHERE es_demo = 1", (secrets.token_urlsafe(6),))
     flash("Código de demo renovado: el link anterior dejó de funcionar y se cerraron las sesiones abiertas.", "success")
     return redirect(url_for("plataforma.agencias"))
+
+
+# ---------------------------------------------------------------------
+# Prospectos (10/11/2026): agencias a las que se les ofrece Agencieros.
+# Se contactan DE A UNA, con mensaje personal por WhatsApp (nada de envíos
+# masivos: riesgo de bloqueo del número). El botón abre WhatsApp con el
+# mensaje base ya armado y marca al prospecto como «contactado».
+# ---------------------------------------------------------------------
+ESTADOS_PROSPECTO = [
+    ("nuevo", "Nuevo"), ("contactado", "Contactado"), ("respondio", "Respondió"),
+    ("interesado", "Interesado"), ("registrado", "Registrado"), ("descartado", "Descartado"),
+]
+_MENSAJE_BASE_DEFAULT = (
+    "Hola {nombre}, soy Daniel, de Italia Automotores (Roldán). Armé una app para agencias de autos, "
+    "Agencieros: consulta de precios con la revista del mes, stock, web propia para tu agencia y una red "
+    "para compartir autos entre colegas. ¿Te cuento cómo funciona? app.agencieros.net.ar"
+)
+_POR_PAGINA = 50
+
+
+def _mensaje_base():
+    fila = query("SELECT valor FROM prospectos_config WHERE clave = 'mensaje'", one=True)
+    return (fila["valor"] if fila and fila["valor"] else _MENSAJE_BASE_DEFAULT)
+
+
+def _solo_digitos(x):
+    return "".join(ch for ch in (x or "") if ch.isdigit())
+
+
+def _primer_nombre(contacto, agencia):
+    """Primer nombre de la persona de contacto; si no hay, vacío (el saludo queda «Hola»)."""
+    base = (contacto or "").strip()
+    if not base:
+        return ""
+    return base.split()[0].strip(" ,.-").capitalize()
+
+
+def _armar_mensaje(plantilla, p):
+    texto = plantilla.replace("{agencia}", (p["agencia"] or "").strip())
+    nombre = _primer_nombre(p["contacto"], p["agencia"])
+    texto = texto.replace("{nombre}", nombre)
+    # «Hola ,» cuando no hay nombre -> «Hola,»
+    return texto.replace(" ,", ",").replace("Hola  ", "Hola ").strip()
+
+
+@bp.route("/prospectos")
+def prospectos():
+    from urllib.parse import quote
+    estado = request.args.get("estado", "nuevo")
+    grupo = (request.args.get("grupo") or "").strip()
+    q = (request.args.get("q") or "").strip()
+    solo_wa = request.args.get("wa", "1") == "1"
+    p_raw = request.args.get("p", "1") or "1"
+    pagina = max(1, int(p_raw)) if p_raw.isdigit() else 1
+
+    cond, params = [], []
+    if estado and estado != "todos":
+        cond.append("estado = ?"); params.append(estado)
+    if grupo:
+        cond.append("grupo = ?"); params.append(grupo)
+    if solo_wa:
+        cond.append("COALESCE(whatsapp, '') != ''")
+    if q:
+        cond.append("(LOWER(COALESCE(agencia,'')) LIKE ? OR LOWER(COALESCE(contacto,'')) LIKE ? OR LOWER(COALESCE(ciudad,'')) LIKE ?)")
+        params += [f"%{q.lower()}%"] * 3
+    donde = (" WHERE " + " AND ".join(cond)) if cond else ""
+    total = query(f"SELECT COUNT(*) AS c FROM prospectos{donde}", tuple(params), one=True)["c"]
+    filas = query(f"SELECT * FROM prospectos{donde} ORDER BY id LIMIT ? OFFSET ?",
+                  tuple(params) + (_POR_PAGINA, (pagina - 1) * _POR_PAGINA))
+    plantilla = _mensaje_base()
+    items = []
+    for f in filas:
+        num = _solo_digitos(f["whatsapp"])
+        link = f"https://wa.me/{num}?text={quote(_armar_mensaje(plantilla, f))}" if len(num) >= 10 else None
+        items.append({"p": f, "wa": link})
+    conteo = {r["estado"]: r["c"] for r in query("SELECT estado, COUNT(*) AS c FROM prospectos GROUP BY estado")}
+    grupos = [r["grupo"] for r in query("SELECT DISTINCT grupo FROM prospectos WHERE COALESCE(grupo,'') != '' ORDER BY grupo")]
+    return render_template(
+        "plataforma/prospectos.html", items=items, total=total, pagina=pagina,
+        paginas=max(1, -(-total // _POR_PAGINA)), estado=estado, grupo=grupo, q=q, solo_wa=solo_wa,
+        estados=ESTADOS_PROSPECTO, conteo=conteo, total_general=sum(conteo.values()), grupos=grupos,
+        mensaje=plantilla,
+    )
+
+
+@bp.route("/prospectos/mensaje", methods=["POST"])
+def prospectos_mensaje():
+    texto = (request.form.get("mensaje") or "").strip()[:1000]
+    if not texto:
+        texto = _MENSAJE_BASE_DEFAULT
+    execute("INSERT INTO prospectos_config (clave, valor) VALUES ('mensaje', ?) "
+            "ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor", (texto,))
+    flash("Mensaje base guardado.", "success")
+    return redirect(request.referrer or url_for("plataforma.prospectos"))
+
+
+@bp.route("/prospectos/<int:pid>/estado", methods=["POST"])
+def prospecto_estado(pid):
+    nuevo = request.form.get("estado") or (request.get_json(silent=True) or {}).get("estado")
+    if nuevo not in {e for e, _ in ESTADOS_PROSPECTO}:
+        abort(400)
+    if nuevo == "contactado":
+        execute("UPDATE prospectos SET estado = ?, fecha_contacto = datetime('now', '-3 hours') WHERE id = ?", (nuevo, pid))
+    else:
+        execute("UPDATE prospectos SET estado = ? WHERE id = ?", (nuevo, pid))
+    if request.is_json or request.headers.get("X-Requested-With") == "fetch":
+        return {"ok": True}
+    return redirect(request.referrer or url_for("plataforma.prospectos"))
+
+
+@bp.route("/prospectos/<int:pid>/contactado", methods=["POST"])
+def prospecto_contactado(pid):
+    """Se llama al tocar «WhatsApp»: pasa de nuevo a contactado (no pisa estados más avanzados)."""
+    execute("UPDATE prospectos SET estado = CASE WHEN estado = 'nuevo' THEN 'contactado' ELSE estado END, "
+            "fecha_contacto = datetime('now', '-3 hours') WHERE id = ?", (pid,))
+    return {"ok": True}
+
+
+@bp.route("/prospectos/importar", methods=["POST"])
+def prospectos_importar():
+    """Importa un CSV (UTF-8) con columnas: agencia, contacto, whatsapp, ciudad,
+    provincia, grupo, estado, fecha_contacto, notas, mail, instagram, link.
+    No duplica: se saltea al que ya existe por WhatsApp (o por agencia + grupo)."""
+    import csv, io
+    archivo = request.files.get("archivo")
+    if not archivo or not archivo.filename:
+        flash("Elegí el archivo CSV a importar.", "error")
+        return redirect(url_for("plataforma.prospectos"))
+    try:
+        texto = archivo.read().decode("utf-8-sig")
+    except UnicodeDecodeError:
+        flash("El archivo tiene que estar guardado en UTF-8.", "error")
+        return redirect(url_for("plataforma.prospectos"))
+    lector = csv.DictReader(io.StringIO(texto))
+    ya_wa = {_solo_digitos(r["whatsapp"]) for r in query("SELECT whatsapp FROM prospectos") if _solo_digitos(r["whatsapp"])}
+    ya_ag = {((r["agencia"] or "").strip().lower(), (r["grupo"] or "").strip().lower()) for r in query("SELECT agencia, grupo FROM prospectos")}
+    estados = {e for e, _ in ESTADOS_PROSPECTO}
+    nuevos = saltados = 0
+    for fila in lector:
+        agencia = (fila.get("agencia") or "").strip()
+        wa = _solo_digitos(fila.get("whatsapp"))
+        clave = (agencia.lower(), (fila.get("grupo") or "").strip().lower())
+        if not agencia and not wa:
+            continue
+        if (wa and wa in ya_wa) or (not wa and clave in ya_ag):
+            saltados += 1
+            continue
+        est = (fila.get("estado") or "nuevo").strip().lower()
+        execute(
+            """INSERT INTO prospectos (agencia, contacto, whatsapp, ciudad, provincia, grupo, estado,
+                                       fecha_contacto, notas, mail, instagram, link)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (agencia, (fila.get("contacto") or "").strip() or None, wa or None,
+             (fila.get("ciudad") or "").strip() or None, (fila.get("provincia") or "").strip() or None,
+             (fila.get("grupo") or "").strip() or None, est if est in estados else "nuevo",
+             (fila.get("fecha_contacto") or "").strip() or None, (fila.get("notas") or "").strip() or None,
+             (fila.get("mail") or "").strip() or None, (fila.get("instagram") or "").strip() or None,
+             (fila.get("link") or "").strip() or None))
+        if wa:
+            ya_wa.add(wa)
+        ya_ag.add(clave)
+        nuevos += 1
+    flash(f"Importados {nuevos} prospectos ({saltados} ya estaban).", "success")
+    return redirect(url_for("plataforma.prospectos"))
