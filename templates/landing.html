@@ -189,9 +189,12 @@
     .seguinos h3 { margin: 0 0 6px; font-size: 1.15rem; }
     .seguinos p { margin: 0 0 14px; color: var(--dim); font-size: .95rem; }
     .seguinos .cta-row { justify-content: center; }
-    footer { border-top: 1px solid var(--border); padding: 32px 0 44px; color: var(--dim); font-size: .85rem; }
+    footer { border-top: 1px solid var(--border); padding: 22px 0 10px; color: var(--dim); font-size: .85rem; }
     footer .wrap { display: flex; justify-content: center; text-align: center; }
     footer .flogo { font-weight: 800; letter-spacing: .06em; color: var(--gold-light); }
+    /* Crédito DanguiApps: flota al pie de la pantalla y queda fijo en su lugar al llegar al pie real */
+    .credito { position: sticky; bottom: 0; z-index: 40; text-align: center; padding: 9px 12px 12px; color: var(--dim); font-size: .85rem; background: rgba(10, 18, 29, .96); box-shadow: 0 -8px 16px rgba(0,0,0,.35); }
+    .credito a { color: var(--gold-light); font-weight: 700; }
     footer a { transition: color .2s; }
     footer a:hover { color: var(--gold-light); }
 
@@ -462,7 +465,7 @@
     </div>
   </footer>
   <!-- Pie DanguiApps (regla transversal): cambiar solo el href para actualizar el enlace -->
-  <div style="text-align:center;padding:0 12px 28px;color:var(--dim);font-size:.85rem">{{ t.pie_dev }} <a href="https://danguiapps.com.ar/?utm_source=agencieros&utm_medium=pie" target="_blank" rel="noopener" style="color:var(--gold-light);font-weight:700">DanguiApps</a></div>
+  <div class="credito">{{ t.pie_dev }} <a href="https://danguiapps.com.ar/?utm_source=agencieros&utm_medium=pie" target="_blank" rel="noopener">DanguiApps</a></div>
 
 </body>
 </html>
