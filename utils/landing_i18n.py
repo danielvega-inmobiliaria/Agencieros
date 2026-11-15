@@ -174,6 +174,7 @@ ES = {
     "seguinos_p": "Novedades de la app, tips para tu agencia y nuevas funciones.",
     "pie_lema": "Consultá, tasá, comprá, vendé.",
     "pie_alt": "Desarrollado por DanguiApps",
+    "pie_dev": "Un desarrollo de",
 }
 
 EN = {
@@ -318,6 +319,7 @@ EN = {
     "seguinos_p": "App news, tips for your dealership and new features.",
     "pie_lema": "Check, appraise, buy, sell.",
     "pie_alt": "Developed by DanguiApps",
+    "pie_dev": "Developed by",
 }
 
 TEXTOS = {"es": ES, "en": EN}
