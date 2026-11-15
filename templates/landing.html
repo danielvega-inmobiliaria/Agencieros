@@ -307,11 +307,11 @@
     <section class="showcase" id="funciones" aria-label="{{ t.aria_pantallas }}">
       <div class="wrap">
         <div class="showcase-track">
-          <div class="showcase-item"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-precios.webp') }}" width="540" height="1169" alt="{{ t.alt_precios }}"></figure><div class="cap">{{ t.sc[0][0] }}</div><div class="sub">{{ t.sc[0][1] }}</div></div>
-          <div class="showcase-item"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-pedidos.webp') }}" width="540" height="1169" alt="{{ t.alt_pedidos }}" loading="lazy"></figure><div class="cap">{{ t.sc[1][0] }}</div><div class="sub">{{ t.sc[1][1] }}</div></div>
-          <div class="showcase-item"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-tasacion.webp') }}" width="540" height="1169" alt="{{ t.alt_tasacion }}" loading="lazy"></figure><div class="cap">{{ t.sc[2][0] }}</div><div class="sub">{{ t.sc[2][1] }}</div></div>
-          <div class="showcase-item"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-dashboard.webp') }}" width="540" height="1003" alt="{{ t.alt_dashboard }}" loading="lazy"></figure><div class="cap">{{ t.sc[3][0] }}</div><div class="sub">{{ t.sc[3][1] }}</div></div>
-          <div class="showcase-item"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-red.webp') }}" width="540" height="1169" alt="{{ t.alt_red }}" loading="lazy"></figure><div class="cap">{{ t.sc[4][0] }}</div><div class="sub">{{ t.sc[4][1] }}</div></div>
+          <div class="showcase-item"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-precios' ~ t.img_sfx ~ '.webp') }}" width="540" height="1169" alt="{{ t.alt_precios }}"></figure><div class="cap">{{ t.sc[0][0] }}</div><div class="sub">{{ t.sc[0][1] }}</div></div>
+          <div class="showcase-item"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-pedidos' ~ t.img_sfx ~ '.webp') }}" width="540" height="1169" alt="{{ t.alt_pedidos }}" loading="lazy"></figure><div class="cap">{{ t.sc[1][0] }}</div><div class="sub">{{ t.sc[1][1] }}</div></div>
+          <div class="showcase-item"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-tasacion' ~ t.img_sfx ~ '.webp') }}" width="540" height="1169" alt="{{ t.alt_tasacion }}" loading="lazy"></figure><div class="cap">{{ t.sc[2][0] }}</div><div class="sub">{{ t.sc[2][1] }}</div></div>
+          <div class="showcase-item"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-dashboard' ~ t.img_sfx ~ '.webp') }}" width="540" height="1003" alt="{{ t.alt_dashboard }}" loading="lazy"></figure><div class="cap">{{ t.sc[3][0] }}</div><div class="sub">{{ t.sc[3][1] }}</div></div>
+          <div class="showcase-item"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-red' ~ t.img_sfx ~ '.webp') }}" width="540" height="1169" alt="{{ t.alt_red }}" loading="lazy"></figure><div class="cap">{{ t.sc[4][0] }}</div><div class="sub">{{ t.sc[4][1] }}</div></div>
         </div>
         <p class="hint">{{ t.hint }}</p>
       </div>
@@ -331,7 +331,7 @@
           <p class="sec-lead">{{ t.s1_lead }}</p>
           <ul class="ticks">{% for x in t.s1_ticks %}<li>{{ x }}</li>{% endfor %}</ul>
         </div>
-        <div class="split-media"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-tasacion.webp') }}" width="540" height="1169" alt="{{ t.alt_tasacion2 }}" loading="lazy"></figure></div>
+        <div class="split-media"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-tasacion' ~ t.img_sfx ~ '.webp') }}" width="540" height="1169" alt="{{ t.alt_tasacion2 }}" loading="lazy"></figure></div>
       </div>
     </section>
 
@@ -344,8 +344,8 @@
           <ul class="ticks">{% for x in t.s2_ticks %}<li>{{ x }}</li>{% endfor %}</ul>
         </div>
         <div class="split-media"><div class="duo">
-          <figure class="phone"><img src="{{ url_for('static', filename='landing/m-stock.webp') }}" width="540" height="1169" alt="{{ t.alt_stock }}" loading="lazy"></figure>
-          <figure class="phone"><img src="{{ url_for('static', filename='landing/m-ficha.webp') }}" width="540" height="1169" alt="{{ t.alt_ficha }}" loading="lazy"></figure>
+          <figure class="phone"><img src="{{ url_for('static', filename='landing/m-stock' ~ t.img_sfx ~ '.webp') }}" width="540" height="1169" alt="{{ t.alt_stock }}" loading="lazy"></figure>
+          <figure class="phone"><img src="{{ url_for('static', filename='landing/m-ficha' ~ t.img_sfx ~ '.webp') }}" width="540" height="1169" alt="{{ t.alt_ficha }}" loading="lazy"></figure>
         </div></div>
       </div>
     </section>
@@ -373,7 +373,7 @@
           <ul class="ticks">{% for x in t.s4_ticks %}<li>{{ x }}</li>{% endfor %}</ul>
           <p style="margin:26px 0 0;"><span class="status live">{{ t.disponible }}</span></p>
         </div>
-        <div class="split-media"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-fin.webp') }}" width="540" height="1169" alt="{{ t.alt_fin }}" loading="lazy"></figure></div>
+        <div class="split-media"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-fin' ~ t.img_sfx ~ '.webp') }}" width="540" height="1169" alt="{{ t.alt_fin }}" loading="lazy"></figure></div>
       </div>
     </section>
 
@@ -385,7 +385,7 @@
           <p class="sec-lead">{{ t.s5_lead }}</p>
           <ul class="ticks">{% for x in t.s5_ticks %}<li>{{ x }}</li>{% endfor %}</ul>
         </div>
-        <div class="split-media"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-red.webp') }}" width="540" height="1169" alt="{{ t.alt_red }}" loading="lazy"></figure></div>
+        <div class="split-media"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-red' ~ t.img_sfx ~ '.webp') }}" width="540" height="1169" alt="{{ t.alt_red }}" loading="lazy"></figure></div>
       </div>
     </section>
 
@@ -397,7 +397,7 @@
           <p class="sec-lead">{{ t.s6_lead }}</p>
           <ul class="ticks">{% for x in t.s6_ticks %}<li>{{ x }}</li>{% endfor %}</ul>
         </div>
-        <div class="split-media"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-dashboard.webp') }}" width="540" height="1003" alt="{{ t.alt_dashboard }}" loading="lazy"></figure></div>
+        <div class="split-media"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-dashboard' ~ t.img_sfx ~ '.webp') }}" width="540" height="1003" alt="{{ t.alt_dashboard }}" loading="lazy"></figure></div>
       </div>
     </section>
 
@@ -462,7 +462,7 @@
     </div>
   </footer>
   <!-- Pie DanguiApps (regla transversal): cambiar solo el href para actualizar el enlace -->
-  <div style="text-align:center;padding:14px 12px 22px"><a href="https://danguiapps.com.ar/?utm_source=agencieros&utm_medium=pie" target="_blank" rel="noopener" aria-label="{{ t.pie_alt }}"><img src="/static/img/pie-danguiapps.webp" alt="{{ t.pie_alt }}" width="320" height="39" loading="lazy" style="max-width:100%;height:auto"></a></div>
+  <div style="text-align:center;padding:14px 12px 22px"><a href="https://danguiapps.com.ar/?utm_source=agencieros&utm_medium=pie" target="_blank" rel="noopener" aria-label="{{ t.pie_alt }}"><img src="/static/img/pie-danguiapps{{ t.img_sfx }}.webp" alt="{{ t.pie_alt }}" width="320" height="39" loading="lazy" style="max-width:100%;height:auto"></a></div>
 
 </body>
 </html>

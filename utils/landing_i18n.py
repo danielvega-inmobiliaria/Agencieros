@@ -26,6 +26,7 @@ def elegir_idioma(args, cookies, accept_language=""):
 ES = {
     "html_lang": "es",
     "brand": "AGENCIEROS",
+    "img_sfx": "",
     "og_locale": "es_AR",
     "title": "AGENCIEROS — La app para agencias de autos usados de Rosario",
     "meta_desc": "La app para agencias de autos usados de Rosario y zona: precios de referencia con avisos reales, stock, toma y tasación con checklist de 44 puntos, web propia de tu agencia, compartir en redes, financiación y red de agencias. Probala gratis 30 días.",
@@ -178,6 +179,7 @@ ES = {
 EN = {
     "html_lang": "en",
     "brand": "CarDealers",
+    "img_sfx": "-en",
     "og_locale": "en_US",
     "title": "CarDealers — The app for used-car dealerships in Rosario, Argentina",
     "meta_desc": "The app for used-car dealerships in Rosario and nearby: reference prices backed by real listings, inventory, trade-in appraisal with a 44-point checklist, your own dealership website, social media sharing, financing and a network of dealerships. Try it free for 30 days.",
