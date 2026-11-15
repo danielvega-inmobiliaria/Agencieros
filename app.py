@@ -366,11 +366,21 @@ def create_app():
         # se ve la landing desde la propia app (/inicio) alcanzan los links
         # relativos.
         en_landing = _es_host_landing()
-        return render_template(
+        from utils.landing_i18n import TEXTOS, elegir_idioma
+        lang, guardar = elegir_idioma(
+            request.args, request.cookies, request.headers.get("Accept-Language", "")
+        )
+        resp = Response(render_template(
             "landing.html",
             app_url=APP_URL if en_landing else "",
             landing_url=LANDING_URL,
-        )
+            lang=lang,
+            t=TEXTOS[lang],
+        ))
+        resp.headers["Vary"] = "Accept-Language, Cookie"
+        if guardar:
+            resp.set_cookie("lang", lang, max_age=60 * 60 * 24 * 365, samesite="Lax")
+        return resp
 
     @app.route("/")
     def index():

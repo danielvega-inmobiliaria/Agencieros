@@ -1,18 +1,22 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="{{ t.html_lang }}">
 <head>
   <meta charset="UTF-8">
   {% include "partials/favicon_agencieros.html" %}
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AGENCIEROS — La app para agencias de autos usados de Rosario</title>
-  <meta name="description" content="La app para agencias de autos usados de Rosario y zona: precios de referencia con avisos reales, stock, toma y tasación con checklist de 44 puntos, señas, ventas, cuotas y red de agencias. Probala gratis 30 días.">
+  <title>{{ t.title }}</title>
+  <meta name="description" content="{{ t.meta_desc }}">
   <meta name="theme-color" content="#0b1420">
-  <link rel="canonical" href="{{ landing_url }}/">
+  <link rel="canonical" href="{{ landing_url }}/{% if lang == 'en' %}?lang=en{% endif %}">
+  <link rel="alternate" hreflang="es" href="{{ landing_url }}/?lang=es">
+  <link rel="alternate" hreflang="en" href="{{ landing_url }}/?lang=en">
+  <link rel="alternate" hreflang="x-default" href="{{ landing_url }}/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="AGENCIEROS">
-  <meta property="og:title" content="AGENCIEROS — La plataforma para agencias de autos">
-  <meta property="og:description" content="Precios, stock, toma y tasación, fichas para WhatsApp y una red de agencias.">
-  <meta property="og:url" content="{{ landing_url }}/">
+  <meta property="og:locale" content="{{ t.og_locale }}">
+  <meta property="og:title" content="{{ t.og_title }}">
+  <meta property="og:description" content="{{ t.og_desc }}">
+  <meta property="og:url" content="{{ landing_url }}/{% if lang == 'en' %}?lang=en{% endif %}">
   <meta property="og:image" content="{{ landing_url }}/static/landing/og.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -226,11 +230,23 @@
       html { scroll-behavior: auto; }
       .btn, .top nav a.link, footer a { transition: none; }
     }
+  
+    /* ---------- Selector de idioma ---------- */
+    .lang { display: inline-flex; border: 1px solid var(--border-2); border-radius: 6px; overflow: hidden; }
+    .lang a { padding: 8px 11px; font-size: .78rem; font-weight: 700; letter-spacing: .06em; color: var(--dim); }
+    .lang a:hover { color: var(--text); }
+    .lang a.on { background: var(--gold); color: #171006; }
+    .feat-grid { display: grid; gap: 22px; margin-top: 8px; }
+    .feat { border: 1px solid var(--border); border-radius: 8px; background: var(--card); padding: 28px 26px; }
+    .feat .ico { color: var(--gold); width: 28px; height: 28px; margin-bottom: 12px; display: block; }
+    .feat h3 { margin: 0 0 4px; font-size: 1.2rem; }
+    @media (min-width: 720px) { .feat-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 520px) { .top .actions { gap: 8px; } .top .actions .btn-gold { padding: 9px 12px; font-size: .82rem; } }
   </style>
 </head>
 <body>
 
-  <svg class="sprite" aria-hidden="true" focusable="false">
+<svg class="sprite" aria-hidden="true" focusable="false">
     <symbol id="i-price" viewBox="0 0 24 24"><path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z"/><circle cx="7.5" cy="7.5" r="1"/></symbol>
     <symbol id="i-car" viewBox="0 0 24 24"><path d="M19 17h2a1 1 0 0 0 1-1v-3a2 2 0 0 0-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4a1 1 0 0 0 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></symbol>
@@ -240,18 +256,25 @@
     <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9M13 17V5M8 17v-3"/></symbol>
     <symbol id="i-bank" viewBox="0 0 24 24"><path d="M3 22h18"/><path d="M6 18v-7M10 18v-7M14 18v-7M18 18v-7"/><path d="m12 2 8 5H4z"/></symbol>
     <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+      <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20a15 15 0 0 1 0-20z"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></symbol>
   </svg>
 
   <header class="top">
     <div class="wrap">
       <a class="logo" href="#inicio">AGENCIEROS</a>
       <nav>
-        <a class="link" href="#funciones">Funciones</a>
-        <a class="link" href="#como-funciona">Cómo funciona</a>
-        <a class="link" href="#modulos">Módulos</a>
+        <a class="link" href="#funciones">{{ t.nav_funciones }}</a>
+        <a class="link" href="#como-funciona">{{ t.nav_como }}</a>
+        <a class="link" href="#modulos">{{ t.nav_modulos }}</a>
         <div class="actions">
-          <a class="btn btn-ghost btn-sm" href="{{ app_url }}{{ url_for('auth.login') }}">Ingresar</a>
-          <a class="btn btn-gold btn-sm" href="{{ app_url }}{{ url_for('auth.registro') }}" onclick="if(window.fbq){fbq('track','Lead');}">Registrá tu agencia</a>
+          <div class="lang" role="group" aria-label="{{ t.idioma_label }}">
+            <a href="?lang=es" hreflang="es" class="{% if lang == 'es' %}on{% endif %}">ES</a>
+            <a href="?lang=en" hreflang="en" class="{% if lang == 'en' %}on{% endif %}">EN</a>
+          </div>
+          <a class="btn btn-ghost btn-sm" href="{{ app_url }}{{ url_for('auth.login') }}">{{ t.btn_ingresar }}</a>
+          <a class="btn btn-gold btn-sm" href="{{ app_url }}{{ url_for('auth.registro') }}" onclick="if(window.fbq){fbq('track','Lead');}">{{ t.btn_registro }}</a>
         </div>
       </nav>
     </div>
@@ -259,18 +282,18 @@
 
   <main id="inicio">
 
-    <!-- ===== Hero ===== -->
     <section class="hero">
       <div class="wrap hero-grid">
         <div>
-          <div class="eyebrow">Para agencias de autos usados de Rosario y zona</div>
-          <h1>Todo el negocio de tu agencia, <em>en el celular.</em></h1>
-          <p class="lead">Consultá el precio de referencia con avisos reales de Rosario, cargá tu stock, tasá cada toma con checklist de 44 puntos, registrá señas, ventas y cuotas, y trabajá en red con otras agencias de la zona.</p>
+          <div class="eyebrow">{{ t.eyebrow_hero }}</div>
+          <h1>{{ t.h1_a }}<em>{{ t.h1_b }}</em></h1>
+          <p class="lead">{{ t.lead }}</p>
           <div class="cta-row">
-            <a class="btn btn-gold" href="{{ app_url }}{{ url_for('auth.registro') }}" onclick="if(window.fbq){fbq('track','Lead');}">Probala gratis 30 días</a>
-            <a class="btn btn-ghost" href="{{ app_url }}{{ url_for('auth.login') }}">Ya tengo cuenta</a>
+            <a class="btn btn-gold" href="{{ app_url }}{{ url_for('auth.registro') }}" onclick="if(window.fbq){fbq('track','Lead');}">{{ t.btn_gratis }}</a>
+            <a class="btn btn-ghost" href="{{ app_url }}{{ url_for('auth.demo') }}">{{ t.btn_demo }}</a>
+            <a class="btn btn-ghost" href="{{ app_url }}{{ url_for('auth.login') }}">{{ t.btn_tengo }}</a>
           </div>
-          <p class="hero-note">30 días gratis, sin tarjeta. Se usa desde el celular o la compu, sin instalar nada.</p>
+          <p class="hero-note">{{ t.hero_note }}</p>
         </div>
         <div class="video-frame">
           <video autoplay muted loop playsinline controls preload="metadata"
@@ -281,180 +304,137 @@
       </div>
     </section>
 
-    <!-- ===== Celulares ===== -->
-    <section class="showcase" id="funciones" aria-label="Pantallas de la app">
+    <section class="showcase" id="funciones" aria-label="{{ t.aria_pantallas }}">
       <div class="wrap">
         <div class="showcase-track">
-          <div class="showcase-item">
-            <figure class="phone"><img src="{{ url_for('static', filename='landing/m-precios.webp') }}" width="540" height="1169" alt="Consulta de precios: resultado y historial de valores de referencia"></figure>
-            <div class="cap">Precios al instante</div>
-            <div class="sub">Valor de referencia e historial por año</div>
-          </div>
-          <div class="showcase-item">
-            <figure class="phone"><img src="{{ url_for('static', filename='landing/m-pedidos.webp') }}" width="540" height="1169" alt="Banco de pedidos: lo que busca cada cliente" loading="lazy"></figure>
-            <div class="cap">Banco de pedidos</div>
-            <div class="sub">Lo que busca cada cliente</div>
-          </div>
-          <div class="showcase-item">
-            <figure class="phone"><img src="{{ url_for('static', filename='landing/m-tasacion.webp') }}" width="540" height="1169" alt="Tasación de una toma con qué hay que reparar y resultado" loading="lazy"></figure>
-            <div class="cap">Toma y tasación</div>
-            <div class="sub">Inspección de 44 puntos</div>
-          </div>
-          <div class="showcase-item">
-            <figure class="phone"><img src="{{ url_for('static', filename='landing/m-dashboard.webp') }}" width="540" height="1003" alt="Dashboard con stock por estado, ventas y gastos" loading="lazy"></figure>
-            <div class="cap">Dashboard</div>
-            <div class="sub">Tu agencia de un vistazo</div>
-          </div>
-          <div class="showcase-item">
-            <figure class="phone"><img src="{{ url_for('static', filename='landing/m-red.webp') }}" width="540" height="1169" alt="Red de Agencieros: ofertas y búsquedas de otras agencias" loading="lazy"></figure>
-            <div class="cap">Red de Agencieros</div>
-            <div class="sub">Ofrecé y buscá entre agencias de Rosario</div>
-          </div>
+          <div class="showcase-item"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-precios.webp') }}" width="540" height="1169" alt="{{ t.alt_precios }}"></figure><div class="cap">{{ t.sc[0][0] }}</div><div class="sub">{{ t.sc[0][1] }}</div></div>
+          <div class="showcase-item"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-pedidos.webp') }}" width="540" height="1169" alt="{{ t.alt_pedidos }}" loading="lazy"></figure><div class="cap">{{ t.sc[1][0] }}</div><div class="sub">{{ t.sc[1][1] }}</div></div>
+          <div class="showcase-item"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-tasacion.webp') }}" width="540" height="1169" alt="{{ t.alt_tasacion }}" loading="lazy"></figure><div class="cap">{{ t.sc[2][0] }}</div><div class="sub">{{ t.sc[2][1] }}</div></div>
+          <div class="showcase-item"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-dashboard.webp') }}" width="540" height="1003" alt="{{ t.alt_dashboard }}" loading="lazy"></figure><div class="cap">{{ t.sc[3][0] }}</div><div class="sub">{{ t.sc[3][1] }}</div></div>
+          <div class="showcase-item"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-red.webp') }}" width="540" height="1169" alt="{{ t.alt_red }}" loading="lazy"></figure><div class="cap">{{ t.sc[4][0] }}</div><div class="sub">{{ t.sc[4][1] }}</div></div>
         </div>
-        <p class="hint">Deslizá para ver más</p>
+        <p class="hint">{{ t.hint }}</p>
       </div>
     </section>
 
-    <!-- ===== Tira ===== -->
     <div class="strip">
       <div class="wrap strip-grid">
-        <div class="chip"><svg class="ico"><use href="#i-price"/></svg><b>Consulta de precios</b><span>Referencia en segundos</span></div>
-        <div class="chip"><svg class="ico"><use href="#i-car"/></svg><b>Stock y ventas</b><span>Con seña, permuta o crédito</span></div>
-        <div class="chip"><svg class="ico"><use href="#i-check"/></svg><b>Toma y tasación</b><span>Inspección de 44 puntos</span></div>
-        <div class="chip"><svg class="ico"><use href="#i-chat"/></svg><b>Fichas por WhatsApp</b><span>Listas para compartir</span></div>
-        <div class="chip"><svg class="ico"><use href="#i-users"/></svg><b>Red de agencias</b><span>Pedidos y ofertas</span></div>
+        {% for ic, b, sp in t.chips %}<div class="chip"><svg class="ico"><use href="#{{ ic }}"/></svg><b>{{ b }}</b><span>{{ sp }}</span></div>{% endfor %}
       </div>
     </div>
 
-    <!-- ===== Tasación ===== -->
     <section class="block">
       <div class="wrap split">
         <div>
-          <div class="eyebrow">01 &nbsp;Toma y tasación</div>
-          <h2 class="sec-title">Tomá el auto sabiendo cuánto vale y qué le falta.</h2>
-          <p class="sec-lead">Cuando un cliente te trae su auto, la app te guía por toda la toma y te devuelve un número para negociar con respaldo.</p>
-          <ul class="ticks">
-            <li>Datos del vehículo, service y códigos de falla en un solo lugar.</li>
-            <li>Fotos de cada vista del auto, con los golpes y rayones marcados sobre la imagen.</li>
-            <li>Inspección de 44 puntos: cada punto en bueno, regular o malo, con su costo estimado.</li>
-            <li>Tasación con el precio de referencia, los gastos de reparación y el margen que querés ganar.</li>
-            <li>Con un toque, la toma pasa a tu stock.</li>
-          </ul>
+          <div class="eyebrow">{{ t.s1_eyebrow }}</div>
+          <h2 class="sec-title">{{ t.s1_title }}</h2>
+          <p class="sec-lead">{{ t.s1_lead }}</p>
+          <ul class="ticks">{% for x in t.s1_ticks %}<li>{{ x }}</li>{% endfor %}</ul>
         </div>
-        <div class="split-media">
-          <figure class="phone"><img src="{{ url_for('static', filename='landing/m-tasacion.webp') }}" width="540" height="1169" alt="Pantalla de tasación con resultado" loading="lazy"></figure>
-        </div>
+        <div class="split-media"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-tasacion.webp') }}" width="540" height="1169" alt="{{ t.alt_tasacion2 }}" loading="lazy"></figure></div>
       </div>
     </section>
 
-    <!-- ===== Stock y ficha ===== -->
     <section class="block alt">
       <div class="wrap split rev">
         <div>
-          <div class="eyebrow">02 &nbsp;Stock y ficha comercial</div>
-          <h2 class="sec-title">Tu stock, listo para mostrar y vender.</h2>
-          <p class="sec-lead">Cargá cada vehículo con sus fotos y su precio. Cada uno tiene su ficha pública para mandar por WhatsApp.</p>
-          <ul class="ticks">
-            <li>Fotos, precio, kilometraje y equipamiento de cada vehículo.</li>
-            <li>Estado de cada unidad: disponible, por ingresar, en reparación, señado o vendido.</li>
-            <li>Ventas con seña, permuta o crédito, registradas desde el mismo stock.</li>
-            <li>Ficha comercial con botón de WhatsApp para compartir con el cliente.</li>
-          </ul>
+          <div class="eyebrow">{{ t.s2_eyebrow }}</div>
+          <h2 class="sec-title">{{ t.s2_title }}</h2>
+          <p class="sec-lead">{{ t.s2_lead }}</p>
+          <ul class="ticks">{% for x in t.s2_ticks %}<li>{{ x }}</li>{% endfor %}</ul>
         </div>
-        <div class="split-media">
-          <div class="duo">
-            <figure class="phone"><img src="{{ url_for('static', filename='landing/m-stock.webp') }}" width="540" height="1169" alt="Stock de vehículos con fotos, precio y estado" loading="lazy"></figure>
-            <figure class="phone"><img src="{{ url_for('static', filename='landing/m-ficha.webp') }}" width="540" height="1169" alt="Ficha comercial de una Toyota Hilux con foto, precio y equipamiento" loading="lazy"></figure>
-          </div>
+        <div class="split-media"><div class="duo">
+          <figure class="phone"><img src="{{ url_for('static', filename='landing/m-stock.webp') }}" width="540" height="1169" alt="{{ t.alt_stock }}" loading="lazy"></figure>
+          <figure class="phone"><img src="{{ url_for('static', filename='landing/m-ficha.webp') }}" width="540" height="1169" alt="{{ t.alt_ficha }}" loading="lazy"></figure>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="wrap">
+        <div class="center">
+          <div class="eyebrow">{{ t.s3_eyebrow }}</div>
+          <h2 class="sec-title">{{ t.s3_title }}</h2>
+          <p class="sec-lead">{{ t.s3_lead }}</p>
+        </div>
+        <div class="feat-grid">
+          <div class="feat"><svg class="ico"><use href="#i-globe"/></svg><h3>{{ t.s3_web_h }}</h3><ul class="ticks">{% for x in t.s3_web %}<li>{{ x }}</li>{% endfor %}</ul></div>
+          <div class="feat"><svg class="ico"><use href="#i-image"/></svg><h3>{{ t.s3_red_h }}</h3><ul class="ticks">{% for x in t.s3_red %}<li>{{ x }}</li>{% endfor %}</ul></div>
         </div>
       </div>
     </section>
 
-    <!-- ===== Financiación ===== -->
-    <section class="block">
+    <section class="block alt">
       <div class="wrap split">
         <div>
-          <div class="eyebrow">03 &nbsp;Financiación propia</div>
-          <h2 class="sec-title">El simulador de cuotas, a mano en el momento de la venta.</h2>
-          <p class="sec-lead">Armá el plan con tu cliente: monto, cantidad de cuotas, periodicidad y tasa. La app calcula la cuota, el total y el interés.</p>
-          <ul class="ticks">
-            <li>Cuota calculada y cuota aplicada redondeada.</li>
-            <li>Cobro mensual o semanal, con la fecha de la primera cuota.</li>
-            <li>Seguimiento de cuotas cobradas, por cobrar y vencidas.</li>
-          </ul>
-          <p style="margin:26px 0 0;"><span class="status live">Disponible</span></p>
+          <div class="eyebrow">{{ t.s4_eyebrow }}</div>
+          <h2 class="sec-title">{{ t.s4_title }}</h2>
+          <p class="sec-lead">{{ t.s4_lead }}</p>
+          <ul class="ticks">{% for x in t.s4_ticks %}<li>{{ x }}</li>{% endfor %}</ul>
+          <p style="margin:26px 0 0;"><span class="status live">{{ t.disponible }}</span></p>
         </div>
-        <div class="split-media">
-          <figure class="phone"><img src="{{ url_for('static', filename='landing/m-fin.webp') }}" width="540" height="1169" alt="Simulador de financiación propia con cuota calculada" loading="lazy"></figure>
-        </div>
+        <div class="split-media"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-fin.webp') }}" width="540" height="1169" alt="{{ t.alt_fin }}" loading="lazy"></figure></div>
       </div>
     </section>
 
-    <!-- ===== Dashboard ===== -->
     <section class="block">
       <div class="wrap split rev">
         <div>
-          <div class="eyebrow">04 &nbsp;Dashboard</div>
-          <h2 class="sec-title">Tu agencia de un vistazo.</h2>
-          <p class="sec-lead">Un tablero con lo que importa cada día, sin planillas ni cuentas a mano.</p>
-          <ul class="ticks">
-            <li>Stock por estado: disponible, por ingresar, en reparación, señado.</li>
-            <li>Pedidos activos y ventas del mes.</li>
-            <li>Gastos en reparación y ganancia del mes.</li>
-          </ul>
+          <div class="eyebrow">{{ t.s5_eyebrow }}</div>
+          <h2 class="sec-title">{{ t.s5_title }}</h2>
+          <p class="sec-lead">{{ t.s5_lead }}</p>
+          <ul class="ticks">{% for x in t.s5_ticks %}<li>{{ x }}</li>{% endfor %}</ul>
         </div>
-        <div class="split-media">
-          <figure class="phone"><img src="{{ url_for('static', filename='landing/m-dashboard.webp') }}" width="540" height="1003" alt="Dashboard con stock por estado, ventas y gastos" loading="lazy"></figure>
-        </div>
+        <div class="split-media"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-red.webp') }}" width="540" height="1169" alt="{{ t.alt_red }}" loading="lazy"></figure></div>
       </div>
     </section>
 
-    <!-- ===== Cómo funciona ===== -->
-    <section class="block alt" id="como-funciona">
+    <section class="block alt">
+      <div class="wrap split">
+        <div>
+          <div class="eyebrow">{{ t.s6_eyebrow }}</div>
+          <h2 class="sec-title">{{ t.s6_title }}</h2>
+          <p class="sec-lead">{{ t.s6_lead }}</p>
+          <ul class="ticks">{% for x in t.s6_ticks %}<li>{{ x }}</li>{% endfor %}</ul>
+        </div>
+        <div class="split-media"><figure class="phone"><img src="{{ url_for('static', filename='landing/m-dashboard.webp') }}" width="540" height="1003" alt="{{ t.alt_dashboard }}" loading="lazy"></figure></div>
+      </div>
+    </section>
+
+    <section class="block" id="como-funciona">
       <div class="wrap">
         <div class="center">
-          <div class="eyebrow">Cómo funciona</div>
-          <h2 class="sec-title">Empezá en tres pasos.</h2>
-          <p class="sec-lead">Sin instalar nada y sin cargar todo de golpe.</p>
+          <div class="eyebrow">{{ t.como_eyebrow }}</div>
+          <h2 class="sec-title">{{ t.como_title }}</h2>
+          <p class="sec-lead">{{ t.como_lead }}</p>
         </div>
         <div class="steps">
-          <div class="step"><div class="num">1</div><h3>Registrá tu agencia</h3><p>30 días gratis, sin tarjeta. Nombre, teléfono, dirección y un email. Te mandamos un código para verificarlo.</p></div>
-          <div class="step"><div class="num">2</div><h3>Cargá tu stock</h3><p>Sumá tus vehículos con fotos y precio. Tu ficha y tu WhatsApp quedan listos para compartir.</p></div>
-          <div class="step"><div class="num">3</div><h3>Tasá, vendé y conectate</h3><p>Hacé tomas con inspección, seguí tus ventas y publicá lo que ofrecés o buscás en la Red.</p></div>
+          {% for h, p in t.pasos %}<div class="step"><div class="num">{{ loop.index }}</div><h3>{{ h }}</h3><p>{{ p }}</p></div>{% endfor %}
         </div>
       </div>
     </section>
 
-    <!-- ===== Módulos ===== -->
-    <section class="block" id="modulos">
+    <section class="block alt" id="modulos">
       <div class="wrap">
         <div class="center">
-          <div class="eyebrow">Módulos</div>
-          <h2 class="sec-title">Lo que trae AGENCIEROS.</h2>
-          <p class="sec-lead">Un sistema hecho por y para agencieros. Todos los módulos están disponibles desde el primer día.</p>
+          <div class="eyebrow">{{ t.mod_eyebrow }}</div>
+          <h2 class="sec-title">{{ t.mod_title }}</h2>
+          <p class="sec-lead">{{ t.mod_lead }}</p>
         </div>
         <div class="mods">
-          <div class="mod"><svg class="ico"><use href="#i-price"/></svg><div><h3>Consulta de precios</h3><p>Valor de referencia e historial por año, con la fecha del dato y avisos reales publicados en Rosario.</p><span class="status live">Disponible</span></div></div>
-          <div class="mod"><svg class="ico"><use href="#i-car"/></svg><div><h3>Stock</h3><p>Tus vehículos con fotos, estado y precio. Ventas con seña, permuta o crédito.</p><span class="status live">Disponible</span></div></div>
-          <div class="mod"><svg class="ico"><use href="#i-check"/></svg><div><h3>Toma, inspección y tasación</h3><p>Inspección de 44 puntos y tasación con gastos y margen.</p><span class="status live">Disponible</span></div></div>
-          <div class="mod"><svg class="ico"><use href="#i-chat"/></svg><div><h3>Ficha comercial</h3><p>Página pública de cada auto para mandar por WhatsApp o compartir en historias.</p><span class="status live">Disponible</span></div></div>
-          <div class="mod"><svg class="ico"><use href="#i-list"/></svg><div><h3>Banco de pedidos</h3><p>Anotá lo que busca cada cliente, con marca, modelo y presupuesto. Cuando entra un auto que coincide, la app te avisa.</p><span class="status live">Disponible</span></div></div>
-          <div class="mod"><svg class="ico"><use href="#i-users"/></svg><div><h3>Red de Agencieros</h3><p>La red de agencias de Rosario y zona: ofrecé tus unidades y encontrá lo que te piden tus clientes, con contacto directo. Estamos sumando las primeras agencias.</p><span class="status live">Disponible</span></div></div>
-          <div class="mod"><svg class="ico"><use href="#i-chart"/></svg><div><h3>Dashboard</h3><p>Stock, pedidos, ventas, gastos y ganancia del mes en una sola pantalla.</p><span class="status live">Disponible</span></div></div>
-          <div class="mod"><svg class="ico"><use href="#i-bank"/></svg><div><h3>Financiación propia</h3><p>Simulador de cuotas y seguimiento de cobros de tus planes.</p><span class="status live">Disponible</span></div></div>
-          <div class="mod"><svg class="ico"><use href="#i-target"/></svg><div><h3>Matches</h3><p>Cruce automático entre lo que buscan tus clientes y lo que hay en tu stock, por ingresar o en la Red.</p><span class="status live">Disponible</span></div></div>
+          {% for ic, h, p in t.mods %}<div class="mod"><svg class="ico"><use href="#{{ ic }}"/></svg><div><h3>{{ h }}</h3><p>{{ p }}</p><span class="status live">{{ t.disponible }}</span></div></div>{% endfor %}
         </div>
       </div>
     </section>
 
-    <!-- ===== CTA final ===== -->
     <div class="wrap">
       <div class="final">
-        <h2>Probá <span class="brand">AGENCIEROS</span> en tu negocio.</h2>
-        <p>Probala gratis 30 días, sin tarjeta. Te registrás en un minuto y empezás a cargar tu stock hoy.</p>
+        <h2>{{ t.fin_a }}<span class="brand">AGENCIEROS</span>{{ t.fin_b }}</h2>
+        <p>{{ t.fin_p }}</p>
         <div class="cta-row">
-          <a class="btn btn-gold" href="{{ app_url }}{{ url_for('auth.registro') }}" onclick="if(window.fbq){fbq('track','Lead');}">Probala gratis 30 días</a>
-          <a class="btn btn-ghost" href="{{ app_url }}{{ url_for('auth.login') }}">Ingresar</a>
+          <a class="btn btn-gold" href="{{ app_url }}{{ url_for('auth.registro') }}" onclick="if(window.fbq){fbq('track','Lead');}">{{ t.btn_gratis }}</a>
+          <a class="btn btn-ghost" href="{{ app_url }}{{ url_for('auth.demo') }}">{{ t.btn_demo }}</a>
+          <a class="btn btn-ghost" href="{{ app_url }}{{ url_for('auth.login') }}">{{ t.btn_ingresar }}</a>
         </div>
       </div>
     </div>
@@ -463,8 +443,8 @@
   {% if redes_facebook or redes_instagram %}
   <section class="seguinos">
     <div class="wrap">
-      <h3>Seguinos en redes</h3>
-      <p>Novedades de la app, tips para tu agencia y nuevas funciones.</p>
+      <h3>{{ t.seguinos_h }}</h3>
+      <p>{{ t.seguinos_p }}</p>
       <div class="cta-row">
         {% if redes_instagram %}<a class="btn btn-ghost" href="{{ redes_instagram }}" target="_blank" rel="noopener">Instagram</a>{% endif %}
         {% if redes_facebook %}<a class="btn btn-ghost" href="{{ redes_facebook }}" target="_blank" rel="noopener">Facebook</a>{% endif %}
@@ -475,15 +455,14 @@
 
   <footer>
     <div class="wrap">
-      <div><span class="flogo">AGENCIEROS</span> &nbsp;·&nbsp; Consultá, tasá, comprá, vendé.
+      <div><span class="flogo">AGENCIEROS</span> &nbsp;·&nbsp; {{ t.pie_lema }}
         {% if redes_facebook %}&nbsp;·&nbsp; <a href="{{ redes_facebook }}" target="_blank" rel="noopener">Facebook</a>{% endif %}
         {% if redes_instagram %}&nbsp;·&nbsp; <a href="{{ redes_instagram }}" target="_blank" rel="noopener">Instagram</a>{% endif %}
       </div>
     </div>
   </footer>
   <!-- Pie DanguiApps (regla transversal): cambiar solo el href para actualizar el enlace -->
-  <div style="text-align:center;padding:14px 12px 22px"><a href="https://danguiapps.com.ar/?utm_source=agencieros&utm_medium=pie" target="_blank" rel="noopener" aria-label="Desarrollado por DanguiApps"><img src="/static/img/pie-danguiapps.webp" alt="Desarrollado por DanguiApps" width="320" height="39" loading="lazy" style="max-width:100%;height:auto"></a></div>
-
+  <div style="text-align:center;padding:14px 12px 22px"><a href="https://danguiapps.com.ar/?utm_source=agencieros&utm_medium=pie" target="_blank" rel="noopener" aria-label="{{ t.pie_alt }}"><img src="/static/img/pie-danguiapps.webp" alt="{{ t.pie_alt }}" width="320" height="39" loading="lazy" style="max-width:100%;height:auto"></a></div>
 
 </body>
 </html>
