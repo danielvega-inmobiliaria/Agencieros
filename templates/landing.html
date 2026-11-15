@@ -12,7 +12,7 @@
   <link rel="alternate" hreflang="en" href="{{ landing_url }}/?lang=en">
   <link rel="alternate" hreflang="x-default" href="{{ landing_url }}/">
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="AGENCIEROS">
+  <meta property="og:site_name" content="{{ t.brand }}">
   <meta property="og:locale" content="{{ t.og_locale }}">
   <meta property="og:title" content="{{ t.og_title }}">
   <meta property="og:description" content="{{ t.og_desc }}">
@@ -263,7 +263,7 @@
 
   <header class="top">
     <div class="wrap">
-      <a class="logo" href="#inicio">AGENCIEROS</a>
+      <a class="logo" href="#inicio">{{ t.brand }}</a>
       <nav>
         <a class="link" href="#funciones">{{ t.nav_funciones }}</a>
         <a class="link" href="#como-funciona">{{ t.nav_como }}</a>
@@ -429,7 +429,7 @@
 
     <div class="wrap">
       <div class="final">
-        <h2>{{ t.fin_a }}<span class="brand">AGENCIEROS</span>{{ t.fin_b }}</h2>
+        <h2>{{ t.fin_a }}<span class="brand">{{ t.brand }}</span>{{ t.fin_b }}</h2>
         <p>{{ t.fin_p }}</p>
         <div class="cta-row">
           <a class="btn btn-gold" href="{{ app_url }}{{ url_for('auth.registro') }}" onclick="if(window.fbq){fbq('track','Lead');}">{{ t.btn_gratis }}</a>
@@ -455,7 +455,7 @@
 
   <footer>
     <div class="wrap">
-      <div><span class="flogo">AGENCIEROS</span> &nbsp;·&nbsp; {{ t.pie_lema }}
+      <div><span class="flogo">{{ t.brand }}</span> &nbsp;·&nbsp; {{ t.pie_lema }}
         {% if redes_facebook %}&nbsp;·&nbsp; <a href="{{ redes_facebook }}" target="_blank" rel="noopener">Facebook</a>{% endif %}
         {% if redes_instagram %}&nbsp;·&nbsp; <a href="{{ redes_instagram }}" target="_blank" rel="noopener">Instagram</a>{% endif %}
       </div>
