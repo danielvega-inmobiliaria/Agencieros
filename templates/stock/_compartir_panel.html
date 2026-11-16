@@ -21,10 +21,13 @@
   .publicar-botones .pub-btn:active { transform: scale(.98); }
   .publicar-botones .pub-principal { min-height: 52px; font-size: 15px; font-weight: 700; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
   .publicar-botones .pub-ancho { grid-column: 1 / -1; color: var(--text-dim); }
+  .publicar-botones .pub-txt { display: flex; flex-direction: column; align-items: flex-start; text-align: left; line-height: 1.2; }
+  .publicar-botones .pub-principal .pub-txt { align-items: flex-start; }
+  .publicar-botones .pub-txt small { font-size: 11px; font-weight: 500; opacity: .7; margin-top: 2px; }
 </style>
 <div class="publicar-panel" id="publicar-panel">
   <div class="publicar-titulo">Compartir en redes</div>
-  <div class="publicar-ayuda">Elegí la plantilla, las fotos y ajustá los textos (todo sale de la ficha y se puede cambiar). Después compartí la imagen o bajala.</div>
+  <div class="publicar-ayuda">Elegí la plantilla, las fotos y ajustá los textos (todo sale de la ficha y se puede cambiar). Después compartí la imagen o bajala; el link de la ficha va incluido en el texto.</div>
 
   <div class="cp-sub">1 · Plantilla</div>
   <div class="cp-chips" id="cp-plantillas"></div>
@@ -48,10 +51,9 @@
   <div class="cp-vista"><canvas id="cp-canvas" width="1080" height="1080"></canvas></div>
 
   <div class="publicar-botones">
-    <button type="button" class="pub-btn pub-principal" id="cp-compartir"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.8l7.4-4.4M8.3 13.2l7.4 4.4"/></svg><span>Compartir imagen</span></button>
-    <button type="button" class="pub-btn" id="cp-bajar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M5 20h14"/></svg><span>Descargar imagen</span></button>
-    <button type="button" class="pub-btn" id="pub-copiar-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><span>Copiar link de la ficha</span></button>
-    <a class="pub-btn pub-ancho" href="{{ publicar.facebook }}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8h3V4h-3a4 4 0 0 0-4 4v3H7v4h3v6h4v-6h3l1-4h-4V8.5A.5.5 0 0 1 14 8z"/></svg><span>Compartir link en Facebook</span></a>
+    <button type="button" class="pub-btn pub-principal" id="cp-compartir"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.8l7.4-4.4M8.3 13.2l7.4 4.4"/></svg><span class="pub-txt">Compartir imagen<small>WhatsApp, Instagram, Facebook y más</small></span></button>
+    <button type="button" class="pub-btn" id="cp-bajar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M5 20h14"/></svg><span class="pub-txt">Descargar imagen<small>Para subirla a Marketplace o a un grupo</small></span></button>
+    <button type="button" class="pub-btn" id="pub-copiar-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><span class="pub-txt">Copiar link de la ficha<small>Para pegarlo en un comentario o mail</small></span></button>
   </div>
   <div class="publicar-aviso" id="pub-aviso"></div>
 </div>
