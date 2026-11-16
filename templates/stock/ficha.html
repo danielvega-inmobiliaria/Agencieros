@@ -44,7 +44,7 @@
 {% if publicar %}
 {% include "stock/_compartir_panel.html" %}
 {% endif %}
-{{ fc.ficha(datos, estado_label, volver_url) }}
+{{ fc.ficha(datos, estado_label, volver_url, false, {'titulo': og.titulo, 'texto': og.descripcion, 'url': og.url}) }}
 {% if acciones %}
 <button type="button" class="btn-accion" id="btn-accion">⚡ Acción</button>
 <div class="hoja-acciones" id="hoja-acciones" hidden>
@@ -98,6 +98,25 @@
   })();
 </script>
 {% endif %}
+<script>
+  // Burbuja de compartir: menú del celular (WhatsApp, etc.); en compu, copia el link.
+  (function () {
+    var b = document.getElementById('btn-compartir');
+    if (!b) return;
+    var aviso = document.getElementById('aviso-compartir'), t = null;
+    function decir(m) { aviso.textContent = m; aviso.hidden = false; clearTimeout(t); t = setTimeout(function () { aviso.hidden = true; }, 2200); }
+    function copiar(url) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function () { decir('Link copiado'); }, function () { window.prompt('Copiá el link:', url); });
+      } else { window.prompt('Copiá el link:', url); }
+    }
+    b.addEventListener('click', function () {
+      var d = { title: b.dataset.titulo, text: b.dataset.texto, url: b.dataset.url };
+      if (navigator.share) { navigator.share(d).catch(function (e) { if (e && e.name !== 'AbortError') copiar(d.url); }); }
+      else { copiar(d.url); }
+    });
+  })();
+</script>
 <script src="{{ url_for('static', filename='js/ficha_fotos.js') }}"></script>
 </body>
 </html>

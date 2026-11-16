@@ -72,6 +72,19 @@
   .agencia-footer-dato { font-size: 12px; color: var(--text-dim); }
   .agencia-footer-redes { display: flex; gap: 10px; margin-top: 2px; }
   .agencia-footer-redes a { color: var(--gold-light); font-size: 12px; text-decoration: none; }
+  /* Burbuja de compartir: a la altura de «Volver» (body padding-top 18px), a la derecha de la ficha, y fija al scrollear.
+     (Es fixed y no sticky porque html/body tienen overflow-x hidden y eso rompe el sticky.) */
+  .btn-compartir {
+    position: fixed; top: 18px; right: max(14px, calc((100vw - 420px) / 2 + 14px)); z-index: 40;
+    width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+    background: var(--navy-card); border: 1px solid var(--border); border-radius: 50%; color: var(--gold-light);
+    box-shadow: 0 4px 14px rgba(0,0,0,.45); cursor: pointer; font-family: inherit;
+  }
+  .btn-compartir svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .btn-compartir:active { transform: scale(.94); }
+  .aviso-compartir { position: fixed; top: 64px; right: max(14px, calc((100vw - 420px) / 2 + 14px)); z-index: 41; padding: 8px 12px; border-radius: 10px;
+    background: var(--navy-card-2); border: 1px solid var(--border); color: var(--text); font-size: 13px; box-shadow: 0 4px 14px rgba(0,0,0,.45); }
+  .aviso-compartir[hidden] { display: none; }
   .btn-volver {
     display: inline-flex; align-items: center; gap: 6px; margin: 0 0 12px; padding: 8px 14px;
     background: var(--navy-card); border: 1px solid var(--border); border-radius: 999px;

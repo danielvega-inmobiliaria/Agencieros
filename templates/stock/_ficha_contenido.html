@@ -1,7 +1,10 @@
-{% macro ficha(d, estado_label, volver_url=None, lazy=False) -%}
+{% macro ficha(d, estado_label, volver_url=None, lazy=False, compartir=None) -%}
 {% set lazy_attr = ' loading="lazy"'|safe if lazy else '' %}
 <div class="ficha">
   {% if volver_url %}<a class="btn-volver" href="{{ volver_url }}">‹ Volver</a>{% endif %}
+  {% if compartir %}<button type="button" class="btn-compartir" id="btn-compartir" aria-label="Compartir esta ficha" title="Compartir"
+    data-titulo="{{ compartir.titulo }}" data-texto="{{ compartir.texto }}" data-url="{{ compartir.url }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>
+  <div class="aviso-compartir" id="aviso-compartir" role="status" hidden></div>{% endif %}
   {% if d.agencia and (d.agencia.nombre_agencia or d.agencia.logo_url) %}
   <div class="agencia-header">
     {% if d.agencia.logo_url %}<img src="{{ d.agencia.logo_url }}" alt="Logo de {{ d.agencia.nombre_agencia or 'la agencia' }}">{% endif %}
