@@ -255,7 +255,7 @@ def create_app():
         publicas = {
             "auth.login", "auth.registro", "auth.verificar", "auth.reenviar_codigo", "auth.demo",
             "auth.olvide", "auth.restablecer",
-            "static", "stock.ficha", "web_agencia.pagina", "web_agencia.compramos", "web_agencia.clic_auto", "web_agencia.clic_web",
+            "static", "stock.ficha", "stock.og_ficha", "web_agencia.pagina", "web_agencia.compramos", "web_agencia.clic_auto", "web_agencia.clic_web",
             # Fotos y logos subidos: la ficha compartida es pública y sin
             # esto quien la abre sin sesión (el cliente) no veía las fotos.
             "uploads_estaticas",

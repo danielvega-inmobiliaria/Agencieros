@@ -1472,6 +1472,101 @@ def rp_habilitado(agencia_id):
     return habilitado(agencia_id)
 
 
+def _ruta_subida(url):
+    """Ruta física de un archivo subido a partir de su URL `/static/uploads/...` (o None)."""
+    pref = "/static/uploads/"
+    if url and url.startswith(pref):
+        return uploads_dir(*url[len(pref):].split("/"))
+    return None
+
+
+def _og_datos(vehiculo):
+    """Textos y archivos de la tarjeta de vista previa del link de la ficha
+    (la imagen que ve el cliente en WhatsApp/Facebook antes de abrir el link)."""
+    datos = _datos_ficha(vehiculo)
+    ag = datos.get("agencia") or {}
+    fila = query("SELECT nombre_agencia FROM agencias WHERE id = ?", (vehiculo["agencia_id"] or 1,), one=True)
+    nombre = ag.get("nombre_agencia") or (fila["nombre_agencia"] if fila else "")
+    lugar = ", ".join(x for x in [ag.get("ciudad"), ag.get("provincia")] if x)
+    titulo = " ".join(str(x) for x in [vehiculo["marca"], vehiculo["modelo"], vehiculo["version"], vehiculo["anio"]] if x)
+    partes = []
+    if vehiculo["km"]:
+        partes.append(f"{int(vehiculo['km']):,} km".replace(",", "."))
+    for k in ("combustible", "transmision"):
+        try:
+            if vehiculo[k]:
+                partes.append(str(vehiculo[k]))
+        except (KeyError, IndexError):
+            pass
+    plan = datos.get("plan_oferta")
+    plan_1 = plan_2 = None
+    if plan:
+        plan_1 = "Entrega $ " + "{:,.0f}".format(plan["entrega"]).replace(",", ".")
+        plan_2 = "%s cuotas %sfijas de $ %s" % (plan["cantidad_cuotas"], "semanales " if plan["periodicidad"] == "semanal" else "",
+                                               "{:,.0f}".format(plan["cuota_final"]).replace(",", "."))
+    fotos = datos.get("fotos") or []
+    foto_url = fotos[0]["url"] if fotos else datos.get("foto_principal_url")
+    return {
+        "titulo": titulo, "datos": " · ".join(partes),
+        "precio": _pesos(vehiculo["valor_publicado"]) if vehiculo["valor_publicado"] else "",
+        "plan_1": plan_1, "plan_2": plan_2,
+        "agencia": nombre + (f" · {lugar}" if lugar else ""),
+        "foto_path": _ruta_subida(foto_url), "logo_path": _ruta_subida(ag.get("logo_url")),
+    }
+
+
+def _og_version(vehiculo_id):
+    """Huella de lo que dibuja la tarjeta: cambia si cambia el precio, la foto, el plan, etc.
+    (va en el link de la imagen para que WhatsApp no muestre una versión vieja)."""
+    import hashlib
+    v = query("SELECT * FROM vehiculos WHERE id = ?", (vehiculo_id,), one=True)
+    if not v:
+        return "0"
+    d = _og_datos(v)
+    mt = []
+    for k in ("foto_path", "logo_path"):
+        try:
+            mt.append(str(int(os.path.getmtime(d[k]))) if d[k] else "")
+        except OSError:
+            mt.append("")
+    base = "|".join(str(d[k]) for k in ("titulo", "datos", "precio", "plan_1", "plan_2", "agencia", "foto_path", "logo_path")) + "|" + "|".join(mt) + "|t2"
+    return hashlib.md5(base.encode("utf-8")).hexdigest()[:10]
+
+
+@bp.route("/<int:vehiculo_id>/og.jpg")
+def og_ficha(vehiculo_id):
+    """Imagen 1200x630 de la vista previa del link de la ficha. Pública (la
+    piden WhatsApp/Facebook sin sesión). Se guarda en disco por huella."""
+    from flask import send_file, redirect
+    vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (vehiculo_id,), one=True)
+    if not vehiculo:
+        abort(404)
+    try:
+        from utils import og_ficha as gen
+        d = _og_datos(vehiculo)
+        carpeta = uploads_dir("og")
+        os.makedirs(carpeta, exist_ok=True)
+        destino = os.path.join(carpeta, "%s-%s.jpg" % (vehiculo_id, _og_version(vehiculo_id)))
+        if not os.path.isfile(destino):
+            for viejo in os.listdir(carpeta):
+                if viejo.startswith("%s-" % vehiculo_id):
+                    try:
+                        os.remove(os.path.join(carpeta, viejo))
+                    except OSError:
+                        pass
+            with open(destino, "wb") as f:
+                f.write(gen.generar(d))
+        resp = send_file(destino, mimetype="image/jpeg")
+        resp.headers["Cache-Control"] = "public, max-age=86400"
+        return resp
+    except Exception:
+        # Sin Pillow o con algún dato raro: se cae a la primera foto sola.
+        foto = foto_principal(vehiculo_id)
+        if foto:
+            return redirect(foto)
+        abort(404)
+
+
 @bp.route("/<int:vehiculo_id>/ficha")
 def ficha(vehiculo_id):
     """Ficha comercial para compartir por WhatsApp o subir a una historia --
@@ -1521,7 +1616,8 @@ def ficha(vehiculo_id):
     og = {
         "titulo": f"{titulo_v} — {nombre_ag}" if nombre_ag else titulo_v,
         "descripcion": " · ".join(p for p in partes if p),
-        "imagen": _url_publica(foto) if foto and foto.startswith("/") else foto,
+        "imagen": _url_publica(url_for("stock.og_ficha", vehiculo_id=vehiculo_id, v=_og_version(vehiculo_id))),
+        "imagen_tarjeta": True,
         "url": _url_publica(url_for("stock.ficha", vehiculo_id=vehiculo_id, wa=0)),
         "sitio": nombre_ag or "Agencieros",
     }

@@ -12,7 +12,9 @@
 <meta property="og:description" content="{{ og.descripcion }}">
 <meta property="og:url" content="{{ og.url }}">
 {% if og.imagen %}<meta property="og:image" content="{{ og.imagen }}">
-<meta name="twitter:card" content="summary_large_image">{% endif %}
+{% if og.imagen_tarjeta %}<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+{% endif %}<meta name="twitter:card" content="summary_large_image">{% endif %}
 {% include "stock/_ficha_estilos.html" %}
 <style>
   .btn-accion { position: fixed; right: 14px; bottom: 18px; z-index: 30; padding: 12px 18px; border-radius: 999px; border: 0;
