@@ -187,7 +187,7 @@
     {% if hay_cero %}<a href="#autos" data-tab="cero">0 Km</a>{% endif %}
     <a href="#compramos">Compramos tu auto</a>
     {% if not vista_previa %}<button type="button" class="compartir" id="btn-compartir-web" aria-label="Compartir esta web" title="Compartir"
-      data-titulo="{{ nombre }} — {{ tipo_titulo }}" data-texto="{{ items|length }} autos disponibles{% if lugar %} · {{ lugar }}{% endif %}" data-url="{{ url_canonica }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>{% endif %}
+      data-titulo="{{ nombre }} — {{ tipo_titulo }}" data-texto="{{ items|length }} autos disponibles{% if lugar %} · {{ lugar }}{% endif %}" data-url="{{ url_canonica }}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.8l7.4-4.4M8.3 13.2l7.4 4.4"/></svg></button>{% endif %}
   </div>
   <div class="fila">
     {% if items %}<button type="button" id="btn-buscador" aria-expanded="false">🔍 Buscador</button>{% endif %}
