@@ -57,7 +57,7 @@
 {% if publicar %}
 {% include "stock/_compartir_panel.html" %}
 {% endif %}
-{{ fc.ficha(datos, estado_label, volver_url, false, {'titulo': og.titulo, 'texto': og.descripcion, 'url': og.url}) }}
+{{ fc.ficha(datos, estado_label, volver_url, false, {'titulo': og.titulo, 'texto': og.descripcion, 'url': og.url} if not publicar else none) }}
 {% if acciones %}
 <button type="button" class="btn-accion" id="btn-accion">⚡ Acción</button>
 <div class="hoja-acciones" id="hoja-acciones" hidden>

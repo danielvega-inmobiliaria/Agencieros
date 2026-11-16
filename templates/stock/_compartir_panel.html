@@ -14,9 +14,16 @@
   .cp-vista { text-align: center; margin: 12px 0; }
   .cp-vista canvas { max-width: 100%; max-height: 70vh; width: auto; height: auto; border-radius: 10px; border: 1px solid var(--border); background: #0b1420; }
   .cp-sub { font-size: 12px; color: var(--text-dim); margin-top: 8px; }
+  /* Botones de compartir: sin emojis, íconos de línea, jerarquía clara (principal dorado, secundarios con borde). */
+  .publicar-botones .pub-btn { gap: 8px; min-height: 46px; padding: 10px 12px; border-radius: 12px; letter-spacing: .01em; transition: background .15s, border-color .15s, transform .1s; }
+  .publicar-botones .pub-btn svg { width: 18px; height: 18px; flex: 0 0 auto; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .publicar-botones .pub-btn:not(.pub-principal):hover { border-color: var(--gold-light); background: rgba(255,255,255,.04); }
+  .publicar-botones .pub-btn:active { transform: scale(.98); }
+  .publicar-botones .pub-principal { min-height: 52px; font-size: 15px; font-weight: 700; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+  .publicar-botones .pub-ancho { grid-column: 1 / -1; color: var(--text-dim); }
 </style>
 <div class="publicar-panel" id="publicar-panel">
-  <div class="publicar-titulo">📣 Compartir en redes</div>
+  <div class="publicar-titulo">Compartir en redes</div>
   <div class="publicar-ayuda">Elegí la plantilla, las fotos y ajustá los textos (todo sale de la ficha y se puede cambiar). Después compartí la imagen o bajala.</div>
 
   <div class="cp-sub">1 · Plantilla</div>
@@ -41,10 +48,10 @@
   <div class="cp-vista"><canvas id="cp-canvas" width="1080" height="1080"></canvas></div>
 
   <div class="publicar-botones">
-    <button type="button" class="pub-btn pub-principal" id="cp-compartir">📤 Compartir imagen</button>
-    <button type="button" class="pub-btn" id="cp-bajar">⬇️ Descargar imagen</button>
-    <button type="button" class="pub-btn" id="pub-copiar-link">🔗 Copiar link de la ficha</button>
-    <a class="pub-btn" href="{{ publicar.facebook }}" target="_blank" rel="noopener">📘 Compartir link en Facebook</a>
+    <button type="button" class="pub-btn pub-principal" id="cp-compartir"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.8l7.4-4.4M8.3 13.2l7.4 4.4"/></svg><span>Compartir imagen</span></button>
+    <button type="button" class="pub-btn" id="cp-bajar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M5 20h14"/></svg><span>Descargar imagen</span></button>
+    <button type="button" class="pub-btn" id="pub-copiar-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><span>Copiar link de la ficha</span></button>
+    <a class="pub-btn pub-ancho" href="{{ publicar.facebook }}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8h3V4h-3a4 4 0 0 0-4 4v3H7v4h3v6h4v-6h3l1-4h-4V8.5A.5.5 0 0 1 14 8z"/></svg><span>Compartir link en Facebook</span></a>
   </div>
   <div class="publicar-aviso" id="pub-aviso"></div>
 </div>
