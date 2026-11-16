@@ -129,6 +129,11 @@
   .menu2 .fila + .fila { margin-top:8px; }
   .menu2 a, .menu2 button { border:1.5px solid var(--line); border-radius:999px; padding:8px 16px; font-size:14px; font-weight:700; color:var(--acc); background:#fff; white-space:nowrap; cursor:pointer; font-family:inherit; }
   .menu2 a.on, .menu2 button.on { background:var(--acc); color:var(--acc-txt); border-color:var(--acc); }
+  /* burbuja de compartir (16/11/2026): va en la barra de menú, que ya queda fija al scrollear; a la derecha de la primera fila */
+  .menu2 button.compartir { margin-left:auto; width:36px; height:36px; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; flex:0 0 auto; }
+  .menu2 button.compartir svg { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .aviso-compartir { position:fixed; top:64px; right:16px; z-index:41; padding:8px 12px; border-radius:10px; background:#111827; color:#fff; font-size:13px; box-shadow:0 6px 20px rgba(0,0,0,.3); }
+  .aviso-compartir[hidden] { display:none; }
   .buscador { display:none; margin-top:16px; }
   .buscador.abierto { display:grid; }
   .hero { padding-bottom:30px; }
@@ -181,6 +186,8 @@
     {% if hay_usados or not hay_cero %}<a href="#autos"{% if hay_cero %} data-tab="usados"{% endif %}>Usados</a>{% endif %}
     {% if hay_cero %}<a href="#autos" data-tab="cero">0 Km</a>{% endif %}
     <a href="#compramos">Compramos tu auto</a>
+    {% if not vista_previa %}<button type="button" class="compartir" id="btn-compartir-web" aria-label="Compartir esta web" title="Compartir"
+      data-titulo="{{ nombre }} — {{ tipo_titulo }}" data-texto="{{ items|length }} autos disponibles{% if lugar %} · {{ lugar }}{% endif %}" data-url="{{ url_canonica }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>{% endif %}
   </div>
   <div class="fila">
     {% if items %}<button type="button" id="btn-buscador" aria-expanded="false">🔍 Buscador</button>{% endif %}
@@ -488,6 +495,26 @@
       .then(function () { btn.disabled = false; btn.textContent = 'Enviar mi consulta'; });
   });
 })();
+</script>
+<div class="aviso-compartir" id="aviso-compartir" role="status" hidden></div>
+<script>
+  // Compartir la web: menú del celular (WhatsApp, etc.); en compu, copia el link.
+  (function () {
+    var b = document.getElementById('btn-compartir-web');
+    if (!b) return;
+    var aviso = document.getElementById('aviso-compartir'), t = null;
+    function decir(m) { aviso.textContent = m; aviso.hidden = false; clearTimeout(t); t = setTimeout(function () { aviso.hidden = true; }, 2200); }
+    function copiar(url) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function () { decir('Link copiado'); }, function () { window.prompt('Copiá el link:', url); });
+      } else { window.prompt('Copiá el link:', url); }
+    }
+    b.addEventListener('click', function () {
+      var d = { title: b.dataset.titulo, text: b.dataset.texto, url: b.dataset.url };
+      if (navigator.share) { navigator.share(d).catch(function (e) { if (e && e.name !== 'AbortError') copiar(d.url); }); }
+      else { copiar(d.url); }
+    });
+  })();
 </script>
 </body>
 </html>

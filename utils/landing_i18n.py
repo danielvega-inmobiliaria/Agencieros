@@ -91,7 +91,7 @@ ES = {
         "Fotos, precio, kilometraje y equipamiento de cada vehículo.",
         "Estado de cada unidad: disponible, por ingresar, en reparación, señado o vendido.",
         "Ventas con seña, permuta o crédito, registradas desde el mismo stock.",
-        "Ficha comercial con botón de WhatsApp para compartir con el cliente.",
+        "Ficha comercial con botón de WhatsApp y burbuja de compartir: un toque y la mandás por WhatsApp, redes o mail.",
     ],
     # --- 03 Web y redes
     "s3_eyebrow": "03  Tu web y tus redes",
@@ -103,6 +103,7 @@ ES = {
         "Usados, 0 Km y «Compramos tu auto», con menú fijo en el celular.",
         "Buscador con filtros y formulario de contacto: te llega el pedido con forma de pago y valor del auto que busca.",
         "Elegís qué unidades se muestran en tu web.",
+        "Botón flotante para compartir tu web con un toque desde el celular.",
     ],
     "s3_red_h": "Compartir en redes",
     "s3_red": [
@@ -243,7 +244,7 @@ EN = {
         "Photos, price, mileage and equipment for every vehicle.",
         "Status of each unit: available, incoming, in repair, reserved or sold.",
         "Sales with deposit, trade-in or credit, recorded right from the inventory.",
-        "Sales sheet with a WhatsApp button to share with the customer.",
+        "Sales sheet with a WhatsApp button and a share bubble: one tap to send it by WhatsApp, social media or email.",
     ],
     "s3_eyebrow": "03  Your website & social media",
     "s3_title": "A website for your dealership, no designer or developer needed.",
@@ -253,7 +254,7 @@ EN = {
         "Your own link, with your dealership's name and logo.",
         "Used cars, new cars and «We buy your car», with a fixed menu on mobile.",
         "Search with filters and a contact form: requests arrive with payment method and the value of the car they want.",
-        "You pick which units appear on your website.",
+        "You pick which units appear on your website.", "A floating button to share your website with one tap from your phone.",
     ],
     "s3_red_h": "Share on social media",
     "s3_red": [
