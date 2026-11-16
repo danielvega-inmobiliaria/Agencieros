@@ -25,6 +25,9 @@
   .credito-fijo a { color: var(--gold-light); text-decoration: none; font-weight: 600; }
   .ficha .credito-agencieros { display: none; }
   body .ficha-nav-publica { bottom: calc(30px + env(safe-area-inset-bottom)); padding-bottom: 10px; }
+  /* Espacio extra al final para que la pastilla «Acción» no tape el pie de la agencia (logo, redes, web). */
+  body:has(.btn-accion) { padding-bottom: calc(130px + env(safe-area-inset-bottom)); }
+  body:has(.btn-accion):has(.ficha-nav-publica) { padding-bottom: calc(180px + env(safe-area-inset-bottom)); }
   body { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
   body:has(.ficha-nav-publica) { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
   .hoja-acciones[hidden] { display: none; }
