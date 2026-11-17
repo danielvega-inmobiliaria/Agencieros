@@ -127,7 +127,8 @@
 
   /* menú en dos filas (10/11/2026) */
   .menu2 { background:#fff; border-bottom:1px solid var(--line); padding:10px 0 12px; position:sticky; top:0; z-index:20; box-shadow:0 2px 6px rgba(0,0,0,.06); }
-  .menu2 .fila { display:flex; gap:8px; flex-wrap:wrap; }
+  .menu2 .fila { display:flex; gap:8px; flex-wrap:nowrap; align-items:center; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .menu2 .fila::-webkit-scrollbar { display:none; }
   .menu2 .fila + .fila { margin-top:8px; }
   .menu2 a, .menu2 button { border:1.5px solid var(--line); border-radius:999px; padding:8px 16px; font-size:14px; font-weight:700; color:var(--acc); background:#fff; white-space:nowrap; cursor:pointer; font-family:inherit; }
   .menu2 a.on, .menu2 button.on { background:var(--acc); color:var(--acc-txt); border-color:var(--acc); }
@@ -178,7 +179,7 @@
 <header class="top"><div class="wrap head">
   <a class="marca" href="#top">
     {% if cfg.logo_url %}<img src="{{ cfg.logo_url }}" alt="Logo de {{ nombre }}">{% endif %}
-    {% if solo_logo %}{% if lugar %}<b class="solo-lugar">{{ lugar }}</b>{% endif %}{% else %}<b>{{ nombre }}{% if lugar %}<small>{{ lugar }}</small>{% endif %}</b>{% endif %}
+    {% if solo_logo %}{% if lugar %}<b class="solo-lugar"><svg class="ico-pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>{{ lugar }}</b>{% endif %}{% else %}<b>{{ nombre }}{% if lugar %}<small><svg class="ico-pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>{{ lugar }}</small>{% endif %}</b>{% endif %}
   </a>
 </div>
 </header>
@@ -187,12 +188,10 @@
     {% if hay_usados or not hay_cero %}<a href="#autos"{% if hay_cero %} data-tab="usados"{% endif %}>Usados</a>{% endif %}
     {% if hay_cero %}<a href="#autos" data-tab="cero">0 Km</a>{% endif %}
     <a href="#compramos">Compramos tu auto</a>
-    {% if not vista_previa %}<button type="button" class="compartir" id="btn-compartir-web" aria-label="Compartir esta web" title="Compartir"
-      data-titulo="{{ nombre }} — {{ tipo_titulo }}" data-texto="{{ items|length }} autos disponibles{% if lugar %} · {{ lugar }}{% endif %}" data-url="{{ url_canonica }}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.8l7.4-4.4M8.3 13.2l7.4 4.4"/></svg></button>{% endif %}
-  </div>
-  <div class="fila">
     {% if items %}<button type="button" id="btn-buscador" aria-expanded="false">Buscador</button>{% endif %}
     <a href="#contacto">Contacto</a>
+    {% if not vista_previa %}<button type="button" class="compartir" id="btn-compartir-web" aria-label="Compartir esta web" title="Compartir"
+      data-titulo="{{ nombre }} — {{ tipo_titulo }}" data-texto="{{ items|length }} autos disponibles{% if lugar %} · {{ lugar }}{% endif %}" data-url="{{ url_canonica }}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.8l7.4-4.4M8.3 13.2l7.4 4.4"/></svg></button>{% endif %}
   </div>
 </div></nav>
 
