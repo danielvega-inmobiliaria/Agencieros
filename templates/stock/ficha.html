@@ -19,6 +19,7 @@
 <style>
   .btn-accion { position: fixed; right: 14px; bottom: 18px; z-index: 30; padding: 12px 18px; border-radius: 999px; border: 0;
     background: var(--gold); color: #1a1405; font-weight: 700; font-size: 15px; box-shadow: 0 4px 14px rgba(0,0,0,.45); cursor: pointer; font-family: inherit; }
+  .ico-accion { width: 17px; height: 17px; vertical-align: -3px; margin-right: 6px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   body:has(.ficha-nav-publica) .btn-accion { bottom: calc(76px + 30px + env(safe-area-inset-bottom)); }
   .btn-accion { bottom: calc(18px + 30px + env(safe-area-inset-bottom)); }
   /* Crédito siempre visible al pie de la pantalla; la barra Anterior/Siguiente queda justo encima. */
@@ -41,6 +42,7 @@
   .hoja-titulo { font-weight: 600; color: var(--gold-light); padding: 4px 4px 8px; }
   .hoja-op { display: block; width: 100%; text-align: left; padding: 13px 14px; border-radius: 10px; background: rgba(255,255,255,.05);
     border: 1px solid var(--border); color: var(--text); font-size: 15px; text-decoration: none; cursor: pointer; font-family: inherit; }
+  .hoja-ico { width: 18px; height: 18px; vertical-align: -3px; margin-right: 8px; stroke: var(--gold-light); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .hoja-op small { display: block; color: var(--text-dim); font-size: 12px; margin-top: 2px; }
   .hoja-cancelar { text-align: center; color: var(--text-dim); }
   .hoja-panel form { margin: 0; }
@@ -61,26 +63,26 @@
 {% endif %}
 {{ fc.ficha(datos, estado_label, volver_url, false, {'titulo': og.titulo, 'texto': og.descripcion, 'url': og.url} if not publicar else none) }}
 {% if acciones %}
-<button type="button" class="btn-accion" id="btn-accion">⚡ Acción</button>
+<button type="button" class="btn-accion" id="btn-accion"><svg class="ico-accion" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/></svg>Acción</button>
 <div class="hoja-acciones" id="hoja-acciones" hidden>
   <div class="hoja-fondo" data-cerrar></div>
   <div class="hoja-panel" role="dialog" aria-modal="true">
     <div class="hoja-titulo">{{ acciones.titulo }}</div>
-    {% if acciones.financiacion %}<a class="hoja-op" href="{{ acciones.financiacion }}">🏦 Financiación <small>calcular cuotas con este auto y seguir con la venta</small></a>{% endif %}
-    {% if acciones.operacion %}<a class="hoja-op" href="{{ acciones.operacion }}">🧾 {{ acciones.operacion_txt }} <small>seña, contado, permuta, financiación propia o externa</small></a>{% endif %}
+    {% if acciones.financiacion %}<a class="hoja-op" href="{{ acciones.financiacion }}"><svg class="hoja-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10l9-6 9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 21h18"/></svg>Financiación <small>calcular cuotas con este auto y seguir con la venta</small></a>{% endif %}
+    {% if acciones.operacion %}<a class="hoja-op" href="{{ acciones.operacion }}"><svg class="hoja-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>{{ acciones.operacion_txt }} <small>seña, contado, permuta, financiación propia o externa</small></a>{% endif %}
     {% if acciones.red_mostrar %}
     <form method="post" action="{{ acciones.red }}">
       <input type="hidden" name="volver" value="{{ acciones.volver }}">
-      <button type="submit" class="hoja-op">🤝 {{ 'Quitar de la Red' if acciones.en_red else 'Agregar a la Red' }}</button>
+      <button type="submit" class="hoja-op"><svg class="hoja-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="6" r="2.4"/><circle cx="5" cy="18" r="2.4"/><circle cx="19" cy="18" r="2.4"/><path d="M12 8.4v3.2M10.6 13l-4 3M13.4 13l4 3"/><circle cx="12" cy="12.6" r="1.2"/></svg>{{ 'Quitar de la Red' if acciones.en_red else 'Agregar a la Red' }}</button>
     </form>
     {% endif %}
     {% if acciones.promotores_mostrar %}
     <form method="post" action="{{ acciones.promotores }}">
       <input type="hidden" name="volver" value="{{ acciones.volver }}">
-      <button type="submit" class="hoja-op">📣 {{ 'Quitar de Red de Promotores' if acciones.en_promotores else 'Compartir en Red de Promotores' }} <small>{{ 'ya no lo verán los promotores' if acciones.en_promotores else 'los promotores lo difunden con su enlace y cobran por resultados' }}</small></button>
+      <button type="submit" class="hoja-op"><svg class="hoja-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h3l7 4V6L7 10z"/><path d="M17 9.5a3.5 3.5 0 0 1 0 5"/></svg>{{ 'Quitar de Red de Promotores' if acciones.en_promotores else 'Compartir en Red de Promotores' }} <small>{{ 'ya no lo verán los promotores' if acciones.en_promotores else 'los promotores lo difunden con su enlace y cobran por resultados' }}</small></button>
     </form>
     {% endif %}
-    <a class="hoja-op" href="{{ acciones.publicar }}">📣 Compartir en redes <small>imagen lista para historia, post, Facebook y Marketplace, con tus fotos y textos</small></a>
+    <a class="hoja-op" href="{{ acciones.publicar }}"><svg class="hoja-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.8l7.4-4.4M8.3 13.2l7.4 4.4"/></svg>Compartir en redes <small>imagen lista para historia, post, Facebook y Marketplace, con tus fotos y textos</small></a>
     <button type="button" class="hoja-op hoja-cancelar" data-cerrar>Cancelar</button>
   </div>
 </div>
