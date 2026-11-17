@@ -127,8 +127,9 @@
 
   /* menú en dos filas (10/11/2026) */
   .menu2 { background:#fff; border-bottom:1px solid var(--line); padding:10px 0 12px; position:sticky; top:0; z-index:20; box-shadow:0 2px 6px rgba(0,0,0,.06); }
-  .menu2 .fila { display:flex; gap:8px; flex-wrap:nowrap; align-items:center; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
-  .menu2 .fila::-webkit-scrollbar { display:none; }
+  .menu2 .fila { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .menu2 .corte { display:none; }
+  .menu2 button.compartir { order:10; }
   .menu2 .fila + .fila { margin-top:8px; }
   .menu2 a, .menu2 button { border:1.5px solid var(--line); border-radius:999px; padding:8px 16px; font-size:14px; font-weight:700; color:var(--acc); background:#fff; white-space:nowrap; cursor:pointer; font-family:inherit; }
   .menu2 a.on, .menu2 button.on { background:var(--acc); color:var(--acc-txt); border-color:var(--acc); }
@@ -145,7 +146,7 @@
   .arriba.ver { opacity:1; pointer-events:auto; }
   .arriba { display:flex; align-items:center; gap:8px; padding:8px 14px 8px 8px; }
   .arriba img { height:30px; width:auto; max-width:84px; object-fit:contain; border-radius:6px; background:#fff; }
-  @media (max-width:560px) { .menu2 { padding:8px 0; } .menu2 a, .menu2 button { padding:6px 12px; font-size:13px; } .menu2 .fila + .fila { margin-top:6px; } #autos, #compramos, #contacto, #datos { scroll-margin-top:100px; } }
+  @media (max-width:560px) { .menu2 .corte { display:block; flex:0 0 100%; height:0; } .menu2 button.compartir { order:0; } .menu2 { padding:8px 0; } .menu2 a, .menu2 button { padding:6px 12px; font-size:13px; } .menu2 .fila + .fila { margin-top:6px; } #autos, #compramos, #contacto, #datos { scroll-margin-top:100px; } }
   .pagos { display:flex; flex-direction:column; gap:8px; }
   .pagos label.chk { display:flex; gap:10px; align-items:center; text-transform:none; letter-spacing:0; font-size:15px; font-weight:600; color:var(--text); margin:0; }
   .pagos label.chk input { width:20px; height:20px; padding:0; flex:none; accent-color:var(--acc); }
@@ -188,10 +189,12 @@
     {% if hay_usados or not hay_cero %}<a href="#autos"{% if hay_cero %} data-tab="usados"{% endif %}>Usados</a>{% endif %}
     {% if hay_cero %}<a href="#autos" data-tab="cero">0 Km</a>{% endif %}
     <a href="#compramos">Compramos tu auto</a>
-    {% if items %}<button type="button" id="btn-buscador" aria-expanded="false">Buscador</button>{% endif %}
-    <a href="#contacto">Contacto</a>
     {% if not vista_previa %}<button type="button" class="compartir" id="btn-compartir-web" aria-label="Compartir esta web" title="Compartir"
       data-titulo="{{ nombre }} — {{ tipo_titulo }}" data-texto="{{ items|length }} autos disponibles{% if lugar %} · {{ lugar }}{% endif %}" data-url="{{ url_canonica }}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.8l7.4-4.4M8.3 13.2l7.4 4.4"/></svg></button>{% endif %}
+    <span class="corte"></span>
+    {% if items %}<button type="button" id="btn-buscador" aria-expanded="false">Buscador</button>{% endif %}
+    <a href="#contacto">Contacto</a>
+
   </div>
 </div></nav>
 
