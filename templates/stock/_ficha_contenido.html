@@ -84,7 +84,7 @@
     {% if d.agencia.logo_url %}<img src="{{ d.agencia.logo_url }}" alt="Logo">{% endif %}
     <div>
       {% if d.agencia.nombre_agencia %}<div class="agencia-footer-nombre">{{ d.agencia.nombre_agencia }}</div>{% endif %}
-      {% if d.agencia.direccion %}<div class="agencia-footer-dato">📍 {{ d.agencia.direccion }}</div>{% endif %}
+      {% if d.agencia.direccion %}<div class="agencia-footer-dato"><svg class="ico-pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>{{ d.agencia.direccion }}</div>{% endif %}
       {% if d.agencia.instagram or d.agencia.facebook or d.agencia.sitio_web %}
       <div class="agencia-footer-redes">
         {% if d.agencia.instagram %}<a href="{{ d.agencia.instagram }}" target="_blank" rel="noopener">Instagram</a>{% endif %}

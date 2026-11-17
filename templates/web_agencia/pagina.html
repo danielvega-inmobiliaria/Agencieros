@@ -14,6 +14,8 @@
 <meta property="og:url" content="{{ url_canonica }}">
 {% if og_img %}<meta property="og:image" content="{{ og_img }}">{% endif %}
 <style>
+  .ico-pin { width: 1em; height: 1em; vertical-align: -.14em; margin-right: .3em; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
   :root { --acc:{{ color }}; --acc-txt:{{ color_txt }}; --bg:#f3f4f6; --card:#fff; --text:#1f2937; --dim:#6b7280; --line:#e5e7eb; --wa:#25d366; }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif; }
@@ -165,7 +167,7 @@
         <div class="precio">{{ it.precio_txt }}</div>
         {% if it.baja and it.precio_ant_txt %}<div class="ant">Antes {{ it.precio_ant_txt }}</div>{% endif %}
         <div class="meta">{{ [it.km_txt, it.anio|string if it.anio else '', it.combustible, it.caja]|select|join(' | ') }}</div>
-        {% if lugar %}<div class="lugar">📍 {{ lugar }}</div>{% endif %}
+        {% if lugar %}<div class="lugar"><svg class="ico-pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>{{ lugar }}</div>{% endif %}
         <div class="acc">
           <a class="btn-line" href="{{ it.ficha }}">Ver ficha</a>
           {% if it.wa %}<a class="btn-wa" href="{{ it.wa }}" target="_blank" rel="noopener" onclick="try{navigator.sendBeacon('/clic/{{ it.id }}?o=web')}catch(e){}">Consultar</a>{% endif %}
@@ -313,7 +315,7 @@
   <div>
     <h3>{{ nombre }}</h3>
     {% set dir_repite = cfg.direccion and cfg.ciudad and (cfg.ciudad|lower|replace('á','a')|replace('é','e')|replace('í','i')|replace('ó','o')|replace('ú','u')) in (cfg.direccion|lower|replace('á','a')|replace('é','e')|replace('í','i')|replace('ó','o')|replace('ú','u')) %}
-    {% if cfg.direccion or lugar %}<p>📍 {% if dir_repite %}{{ cfg.direccion }}{% if cfg.provincia %}, {{ cfg.provincia }}{% endif %}{% else %}{{ cfg.direccion or '' }}{{ ' · ' if cfg.direccion and lugar else '' }}{{ lugar }}{% endif %}</p>{% endif %}
+    {% if cfg.direccion or lugar %}<p><svg class="ico-pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>{% if dir_repite %}{{ cfg.direccion }}{% if cfg.provincia %}, {{ cfg.provincia }}{% endif %}{% else %}{{ cfg.direccion or '' }}{{ ' · ' if cfg.direccion and lugar else '' }}{{ lugar }}{% endif %}</p>{% endif %}
     {% if cfg.nombre_contacto %}<p>Atiende: {{ cfg.nombre_contacto }}</p>{% endif %}
   </div>
   <div class="redes">
