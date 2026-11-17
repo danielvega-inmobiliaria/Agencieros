@@ -1444,6 +1444,24 @@ def _volver_seguro(destino, por_defecto):
     return por_defecto
 
 
+def _forma_pago_texto(vehiculo, datos):
+    """Forma de pago para las plantillas de redes: el plan de financiación que
+    se ve en la ficha (entrega + cuotas fijas, si está cargado y visible) y las
+    condiciones de pago escritas a mano. Antes solo salían estas últimas, y si
+    no había nada escrito el campo quedaba vacío aunque la ficha mostrara el
+    plan (16/11/2026)."""
+    partes = []
+    plan = (datos or {}).get("plan_oferta")
+    if plan:
+        entrega = "{:,.0f}".format(plan["entrega"]).replace(",", ".")
+        cuota = "{:,.0f}".format(plan["cuota_final"]).replace(",", ".")
+        sem = "semanales " if plan["periodicidad"] == "semanal" else ""
+        partes.append(f"Entrega $ {entrega} + {plan['cantidad_cuotas']} cuotas {sem}fijas de $ {cuota}")
+    if vehiculo["condiciones_pago"]:
+        partes.append(str(vehiculo["condiciones_pago"]))
+    return " · ".join(partes)
+
+
 def _campos_compartir(vehiculo, datos, titulo_v, nombre_ag, lugar, agencia_cfg):
     """Textos iniciales (todos editables en pantalla) de las plantillas de
     imagen para redes (09/11/2026): salen de la ficha."""
@@ -1459,7 +1477,7 @@ def _campos_compartir(vehiculo, datos, titulo_v, nombre_ag, lugar, agencia_cfg):
         "titulo": titulo,
         "datos": datos_l,
         "precio": _pesos(v["valor_publicado"]) if v["valor_publicado"] else "",
-        "pago": v["condiciones_pago"] or "",
+        "pago": _forma_pago_texto(v, datos),
         "equip": " · ".join((datos.get("equipamiento") or [])[:6]),
         "cta": "Consultanos por WhatsApp",
         "contacto": contacto,
