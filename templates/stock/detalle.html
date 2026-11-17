@@ -46,7 +46,7 @@
       Ficha del vehículo <span class="badge {{ vehiculo.estado }}">{{ estado_label.get(vehiculo.estado, vehiculo.estado) }}</span>
       {% if vehiculo.propiedad == 'consignacion' %}<span class="badge por_ingresar">Consignación</span>{% endif %}
     </h2>
-    <a class="btn btn-primary btn-sm" href="{{ url_for('stock.ficha', vehiculo_id=vehiculo.id) }}" style="display:inline-block; margin-bottom:16px;">📱 Ver ficha comercial (para compartir)</a>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('stock.ficha', vehiculo_id=vehiculo.id) }}" style="display:inline-block; margin-bottom:16px;">Ver ficha comercial (para compartir)</a>
     <table>
       <tr><td>Kilómetros</td><td>{{ "{:,.0f}".format(vehiculo.km).replace(",", ".") if vehiculo.km else '-' }}</td></tr>
       <tr><td>Combustible</td><td>{{ vehiculo.combustible or '-' }}</td></tr>
@@ -189,16 +189,16 @@
        style="display:block; border:1px solid var(--gold); border-radius:10px; padding:14px; margin-bottom:6px; color:inherit;">
       <p style="margin:0 0 10px;">Este vehículo está señado por un <b>crédito de Financiación en trámite</b>
         ({{ plan_pendiente.cliente_nombre or 'cliente a cargar' }}).</p>
-      <span class="btn btn-primary btn-sm">➡️ Ir al trámite de venta (garantes, cerrar o cancelar)</span>
+      <span class="btn btn-primary btn-sm">Ir al trámite de venta (garantes, cerrar o cancelar)</span>
     </a>
     {% else %}
     <p style="color:var(--text-dim); font-size:13px; margin-top:0;">Está marcado como Señado a mano, sin seña registrada.</p>
     {% endif %}
     {% if not plan_pendiente %}
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
-      <a class="btn btn-primary btn-sm" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id) }}">✅ Cerrar venta</a>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id) }}">Cerrar venta</a>
       {% if venta_abierta %}
-      <a class="btn btn-primary btn-sm" href="{{ url_for('financiacion.simulador', venta_id=venta_abierta.id) }}">🏦 {{ 'Crédito rechazado: pasar a financiación propia' if venta_abierta.credito_monto else 'Pasar a financiación propia' }}</a>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('financiacion.simulador', venta_id=venta_abierta.id) }}">{{ 'Crédito rechazado: pasar a financiación propia' if venta_abierta.credito_monto else 'Pasar a financiación propia' }}</a>
       {% endif %}
       {% if venta_abierta %}
       <form method="post" action="{{ url_for('stock.cancelar_sena', vehiculo_id=vehiculo.id) }}"
@@ -212,14 +212,14 @@
   {% else %}
     <p style="color:var(--text-dim); font-size:13px; margin-top:0;">Elegí cómo se hace la operación. Las formas de pago se pueden combinar al cerrar (efectivo + permuta + crédito externo).</p>
     <div class="op-opciones">
-      <a class="op-opcion" href="#recibir-sena" id="op-senar">🤝 <b>Señar</b><small>Reservar con una seña; se puede anotar la permuta y el crédito externo</small></a>
-      <a class="op-opcion" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id, modo='contado') }}">💵 <b>Todo contado</b><small>Paga el total ahora en efectivo o transferencia</small></a>
-      <a class="op-opcion" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id, modo='permuta') }}">🔄 <b>Con permuta</b><small>Entrega un vehículo como parte de pago</small></a>
-      <a class="op-opcion" href="{{ url_for('financiacion.simulador', vehiculo_id=vehiculo.id) }}">🏦 <b>Financiación propia</b><small>El saldo en cuotas con tu plan (simulador con este auto elegido)</small></a>
-      <a class="op-opcion" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id, modo='credito') }}">🏛️ <b>Financiación externa</b><small>Crédito de banco o financiera que le paga a la agencia</small></a>
+      <a class="op-opcion" href="#recibir-sena" id="op-senar"><b>Señar</b><small>Reservar con una seña; se puede anotar la permuta y el crédito externo</small></a>
+      <a class="op-opcion" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id, modo='contado') }}"><b>Todo contado</b><small>Paga el total ahora en efectivo o transferencia</small></a>
+      <a class="op-opcion" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id, modo='permuta') }}"><b>Con permuta</b><small>Entrega un vehículo como parte de pago</small></a>
+      <a class="op-opcion" href="{{ url_for('financiacion.simulador', vehiculo_id=vehiculo.id) }}"><b>Financiación propia</b><small>El saldo en cuotas con tu plan (simulador con este auto elegido)</small></a>
+      <a class="op-opcion" href="{{ url_for('stock.vender', vehiculo_id=vehiculo.id, modo='credito') }}"><b>Financiación externa</b><small>Crédito de banco o financiera que le paga a la agencia</small></a>
     </div>
     <details id="recibir-sena" style="margin-top:14px;">
-      <summary style="cursor:pointer; color:var(--gold-light); font-size:13px;">🤝 Recibir una seña</summary>
+      <summary style="cursor:pointer; color:var(--gold-light); font-size:13px;">Recibir una seña</summary>
       <form method="post" action="{{ url_for('stock.senar', vehiculo_id=vehiculo.id) }}" style="margin-top:12px;">
         {% if solo_venta %}<input type="hidden" name="desde" value="operacion">{% endif %}
         <div class="grid-2">
@@ -235,7 +235,7 @@
           <div class="panel" style="background:var(--navy-card-2); margin:10px 0;">
             <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
               <input type="checkbox" name="contado_hay" id="sena_contado_hay" value="1" style="width:auto;">
-              💵 Entrega contado
+              Entrega contado
             </label>
             <div id="sena-contado-datos" hidden style="margin-top:12px;">
               <label>Efectivo o transferencia que entrega al cerrar (además de la seña)</label>
@@ -245,7 +245,7 @@
         <div class="panel" style="background:var(--navy-card-2); margin:10px 0;">
           <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
             <input type="checkbox" name="permuta_hay" id="sena_permuta_hay" value="1" style="width:auto;">
-            🔄 Entrega permuta
+            Entrega permuta
           </label>
           <div id="sena-permuta-datos" hidden style="margin-top:12px;">
             <p style="color:var(--text-dim); font-size:11.5px; margin:0 0 10px;">
@@ -280,14 +280,14 @@
               </div>
             </div>
             <p style="font-size:12px; margin:10px 0 0;">¿Hay que tasarlo? No hace falta para señar.
-              <a href="#" id="sena-tasar-ahora" target="_blank" rel="noopener">🔧 Tasarlo ahora</a> abre la Toma en otra pestaña con estos datos;
+              <a href="#" id="sena-tasar-ahora" target="_blank" rel="noopener">Tasarlo ahora</a> abre la Toma en otra pestaña con estos datos;
               cuando esté hecha, elegila en "Tasación ya hecha" (acá o al cerrar la venta).</p>
           </div>
         </div>
           <div class="panel" style="background:var(--navy-card-2); margin:10px 0;">
             <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
               <input type="checkbox" name="credito_hay" id="sena_credito_hay" value="1" style="width:auto;">
-              🏦 Completa con crédito
+              Completa con crédito
             </label>
             <div id="sena-credito-datos" hidden style="margin-top:12px;">
               <label>¿De dónde viene el crédito?</label>

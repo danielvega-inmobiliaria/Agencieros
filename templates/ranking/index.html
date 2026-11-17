@@ -12,7 +12,7 @@
 
 {% if r.mejor %}
 <div class="rk-mejor">
-  <div class="rk-trofeo">🏆</div>
+  <div class="rk-trofeo" style="color:var(--gold-light);"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg></div>
   <div>
     <div class="rk-mejor-t">{{ 'Mejor vendedor del mes' if periodo == 'mes' else ('Mejor vendedor del mes anterior' if periodo == 'mes_ant' else 'Mejor vendedor · ' ~ periodo_nombre|lower) }}</div>
     <div class="rk-mejor-n">{{ r.mejor.nombre }}</div>

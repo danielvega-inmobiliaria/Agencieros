@@ -160,10 +160,10 @@
         <div><label>Domicilio</label><input type="text" name="domicilio" value="{{ g.domicilio or '' }}"></div>
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-        <button class="btn btn-secondary btn-sm" type="submit">💾 Guardar garante</button>
+        <button class="btn btn-secondary btn-sm" type="submit">Guardar garante</button>
         <button class="btn btn-secondary btn-sm" type="submit" style="color:var(--red); border-color:var(--red);"
                 formaction="{{ url_for('financiacion.eliminar_garante', financiacion_id=fin.id, garante_id=g.id) }}"
-                formnovalidate onclick="return window.confirm('¿Quitar a este garante?');">🗑️ Quitar</button>
+                formnovalidate onclick="return window.confirm('¿Quitar a este garante?');">Quitar</button>
       </div>
     </form>
     {% endfor %}
@@ -181,13 +181,13 @@
 
   <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--border); display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
     <form method="post" action="{{ url_for('financiacion.confirmar_venta', financiacion_id=fin.id) }}" id="form-confirmar-venta">
-      <button class="btn btn-primary" type="submit" {{ 'disabled' if not fin.cliente_nombre or not fin.vehiculo_id else '' }}>🔒 Cerrar operación</button>
+      <button class="btn btn-primary" type="submit" {{ 'disabled' if not fin.cliente_nombre or not fin.vehiculo_id else '' }}>Cerrar operación</button>
     </form>
     <form method="post" action="{{ url_for('financiacion.cancelar_reserva', financiacion_id=fin.id) }}" id="form-cancelar-reserva">
       <button class="btn btn-secondary" type="submit" style="border-color:var(--red); color:var(--red);">✕ Cancelar reserva</button>
     </form>
     <form method="post" action="{{ url_for('financiacion.eliminar', financiacion_id=fin.id) }}" id="form-eliminar-plan">
-      <button class="btn btn-secondary" type="submit" style="border-color:var(--red); color:var(--red);" title="Borra el plan por completo -- para cuando se guardó por error o solo probando">🗑 Eliminar</button>
+      <button class="btn btn-secondary" type="submit" style="border-color:var(--red); color:var(--red);" title="Borra el plan por completo -- para cuando se guardó por error o solo probando">Eliminar</button>
     </form>
     {% if not fin.cliente_nombre or not fin.vehiculo_id %}
     <span style="color:var(--gold-light); font-size:12px;">Para cerrar la operación necesitás cargar cliente y vehículo.</span>
@@ -334,10 +334,10 @@
       <div><label>Domicilio</label><input type="text" name="domicilio" value="{{ g.domicilio or '' }}"></div>
     </div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-      <button class="btn btn-secondary btn-sm" type="submit">💾 Guardar garante</button>
+      <button class="btn btn-secondary btn-sm" type="submit">Guardar garante</button>
       <button class="btn btn-secondary btn-sm" type="submit" style="color:var(--red); border-color:var(--red);"
               formaction="{{ url_for('financiacion.eliminar_garante', financiacion_id=fin.id, garante_id=g.id) }}"
-              formnovalidate onclick="return window.confirm('¿Quitar a este garante?');">🗑️ Quitar</button>
+              formnovalidate onclick="return window.confirm('¿Quitar a este garante?');">Quitar</button>
     </div>
   </form>
   {% endif %}

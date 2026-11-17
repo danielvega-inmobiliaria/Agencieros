@@ -129,7 +129,7 @@
           <a class="sidebar-user-logout" href="{{ url_for('auth.logout') }}">Salir</a>
         </div>
         {# PWA: «Instalar app» aparece solo si el navegador lo permite (Android/Chrome) o en iPhone (con instrucciones); no si ya está instalada. #}
-        <a href="#" id="btn-instalar" class="sidebar-user-logout" hidden style="display:none; margin-top:8px; font-weight:700;">📲 Instalar app</a>
+        <a href="#" id="btn-instalar" class="sidebar-user-logout" hidden style="display:none; margin-top:8px; font-weight:700;">Instalar app</a>
         <div id="tip-ios" hidden style="display:none; margin-top:6px; font-size:12px; opacity:.85;">En iPhone: tocá <b>Compartir</b> y después <b>Agregar a inicio</b>.</div>
       </div>
       {% elif es_superadmin %}
@@ -151,7 +151,7 @@
     </aside>
     <main class="main">
       {% if es_demo %}
-      <div class="banner-demo">🧪 Estás en la <b>demo</b> de AGENCIEROS: datos de ejemplo, cargá y probá todo lo que quieras. Se reinicia cada día.
+      <div class="banner-demo">Estás en la <b>demo</b> de AGENCIEROS: datos de ejemplo, cargá y probá todo lo que quieras. Se reinicia cada día.
         <a href="{{ url_for('auth.registro') }}">Registrá tu agencia</a></div>
       {% endif %}
       {% include "partials/barra_navegacion.html" %}

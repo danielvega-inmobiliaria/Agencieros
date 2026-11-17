@@ -22,7 +22,7 @@
         </span>
         <span class="mw-op">
           <span class="mw-op1" title="En la web se muestra &quot;Consultar&quot; en vez del precio"><input type="checkbox" name="sin_precio" value="{{ v.id }}" {{ 'checked' if v.ocultar_precio else '' }}><small>Ocultar precio</small></span>
-          <span class="mw-op1" title="Aparece en la franja de destacados, arriba de la web"><input type="checkbox" name="destacado" value="{{ v.id }}" {{ 'checked' if v.destacado else '' }}><small>⭐ Destacar</small></span>
+          <span class="mw-op1" title="Aparece en la franja de destacados, arriba de la web"><input type="checkbox" name="destacado" value="{{ v.id }}" {{ 'checked' if v.destacado else '' }}><small>Destacar</small></span>
         </span>
       </label>
       {% endfor %}
@@ -33,7 +33,7 @@
     <div class="mw-guardar"><button class="btn btn-primary btn-sm" type="submit">Guardar</button></div>
   </form>
   <p style="margin-top:16px;">
-    <a class="btn btn-sm btn-secondary" href="{{ url_for('web_agencia.consultas') }}">📩 Bandeja de consultas{% if consultas_nuevas %} ({{ consultas_nuevas }} nuevas){% endif %}</a>
+    <a class="btn btn-sm btn-secondary" href="{{ url_for('web_agencia.consultas') }}">Bandeja de consultas{% if consultas_nuevas %} ({{ consultas_nuevas }} nuevas){% endif %}</a>
   </p>
   {% if ag.web_slug %}
   <p style="margin-top:16px;">

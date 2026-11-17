@@ -13,8 +13,8 @@
     {% for c in consultas %}
     <div style="border:1px solid var(--border); border-radius:10px; padding:12px 14px; background:var(--navy-bg); {{ '' if c.estado == 'nuevo' else 'opacity:.7;' }}">
       <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;">
-        {% if c.tipo == 'busco' %}<b>🔎 Busca: {{ c.modelo }}</b>
-        {% else %}<b>💰 Vende: {{ c.marca }} {{ c.modelo }} · {{ c.anio }}{% if c.km %} · {{ '{:,}'.format(c.km).replace(',', '.') }} km{% endif %}</b>{% endif %}
+        {% if c.tipo == 'busco' %}<b>Busca: {{ c.modelo }}</b>
+        {% else %}<b>Vende: {{ c.marca }} {{ c.modelo }} · {{ c.anio }}{% if c.km %} · {{ '{:,}'.format(c.km).replace(',', '.') }} km{% endif %}</b>{% endif %}
         <span style="color:var(--text-dim); font-size:12px;">{{ c.created_at|fecha_ar }}</span>
       </div>
       <div style="margin-top:4px;">{{ c.nombre }} · {{ c.telefono }}</div>

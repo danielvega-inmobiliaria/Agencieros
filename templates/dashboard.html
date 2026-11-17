@@ -69,7 +69,7 @@
 
 {% if top_vendedores and not es_vendedor %}
 <a class="panel rk-dash" href="{{ url_for('ranking.index') }}" style="display:block;color:inherit;text-decoration:none;">
-  <h2 style="margin-top:0;">🏆 Mejores vendedores del mes</h2>
+  <h2 style="margin-top:0;">Mejores vendedores del mes</h2>
   {% for f in top_vendedores %}
   <div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;{{ 'border-top:1px solid var(--border);' if not loop.first else '' }}">
     <span>{{ loop.index }}. <b>{{ f.nombre }}</b></span>

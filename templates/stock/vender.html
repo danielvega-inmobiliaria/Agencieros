@@ -43,7 +43,7 @@
     <div class="panel" style="background:var(--navy-card-2); margin:16px 0;">
       <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
         <input type="checkbox" name="credito_hay" id="credito_hay" value="1" style="width:auto;" {{ 'checked' if datos.get('credito_hay') else '' }}>
-        🏦 Completa con crédito
+        Completa con crédito
       </label>
       <div id="credito-datos" {{ '' if datos.get('credito_hay') else 'hidden' }} style="margin-top:12px;">
         <label>¿De dónde viene el crédito?</label>
@@ -96,7 +96,7 @@
     </div>
 
     <div style="margin-top:20px;">
-      <button class="btn btn-primary" type="submit" id="btn-cerrar">✅ Cerrar venta</button>
+      <button class="btn btn-primary" type="submit" id="btn-cerrar">Cerrar venta</button>
       <a class="btn btn-secondary" href="{{ url_for('stock.detalle', vehiculo_id=vehiculo.id) }}">Cancelar</a>
     </div>
     <p style="color:var(--text-dim); font-size:12.5px; margin:8px 0 0;">
@@ -140,7 +140,7 @@
     var propia = creditoHay.checked && creditoTipo.value === 'propia';
     document.getElementById('credito-externo').hidden = propia;
     document.getElementById('credito-propia').hidden = !propia;
-    document.getElementById('btn-cerrar').textContent = propia ? 'Seguir a la financiación →' : '✅ Cerrar venta';
+    document.getElementById('btn-cerrar').textContent = propia ? 'Seguir a la financiación →' : 'Cerrar venta';
     document.getElementById('efectivo-label').textContent = propia
       ? 'Entrega en contado (total, con la seña incluida)' : 'Efectivo cobrado (total, con la seña incluida)';
     var cr = creditoHay.checked && !propia ? num(creditoMonto) : 0;

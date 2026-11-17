@@ -50,7 +50,7 @@
         {% if p.fecha_contacto %}<small style="color:var(--text-dim);">Últ. contacto: {{ p.fecha_contacto[:16] }}</small>{% endif %}
       </td>
       <td class="fila-accion">
-        {% if it.wa %}<a class="btn btn-primary btn-sm" href="{{ it.wa }}" target="_blank" rel="noopener" onclick="fetch('{{ url_for('plataforma.prospecto_contactado', pid=p.id) }}', {method:'POST', keepalive:true});">💬 WhatsApp</a>{% else %}<small style="color:var(--text-dim);">Sin WhatsApp</small>{% endif %}
+        {% if it.wa %}<a class="btn btn-primary btn-sm" href="{{ it.wa }}" target="_blank" rel="noopener" onclick="fetch('{{ url_for('plataforma.prospecto_contactado', pid=p.id) }}', {method:'POST', keepalive:true});">WhatsApp</a>{% else %}<small style="color:var(--text-dim);">Sin WhatsApp</small>{% endif %}
       </td>
     </tr>
     {% else %}

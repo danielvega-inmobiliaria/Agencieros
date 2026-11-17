@@ -12,7 +12,7 @@
     </h2>
     <table>
       <tr><td>Nombre</td><td>{{ f.nombre }}</td></tr>
-      <tr><td>Cómo llegó</td><td>{% if f.por_invitacion %}🎟 Por invitación a la demo{% if f.demo_ultimo_ingreso_fmt %} (última vez en la demo: {{ f.demo_ultimo_ingreso_fmt }}){% endif %}{% else %}Landing / registro propio{% endif %}</td></tr>
+      <tr><td>Cómo llegó</td><td>{% if f.por_invitacion %}Por invitación a la demo{% if f.demo_ultimo_ingreso_fmt %} (última vez en la demo: {{ f.demo_ultimo_ingreso_fmt }}){% endif %}{% else %}Landing / registro propio{% endif %}</td></tr>
       <tr><td>Email</td><td>{{ f.email }}</td></tr>
       <tr><td>Teléfono</td><td>{{ f.telefono or "-" }}</td></tr>
       <tr><td>Contacto de referencia</td><td>{{ f.contacto_referencia or "-" }}</td></tr>
@@ -24,7 +24,7 @@
     </table>
     {% if not f.verificada %}
     <form method="post" action="{{ url_for('plataforma.conservar', agencia_id=f.id) }}" style="margin-top:12px;">
-      <button class="btn btn-secondary btn-sm" type="submit">{% if f.conservar %}✔ Se conserva (tocá para quitar){% else %}🛟 Conservar: no borrar al limpiar{% endif %}</button>
+      <button class="btn btn-secondary btn-sm" type="submit">{% if f.conservar %}✔ Se conserva (tocá para quitar){% else %}Conservar: no borrar al limpiar{% endif %}</button>
     </form>
     {% endif %}
   </div>

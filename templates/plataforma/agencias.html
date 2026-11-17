@@ -5,7 +5,7 @@
 <div class="panel" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
   <div style="flex:1; min-width:220px;">
     <b>Agencia demo</b>
-    <div style="color:var(--text-dim); font-size:13px;">Solo por invitación (ya no hay botón público). Quien abre el link tiene que registrar su agencia con todos los datos y queda marcado "🎟 Por invitación" en el listado. Link para mandar:
+    <div style="color:var(--text-dim); font-size:13px;">Solo por invitación (ya no hay botón público). Quien abre el link tiene que registrar su agencia con todos los datos y queda marcado "Por invitación" en el listado. Link para mandar:
       {% if demo_codigo %}<b style="color:var(--text); word-break:break-all;">{{ request.url_root }}auth/demo?c={{ demo_codigo }}</b>
       {% else %}<b style="color:var(--text);">todavía no hay link: tocá "Nuevo código".</b>{% endif %}
       — se reinicia sola cada día. "Nuevo código" invalida el link anterior y saca a quien esté adentro.</div>
@@ -13,17 +13,17 @@
   {% if demo_codigo %}<a class="btn btn-secondary btn-sm" href="{{ url_for('auth.demo', c=demo_codigo) }}" target="_blank" rel="noopener">Ver demo</a>{% endif %}
   <form method="post" action="{{ url_for('plataforma.renovar_codigo_demo') }}"
         onsubmit="return window.confirm('¿Generar un código nuevo? El link actual deja de funcionar y se cierran las sesiones de demo abiertas.');">
-    <button class="btn btn-secondary btn-sm" type="submit">🔑 Nuevo código</button>
+    <button class="btn btn-secondary btn-sm" type="submit">Nuevo código</button>
   </form>
   {% if resumen.sin_validar %}
   <form method="post" action="{{ url_for('plataforma.limpiar_sin_validar') }}"
         onsubmit="return window.confirm('¿Borrar las {{ resumen.sin_validar }} cuentas que nunca validaron su mail (de más de 1 hora)? No se puede deshacer.');">
-    <button class="btn btn-secondary btn-sm" type="submit">🧹 Borrar sin validar ({{ resumen.sin_validar }})</button>
+    <button class="btn btn-secondary btn-sm" type="submit">Borrar sin validar ({{ resumen.sin_validar }})</button>
   </form>
   {% endif %}
   <form method="post" action="{{ url_for('plataforma.reiniciar_demo_ruta') }}"
         onsubmit="return window.confirm('¿Reiniciar la agencia demo? Se borra lo que se haya cargado y vuelve a los datos de ejemplo.');">
-    <button class="btn btn-primary btn-sm" type="submit">♻ Reiniciar demo</button>
+    <button class="btn btn-primary btn-sm" type="submit">Reiniciar demo</button>
   </form>
 </div>
 <div class="cards">
@@ -111,10 +111,10 @@
           Act.: {{ f.ultima_actividad_fmt or "nunca" }} · Alta: {{ f.alta.split(" ")[0] if f.alta else "" }}
           {% if f.verificada %}<span class="badge disponible">Verificada</span>{% else %}<span class="badge por_ingresar">Pendiente</span>{% endif %}
           {% if not f.activa %}<span class="badge en_reparacion">Inactiva</span>{% endif %}
-          {% if f.por_invitacion %}<span class="badge badge-sucursal">🎟 Por invitación</span>{% endif %}
+          {% if f.por_invitacion %}<span class="badge badge-sucursal">Por invitación</span>{% endif %}
         </div>
       </td>
-      <td data-label="Agencia">{{ f.nombre }}{% if f.por_invitacion %} <span class="badge badge-sucursal">🎟 Por invitación</span>{% endif %}{% if f.plan != "libre" %} <span class="badge badge-sucursal">{{ f.plan|capitalize }}</span>{% endif %}</td>
+      <td data-label="Agencia">{{ f.nombre }}{% if f.por_invitacion %} <span class="badge badge-sucursal">Por invitación</span>{% endif %}{% if f.plan != "libre" %} <span class="badge badge-sucursal">{{ f.plan|capitalize }}</span>{% endif %}</td>
       <td data-label="Ubicación">
         {% if f.ciudad or f.provincia %}{{ f.ciudad or "" }}{% if f.ciudad and f.provincia %}, {% endif %}{{ f.provincia or "" }}{% else %}<span style="color:var(--text-dim);">Sin cargar</span>{% endif %}
       </td>

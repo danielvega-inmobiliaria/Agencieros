@@ -160,7 +160,7 @@
 {% macro tarjeta(it, datos=True, destacada=False) -%}
     <article class="card{{ ' dest' if destacada else '' }}" data-cero="{{ 1 if it.cero_km else 0 }}" data-nuevo="{{ 1 if it.nuevo else 0 }}" data-baja="{{ 1 if it.baja else 0 }}"{% if datos %} data-t="{{ (it.titulo ~ ' ' ~ it.version)|lower }}" data-marca="{{ it.marca }}" data-modelo="{{ it.modelo }}"
              data-precio="{{ it.precio }}" data-anio="{{ it.anio or 0 }}" data-km="{{ it.km if it.km is not none else -1 }}" data-i="{{ it.idx }}"{% endif %}>
-      <a class="foto" href="{{ it.ficha }}"><img src="{{ it.foto }}" alt="{{ it.titulo }}" loading="lazy">{% if it.destacado %}<span class="badge-dest">⭐ Destacado</span>{% endif %}{% if it.cero_km %}<span class="badge-cero">0 Km</span>{% endif %}{% if it.nuevo %}<span class="badge-nuevo">🆕 Nuevo</span>{% endif %}{% if it.baja %}<span class="badge-baja">⬇ Bajó de precio</span>{% endif %}</a>
+      <a class="foto" href="{{ it.ficha }}"><img src="{{ it.foto }}" alt="{{ it.titulo }}" loading="lazy">{% if it.destacado %}<span class="badge-dest">Destacado</span>{% endif %}{% if it.cero_km %}<span class="badge-cero">0 Km</span>{% endif %}{% if it.nuevo %}<span class="badge-nuevo">🆕 Nuevo</span>{% endif %}{% if it.baja %}<span class="badge-baja">⬇ Bajó de precio</span>{% endif %}</a>
       <div class="cuerpo">
         <h3>{{ it.titulo }}</h3>
         {% if it.version %}<div class="ver">{{ it.version }}</div>{% endif %}
@@ -192,7 +192,7 @@
       data-titulo="{{ nombre }} — {{ tipo_titulo }}" data-texto="{{ items|length }} autos disponibles{% if lugar %} · {{ lugar }}{% endif %}" data-url="{{ url_canonica }}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.8l7.4-4.4M8.3 13.2l7.4 4.4"/></svg></button>{% endif %}
   </div>
   <div class="fila">
-    {% if items %}<button type="button" id="btn-buscador" aria-expanded="false">🔍 Buscador</button>{% endif %}
+    {% if items %}<button type="button" id="btn-buscador" aria-expanded="false">Buscador</button>{% endif %}
     <a href="#contacto">Contacto</a>
   </div>
 </div></nav>
@@ -226,7 +226,7 @@
 
   {% if destacados %}
   <section class="franja-dest" id="franja-dest">
-    <h2>⭐ Destacados</h2>
+    <h2>Destacados</h2>
     <div class="carril">{% for it in destacados %}{{ tarjeta(it, False, True) }}{% endfor %}</div>
   </section>
   {% endif %}
@@ -326,7 +326,7 @@
 </div></section>
 <footer>Precios sujetos a cambio sin previo aviso.<br>Esta página web fue creada con la app <a href="{{ url_canonica.rsplit('/a/', 1)[0] }}?utm_source=web_agencia&utm_medium=pie" target="_blank" rel="noopener">Agencieros</a>, un desarrollo de <a href="https://danguiapps.com.ar/?utm_source=agencieros&utm_medium=pie" target="_blank" rel="noopener">DanguiApps</a>.</footer>
 <button type="button" class="arriba" id="arriba" aria-label="Volver al inicio">{% if cfg.logo_url %}<img src="{{ cfg.logo_url }}" alt="">{% endif %}<span>↑ Inicio</span></button>
-{% if wa_general %}<a class="btn btn-wa flot" href="{{ wa_general }}" target="_blank" rel="noopener" onclick="try{navigator.sendBeacon('/a/{{ slug }}/clic')}catch(e){}">💬 WhatsApp</a>{% endif %}
+{% if wa_general %}<a class="btn btn-wa flot" href="{{ wa_general }}" target="_blank" rel="noopener" onclick="try{navigator.sendBeacon('/a/{{ slug }}/clic')}catch(e){}"><svg class="ico-wa" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-3px;margin-right:6px"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.7-5.4A8.4 8.4 0 1 1 21 11.5z"/></svg>WhatsApp</a>{% endif %}
 
 <script>
 (function () {
