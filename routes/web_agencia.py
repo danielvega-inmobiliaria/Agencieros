@@ -94,7 +94,7 @@ def _items(agencia_id, slug):
             # "Bajó de precio" solo si el precio se muestra (si está oculto no se delata la baja).
             "baja": bool(v["es_baja"]) and not v["ocultar_precio"],
             "precio_ant_txt": _pesos(v["precio_anterior"]) if (v["es_baja"] and not v["ocultar_precio"]) else "",
-            "ficha": f"{APP_URL}/stock/{v['id']}/ficha?wa=0&web={slug}",
+            "ficha": f"{APP_URL}/stock/{v['id']}/ficha?web={slug}",
         })
     return items
 

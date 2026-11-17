@@ -170,7 +170,6 @@
         {% if lugar %}<div class="lugar"><svg class="ico-pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>{{ lugar }}</div>{% endif %}
         <div class="acc">
           <a class="btn-line" href="{{ it.ficha }}">Ver ficha</a>
-          {% if it.wa %}<a class="btn-wa" href="{{ it.wa }}" target="_blank" rel="noopener" onclick="try{navigator.sendBeacon('/clic/{{ it.id }}?o=web')}catch(e){}">Consultar</a>{% endif %}
         </div>
       </div>
     </article>
@@ -319,7 +318,6 @@
     {% if cfg.nombre_contacto %}<p>Atiende: {{ cfg.nombre_contacto }}</p>{% endif %}
   </div>
   <div class="redes">
-    {% if wa_general %}<a class="btn btn-wa" href="{{ wa_general }}" target="_blank" rel="noopener" onclick="try{navigator.sendBeacon('/a/{{ slug }}/clic')}catch(e){}">WhatsApp</a>{% endif %}
     {% if cfg.instagram %}<a class="btn btn-line" href="{{ cfg.instagram }}" target="_blank" rel="noopener">Instagram</a>{% endif %}
     {% if cfg.facebook %}<a class="btn btn-line" href="{{ cfg.facebook }}" target="_blank" rel="noopener">Facebook</a>{% endif %}
   </div>
