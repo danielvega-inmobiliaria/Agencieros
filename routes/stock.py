@@ -1680,7 +1680,6 @@ def ficha(vehiculo_id):
             "link": link_ficha,
             "titulo": titulo_v,
             "fotos": [f["url"] for f in datos.get("fotos") or []],
-            "facebook": "https://www.facebook.com/sharer/sharer.php?u=" + quote_plus(link_ficha),
         }
     # Botón «Acción» (05/11/2026): solo con sesión de la agencia dueña, fuera del
     # panel Publicar. Junta lo que antes estaba en el menú de la tarjeta de Stock.
