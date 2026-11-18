@@ -1696,6 +1696,48 @@ def _migrar_sucursales(conn):
         )
 
 
+def _migrar_zonas_fundador(conn):
+    """Campaña «Agenciero Fundador» (17/11/2026): tabla `zonas` (barrios de
+    Rosario y localidades del Gran Rosario), `agencia_config.zona_id` (la zona
+    que elige cada agencia en Registro/Admin) y `agencias.mision_completada_at`
+    (fecha y hora UTC en que cumplió las consignas). Las zonas se cargan desde
+    ZONAS_CAMPANA_FUNDADOR.csv (`;`, UTF-8 con BOM) sin pisar las que ya
+    existen: se puede agregar filas al CSV y redeployar."""
+    conn.execute("""CREATE TABLE IF NOT EXISTS zonas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL UNIQUE,
+        tipo TEXT NOT NULL DEFAULT 'barrio',
+        distrito TEXT,
+        estado TEXT,
+        premio_meses INTEGER NOT NULL DEFAULT 6,
+        fundador_agencia_id INTEGER,
+        fundador_fecha TEXT,
+        activa INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT DEFAULT (datetime('now'))
+    )""")
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(agencia_config)")}
+    if "zona_id" not in cols:
+        conn.execute("ALTER TABLE agencia_config ADD COLUMN zona_id INTEGER")
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(agencias)")}
+    if "mision_completada_at" not in cols:
+        conn.execute("ALTER TABLE agencias ADD COLUMN mision_completada_at TEXT")
+    import csv
+    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ZONAS_CAMPANA_FUNDADOR.csv")
+    if not os.path.exists(ruta):
+        return
+    with open(ruta, encoding="utf-8-sig", newline="") as f:
+        for fila in csv.DictReader(f, delimiter=";"):
+            nombre = (fila.get("zona") or "").strip()
+            if not nombre or nombre.startswith("("):
+                continue  # filas de nota, no son zonas
+            distrito = (fila.get("distrito_municipal") or "").strip()
+            conn.execute(
+                "INSERT OR IGNORE INTO zonas (nombre, tipo, distrito, estado) VALUES (?, ?, ?, ?)",
+                (nombre, (fila.get("tipo") or "barrio").strip(),
+                 None if distrito in ("", "—") else distrito, (fila.get("estado") or "").strip()),
+            )
+
+
 def _migrar_planes(conn):
     """Plan por agencia (30/09/2026, paso 5). Todas arrancan en 'libre' (sin
     límites) mientras la app es gratis; el admin lo cambia desde el Panel.
@@ -1814,6 +1856,7 @@ def init_db():
     _migrar_sucursales(conn)
     _migrar_planes(conn)
     _migrar_planes_oferta(conn)
+    _migrar_zonas_fundador(conn)
     _crear_superadmin_desde_env(conn)
     import mercado_ml
     mercado_ml.asegurar_tablas(conn)

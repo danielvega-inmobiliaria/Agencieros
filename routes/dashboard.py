@@ -289,6 +289,11 @@ def index():
                 (agencia_id, uid), one=True)["c"],
         }
     selector = contexto_selector()
+    # Campaña Agenciero Fundador: checklist de misión (solo dueño; no vendedor).
+    mision = None
+    if session.get("usuario_rol") != "vendedor":
+        from utils import fundador
+        mision = fundador.registrar_si_completa(agencia_id)
     top_vendedores = []
     if not session.get("usuario_rol") == "vendedor":
         from routes.ranking import top3
@@ -297,6 +302,8 @@ def index():
         "dashboard.html",
         **selector,
         top_vendedores=top_vendedores,
+        mision=mision,
+        mision_min=10,
         suc_endpoint="dashboard.index",
         suc_args={},
         por_sucursal=_resumen_por_sucursal(agencia_id) if selector["sucursales_sel"] and selector["sucursal_sel"] is None else [],

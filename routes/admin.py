@@ -16,6 +16,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from storage import uploads_dir
 
 from database import query, execute, obtener_config_agencia
+from utils.fundador import zonas_agrupadas, zona_valida
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -43,6 +44,7 @@ def index():
         direccion = request.form.get("direccion", "").strip() or None
         ciudad = request.form.get("ciudad", "").strip() or None
         provincia = request.form.get("provincia", "").strip() or None
+        zona_id = zona_valida(request.form.get("zona_id"))
         telefono = request.form.get("telefono", "").strip() or None
         instagram = request.form.get("instagram", "").strip() or None
         facebook = request.form.get("facebook", "").strip() or None
@@ -106,22 +108,22 @@ def index():
                 """UPDATE agencia_config
                    SET nombre_agencia = ?, nombre_contacto = ?, logo_url = ?, direccion = ?, ciudad = ?, provincia = ?,
                        telefono = ?, instagram = ?, facebook = ?, sitio_web = ?, margen_objetivo_pct = ?,
-                       updated_at = datetime('now')
+                       zona_id = ?, updated_at = datetime('now')
                    WHERE agencia_id = ?""",
                 (
                     nombre_agencia, nombre_contacto, logo_url, direccion, ciudad, provincia,
-                    telefono, instagram, facebook, sitio_web, margen_objetivo_pct, agencia_id,
+                    telefono, instagram, facebook, sitio_web, margen_objetivo_pct, zona_id, agencia_id,
                 ),
             )
         else:
             execute(
                 """INSERT INTO agencia_config
                    (agencia_id, nombre_agencia, nombre_contacto, logo_url, direccion, ciudad, provincia,
-                    telefono, instagram, facebook, sitio_web, margen_objetivo_pct)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    telefono, instagram, facebook, sitio_web, margen_objetivo_pct, zona_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     agencia_id, nombre_agencia, nombre_contacto, logo_url, direccion, ciudad, provincia,
-                    telefono, instagram, facebook, sitio_web, margen_objetivo_pct,
+                    telefono, instagram, facebook, sitio_web, margen_objetivo_pct, zona_id,
                 ),
             )
 
@@ -146,5 +148,6 @@ def index():
         2,
     )
     return render_template(
-        "admin/index.html", config=config, provincias=PROVINCIAS_AR, margen_pct_actual=margen_pct_actual
+        "admin/index.html", config=config, provincias=PROVINCIAS_AR, margen_pct_actual=margen_pct_actual,
+        zonas=zonas_agrupadas()
     )

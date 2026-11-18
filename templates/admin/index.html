@@ -40,6 +40,23 @@
     </div>
 
     <div class="form-row">
+      <div>
+        <label>Barrio o localidad (Agenciero Fundador)</label>
+        <select name="zona_id">
+          <option value="">Sin elegir</option>
+          {% for grupo, items in zonas %}
+          <optgroup label="{{ grupo }}">
+            {% for z in items %}
+            <option value="{{ z.id }}" {{ "selected" if config.zona_id == z.id else "" }}>{{ z.nombre }}</option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+        <div style="font-size:12px; color:var(--muted); margin-top:4px;">Define tu zona en la campaña: la primera agencia de cada zona que complete la misión gana 6 meses gratis.</div>
+      </div>
+    </div>
+
+    <div class="form-row">
       <div><label>Instagram</label><input type="text" name="instagram" value="{{ config.instagram or '' }}" placeholder="Ej: https://instagram.com/tu_agencia"></div>
       <div><label>Facebook</label><input type="text" name="facebook" value="{{ config.facebook or '' }}" placeholder="Ej: https://facebook.com/tu_agencia"></div>
     </div>

@@ -21,6 +21,7 @@ from database import query, execute
 from routes.admin import PROVINCIAS_AR
 from utils.verificacion import crear_codigo, validar_codigo, enviar_codigo_email, enviar_email_reset
 from utils import antibot
+from utils.fundador import zonas_agrupadas, zona_valida
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -204,7 +205,7 @@ def _render_registro(prev, invitacion):
     envío demasiado rápido (menos de antibot.TIEMPO_MINIMO_FORM segundos) es
     de un bot. Incluye el desafío de Turnstile si está configurado."""
     session["reg_t"] = time.time()
-    return render_template("auth/registro.html", prev=prev, provincias=PROVINCIAS_AR,
+    return render_template("auth/registro.html", prev=prev, provincias=PROVINCIAS_AR, zonas=zonas_agrupadas(),
                            invitacion=bool(invitacion), turnstile_site_key=antibot.turnstile_site_key())
 
 
@@ -236,6 +237,7 @@ def registro():
         direccion = request.form.get("direccion", "").strip()
         ciudad = request.form.get("ciudad", "").strip()
         provincia = request.form.get("provincia", "").strip()
+        zona_id = zona_valida(request.form.get("zona_id"))  # opcional: campaña Agenciero Fundador
         contacto_referencia = request.form.get("contacto_referencia", "").strip()
         password = request.form.get("password", "")
         password2 = request.form.get("password2", "")
@@ -311,9 +313,9 @@ def registro():
         # desde el primer día y Admin ya los muestra completos.
         execute(
             """INSERT INTO agencia_config
-               (agencia_id, nombre_agencia, direccion, ciudad, provincia, telefono)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (agencia_id, nombre_agencia, direccion, ciudad, provincia, telefono),
+               (agencia_id, nombre_agencia, direccion, ciudad, provincia, telefono, zona_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (agencia_id, nombre_agencia, direccion, ciudad, provincia, telefono, zona_id),
         )
         codigo = crear_codigo(agencia_id)
         enviado = enviar_codigo_email(email, nombre_agencia, codigo)
