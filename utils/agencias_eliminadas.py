@@ -110,7 +110,7 @@ def restaurar(archivo_id):
                     f'VALUES ({",".join("?" * len(cols))})',
                     [_unval(fila[c]) for c in cols],
                 )
-        db.execute("UPDATE agencias_eliminadas SET restaurada = 1 WHERE id = ?", (archivo_id,))
+        db.execute("DELETE FROM agencias_eliminadas WHERE id = ?", (archivo_id,))  # 19/11/2026: la copia se quita al restaurar (no quedan fichas «Restaurada»)
         db.commit()
     except Exception as e:
         db.rollback()

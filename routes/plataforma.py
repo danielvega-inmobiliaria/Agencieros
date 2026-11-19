@@ -273,6 +273,7 @@ def eliminadas():
     """Copias de las agencias eliminadas a mano (19/11/2026)."""
     from utils.agencias_eliminadas import asegurar_tabla
     asegurar_tabla()
+    execute("DELETE FROM agencias_eliminadas WHERE COALESCE(restaurada, 0) = 1")  # fichas viejas ya restauradas
     filas = query("""SELECT id, agencia_id, nombre, email, telefono, validada, filas, eliminada_at, restaurada
                      FROM agencias_eliminadas ORDER BY id DESC""")
     return render_template("plataforma/eliminadas.html", filas=filas)
