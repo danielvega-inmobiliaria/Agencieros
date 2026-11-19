@@ -304,7 +304,7 @@ def borrar_agencia_sin_validar(agencia_id, validada_ok=False):
         db.execute("PRAGMA foreign_keys = OFF")
         for (t,) in db.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").fetchall():
             cols = [c[1] for c in db.execute(f'PRAGMA table_info("{t}")').fetchall()]
-            if "agencia_id" in cols and t != "agencias":
+            if "agencia_id" in cols and t not in ("agencias", "agencias_eliminadas"):
                 db.execute(f'DELETE FROM "{t}" WHERE agencia_id = ?', (agencia_id,))
         db.execute("DELETE FROM agencias WHERE id = ?", (agencia_id,))
         db.commit()
@@ -346,7 +346,7 @@ def purgar_sin_validar(horas=24, limite=None):
     tablas = []
     for (t,) in db.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").fetchall():
         cols = [c[1] for c in db.execute(f'PRAGMA table_info("{t}")').fetchall()]
-        if "agencia_id" in cols and t != "agencias":
+        if "agencia_id" in cols and t not in ("agencias", "agencias_eliminadas"):
             tablas.append(t)
     for i in range(0, len(ids), 400):
         trozo = ids[i:i + 400]
