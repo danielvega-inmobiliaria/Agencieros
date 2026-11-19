@@ -5,7 +5,7 @@
 <div class="panel">
   <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
     Mandale este link a otro agenciero. Si se registra, prueba AGENCIEROS gratis; y cuando
-    contrate su plan, <b>vos ganás 1 mes gratis</b> (hasta {{ tope }} meses acumulados).
+    contrate su plan, <b>vos ganás meses gratis</b>. Cuantos más colegas usen la app, más fuerte es la Red.
   </p>
   {% if link %}
   <input id="link-invitacion" type="text" readonly value="{{ link }}" style="width:100%; font-size:14px;" onclick="this.select();">
@@ -28,27 +28,39 @@
 
 <div class="panel">
   <h2>Tus invitados</h2>
-  <p style="margin-top:0;">Meses gratis ganados: <b>{{ meses }}</b> de {{ tope }}.</p>
   {% if invitados %}
+  <p style="margin-top:0;">
+    <b>{{ resumen.total }}</b> se registraron · <b>{{ resumen.validaron }}</b> validaron el mail ·
+    <b>{{ resumen.con_autos }}</b> ya cargaron autos · <b>{{ resumen.contrataron }}</b> contrataron.
+    Meses gratis ganados: <b>{{ meses }}</b>.
+  </p>
   <table class="tabla-responsive">
-    <thead><tr><th>Agencia</th><th>Ciudad</th><th>Se registró</th><th>Estado</th></tr></thead>
+    <thead><tr><th>Agencia</th><th>Se registró</th><th>Estado</th><th>Autos en stock</th><th>Última vez</th><th></th></tr></thead>
     <tbody>
     {% for i in invitados %}
     <tr>
-      <td data-label="Agencia"><b>{{ i.nombre_agencia }}</b></td>
-      <td data-label="Ciudad">{{ i.ciudad_txt or '—' }}</td>
+      <td data-label="Agencia"><b>{{ i.nombre_agencia }}</b>{% if i.ciudad_txt %}<br><small style="color:var(--text-dim);">{{ i.ciudad_txt }}</small>{% endif %}</td>
       <td data-label="Se registró">{{ (i.created_at or '')[:10] }}</td>
       <td data-label="Estado">
-        {% if i.pago_at %}Ya contrató{% if i.credito_meses %} · +{{ i.credito_meses }} mes{% endif %}
-        {% elif i.email_verificado %}Probando la app
-        {% else %}Falta validar su mail{% endif %}
+        {% if i.pago_at %}Ya contrató
+        {% elif not i.email_verificado %}Falta validar su mail
+        {% elif i.autos_stock %}La está usando
+        {% else %}Entró pero todavía no cargó autos{% endif %}
       </td>
+      <td data-label="Autos en stock">{{ i.autos_stock }}</td>
+      <td data-label="Última vez">
+        {% if i.dias_sin_entrar is none %}Nunca entró
+        {% elif i.dias_sin_entrar == 0 %}Hoy
+        {% elif i.dias_sin_entrar == 1 %}Ayer
+        {% else %}Hace {{ i.dias_sin_entrar }} días{% endif %}
+      </td>
+      <td data-label="">{% if i.wa and not i.pago_at %}<a class="btn btn-secondary btn-sm" target="_blank" rel="noopener" href="{{ i.wa }}">Escribirle</a>{% endif %}</td>
     </tr>
     {% endfor %}
     </tbody>
   </table>
   {% else %}
-  <p style="color:var(--text-dim);">Todavía no se registró nadie con tu link.</p>
+  <p style="color:var(--text-dim); margin:0;">Todavía no se registró nadie con tu link. Cuando se registren vas a ver acá quién entró y quién usa la app, para escribirles.</p>
   {% endif %}
 </div>
 {% endblock %}

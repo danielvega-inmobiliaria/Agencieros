@@ -5,14 +5,13 @@ Cada agencia tiene un código propio (`agencias.ref_codigo`) y un link
 `referidos`. El premio (1 mes gratis para quien invitó) se acredita cuando el
 colega hace su PRIMER PAGO: como todavía no se cobra desde la app, el admin lo
 marca a mano en el Panel de Agencias (ficha del colega → «Registrar primer
-pago»). Los meses se anotan como crédito, con tope MAX_MESES_CREDITO.
+pago»). Los meses se anotan como crédito, sin tope.
 """
 import secrets
 
 from database import query, execute
 
-MAX_MESES_CREDITO = 6   # tope propuesto: a confirmar por Daniel
-MESES_POR_REFERIDO = 1
+MESES_POR_REFERIDO = 1   # sin tope de meses acumulados (Daniel, 19/11/2026)
 _ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # sin O/0/I/1
 
 
@@ -62,19 +61,22 @@ def acreditar_primer_pago(invitado_id):
         return False, "Esta agencia no llegó por una invitación."
     if r["pago_at"]:
         return False, "El primer pago ya estaba registrado."
-    ya = meses_acreditados(r["invitador_id"])
-    meses = max(0, min(MESES_POR_REFERIDO, MAX_MESES_CREDITO - ya))
+    meses = MESES_POR_REFERIDO
     execute("UPDATE referidos SET pago_at = datetime('now'), credito_meses = ? WHERE id = ?",
             (meses, r["id"]))
-    if meses:
-        return True, f"Primer pago registrado: se acreditó {meses} mes gratis a quien la invitó."
-    return True, f"Primer pago registrado. Quien la invitó ya llegó al tope de {MAX_MESES_CREDITO} meses: no se suma crédito."
+    return True, f"Primer pago registrado: se acreditó {meses} mes gratis a quien la invitó."
 
 
 def lista_de(invitador_id):
+    """Invitados con su actividad (para que quien invita sepa quién la usa y
+    pueda insistirle): mail validado, autos cargados / en stock y última vez
+    que entró."""
     return query(
         """SELECT r.created_at, r.pago_at, r.credito_meses, a.nombre_agencia, a.email_verificado,
-                  (SELECT c.ciudad FROM agencia_config c WHERE c.agencia_id = a.id) AS ciudad_txt
+                  a.telefono, a.ultima_actividad,
+                  (SELECT c.ciudad FROM agencia_config c WHERE c.agencia_id = a.id) AS ciudad_txt,
+                  (SELECT COUNT(*) FROM vehiculos v WHERE v.agencia_id = a.id) AS autos,
+                  (SELECT COUNT(*) FROM vehiculos v WHERE v.agencia_id = a.id AND v.estado = 'disponible') AS autos_stock
            FROM referidos r JOIN agencias a ON a.id = r.invitado_id
            WHERE r.invitador_id = ? ORDER BY r.created_at DESC""",
         (invitador_id,),
