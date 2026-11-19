@@ -181,7 +181,14 @@ def agencias():
     resumen["sin_validar"] = sum(1 for f in todas if not f["verificada"] and not f["conservar"])
     # Por defecto solo las que validaron el mail (el listado con miles de
     # registros de bots era inmanejable); ?sin_validar=1 las muestra todas.
-    filas = todas if ver_todas else [f for f in todas if f["verificada"] or f["conservar"]]
+    # 18/11/2026: además de las validadas, siempre se ven las sin validar con
+    # teléfono real (personas que todavía no recibieron o no cargaron el
+    # código) y las de los últimos 3 días; el resto (bots) queda oculto.
+    from utils.antibot import telefono_real
+    limite_reciente = (datetime.utcnow() - timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
+    filas = todas if ver_todas else [
+        f for f in todas if f["verificada"] or f["conservar"] or telefono_real(f["telefono"])
+        or (f.get("alta") or "") >= limite_reciente]
     if q:
         def _matchea(f):
             campos = [f["nombre"], f["email"], f["ciudad"], f["provincia"]]
@@ -212,6 +219,18 @@ def conservar(agencia_id):
     return redirect(url_for("plataforma.detalle", agencia_id=agencia_id))
 
 
+@bp.route("/agencias/<int:agencia_id>/eliminar", methods=["POST"])
+def eliminar_sin_validar(agencia_id):
+    """Borra a mano una agencia que no validó el mail (18/11/2026): para las
+    personas que se contactaron y no avanzaron. No toca verificadas, la 1 ni la demo."""
+    from utils.antibot import borrar_agencia_sin_validar
+    if borrar_agencia_sin_validar(agencia_id):
+        flash("Agencia sin validar eliminada.", "success")
+        return redirect(url_for("plataforma.agencias", sin_validar=1))
+    flash("No se puede eliminar: solo se borran agencias que no validaron el mail.", "error")
+    return redirect(url_for("plataforma.detalle", agencia_id=agencia_id))
+
+
 @bp.route("/agencias/limpiar-sin-validar", methods=["POST"])
 def limpiar_sin_validar():
     """Borra las cuentas que nunca validaron el mail (bots/abandonadas) con
@@ -219,9 +238,12 @@ def limpiar_sin_validar():
     from utils.antibot import purgar_sin_validar
     # El código de mail vence a los 15 min: una cuenta sin validar de más de
     # 1 hora ya no la está validando nadie. Tandas de 3000 por clic.
+    # 18/11/2026: solo bots (sin teléfono real); las personas que no validaron
+    # se contactan y se borran a mano desde el detalle de la agencia.
     n = purgar_sin_validar(horas=1, limite=3000)
     flash(f"Se borraron {n} agencias que nunca validaron su mail."
-          + (" Quedan más: tocá el botón de nuevo." if n >= 3000 else ""), "success")
+          + (" Quedan más: tocá el botón de nuevo." if n >= 3000 else "")
+          + (" Las cuentas con teléfono real no se borran solas: borralas a mano desde su detalle." if n == 0 else ""), "success")
     return redirect(url_for("plataforma.agencias"))
 
 

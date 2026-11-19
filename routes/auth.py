@@ -239,8 +239,10 @@ def registro():
         provincia = request.form.get("provincia", "").strip()
         zona_id = zona_valida(request.form.get("zona_id"))  # opcional: campaña Agenciero Fundador
         contacto_referencia = request.form.get("contacto_referencia", "").strip()
-        password = request.form.get("password", "")
-        password2 = request.form.get("password2", "")
+        # 18/11/2026: se recortan espacios al principio y al final (el teclado
+        # del celu a veces los agrega al autocompletar); el login ya los tolera.
+        password = request.form.get("password", "").strip()
+        password2 = request.form.get("password2", "").strip()
 
         # Obligatorios (Daniel 21/09/2026): nombre de la agencia, teléfono,
         # dirección, ciudad, provincia y contacto de referencia -- así el Panel de Agencias y la Red
@@ -291,7 +293,7 @@ def registro():
             return _render_registro(request.form, invitacion)
 
         try:
-            antibot.purgar_sin_validar(horas=2, limite=300)  # limpieza liviana de cuentas abandonadas
+            antibot.purgar_sin_validar(horas=2, limite=300)  # limpieza liviana: solo bots (sin teléfono real; esas no se borran solas, 18/11/2026)
         except Exception as e:
             print(f"[antibot] no se pudo purgar: {e}", flush=True)
         agencia_id = execute(

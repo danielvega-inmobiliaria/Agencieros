@@ -265,6 +265,45 @@ def asegurar_columna_conservar():
         db.commit()
 
 
+def telefono_real(tel):
+    """True si el teléfono parece de una persona (solo números, 10 a 13
+    dígitos). Las cuentas sin validar con teléfono real NUNCA se borran solas
+    (Daniel 18/11/2026): se contactan y, si no avanzan, se borran a mano."""
+    tel = (tel or "").strip()
+    return tel.isdigit() and 10 <= len(tel) <= 13
+
+
+def borrar_agencia_sin_validar(agencia_id):
+    """Borrado manual (botón del detalle) de UNA agencia que no validó el
+    mail, con todas sus filas. Nunca borra la agencia 1, la demo ni una
+    verificada. Devuelve True si borró."""
+    db = get_db()
+    fila = db.execute("SELECT id, email_verificado, es_demo FROM agencias WHERE id = ?", (agencia_id,)).fetchone()
+    if not fila or fila["id"] == 1 or fila["es_demo"] or fila["email_verificado"]:
+        return False
+    if db.execute("SELECT 1 FROM vehiculos WHERE agencia_id = ? LIMIT 1", (agencia_id,)).fetchone():
+        return False  # ya cargó stock: no se borra desde acá
+    try:
+        # Se apagan las claves foráneas solo durante el borrado (todas las
+        # filas hijas llevan agencia_id y se borran junto con la agencia).
+        db.commit()
+        db.execute("PRAGMA foreign_keys = OFF")
+        for (t,) in db.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").fetchall():
+            cols = [c[1] for c in db.execute(f'PRAGMA table_info("{t}")').fetchall()]
+            if "agencia_id" in cols and t != "agencias":
+                db.execute(f'DELETE FROM "{t}" WHERE agencia_id = ?', (agencia_id,))
+        db.execute("DELETE FROM agencias WHERE id = ?", (agencia_id,))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"[antibot] no se pudo borrar la agencia {agencia_id}: {e}", flush=True)
+        return False
+    finally:
+        db.execute("PRAGMA foreign_keys = ON")
+    print(f"[antibot] agencia {agencia_id} sin validar borrada a mano", flush=True)
+    return True
+
+
 def purgar_sin_validar(horas=24, limite=None):
     """Borra las agencias que se registraron y NUNCA validaron el mail
     (cuentas de bots o abandonadas), junto con sus filas en TODAS las tablas
@@ -277,6 +316,10 @@ def purgar_sin_validar(horas=24, limite=None):
     sql = ("SELECT a.id FROM agencias a WHERE COALESCE(a.email_verificado, 0) = 0 AND COALESCE(a.conservar, 0) = 0 "
            "AND a.id <> 1 AND COALESCE(a.es_demo, 0) = 0 "
            "AND a.created_at < datetime('now', ?) "
+           # 18/11/2026: nunca se borra una cuenta con teléfono real (solo
+           # números, 10 a 13 dígitos): es una persona que se inscribió y
+           # todavía no validó el mail (ej. no le llegó el código).
+           "AND NOT (LENGTH(COALESCE(a.telefono, '')) BETWEEN 10 AND 13 AND a.telefono NOT GLOB '*[^0-9]*') "
            "AND NOT EXISTS (SELECT 1 FROM agencia_usuarios u WHERE u.agencia_id = a.id AND u.ultimo_ingreso IS NOT NULL) "
            "AND NOT EXISTS (SELECT 1 FROM vehiculos v WHERE v.agencia_id = a.id)")
     args = [f"-{int(horas)} hours"]

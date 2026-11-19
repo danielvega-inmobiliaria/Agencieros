@@ -26,6 +26,14 @@
     <form method="post" action="{{ url_for('plataforma.conservar', agencia_id=f.id) }}" style="margin-top:12px;">
       <button class="btn btn-secondary btn-sm" type="submit">{% if f.conservar %}✔ Se conserva (tocá para quitar){% else %}Conservar: no borrar al limpiar{% endif %}</button>
     </form>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+      {% set tel = (f.telefono or '')|replace(' ', '')|replace('+', '') %}
+      {% if tel and tel.isdigit() %}<a class="btn btn-secondary btn-sm" target="_blank" rel="noopener" href="https://wa.me/{{ tel if tel.startswith('54') else '54' + tel }}">Contactar por WhatsApp</a>{% endif %}
+      <form method="post" action="{{ url_for('plataforma.eliminar_sin_validar', agencia_id=f.id) }}"
+            onsubmit="return window.confirm('¿Eliminar esta agencia que no validó el mail? No se puede deshacer.');">
+        <button class="btn btn-secondary btn-sm" type="submit" style="color:var(--red);">Eliminar (no avanzó)</button>
+      </form>
+    </div>
     {% endif %}
   </div>
 
