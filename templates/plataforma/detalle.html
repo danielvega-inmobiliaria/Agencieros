@@ -26,9 +26,12 @@
     <form method="post" action="{{ url_for('plataforma.conservar', agencia_id=f.id) }}" style="margin-top:12px;">
       <button class="btn btn-secondary btn-sm" type="submit">{% if f.conservar %}✔ Se conserva (tocá para quitar){% else %}Conservar: no borrar al limpiar{% endif %}</button>
     </form>
+    {% endif %}
+    {# 19/11/2026: WhatsApp y Eliminar se ven en TODAS las agencias (validadas o no); Validar mail solo en las sin validar. #}
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
       {% set tel = (f.telefono or '')|replace(' ', '')|replace('+', '') %}
       {% if tel and tel.isdigit() %}<a class="btn btn-secondary btn-sm" target="_blank" rel="noopener" href="https://wa.me/{{ tel if tel.startswith('54') else '54' + tel }}">Contactar por WhatsApp</a>{% endif %}
+      {% if not f.verificada %}
       <form method="post" action="{{ url_for('plataforma.validar_mail_manual', agencia_id=f.id) }}"
             onsubmit="return window.confirm('¿Validar a mano el mail de esta agencia? Podrá ingresar sin código.');">
         <button class="btn btn-primary btn-sm" type="submit">Validar mail manualmente</button>
@@ -37,8 +40,13 @@
             onsubmit="return window.confirm('¿Eliminar esta agencia que no validó el mail? No se puede deshacer.');">
         <button class="btn btn-secondary btn-sm" type="submit" style="color:var(--red);">Eliminar (no avanzó)</button>
       </form>
+      {% elif f.id != 1 %}
+      <form method="post" action="{{ url_for('plataforma.eliminar_agencia', agencia_id=f.id) }}"
+            onsubmit="return window.confirm('¿ELIMINAR la agencia {{ f.nombre|e }} (mail validado)? Se borran sus usuarios, vehículos y todos sus datos. No se puede deshacer.');">
+        <button class="btn btn-secondary btn-sm" type="submit" style="color:var(--red);">Eliminar agencia</button>
+      </form>
+      {% endif %}
     </div>
-    {% endif %}
   </div>
 
   <div class="panel">

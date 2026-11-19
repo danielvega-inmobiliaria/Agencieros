@@ -273,16 +273,21 @@ def telefono_real(tel):
     return tel.isdigit() and 10 <= len(tel) <= 13
 
 
-def borrar_agencia_sin_validar(agencia_id):
+def borrar_agencia_sin_validar(agencia_id, validada_ok=False):
     """Borrado manual (botón del detalle) de UNA agencia que no validó el
-    mail, con todas sus filas. Nunca borra la agencia 1, la demo ni una
-    verificada. Devuelve True si borró."""
+    mail, con todas sus filas. Nunca borra la agencia 1 ni la demo. Con
+    `validada_ok=False` tampoco una verificada ni una con stock; con
+    `validada_ok=True` (botón «Eliminar agencia», 19/11/2026) sí borra una
+    validada, con su stock. Devuelve True si borró."""
     db = get_db()
     fila = db.execute("SELECT id, email_verificado, es_demo FROM agencias WHERE id = ?", (agencia_id,)).fetchone()
-    if not fila or fila["id"] == 1 or fila["es_demo"] or fila["email_verificado"]:
+    if not fila or fila["id"] == 1 or fila["es_demo"]:
         return False
-    if db.execute("SELECT 1 FROM vehiculos WHERE agencia_id = ? LIMIT 1", (agencia_id,)).fetchone():
-        return False  # ya cargó stock: no se borra desde acá
+    if not validada_ok:
+        if fila["email_verificado"]:
+            return False
+        if db.execute("SELECT 1 FROM vehiculos WHERE agencia_id = ? LIMIT 1", (agencia_id,)).fetchone():
+            return False  # ya cargó stock: no se borra desde acá
     try:
         # Se apagan las claves foráneas solo durante el borrado (todas las
         # filas hijas llevan agencia_id y se borran junto con la agencia).
@@ -300,7 +305,7 @@ def borrar_agencia_sin_validar(agencia_id):
         return False
     finally:
         db.execute("PRAGMA foreign_keys = ON")
-    print(f"[antibot] agencia {agencia_id} sin validar borrada a mano", flush=True)
+    print(f"[antibot] agencia {agencia_id} borrada a mano (validada_ok={validada_ok})", flush=True)
     return True
 
 

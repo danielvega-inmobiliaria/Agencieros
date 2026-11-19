@@ -251,6 +251,18 @@ def eliminar_sin_validar(agencia_id):
     return redirect(url_for("plataforma.detalle", agencia_id=agencia_id))
 
 
+@bp.route("/agencias/<int:agencia_id>/eliminar-agencia", methods=["POST"])
+def eliminar_agencia(agencia_id):
+    """Borra a mano una agencia (validada o no) con todos sus datos
+    (19/11/2026). No toca la 1 (Italia) ni la demo."""
+    from utils.antibot import borrar_agencia_sin_validar
+    if borrar_agencia_sin_validar(agencia_id, validada_ok=True):
+        flash("Agencia eliminada.", "success")
+        return redirect(url_for("plataforma.agencias"))
+    flash("No se puede eliminar esta agencia (es la principal, la demo o no existe).", "error")
+    return redirect(url_for("plataforma.detalle", agencia_id=agencia_id))
+
+
 @bp.route("/agencias/limpiar-sin-validar", methods=["POST"])
 def limpiar_sin_validar():
     """Borra las cuentas que nunca validaron el mail (bots/abandonadas) con
