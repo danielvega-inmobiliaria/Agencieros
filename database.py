@@ -1122,6 +1122,22 @@ def _migrar_agencias_ultima_actividad(conn):
         conn.execute("ALTER TABLE agencias ADD COLUMN ultima_actividad TEXT")
 
 
+def _migrar_referidos(conn):
+    """«Invitar a un colega» (19/11/2026): código propio por agencia y tabla
+    de invitaciones. Ver utils/referidos.py."""
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(agencias)")]
+    if "ref_codigo" not in cols:
+        conn.execute("ALTER TABLE agencias ADD COLUMN ref_codigo TEXT")
+    conn.execute("""CREATE TABLE IF NOT EXISTS referidos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        invitador_id INTEGER NOT NULL,
+        invitado_id INTEGER NOT NULL UNIQUE,
+        created_at TEXT DEFAULT (datetime('now')),
+        pago_at TEXT,
+        credito_meses INTEGER NOT NULL DEFAULT 0
+    )""")
+
+
 def _migrar_agencias_contacto_referencia(conn):
     """Contacto de referencia (18/09/2026, Panel de Agencias -- pedido de
     Daniel): nombre/cargo de la persona de referencia en cada agencia, para
@@ -1840,6 +1856,7 @@ def init_db():
     _migrar_tasaciones_margen_objetivo(conn)
     _migrar_agencias_ultima_actividad(conn)
     _migrar_agencias_contacto_referencia(conn)
+    _migrar_referidos(conn)
     _migrar_financiaciones_permuta(conn)
     _migrar_multi_tenant_columnas(conn)
     _migrar_senas_resolucion(conn)

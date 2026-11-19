@@ -66,6 +66,7 @@
       {{ item(url_for('web_agencia.consultas'), ep.startswith('web_agencia.consulta'), i_msg, 'Consultas de la web', consultas_web_nuevas) }}
       {{ item(url_for('matches.index'), ep.startswith('matches.'), i_match, 'Matches', matches_pendientes) }}
       {{ item(url_for('pedidos.index'), ep.startswith('pedidos.'), i_ped, 'Pedidos') }}
+      {% if not es_vendedor %}{{ item(url_for('invitar.index'), ep.startswith('invitar.'), i_user, 'Invitar a un colega') }}{% endif %}
       <details class="nav-mas" {% if ep.split('.')[0] in ('red','finanzas','mensajes','ranking') or interna %}open{% endif %}>
         <summary class="nav-item">Uso interno{% if respuestas_nuevas %}<span class="nav-badge">•</span>{% endif %}</summary>
         {{ item(url_for('red.index'), ep.startswith('red.'), i_red, 'Red de Agencieros') }}

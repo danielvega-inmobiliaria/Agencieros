@@ -350,8 +350,26 @@ def detalle(agencia_id):
         (agencia_id,),
     )
     from utils.planes import PLANES, resumen
+    from utils import referidos
+    ref = query(
+        """SELECT r.pago_at, r.credito_meses, a.nombre_agencia AS invitador
+           FROM referidos r JOIN agencias a ON a.id = r.invitador_id WHERE r.invitado_id = ?""",
+        (agencia_id,), one=True)
+    n_invitados = query("SELECT COUNT(*) AS n FROM referidos WHERE invitador_id = ?", (agencia_id,), one=True)["n"]
     return render_template("plataforma/detalle.html", f=fila, usuarios=usuarios,
-                           planes=PLANES, plan=resumen(agencia_id))
+                           planes=PLANES, plan=resumen(agencia_id), ref=ref, n_invitados=n_invitados,
+                           meses_ref=referidos.meses_acreditados(agencia_id))
+
+
+@bp.route("/agencias/<int:agencia_id>/primer-pago", methods=["POST"])
+def primer_pago(agencia_id):
+    """Registra el primer pago de una agencia que llegó por «Invitar a un
+    colega» y acredita 1 mes a quien la invitó (19/11/2026). Manual: todavía
+    no hay cobro automático."""
+    from utils import referidos
+    ok, msg = referidos.acreditar_primer_pago(agencia_id)
+    flash(msg, "success" if ok else "error")
+    return redirect(url_for("plataforma.detalle", agencia_id=agencia_id))
 
 
 @bp.route("/agencias/<int:agencia_id>/plan", methods=["POST"])

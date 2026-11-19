@@ -64,6 +64,7 @@ def create_app():
     from routes.ml import bp as ml_bp
     from routes.mensajes import bp as mensajes_bp
     from routes.cuenta import bp as cuenta_bp
+    from routes.invitar import bp as invitar_bp
     from routes.web_agencia import bp as web_agencia_bp
     from routes.ranking import bp as ranking_bp
 
@@ -84,6 +85,7 @@ def create_app():
     app.register_blueprint(ml_bp)
     app.register_blueprint(mensajes_bp)
     app.register_blueprint(cuenta_bp)
+    app.register_blueprint(invitar_bp)
     app.register_blueprint(web_agencia_bp)
     app.register_blueprint(ranking_bp)
 
@@ -144,7 +146,7 @@ def create_app():
 
     # Demo (06/10/2026): se puede cargar y probar todo, pero no tocar cuentas
     # ni mandar mensajes (le llegarían al administrador).
-    DEMO_BLOQUEADOS = {"cuenta.index", "cuenta.usuario_nuevo", "cuenta.usuario_editar", "mensajes.index"}
+    DEMO_BLOQUEADOS = {"cuenta.index", "cuenta.usuario_nuevo", "cuenta.usuario_editar", "mensajes.index", "invitar.index"}
 
     @app.before_request
     def _proteger_demo():

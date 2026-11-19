@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Invitar a un colega — Agencieros{% endblock %}
+{% block header %}Invitar a un colega{% endblock %}
+{% block content %}
+<div class="panel">
+  <p style="color:var(--text-dim); font-size:13px; margin-top:0;">
+    Mandale este link a otro agenciero. Si se registra, prueba AGENCIEROS gratis; y cuando
+    contrate su plan, <b>vos ganás 1 mes gratis</b> (hasta {{ tope }} meses acumulados).
+  </p>
+  {% if link %}
+  <input id="link-invitacion" type="text" readonly value="{{ link }}" style="width:100%; font-size:14px;" onclick="this.select();">
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+    <a class="btn btn-primary" target="_blank" rel="noopener" href="{{ wa_url }}">Compartir por WhatsApp</a>
+    <button class="btn btn-secondary" type="button" id="copiar-link">Copiar link</button>
+  </div>
+  <script>
+    document.getElementById('copiar-link').addEventListener('click', function () {
+      var i = document.getElementById('link-invitacion');
+      i.select();
+      try { navigator.clipboard.writeText(i.value); } catch (e) { document.execCommand('copy'); }
+      this.textContent = '¡Copiado!';
+    });
+  </script>
+  {% else %}
+  <p style="color:var(--red);">No se pudo generar tu link. Probá de nuevo en un rato.</p>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h2>Tus invitados</h2>
+  <p style="margin-top:0;">Meses gratis ganados: <b>{{ meses }}</b> de {{ tope }}.</p>
+  {% if invitados %}
+  <table class="tabla-responsive">
+    <thead><tr><th>Agencia</th><th>Ciudad</th><th>Se registró</th><th>Estado</th></tr></thead>
+    <tbody>
+    {% for i in invitados %}
+    <tr>
+      <td data-label="Agencia"><b>{{ i.nombre_agencia }}</b></td>
+      <td data-label="Ciudad">{{ i.ciudad_txt or '—' }}</td>
+      <td data-label="Se registró">{{ (i.created_at or '')[:10] }}</td>
+      <td data-label="Estado">
+        {% if i.pago_at %}Ya contrató{% if i.credito_meses %} · +{{ i.credito_meses }} mes{% endif %}
+        {% elif i.email_verificado %}Probando la app
+        {% else %}Falta validar su mail{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--text-dim);">Todavía no se registró nadie con tu link.</p>
+  {% endif %}
+</div>
+{% endblock %}

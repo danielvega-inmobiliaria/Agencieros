@@ -65,6 +65,24 @@
     </table>
   </div>
 
+  {% if ref or n_invitados %}
+  <div class="panel">
+    <h2>Invitaciones</h2>
+    {% if ref %}
+    <p style="margin-top:0;">Llegó invitada por <b>{{ ref.invitador }}</b>.
+      {% if ref.pago_at %}Primer pago registrado ({{ ref.pago_at[:10] }}){% if ref.credito_meses %}: se acreditó {{ ref.credito_meses }} mes a quien la invitó{% endif %}.
+      {% else %}Todavía sin primer pago.{% endif %}</p>
+    {% if not ref.pago_at %}
+    <form method="post" action="{{ url_for('plataforma.primer_pago', agencia_id=f.id) }}"
+          onsubmit="return window.confirm('¿Registrar el primer pago de esta agencia? Se acredita 1 mes gratis a {{ ref.invitador|e }}.');">
+      <button class="btn btn-primary btn-sm" type="submit">Registrar primer pago (acreditar mes al que invitó)</button>
+    </form>
+    {% endif %}
+    {% endif %}
+    {% if n_invitados %}<p style="margin-bottom:0;">Invitó a {{ n_invitados }} colega(s) · meses gratis acreditados: <b>{{ meses_ref }}</b>.</p>{% endif %}
+  </div>
+  {% endif %}
+
   <div class="panel">
     <h2>Plan: {{ plan.nombre }}</h2>
     <form method="post" action="{{ url_for('plataforma.cambiar_plan', agencia_id=f.id) }}" style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">

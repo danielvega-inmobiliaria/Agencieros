@@ -212,6 +212,13 @@ def _render_registro(prev, invitacion):
 @bp.route("/registro", methods=["GET", "POST"])
 def registro():
     invitacion = session.get("invitacion_demo") if _codigo_demo_valido(session.get("invitacion_demo")) else None
+    # «Invitar a un colega» (19/11/2026): el link trae ?ref=CODIGO; se guarda en
+    # la sesión hasta que complete la inscripción.
+    ref_url = (request.args.get("ref") or "").strip().upper()
+    if ref_url:
+        from utils import referidos
+        if referidos.agencia_por_codigo(ref_url):
+            session["ref_codigo"] = ref_url
     if request.method == "POST":
         ip = antibot.ip_cliente()
         # 1) Trampas: campo oculto lleno o formulario enviado demasiado rápido.
@@ -304,6 +311,17 @@ def registro():
             (nombre_agencia, email, generate_password_hash(password), telefono, contacto_referencia,
              "invitacion" if invitacion else "landing", invitacion),
         )
+        # «Invitar a un colega»: si llegó con el link de otra agencia, se anota.
+        try:
+            from utils import referidos
+            invitador = referidos.agencia_por_codigo(session.pop("ref_codigo", None))
+            if invitador:
+                referidos.registrar(invitador, agencia_id)
+                if not invitacion:
+                    execute("UPDATE agencias SET origen = 'referido', origen_codigo = ? WHERE id = ?",
+                            (referidos.codigo_de(invitador), agencia_id))
+        except Exception as e:
+            print(f"[referidos] no se pudo anotar la invitación: {e}", flush=True)
         # Usuario dueño de la agencia (28/09/2026): mismo mail y contraseña.
         execute(
             """INSERT INTO agencia_usuarios (agencia_id, nombre, email, password_hash, rol)
