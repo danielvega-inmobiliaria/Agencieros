@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Agencias eliminadas — Panel de Agencias{% endblock %}
+{% block header %}Agencias eliminadas{% endblock %}
+{% block content %}
+<a href="{{ url_for('plataforma.agencias') }}" style="display:inline-block; margin-bottom:14px; font-size:13px; color:var(--text-dim);">&larr; Volver al Panel de Agencias</a>
+<div class="panel">
+  <p style="font-size:.85rem; color:var(--text-dim);">Cada vez que se elimina una agencia a mano se guarda acá una copia completa (datos, usuarios, stock). «Restaurar» la vuelve a cargar tal cual estaba; «Descargar» baja la copia en JSON. Las imágenes guardadas fuera de la base no se copian.</p>
+  {% if filas %}
+  <table class="tabla-responsive">
+    <tr class="fila-header"><th>Agencia</th><th>Mail</th><th>Teléfono</th><th>Eliminada</th><th>Filas</th><th>Estado</th><th></th></tr>
+    {% for f in filas %}
+    <tr>
+      <td>{{ f.nombre }}{% if f.validada %} <span class="badge disponible">Estaba validada</span>{% endif %}</td>
+      <td>{{ f.email }}</td>
+      <td>{{ f.telefono or "-" }}</td>
+      <td>{{ f.eliminada_at }}</td>
+      <td>{{ f.filas }}</td>
+      <td>{% if f.restaurada %}Restaurada{% else %}Eliminada{% endif %}</td>
+      <td style="white-space:nowrap;">
+        <a class="btn btn-secondary btn-sm" href="{{ url_for('plataforma.descargar_eliminada', archivo_id=f.id) }}">Descargar</a>
+        {% if not f.restaurada %}
+        <form method="post" action="{{ url_for('plataforma.restaurar_agencia', archivo_id=f.id) }}" style="display:inline;"
+              onsubmit="return window.confirm('¿Restaurar la agencia {{ f.nombre|e }}?');">
+          <button class="btn btn-primary btn-sm" type="submit">Restaurar</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p>Todavía no se eliminó ninguna agencia.</p>{% endif %}
+</div>
+{% endblock %}

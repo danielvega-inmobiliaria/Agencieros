@@ -81,6 +81,7 @@
     </div>
   </form>
 
+  <p style="font-size:.85rem; margin:0 0 10px;"><a href="{{ url_for('plataforma.eliminadas') }}">Agencias eliminadas (copias para restaurar)</a></p>
   <h2>Agencias de la Red{% if q %} — resultados para "{{ q }}"{% endif %}</h2>
   <p style="font-size:.85rem; color:var(--text-dim); margin:-6px 0 12px;">
     {% if ver_todas %}Mostrando también las que no validaron el mail. <a href="{{ url_for('plataforma.agencias') }}">Ver solo las validadas</a>

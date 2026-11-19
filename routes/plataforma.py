@@ -257,10 +257,40 @@ def eliminar_agencia(agencia_id):
     (19/11/2026). No toca la 1 (Italia) ni la demo."""
     from utils.antibot import borrar_agencia_sin_validar
     if borrar_agencia_sin_validar(agencia_id, validada_ok=True):
-        flash("Agencia eliminada.", "success")
+        flash("Agencia eliminada. Quedó una copia en «Agencias eliminadas» por si hay que restaurarla.", "success")
         return redirect(url_for("plataforma.agencias"))
     flash("No se puede eliminar esta agencia (es la principal, la demo o no existe).", "error")
     return redirect(url_for("plataforma.detalle", agencia_id=agencia_id))
+
+
+@bp.route("/agencias/eliminadas")
+def eliminadas():
+    """Copias de las agencias eliminadas a mano (19/11/2026)."""
+    from utils.agencias_eliminadas import asegurar_tabla
+    asegurar_tabla()
+    filas = query("""SELECT id, agencia_id, nombre, email, telefono, validada, filas, eliminada_at, restaurada
+                     FROM agencias_eliminadas ORDER BY id DESC""")
+    return render_template("plataforma/eliminadas.html", filas=filas)
+
+
+@bp.route("/agencias/eliminadas/<int:archivo_id>/restaurar", methods=["POST"])
+def restaurar_agencia(archivo_id):
+    from utils.agencias_eliminadas import restaurar
+    ok, msg = restaurar(archivo_id)
+    flash(msg, "success" if ok else "error")
+    return redirect(url_for("plataforma.eliminadas"))
+
+
+@bp.route("/agencias/eliminadas/<int:archivo_id>/descargar")
+def descargar_eliminada(archivo_id):
+    from flask import Response
+    from utils.agencias_eliminadas import asegurar_tabla
+    asegurar_tabla()
+    reg = query("SELECT agencia_id, datos FROM agencias_eliminadas WHERE id = ?", (archivo_id,), one=True)
+    if reg is None:
+        abort(404)
+    return Response(reg["datos"], mimetype="application/json",
+                    headers={"Content-Disposition": f"attachment; filename=agencia_{reg['agencia_id']}_copia.json"})
 
 
 @bp.route("/agencias/limpiar-sin-validar", methods=["POST"])

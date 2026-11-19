@@ -288,6 +288,15 @@ def borrar_agencia_sin_validar(agencia_id, validada_ok=False):
             return False
         if db.execute("SELECT 1 FROM vehiculos WHERE agencia_id = ? LIMIT 1", (agencia_id,)).fetchone():
             return False  # ya cargó stock: no se borra desde acá
+    # 19/11/2026: antes de borrar se guarda una copia completa (Panel →
+    # Agencias eliminadas, con «Restaurar»). Si no se puede copiar, no se borra.
+    from utils.agencias_eliminadas import archivar
+    try:
+        if archivar(agencia_id) is None:
+            return False
+    except Exception as e:
+        print(f"[antibot] no se pudo archivar la agencia {agencia_id}: {e}", flush=True)
+        return False
     try:
         # Se apagan las claves foráneas solo durante el borrado (todas las
         # filas hijas llevan agencia_id y se borran junto con la agencia).
