@@ -219,6 +219,26 @@ def conservar(agencia_id):
     return redirect(url_for("plataforma.detalle", agencia_id=agencia_id))
 
 
+@bp.route("/agencias/<int:agencia_id>/validar-mail", methods=["POST"])
+def validar_mail_manual(agencia_id):
+    """Valida a mano el mail de una agencia (19/11/2026): para cuando el código
+    no llegó (cuota diaria de Resend agotada, mail en spam, etc.) y la persona
+    ya se contactó con nosotros. Marca el mail como verificado, inutiliza los
+    códigos pendientes y deja la cuenta como «se conserva»."""
+    from utils.antibot import asegurar_columna_conservar
+    asegurar_columna_conservar()
+    fila = query("SELECT id, email_verificado FROM agencias WHERE id = ?", (agencia_id,), one=True)
+    if fila is None:
+        abort(404)
+    if fila["email_verificado"]:
+        flash("Esta agencia ya tenía el mail validado.", "success")
+    else:
+        execute("UPDATE agencias SET email_verificado = 1, conservar = 1 WHERE id = ?", (agencia_id,))
+        execute("UPDATE verificacion_codigos SET usado = 1 WHERE agencia_id = ? AND usado = 0", (agencia_id,))
+        flash("Mail validado a mano: la persona ya puede ingresar con su mail y contraseña.", "success")
+    return redirect(url_for("plataforma.detalle", agencia_id=agencia_id))
+
+
 @bp.route("/agencias/<int:agencia_id>/eliminar", methods=["POST"])
 def eliminar_sin_validar(agencia_id):
     """Borra a mano una agencia que no validó el mail (18/11/2026): para las

@@ -21,6 +21,9 @@
       {% if invitacion %}
         <div class="flash success">Te invitaron a ver la demo. Completá los datos de tu agencia y, al validar tu mail, entrás.</div>
       {% endif %}
+      <div class="aviso-ayuda" style="font-size:13px; color:var(--muted); background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:10px 12px; margin-bottom:14px;">
+        ¿Tenés problemas para inscribirte o no te llega el mail de validación? Avisanos al <a href="https://wa.me/5493416533158" target="_blank" rel="noopener"><strong>341 653-3158</strong></a> (WhatsApp) y te ayudamos.
+      </div>
       <form method="post">
         <label>Nombre de tu agencia</label>
         <input type="text" name="nombre_agencia" value="{{ prev.get('nombre_agencia', '') }}" required autofocus maxlength="60">
