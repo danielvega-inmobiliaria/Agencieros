@@ -30,7 +30,9 @@
     {# 19/11/2026: WhatsApp y Eliminar se ven en TODAS las agencias (validadas o no); Validar mail solo en las sin validar. #}
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
       {% set tel = (f.telefono or '')|replace(' ', '')|replace('+', '') %}
-      {% if tel and tel.isdigit() %}<a class="btn btn-secondary btn-sm" target="_blank" rel="noopener" href="https://wa.me/{{ tel if tel.startswith('54') else '54' + tel }}">Contactar por WhatsApp</a>{% endif %}
+      {% if tel and tel.isdigit() %}<a class="btn btn-secondary btn-sm" target="_blank" rel="noopener" href="https://wa.me/{{ tel if tel.startswith('54') else '54' + tel }}">Contactar por WhatsApp</a>
+      {# 19/11/2026: en iPhone con WhatsApp y WhatsApp Business instalados, wa.me pregunta con cuál abrir. Este enlace abre directo Business (esquema propio de la app; solo sirve en el iPhone). #}
+      <a class="btn btn-secondary btn-sm" href="whatsapp-business://send?phone={{ tel if tel.startswith('54') else '54' + tel }}">Abrir en WhatsApp Business (iPhone)</a>{% endif %}
       {% if not f.verificada %}
       <form method="post" action="{{ url_for('plataforma.validar_mail_manual', agencia_id=f.id) }}"
             onsubmit="return window.confirm('¿Validar a mano el mail de esta agencia? Podrá ingresar sin código.');">

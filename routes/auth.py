@@ -322,6 +322,7 @@ def registro():
         codigo = crear_codigo(agencia_id)
         enviado = enviar_codigo_email(email, nombre_agencia, codigo)
         session["agencia_pendiente_id"] = agencia_id
+        _avisar_inscripcion(agencia_id, nombre_agencia, email, telefono, ciudad, provincia, contacto_referencia, invitacion)
         if enviado:
             flash(f"Te mandamos un código de verificación a {email}.", "success")
         else:
@@ -331,6 +332,26 @@ def registro():
             flash("No se pudo enviar el mail todavía (revisá la consola del servidor para el código).", "error")
         return redirect(url_for("auth.verificar"))
     return _render_registro({}, invitacion)
+
+
+def _avisar_inscripcion(agencia_id, nombre, email, telefono, ciudad, provincia, contacto, invitacion):
+    """Aviso al admin (mail + push) apenas alguien se INSCRIBE (19/11/2026),
+    sin esperar a que valide el mail: así se puede escribirle por WhatsApp si
+    el código no le llega. Solo si el teléfono es real (10 a 13 dígitos): los
+    bots no gastan cuota de Resend ni llenan la casilla. Cuando valide, sale
+    además el aviso de «mail validado»."""
+    try:
+        if not antibot.telefono_real(telefono):
+            return
+        from utils.notificaciones import notificar_admin
+        notificar_admin(
+            f"Nueva inscripción{' (POR INVITACIÓN A LA DEMO)' if invitacion else ''} — falta validar el mail: {nombre}",
+            f"{nombre} — {ciudad or '-'}, {provincia or '-'}\nTeléfono: {telefono}\nMail: {email}\n"
+            f"Contacto: {contacto}\n(Todavía no validó el mail: si el código no le llega, contactalo por WhatsApp.)",
+            ruta=f"/plataforma/agencias/{agencia_id}",
+        )
+    except Exception as e:
+        print(f"[auth] No se pudo avisar al admin de la inscripción: {e}", flush=True)
 
 
 def _avisar_registro_validado(agencia):
