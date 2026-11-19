@@ -81,7 +81,11 @@
     </div>
   </form>
 
-  <p style="font-size:.85rem; margin:0 0 10px;"><a href="{{ url_for('plataforma.eliminadas') }}">Agencias eliminadas (copias para restaurar)</a></p>
+  {# 19/11/2026: en rojo y con la cantidad de copias sin restaurar; botón verde «Restaurar» lleva a la lista (ahí se elige cuál). #}
+  <p style="font-size:.9rem; margin:0 0 10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+    <a href="{{ url_for('plataforma.eliminadas') }}" style="color:var(--red); font-weight:700;">Agencias eliminadas ({{ n_eliminadas }})</a>
+    {% if n_eliminadas %}<a class="btn btn-sm" href="{{ url_for('plataforma.eliminadas') }}" style="background:var(--green); color:#0b1a12; font-weight:700;">Restaurar</a>{% endif %}
+  </p>
   <h2>Agencias de la Red{% if q %} — resultados para "{{ q }}"{% endif %}</h2>
   <p style="font-size:.85rem; color:var(--text-dim); margin:-6px 0 12px;">
     {% if ver_todas %}Mostrando también las que no validaron el mail. <a href="{{ url_for('plataforma.agencias') }}">Ver solo las validadas</a>

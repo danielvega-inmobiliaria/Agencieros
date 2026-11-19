@@ -197,9 +197,14 @@ def agencias():
 
     filas.sort(key=_CLAVES_ORDEN[orden], reverse=(direccion == "desc"))
 
+    # 19/11/2026: cantidad de copias sin restaurar, para el aviso rojo con botón «Restaurar».
+    from utils.agencias_eliminadas import asegurar_tabla
+    asegurar_tabla()
+    n_eliminadas = query("SELECT COUNT(*) AS n FROM agencias_eliminadas WHERE COALESCE(restaurada, 0) = 0", one=True)["n"]
+
     return render_template(
         "plataforma/agencias.html",
-        filas=filas, resumen=resumen,
+        filas=filas, resumen=resumen, n_eliminadas=n_eliminadas,
         demo_codigo=(query("SELECT demo_codigo FROM agencias WHERE es_demo = 1 ORDER BY id LIMIT 1", one=True) or {"demo_codigo": None})["demo_codigo"],
         q=q, orden=orden, direccion=direccion, orden_opciones=ORDEN_OPCIONES, ver_todas=ver_todas,
     )
