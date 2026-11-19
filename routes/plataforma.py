@@ -287,6 +287,21 @@ def restaurar_agencia(archivo_id):
     return redirect(url_for("plataforma.eliminadas"))
 
 
+@bp.route("/agencias/eliminadas/<int:archivo_id>/borrar", methods=["POST"])
+def borrar_eliminada(archivo_id):
+    """Borra para siempre una copia de «Agencias eliminadas» (19/11/2026):
+    después ya no se puede restaurar."""
+    from utils.agencias_eliminadas import asegurar_tabla
+    asegurar_tabla()
+    reg = query("SELECT nombre FROM agencias_eliminadas WHERE id = ?", (archivo_id,), one=True)
+    if reg is None:
+        flash("Esa copia ya no existe.", "error")
+    else:
+        execute("DELETE FROM agencias_eliminadas WHERE id = ?", (archivo_id,))
+        flash(f"Copia de «{reg['nombre']}» borrada definitivamente.", "success")
+    return redirect(url_for("plataforma.eliminadas"))
+
+
 @bp.route("/agencias/eliminadas/<int:archivo_id>/descargar")
 def descargar_eliminada(archivo_id):
     from flask import Response

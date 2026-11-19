@@ -4,7 +4,7 @@
 {% block content %}
 <a href="{{ url_for('plataforma.agencias') }}" style="display:inline-block; margin-bottom:14px; font-size:13px; color:var(--text-dim);">&larr; Volver al Panel de Agencias</a>
 <div class="panel">
-  <p style="font-size:.85rem; color:var(--text-dim);">Cada vez que se elimina una agencia a mano se guarda acá una copia completa (datos, usuarios, stock). «Restaurar» la vuelve a cargar tal cual estaba; «Descargar» baja la copia en JSON. Las imágenes guardadas fuera de la base no se copian.</p>
+  <p style="font-size:.85rem; color:var(--text-dim);">Cada vez que se elimina una agencia a mano se guarda acá una copia completa (datos, usuarios, stock). «Restaurar» la vuelve a cargar tal cual estaba; «Descargar» baja un archivo con todos los datos de la agencia (JSON), por si querés guardarlo fuera de la app antes de borrarla; «Borrar» elimina la copia para siempre. Las imágenes guardadas fuera de la base no se copian.</p>
   {% if filas %}
   <table class="tabla-responsive">
     <tr class="fila-header"><th>Agencia</th><th>Mail</th><th>Teléfono</th><th>Eliminada</th><th>Filas</th><th>Estado</th><th></th></tr>
@@ -24,6 +24,10 @@
           <button class="btn btn-primary btn-sm" type="submit">Restaurar</button>
         </form>
         {% endif %}
+        <form method="post" action="{{ url_for('plataforma.borrar_eliminada', archivo_id=f.id) }}" style="display:inline;"
+              onsubmit="return window.confirm('¿Borrar DEFINITIVAMENTE la copia de {{ f.nombre|e }}? Después ya no se puede restaurar.');">
+          <button class="btn btn-secondary btn-sm" type="submit" style="color:var(--red);">Borrar</button>
+        </form>
       </td>
     </tr>
     {% endfor %}
