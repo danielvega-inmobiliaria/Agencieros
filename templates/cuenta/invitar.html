@@ -30,8 +30,10 @@
   <h2>Tus invitados</h2>
   {% if invitados %}
   <p style="margin-top:0;">
-    <b>{{ resumen.total }}</b> se registraron · <b>{{ resumen.validaron }}</b> validaron el mail ·
-    <b>{{ resumen.con_autos }}</b> ya cargaron autos · <b>{{ resumen.contrataron }}</b> contrataron.
+    <b>{{ resumen.total }}</b> {{ 'se registró' if resumen.total == 1 else 'se registraron' }} ·
+    <b>{{ resumen.validaron }}</b> {{ 'validó' if resumen.validaron == 1 else 'validaron' }} el mail ·
+    <b>{{ resumen.con_autos }}</b> {{ 'ya cargó' if resumen.con_autos == 1 else 'ya cargaron' }} autos ·
+    <b>{{ resumen.contrataron }}</b> {{ 'contrató' if resumen.contrataron == 1 else 'contrataron' }}.
     Meses gratis ganados: <b>{{ meses }}</b>.
   </p>
   <table class="tabla-responsive">
