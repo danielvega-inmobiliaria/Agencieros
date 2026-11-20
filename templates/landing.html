@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+{% from "partials/sello.html" import sello %}<!DOCTYPE html>
 <html lang="{{ t.html_lang }}">
 <head>
   <meta charset="UTF-8">
@@ -427,6 +427,20 @@
         <div class="mods">
           {% for ic, h, p in t.mods %}<div class="mod"><svg class="ico"><use href="#{{ ic }}"/></svg><div><h3>{{ h }}</h3><p>{{ p }}</p><span class="status live">{{ t.disponible }}</span></div></div>{% endfor %}
         </div>
+      </div>
+    </section>
+
+    <section class="block" id="fundador">
+      <div class="wrap split">
+        <div>
+          <div class="eyebrow">{{ t.fund_eyebrow }}</div>
+          <h2 class="sec-title">{{ t.fund_title }}</h2>
+          <p class="sec-lead">{{ t.fund_lead }}</p>
+          <ul class="ticks">{% for x in t.fund_ticks %}<li>{{ x }}</li>{% endfor %}</ul>
+          <p class="sec-lead" style="margin:18px 0 22px; font-size:.84rem;">{{ t.fund_nota }}</p>
+          <a class="btn btn-gold" href="{{ app_url }}{{ url_for('auth.registro') }}" onclick="if(window.fbq){fbq('track','Lead');}">{{ t.fund_btn }}</a>
+        </div>
+        <div class="split-media" style="display:flex; justify-content:center;">{{ sello(t.fund_sello_zona, 0, 230) }}</div>
       </div>
     </section>
 
