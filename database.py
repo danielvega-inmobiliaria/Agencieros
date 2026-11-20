@@ -1122,6 +1122,25 @@ def _migrar_agencias_ultima_actividad(conn):
         conn.execute("ALTER TABLE agencias ADD COLUMN ultima_actividad TEXT")
 
 
+def _migrar_fundador_reglas(conn):
+    """Reglas de la campaña Fundador (19/11/2026): validación del admin y
+    acreditación del premio por zona, y libro de meses gratis."""
+    zc = {r[1] for r in conn.execute("PRAGMA table_info(zonas)")}
+    for col in ("fundador_validado_at", "fundador_premio_at"):
+        if col not in zc:
+            conn.execute(f"ALTER TABLE zonas ADD COLUMN {col} TEXT")
+    conn.execute("""CREATE TABLE IF NOT EXISTS creditos_meses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        agencia_id INTEGER NOT NULL,
+        meses INTEGER NOT NULL,
+        motivo TEXT NOT NULL,
+        origen_agencia_id INTEGER NOT NULL DEFAULT 0,
+        detalle TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+    )""")
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_creditos_meses ON creditos_meses (agencia_id, motivo, origen_agencia_id)")
+
+
 def _migrar_referidos(conn):
     """«Invitar a un colega» (19/11/2026): código propio por agencia y tabla
     de invitaciones. Ver utils/referidos.py."""
@@ -1874,6 +1893,7 @@ def init_db():
     _migrar_planes(conn)
     _migrar_planes_oferta(conn)
     _migrar_zonas_fundador(conn)
+    _migrar_fundador_reglas(conn)
     _crear_superadmin_desde_env(conn)
     import mercado_ml
     mercado_ml.asegurar_tablas(conn)

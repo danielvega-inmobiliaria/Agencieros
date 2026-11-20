@@ -2,6 +2,7 @@
 {% block title %}Dashboard — Agencieros{% endblock %}
 {% block header %}Dashboard{% endblock %}
 {% block content %}
+{% from "partials/sello.html" import sello %}
 {% include "partials/selector_sucursal.html" %}
 {% if mision and not es_vendedor %}
 <div class="card" style="margin-bottom:16px; padding:16px;">
@@ -23,7 +24,14 @@
     <li><span style="color:var(--muted);">○</span> Publicados en el portal público de la Red <span class="sub">(se acredita cuando el portal exista)</span></li>
   </ul>
   {% if mision.es_fundador %}
-  <div class="sub" style="color:var(--green);">¡Misión completada! Sos el Agenciero Fundador de {{ mision.zona.nombre }}: {{ mision.premio_meses }} meses gratis, a confirmar por el administrador.</div>
+  <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
+    {% if mision.validado %}<div>{{ sello(mision.zona.nombre, mision.zona.id, 110) }}</div>{% endif %}
+    <div class="sub" style="color:var(--green); flex:1 1 220px;">
+      {% if mision.premiado %}¡Sos el Agenciero Fundador de {{ mision.zona.nombre }}! Tus {{ mision.premio_meses }} meses gratis ya están acreditados.
+      {% elif mision.validado %}¡Sos el Agenciero Fundador de {{ mision.zona.nombre }}! Los {{ mision.premio_meses }} meses gratis se acreditan cuando tu stock se sostenga {{ dias_stock }} días desde que cumpliste la misión ({{ (mision.completada_at or '')[:10] }}).
+      {% else %}¡Misión completada! Sos el fundador provisorio de {{ mision.zona.nombre }}: falta que el administrador valide tu agencia.{% endif %}
+    </div>
+  </div>
   {% elif mision.zona_tomada %}
   <div class="sub">Esta zona ya tiene Agenciero Fundador. Seguí cargando tu stock igual: la Red y tu web te traen consultas.</div>
   {% else %}

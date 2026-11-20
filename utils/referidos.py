@@ -10,6 +10,7 @@ pago»). Los meses se anotan como crédito, sin tope.
 import secrets
 
 from database import query, execute
+from utils import creditos
 
 MESES_POR_REFERIDO = 1   # sin tope de meses acumulados (Daniel, 19/11/2026)
 _ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # sin O/0/I/1
@@ -39,18 +40,24 @@ def agencia_por_codigo(codigo):
     return fila["id"] if fila else None
 
 
-def registrar(invitador_id, invitado_id):
-    """Anota que `invitado_id` se inscribió con el link de `invitador_id`."""
+def registrar(invitador_id, invitado_id, zona_id=None):
+    """Anota que `invitado_id` se inscribió con el link de `invitador_id`.
+    Si su zona ya está cubierta (tiene un fundador validado por el admin), el
+    colega recibe 1 mes de prueba; vale también si es la zona de quien lo
+    invitó (decidido por Daniel el 19/11/2026)."""
     if not invitador_id or invitador_id == invitado_id:
         return
     execute("INSERT OR IGNORE INTO referidos (invitador_id, invitado_id) VALUES (?, ?)",
             (invitador_id, invitado_id))
+    if zona_id:
+        z = query("SELECT fundador_agencia_id, fundador_validado_at FROM zonas WHERE id = ?", (zona_id,), one=True)
+        if z and z["fundador_validado_at"] and z["fundador_agencia_id"] != invitado_id:
+            creditos.acreditar(invitado_id, 1, "prueba_zona_cubierta", invitador_id)
 
 
-def meses_acreditados(invitador_id):
-    fila = query("SELECT COALESCE(SUM(credito_meses), 0) AS m FROM referidos WHERE invitador_id = ?",
-                 (invitador_id,), one=True)
-    return int(fila["m"] or 0)
+def meses_acreditados(agencia_id):
+    """Meses gratis acumulados por la agencia (todos los motivos, sin tope)."""
+    return creditos.total(agencia_id)
 
 
 def acreditar_primer_pago(invitado_id):
@@ -64,6 +71,7 @@ def acreditar_primer_pago(invitado_id):
     meses = MESES_POR_REFERIDO
     execute("UPDATE referidos SET pago_at = datetime('now'), credito_meses = ? WHERE id = ?",
             (meses, r["id"]))
+    creditos.acreditar(r["invitador_id"], meses, "invitado_contrato", invitado_id)
     return True, f"Primer pago registrado: se acreditó {meses} mes gratis a quien la invitó."
 
 

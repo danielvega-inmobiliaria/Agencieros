@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "partials/sello.html" import sello %}
+{% block title %}Agencieros Fundadores — Panel de Agencias{% endblock %}
+{% block header %}Agencieros Fundadores{% endblock %}
+{% block content %}
+<a href="{{ url_for('plataforma.agencias') }}" style="display:inline-block; margin-bottom:14px; font-size:13px; color:var(--text-dim);">&larr; Volver al Panel de Agencias</a>
+<div class="panel">
+  <p style="font-size:.85rem; color:var(--text-dim); margin-top:0;">
+    El primero de cada zona en cumplir la misión queda como fundador provisorio. Al <b>validarlo</b> (agencia real, fotos propias, sin duplicados) la zona queda
+    <b>cubierta</b>, recibe el sello y, si lo invitó otro agenciero, esa agencia suma 1 mes. Los meses del premio se acreditan cuando pasaron {{ dias_stock }} días
+    desde que cumplió la misión y sigue cumpliéndola. Zonas libres: <b>{{ libres }}</b> de {{ total }}.
+  </p>
+  {% if filas %}
+  <table class="tabla-responsive">
+    <tr class="fila-header"><th>Zona</th><th>Agencia</th><th>Cumplió la misión</th><th>Estado</th><th></th></tr>
+    {% for f in filas %}
+    <tr>
+      <td data-label="Zona"><b>{{ f.nombre }}</b><br><small style="color:var(--text-dim);">{{ f.distrito or f.tipo }}</small></td>
+      <td data-label="Agencia"><a href="{{ url_for('plataforma.detalle', agencia_id=f.fundador_agencia_id) }}">{{ f.fundador_nombre }}</a><br><small style="color:var(--text-dim);">{{ f.fundador_email }}</small></td>
+      <td data-label="Cumplió la misión">{{ (f.completada_at or '')[:16] }}{% if f.dias is not none %}<br><small style="color:var(--text-dim);">hace {{ f.dias }} días</small>{% endif %}</td>
+      <td data-label="Estado">
+        {% if f.estado == 'provisorio' %}Provisorio: falta validar
+        {% elif f.estado == 'validado' %}Validado · zona cubierta
+        {% else %}Premio acreditado ({{ f.premio_meses }} meses){% endif %}
+        {% if f.estado != 'provisorio' %}<div>{{ sello(f.nombre, f.id, 56) }}</div>{% endif %}
+      </td>
+      <td data-label="" style="white-space:nowrap;">
+        {% if f.estado == 'provisorio' %}
+        <form method="post" action="{{ url_for('plataforma.fundador_accion', zona_id=f.id, accion='validar') }}" style="display:inline;"
+              onsubmit="return window.confirm('¿Validar a {{ f.fundador_nombre|e }} como Agenciero Fundador de {{ f.nombre|e }}? La zona queda cubierta.');">
+          <button class="btn btn-primary btn-sm" type="submit">Validar</button>
+        </form>
+        {% endif %}
+        {% if f.estado != 'premiado' %}
+        <form method="post" action="{{ url_for('plataforma.fundador_accion', zona_id=f.id, accion='rechazar') }}" style="display:inline;"
+              onsubmit="return window.confirm('¿Rechazar a {{ f.fundador_nombre|e }} como fundador de {{ f.nombre|e }}? Pasa a la siguiente agencia de la zona que cumplió la misión, si hay.');">
+          <button class="btn btn-secondary btn-sm" type="submit" style="color:var(--red);">Rechazar</button>
+        </form>
+        {% endif %}
+        {% if f.estado == 'validado' %}
+        <form method="post" action="{{ url_for('plataforma.fundador_accion', zona_id=f.id, accion='acreditar') }}" style="display:inline;"
+              onsubmit="return window.confirm('¿Acreditar {{ f.premio_meses }} meses gratis a {{ f.fundador_nombre|e }}?');">
+          <button class="btn btn-sm" type="submit" style="background:var(--green); color:#0b1a12; font-weight:700;" {{ '' if f.puede_acreditar else 'title=' ~ ('"' ~ f.motivo_no ~ '"')|safe }}>Acreditar {{ f.premio_meses }} meses</button>
+        </form>
+        {% if not f.puede_acreditar %}<div><small style="color:var(--text-dim);">{{ f.motivo_no }}</small></div>{% endif %}
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p style="color:var(--text-dim);">Todavía ninguna agencia cumplió la misión en su zona.</p>
+  {% endif %}
+</div>
+{% endblock %}

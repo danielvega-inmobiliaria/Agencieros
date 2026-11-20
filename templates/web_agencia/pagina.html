@@ -1,3 +1,4 @@
+{% from "partials/sello.html" import sello -%}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -182,6 +183,7 @@
     {% if cfg.logo_url %}<img src="{{ cfg.logo_url }}" alt="Logo de {{ nombre }}">{% endif %}
     {% if solo_logo %}{% if lugar %}<b class="solo-lugar"><svg class="ico-pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>{{ lugar }}</b>{% endif %}{% else %}<b>{{ nombre }}{% if lugar %}<small><svg class="ico-pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>{{ lugar }}</small>{% endif %}</b>{% endif %}
   </a>
+  {% if sello_zona %}<span style="margin-left:auto; display:flex;">{{ sello(sello_zona.nombre, sello_zona.id, 60) }}</span>{% endif %}
 </div>
 </header>
 <nav class="menu2"><div class="wrap">

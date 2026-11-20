@@ -316,7 +316,7 @@ def registro():
             from utils import referidos
             invitador = referidos.agencia_por_codigo(session.pop("ref_codigo", None))
             if invitador:
-                referidos.registrar(invitador, agencia_id)
+                referidos.registrar(invitador, agencia_id, zona_id)
                 if not invitacion:
                     execute("UPDATE agencias SET origen = 'referido', origen_codigo = ? WHERE id = ?",
                             (referidos.codigo_de(invitador), agencia_id))

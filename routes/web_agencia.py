@@ -134,8 +134,11 @@ def pagina(slug):
     og_img = items[0]["foto"] if items else cfg.get("logo_url")
     if og_img and og_img.startswith("/"):
         og_img = APP_URL + og_img
+    # Sello «Agenciero Fundador» (19/11/2026): solo si el admin validó a la agencia como fundador de su zona.
+    sello_zona = query("SELECT id, nombre FROM zonas WHERE fundador_agencia_id = ? AND fundador_validado_at IS NOT NULL",
+                       (ag["id"],), one=True)
     return render_template(
-        "web_agencia/pagina.html", ico=icono_de_agencia(ag["id"]), nombre=nombre, cfg=cfg,
+        "web_agencia/pagina.html", ico=icono_de_agencia(ag["id"]), nombre=nombre, cfg=cfg, sello_zona=sello_zona,
         solo_logo=bool(cfg.get("logo_url")) and ag["web_encabezado"] == "solo_logo", lugar=lugar, items=items,
         marcas=sorted({i["marca"] for i in items if i["marca"]}),
         wa_general=(f"{wa_base}?text={quote_plus('Hola! Vi tu web y quiero consultar por un auto.')}" if wa_base else None),

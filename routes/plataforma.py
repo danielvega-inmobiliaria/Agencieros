@@ -620,3 +620,27 @@ def prospectos_importar():
         nuevos += 1
     flash(f"Importados {nuevos} prospectos ({saltados} ya estaban).", "success")
     return redirect(url_for("plataforma.prospectos"))
+
+
+@bp.route("/fundadores")
+def fundadores():
+    """Panel de fundadores (19/11/2026): validar al primero de cada zona,
+    rechazarlo o acreditarle los meses cuando pasaron 30 días."""
+    from utils import fundador
+    filas = fundador.zonas_panel()
+    libres = query("SELECT COUNT(*) c FROM zonas WHERE activa = 1 AND fundador_agencia_id IS NULL", one=True)["c"]
+    total = query("SELECT COUNT(*) c FROM zonas WHERE activa = 1", one=True)["c"]
+    return render_template("plataforma/fundadores.html", filas=filas, libres=libres, total=total,
+                           dias_stock=fundador.DIAS_STOCK)
+
+
+@bp.route("/fundadores/<int:zona_id>/<accion>", methods=["POST"])
+def fundador_accion(zona_id, accion):
+    from utils import fundador
+    fn = {"validar": fundador.validar_fundador, "rechazar": fundador.rechazar_fundador,
+          "acreditar": fundador.acreditar_premio}.get(accion)
+    if fn is None:
+        abort(404)
+    ok, msg = fn(zona_id)
+    flash(msg, "success" if ok else "error")
+    return redirect(url_for("plataforma.fundadores"))

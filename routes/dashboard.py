@@ -304,6 +304,7 @@ def index():
         top_vendedores=top_vendedores,
         mision=mision,
         mision_min=10,
+        dias_stock=30,  # utils.fundador.DIAS_STOCK
         suc_endpoint="dashboard.index",
         suc_args={},
         por_sucursal=_resumen_por_sucursal(agencia_id) if selector["sucursales_sel"] and selector["sucursal_sel"] is None else [],

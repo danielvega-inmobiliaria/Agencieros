@@ -83,6 +83,7 @@
 
   {# 19/11/2026: en rojo y con la cantidad de copias sin restaurar; botón verde «Restaurar» abre la lista, donde se elige cuál restaurar. #}
   <p style="font-size:.9rem; margin:0 0 10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+    <a href="{{ url_for('plataforma.fundadores') }}" style="font-weight:700;">Agencieros Fundadores</a>
     <a href="{{ url_for('plataforma.eliminadas') }}" style="color:var(--red); font-weight:700;">Agencias eliminadas ({{ n_eliminadas }})</a>
     {% if n_eliminadas %}<a class="btn btn-sm" href="{{ url_for('plataforma.eliminadas') }}" style="background:var(--green); color:#0b1a12; font-weight:700;">Restaurar</a>{% endif %}
   </p>

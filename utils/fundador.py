@@ -14,9 +14,13 @@ acredita cuando el portal exista. Sin fecha de cierre.
   fundadores, todavía sin hacer). Los meses se anotan como crédito: todavía
   no hay cobro automático.
 """
+from datetime import datetime
+
 from database import query, execute
+from utils import creditos
 
 MIN_VEHICULOS = 10  # unidades que tienen que cumplir cada consigna
+DIAS_STOCK = 30     # días que tiene que sostener la misión antes de acreditar el premio
 
 # Orden en que se muestran los grupos del selector de zona.
 _ORDEN_DISTRITOS = ["Centro", "Norte", "Noroeste", "Oeste", "Sudoeste", "Sur"]
@@ -97,6 +101,8 @@ def progreso(agencia_id):
         "completa": completa,
         "completada_at": ag["mision_completada_at"],
         "es_fundador": bool(zona and zona["fundador_agencia_id"] == agencia_id),
+        "validado": bool(zona and zona["fundador_agencia_id"] == agencia_id and zona["fundador_validado_at"]),
+        "premiado": bool(zona and zona["fundador_agencia_id"] == agencia_id and zona["fundador_premio_at"]),
         "zona_tomada": bool(zona and zona["fundador_agencia_id"]
                             and zona["fundador_agencia_id"] != agencia_id),
         "premio_meses": (zona["premio_meses"] if zona else 6),
@@ -116,3 +122,123 @@ def registrar_si_completa(agencia_id):
     execute("""UPDATE zonas SET fundador_agencia_id = ?, fundador_fecha = datetime('now')
                WHERE id = ? AND fundador_agencia_id IS NULL""", (agencia_id, p["zona"]["id"]))
     return progreso(agencia_id)
+
+
+# ---------------------------------------------------------------------------
+# Reglas confirmadas por Daniel (19/11/2026)
+#  - La primera agencia de la zona que cumple la misión queda como fundador
+#    PROVISORIO (registrar_si_completa).
+#  - El admin lo VALIDA (agencia real, fotos propias, sin duplicados): desde ahí
+#    la zona está «cubierta» y aparece el sello. Si quien lo invitó existe, suma
+#    +1 mes en ese momento.
+#  - Los 6 meses se acreditan cuando pasaron 30 días desde que cumplió la misión
+#    y sigue cumpliéndola.
+# ---------------------------------------------------------------------------
+
+def _dias_desde(ts):
+    if not ts:
+        return None
+    try:
+        return max(0, (datetime.utcnow() - datetime.strptime(str(ts)[:19], "%Y-%m-%d %H:%M:%S")).days)
+    except ValueError:
+        return None
+
+
+def estado_zona(z):
+    """libre | provisorio | validado | premiado."""
+    if not z["fundador_agencia_id"]:
+        return "libre"
+    if z["fundador_premio_at"]:
+        return "premiado"
+    if z["fundador_validado_at"]:
+        return "validado"
+    return "provisorio"
+
+
+def zonas_panel():
+    """Zonas con fundador (provisorio, validado o premiado) para el panel del admin."""
+    filas = query(
+        """SELECT z.*, a.nombre_agencia AS fundador_nombre, a.email AS fundador_email,
+                  a.mision_completada_at AS completada_at
+           FROM zonas z JOIN agencias a ON a.id = z.fundador_agencia_id
+           WHERE z.activa = 1 ORDER BY z.fundador_validado_at IS NOT NULL, a.mision_completada_at""")
+    salida = []
+    for z in filas:
+        d = dict(z)
+        d["estado"] = estado_zona(z)
+        d["dias"] = _dias_desde(z["completada_at"])
+        ok, motivo = _puede_acreditar(z)
+        d["puede_acreditar"] = ok
+        d["motivo_no"] = motivo
+        salida.append(d)
+    return salida
+
+
+def _puede_acreditar(z):
+    """(se puede acreditar ya?, motivo si no) para el panel del admin."""
+    if z["fundador_premio_at"]:
+        return False, "Ya acreditado."
+    if not z["fundador_validado_at"]:
+        return False, "Primero hay que validarla."
+    dias = _dias_desde(z["completada_at"])
+    if dias is None or dias < DIAS_STOCK:
+        return False, f"Faltan {DIAS_STOCK - (dias or 0)} días de stock sostenido."
+    return True, ""
+
+
+def validar_fundador(zona_id):
+    """El admin valida al fundador provisorio: la zona queda cubierta."""
+    z = query("SELECT * FROM zonas WHERE id = ?", (zona_id,), one=True)
+    if not z or not z["fundador_agencia_id"]:
+        return False, "Esa zona no tiene fundador para validar."
+    if z["fundador_validado_at"]:
+        return False, "Ese fundador ya estaba validado."
+    execute("UPDATE zonas SET fundador_validado_at = datetime('now') WHERE id = ?", (zona_id,))
+    ref = query("SELECT invitador_id FROM referidos WHERE invitado_id = ?", (z["fundador_agencia_id"],), one=True)
+    extra = ""
+    if ref and creditos.acreditar(ref["invitador_id"], 1, "invitado_fundador", z["fundador_agencia_id"]):
+        extra = " Se sumó 1 mes a quien lo invitó."
+    return True, f"Fundador de {z['nombre']} validado: la zona queda cubierta y la agencia recibe el sello.{extra}"
+
+
+def rechazar_fundador(zona_id):
+    """El admin rechaza al fundador (no era una agencia real, duplicada, etc.):
+    pasa a la siguiente agencia de la zona que cumplió la misión, si hay."""
+    z = query("SELECT * FROM zonas WHERE id = ?", (zona_id,), one=True)
+    if not z or not z["fundador_agencia_id"]:
+        return False, "Esa zona no tiene fundador."
+    if z["fundador_premio_at"]:
+        return False, "El premio ya se acreditó: no se puede rechazar."
+    sig = query(
+        """SELECT a.id FROM agencias a JOIN agencia_config c ON c.agencia_id = a.id
+           WHERE c.zona_id = ? AND a.id != ? AND a.activo = 1 AND a.mision_completada_at IS NOT NULL
+           ORDER BY a.mision_completada_at LIMIT 1""", (zona_id, z["fundador_agencia_id"]), one=True)
+    execute("""UPDATE zonas SET fundador_agencia_id = ?, fundador_fecha = datetime('now'),
+               fundador_validado_at = NULL WHERE id = ?""", (sig["id"] if sig else None, zona_id))
+    if sig:
+        return True, f"Fundador rechazado: pasa a la siguiente agencia de {z['nombre']} que cumplió la misión (queda provisoria)."
+    return True, f"Fundador rechazado: {z['nombre']} queda libre."
+
+
+def acreditar_premio(zona_id):
+    """Acredita los meses al fundador validado, si pasaron DIAS_STOCK días desde
+    que cumplió la misión y la sigue cumpliendo."""
+    z = query("SELECT * FROM zonas WHERE id = ?", (zona_id,), one=True)
+    if not z or not z["fundador_agencia_id"]:
+        return False, "Esa zona no tiene fundador."
+    if z["fundador_premio_at"]:
+        return False, "El premio ya estaba acreditado."
+    if not z["fundador_validado_at"]:
+        return False, "Primero hay que validar al fundador."
+    ag_id = z["fundador_agencia_id"]
+    ag = query("SELECT mision_completada_at FROM agencias WHERE id = ?", (ag_id,), one=True)
+    dias = _dias_desde(ag["mision_completada_at"]) if ag else None
+    if dias is None or dias < DIAS_STOCK:
+        faltan = DIAS_STOCK - (dias or 0)
+        return False, f"Todavía no pasaron {DIAS_STOCK} días desde que cumplió la misión (faltan {faltan})."
+    p = progreso(ag_id)
+    if not p or not p["completa"]:
+        return False, "Hoy ya no cumple las 3 consignas (bajó su stock): no se acredita."
+    creditos.acreditar(ag_id, z["premio_meses"], "fundador", 0, f"Fundador de {z['nombre']}")
+    execute("UPDATE zonas SET fundador_premio_at = datetime('now') WHERE id = ?", (zona_id,))
+    return True, f"Se acreditaron {z['premio_meses']} meses gratis al fundador de {z['nombre']}."
