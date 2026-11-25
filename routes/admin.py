@@ -53,6 +53,15 @@ def index():
            ("instagram" in (facebook or "").lower()):
             instagram, facebook = facebook, instagram
         sitio_web = request.form.get("sitio_web", "").strip() or None
+        # Si cargaron el link sin http(s):// se lo agregamos (si no, el enlace de la
+        # ficha se abría como ruta relativa y daba "No encontrado").
+        def _con_https(v):
+            if v and not v.lower().startswith(("http://", "https://")):
+                return "https://" + v.lstrip("/")
+            return v
+        sitio_web = _con_https(sitio_web)
+        instagram = _con_https(instagram)
+        facebook = _con_https(facebook)
 
         if telefono and not telefono.isdigit():
             flash(

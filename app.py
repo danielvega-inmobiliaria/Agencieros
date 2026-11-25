@@ -89,6 +89,20 @@ def create_app():
     app.register_blueprint(web_agencia_bp)
     app.register_blueprint(ranking_bp)
 
+    @app.template_filter("url_externa")
+    def _url_externa(valor):
+        # Link a un sitio/red social cargado a mano en Admin: si no trae
+        # http(s):// (ej. "agencieros.net.ar/a/car-black") el navegador lo
+        # toma como ruta relativa y da "No encontrado" (25/11/2026).
+        v = (valor or "").strip()
+        if not v:
+            return ""
+        if v.lower().startswith(("http://", "https://")):
+            return v
+        if v.startswith("//"):
+            return "https:" + v
+        return "https://" + v.lstrip("/")
+
     @app.template_filter("fecha_ar")
     def _fecha_ar(valor):
         # "YYYY-MM-DD HH:MM:SS" en UTC (datetime('now') de SQLite) -> hora
