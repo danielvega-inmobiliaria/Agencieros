@@ -120,7 +120,7 @@ def create_app():
         # estáticos; el resto se manda a la app (mismo path y query).
         if not _es_host_landing():
             return None
-        if request.endpoint in {"index", "inicio", "robots_txt", "static", "web_agencia.pagina", "web_agencia.compramos", "web_agencia.clic_auto", "web_agencia.clic_web", "uploads_estaticas"}:
+        if request.endpoint in {"index", "inicio", "robots_txt", "static", "web_agencia.pagina", "web_agencia.icono", "web_agencia.manifiesto", "web_agencia.compramos", "web_agencia.clic_auto", "web_agencia.clic_web", "uploads_estaticas"}:
             return None
         destino = APP_URL + request.full_path
         if destino.endswith("?"):
@@ -271,7 +271,7 @@ def create_app():
         publicas = {
             "auth.login", "auth.registro", "auth.verificar", "auth.reenviar_codigo", "auth.demo",
             "auth.olvide", "auth.restablecer",
-            "static", "stock.ficha", "stock.og_ficha", "web_agencia.pagina", "web_agencia.compramos", "web_agencia.clic_auto", "web_agencia.clic_web",
+            "static", "stock.ficha", "stock.og_ficha", "web_agencia.pagina", "web_agencia.icono", "web_agencia.manifiesto", "web_agencia.compramos", "web_agencia.clic_auto", "web_agencia.clic_web",
             # Fotos y logos subidos: la ficha compartida es pública y sin
             # esto quien la abre sin sesión (el cliente) no veía las fotos.
             "uploads_estaticas",

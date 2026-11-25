@@ -34,6 +34,7 @@
 
   <div class="cp-sub">1 · Plantilla</div>
   <div class="cp-chips" id="cp-plantillas"></div>
+  <div class="cp-chips" style="margin-top:6px"><button type="button" class="cp-chip" id="cp-mezclar">Mezclar diseño</button></div>
 
   <div class="cp-sub">2 · Fotos (tocá para elegir; el número es el orden)</div>
   <div class="cp-fotos" id="cp-fotos"></div>
@@ -72,7 +73,28 @@
     { id: 'horizontal', nombre: 'Facebook / Marketplace', w: 1200, h: 630, fotos: 1 },
     { id: 'collage', nombre: 'Collage 3 fotos', w: 1080, h: 1350, fotos: 3 }
   ];
-  var NAVY = '#0b1420', DORADO = '#e9b44c', TENUE = '#aab4c3';
+  var NAVY = '#0b1420', DORADO = '#e9b44c', TENUE = '#aab4c3', PANEL = '#1b2638', RGB_BG = '11,20,32', ACC_TXT = '#0b1420';
+  // Colores de marca de la agencia (color de «Mi web»): fondo oscuro del mismo tono, acento = el color de marca.
+  // Sin color elegido queda la paleta de siempre (azul noche + dorado).
+  (function paleta() {
+    var m = /^#([0-9a-f]{6})$/i.exec(D.color || ''); if (!m) return;
+    var n = parseInt(m[1], 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    var R = r / 255, G = g / 255, B = b / 255, mx = Math.max(R, G, B), mn = Math.min(R, G, B), l = (mx + mn) / 2, d = mx - mn, h = 0, sat = 0;
+    if (d) { sat = d / (1 - Math.abs(2 * l - 1)); h = mx === R ? ((G - B) / d) % 6 : (mx === G ? (B - R) / d + 2 : (R - G) / d + 4); h = (h * 60 + 360) % 360; }
+    function hslRgb(hh, ss, ll) {
+      var c = (1 - Math.abs(2 * ll - 1)) * ss, x = c * (1 - Math.abs((hh / 60) % 2 - 1)), mm = ll - c / 2, a;
+      a = hh < 60 ? [c, x, 0] : hh < 120 ? [x, c, 0] : hh < 180 ? [0, c, x] : hh < 240 ? [0, x, c] : hh < 300 ? [x, 0, c] : [c, 0, x];
+      return a.map(function (v) { return Math.round((v + mm) * 255); });
+    }
+    function hex(a) { return '#' + a.map(function (v) { return ('0' + v.toString(16)).slice(-2); }).join(''); }
+    function lum(a) { var f = a.map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * f[0] + 0.7152 * f[1] + 0.0722 * f[2]; }
+    var s0 = sat < 0.08 ? 0 : Math.min(sat, 0.5);
+    var bg = hslRgb(h, s0, 0.10), acc = lum([r, g, b]) < 0.10 ? hslRgb(h, Math.max(sat, 0.6), 0.58) : [r, g, b];
+    NAVY = hex(bg); RGB_BG = bg.join(','); PANEL = hex(hslRgb(h, s0, 0.17)); DORADO = hex(acc);
+    TENUE = hex(hslRgb(h, sat < 0.08 ? 0 : 0.12, 0.74)); ACC_TXT = lum(acc) > 0.4 ? '#0b1420' : '#ffffff';
+  })();
+  // Diseño al azar: 0 clásico, 1 texto arriba + chapa de precio, 2 foto completa con texto encima. «Mezclar diseño» lo cambia.
+  var VAR = Math.floor(Math.random() * 3);
   var cv = document.getElementById('cp-canvas'), ctx = cv.getContext('2d');
   var actual = PLANTILLAS[0], sel = [], cache = {}, pendiente = null;
   var campo = function (id) { return document.getElementById(id); };
@@ -95,7 +117,7 @@
     return cache[url];
   }
   function cubrir(i, x, y, w, h) {
-    if (!i) { ctx.fillStyle = '#1b2638'; ctx.fillRect(x, y, w, h); return; }
+    if (!i) { ctx.fillStyle = PANEL; ctx.fillRect(x, y, w, h); return; }
     var r = Math.max(w / i.width, h / i.height), sw = w / r, sh = h / r;
     ctx.drawImage(i, (i.width - sw) / 2, (i.height - sh) / 2, sw, sh, x, y, w, h);
   }
@@ -127,7 +149,15 @@
     }
     bloque(v.titulo, 58 * s, '800', '#fff', 2, 8 * s);
     bloque(v.datos, 34 * s, '400', TENUE, 2, 14 * s);
-    bloque(v.precio, 96 * s, '800', DORADO, 1, 10 * s);
+    if (v.precio && VAR === 1) {
+      var pp = 96 * s; ctx.font = '800 ' + pp + 'px ' + F;
+      var pw = Math.min(w, ctx.measureText(v.precio).width + 52 * s), ph2 = pp * 1.3;
+      if (dibujar) {
+        ctx.fillStyle = DORADO; rr(x, y, pw, ph2, 18 * s); ctx.fill();
+        ctx.fillStyle = ACC_TXT; ctx.textBaseline = 'middle'; ctx.fillText(lineas(v.precio, pw - 40 * s, 1)[0], x + 26 * s, y + ph2 / 2 + 3 * s); ctx.textBaseline = 'top';
+      }
+      y += ph2 + 12 * s;
+    } else bloque(v.precio, 96 * s, '800', DORADO, 1, 10 * s);
     bloque(v.pago, 36 * s, '600', '#fff', 2, 10 * s);
     bloque(v.equip, 30 * s, '400', '#cdd6e3', 2, 12 * s);
     bloque(v.extra, 34 * s, '400', '#fff', 3, 14 * s);
@@ -136,7 +166,7 @@
       var tw = Math.min(w, ctx.measureText(v.cta).width + 56 * s), bh = px * 1.9;
       if (dibujar) {
         ctx.fillStyle = DORADO; rr(x, y, tw, bh, bh / 2); ctx.fill();
-        ctx.fillStyle = NAVY; ctx.textBaseline = 'middle'; ctx.fillText(lineas(v.cta, tw - 40 * s, 1)[0], x + 28 * s, y + bh / 2 + 2); ctx.textBaseline = 'top';
+        ctx.fillStyle = ACC_TXT; ctx.textBaseline = 'middle'; ctx.fillText(lineas(v.cta, tw - 40 * s, 1)[0], x + 28 * s, y + bh / 2 + 2); ctx.textBaseline = 'top';
       }
       y += bh + 14 * s;
     }
@@ -160,50 +190,93 @@
   }
   function degradado(y0, y1, a0, a1) {
     var g = ctx.createLinearGradient(0, y0, 0, y1);
-    g.addColorStop(0, 'rgba(11,20,32,' + a0 + ')'); g.addColorStop(1, 'rgba(11,20,32,' + a1 + ')');
+    g.addColorStop(0, 'rgba(' + RGB_BG + ',' + a0 + ')'); g.addColorStop(1, 'rgba(' + RGB_BG + ',' + a1 + ')');
     ctx.fillStyle = g; ctx.fillRect(0, y0, cv.width, y1 - y0);
   }
+  function degradadoH(x0, x1, a0, a1) {
+    var g = ctx.createLinearGradient(x0, 0, x1, 0);
+    g.addColorStop(0, 'rgba(' + RGB_BG + ',' + a0 + ')'); g.addColorStop(1, 'rgba(' + RGB_BG + ',' + a1 + ')');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, cv.width, cv.height);
+  }
+  function barra(x, y, w, h) { ctx.fillStyle = DORADO; ctx.fillRect(x, y, w, h); }
+  function recorte(x, y, w, h, hacer) { ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); hacer(); ctx.restore(); }
   function dibujar() {
     var p = actual, W = p.w, H = p.h;
     cv.width = W; cv.height = H;
     var urls = sel.length ? sel.map(function (i) { return D.fotos[i]; }) : D.fotos.slice(0, p.fotos);
     Promise.all([img(urls[0]), img(urls[1]), img(urls[2]), img(D.logo)]).then(function (r) {
-      var f0 = r[0], f1 = r[1] || r[0], f2 = r[2] || r[0], logo = r[3];
+      var f0 = r[0], f1 = r[1] || r[0], f2 = r[2] || r[0], logo = r[3], y;
       ctx.fillStyle = NAVY; ctx.fillRect(0, 0, W, H);
       if (p.id === 'historia') {
-        // Foto completa (sin recortar) sobre fondo desenfocado de la misma foto.
-        if (f0) {
-          var mini = document.createElement('canvas'); mini.width = 18; mini.height = Math.max(2, Math.round(18 * H / W));
-          var mc = mini.getContext('2d'); var r0 = Math.max(mini.width / f0.width, mini.height / f0.height);
-          mc.drawImage(f0, (mini.width - f0.width * r0) / 2, (mini.height - f0.height * r0) / 2, f0.width * r0, f0.height * r0);
-          ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(mini, 0, 0, W, H);
-          ctx.fillStyle = 'rgba(11,20,32,0.55)'; ctx.fillRect(0, 0, W, H);
+        if (VAR === 0) {
+          // Foto completa (sin recortar) sobre fondo desenfocado de la misma foto.
+          if (f0) {
+            var mini = document.createElement('canvas'); mini.width = 18; mini.height = Math.max(2, Math.round(18 * H / W));
+            var mc = mini.getContext('2d'); var r0 = Math.max(mini.width / f0.width, mini.height / f0.height);
+            mc.drawImage(f0, (mini.width - f0.width * r0) / 2, (mini.height - f0.height * r0) / 2, f0.width * r0, f0.height * r0);
+            ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(mini, 0, 0, W, H);
+            ctx.fillStyle = 'rgba(' + RGB_BG + ',0.55)'; ctx.fillRect(0, 0, W, H);
+          }
+          var ph = 0, py = 330;
+          if (f0) {
+            var rr0 = Math.min(W / f0.width, 1000 / f0.height), pw = f0.width * rr0; ph = f0.height * rr0;
+            ctx.drawImage(f0, (W - pw) / 2, py, pw, ph);
+          } else { ph = 700; cubrir(null, 0, py, W, ph); }
+          barra(0, 0, W, 22); logoChip(48, 150, 110, logo);
+          y = py + ph + 50;
+          ajustar(60, y, W - 120, H - y - 200, 1.1);
+        } else if (VAR === 1) {
+          ctx.fillStyle = PANEL; ctx.fillRect(0, 0, W, H); barra(0, 0, W, 22); barra(0, H - 22, W, 22);
+          recorte(60, 230, W - 120, 900, function () { rr(60, 230, W - 120, 900, 36); ctx.clip(); cubrir(f0, 60, 230, W - 120, 900); });
+          logoChip(60, 70, 110, logo);
+          y = 230 + 900 + 50;
+          ajustar(60, y, W - 120, H - y - 200, 1.1);
+        } else {
+          cubrir(f0, 0, 0, W, H); degradado(H * 0.20, H * 0.55, 0, 0.9); degradado(H * 0.55, H, 0.9, 0.96); barra(0, 0, W, 22); logoChip(48, 70, 110, logo);
+          y = H * 0.55;
+          ajustar(60, y, W - 120, H - y - 200, 1.15);
         }
-        var ph = 0, py = 330;
-        if (f0) {
-          var rr0 = Math.min(W / f0.width, 1000 / f0.height), pw = f0.width * rr0; ph = f0.height * rr0;
-          ctx.drawImage(f0, (W - pw) / 2, py, pw, ph);
-        } else { ph = 700; cubrir(null, 0, py, W, ph); }
-        logoChip(48, 150, 110, logo);
-        var y0 = py + ph + 50;
-        ajustar(60, y0, W - 120, H - y0 - 200, 1.1);
         credito(0, H - 150, W, 28, 'center');
-      } else if (p.id === 'cuadrado') {
-        cubrir(f0, 0, 0, W, 640); logoChip(36, 36, 90, logo);
-        ajustar(50, 670, W - 100, H - 670 - 60, 0.8);
-        credito(0, H - 40, W, 22, 'center');
-      } else if (p.id === 'vertical') {
-        cubrir(f0, 0, 0, W, 800); logoChip(36, 36, 100, logo);
-        ajustar(55, 830, W - 110, H - 830 - 60, 0.9);
-        credito(0, H - 42, W, 22, 'center');
+      } else if (p.id === 'cuadrado' || p.id === 'vertical') {
+        var fh = p.id === 'cuadrado' ? 640 : 800, esc = p.id === 'cuadrado' ? 0.8 : 0.9, lh = p.id === 'cuadrado' ? 90 : 100, pie = p.id === 'cuadrado' ? 40 : 42, cp = p.id === 'cuadrado' ? 22 : 22;
+        if (VAR === 0) {
+          cubrir(f0, 0, 0, W, fh); barra(0, fh, W, 10); logoChip(36, 36, lh, logo);
+          ajustar(50, fh + 36, W - 100, H - fh - 36 - 60, esc);
+        } else if (VAR === 1) {
+          var th = fh - 230; // alto del bloque de texto de arriba
+          barra(0, 0, W, 16); ajustar(50, 46, W - 100, th - 46, esc);
+          recorte(0, th, W, H - th, function () { cubrir(f0, 0, th, W, H - th); });
+          barra(0, th, W, 10); degradado(H - 120, H, 0, 0.75); logoChip(36, th + 28, lh, logo);
+        } else {
+          cubrir(f0, 0, 0, W, H); degradado(H * 0.22, H * 0.52, 0, 0.9); degradado(H * 0.52, H, 0.9, 0.96); barra(0, 0, W, 14); logoChip(36, 36, lh, logo);
+          y = H * (p.id === 'cuadrado' ? 0.52 : 0.56);
+          ajustar(50, y, W - 100, H - y - 60, esc);
+        }
+        credito(0, H - pie, W, cp, 'center');
       } else if (p.id === 'horizontal') {
-        cubrir(f0, 0, 0, 700, H); logoChip(24, 24, 70, logo);
-        ajustar(730, 30, W - 730 - 30, H - 90, 0.62);
-        credito(730, H - 38, W - 760, 15, 'left');
+        if (VAR === 0) {
+          cubrir(f0, 0, 0, 700, H); barra(700, 0, 8, H); logoChip(24, 24, 70, logo);
+          ajustar(730, 30, W - 730 - 30, H - 90, 0.62); credito(730, H - 38, W - 760, 15, 'left');
+        } else if (VAR === 1) {
+          cubrir(f0, 500, 0, W - 500, H); barra(492, 0, 8, H); logoChip(524, 24, 70, logo);
+          ajustar(30, 30, 440, H - 90, 0.58); credito(30, H - 38, 440, 15, 'left');
+        } else {
+          cubrir(f0, 0, 0, W, H); degradadoH(W * 0.75, W * 0.30, 0, 0.92); barra(0, 0, 10, H); logoChip(W - 250, 24, 70, logo);
+          ajustar(40, 30, 560, H - 90, 0.62); credito(40, H - 38, 560, 15, 'left');
+        }
       } else {
-        cubrir(f0, 0, 0, W, 700); cubrir(f1, 0, 704, W / 2 - 2, 330); cubrir(f2, W / 2 + 2, 704, W / 2 - 2, 330);
-        logoChip(36, 36, 90, logo);
-        ajustar(55, 1060, W - 110, H - 1060 - 55, 0.7);
+        if (VAR === 0) {
+          cubrir(f0, 0, 0, W, 700); cubrir(f1, 0, 704, W / 2 - 2, 330); cubrir(f2, W / 2 + 2, 704, W / 2 - 2, 330);
+          barra(0, 1034, W, 8); logoChip(36, 36, 90, logo); ajustar(55, 1060, W - 110, H - 1060 - 55, 0.7);
+        } else if (VAR === 1) {
+          barra(0, 0, W, 16); ajustar(55, 44, W - 110, 380, 0.7);
+          cubrir(f0, 0, 450, W, 520); cubrir(f1, 0, 974, W / 2 - 2, 326); cubrir(f2, W / 2 + 2, 974, W / 2 - 2, 326);
+          barra(0, 440, W, 10); logoChip(36, 474, 90, logo); degradado(H - 90, H, 0, 0.8);
+        } else {
+          var cw = Math.round(W * 0.62);
+          cubrir(f0, 0, 0, cw - 2, 900); cubrir(f1, cw + 2, 0, W - cw - 2, 448); cubrir(f2, cw + 2, 452, W - cw - 2, 448);
+          barra(0, 900, W, 10); logoChip(36, 36, 90, logo); ajustar(55, 935, W - 110, H - 935 - 55, 0.7);
+        }
         credito(0, H - 38, W, 20, 'center');
       }
     });
@@ -217,6 +290,7 @@
     b.onclick = function () { actual = p; Array.prototype.forEach.call(cont.children, function (o) { o.classList.toggle('on', o === b); }); dibujar(); };
     cont.appendChild(b);
   });
+  campo('cp-mezclar').onclick = function () { VAR = (VAR + 1 + Math.floor(Math.random() * 2)) % 3; dibujar(); };
   // Fotos
   var fc = campo('cp-fotos');
   function pintarFotos() {
@@ -236,7 +310,7 @@
   campo('cp-logo').addEventListener('change', dibujar);
 
   function blob() { return new Promise(function (ok) { cv.toBlob(ok, 'image/jpeg', 0.92); }); }
-  function nombreArchivo() { return 'agencieros-' + actual.id + '.jpg'; }
+  function nombreArchivo() { return 'agencieros-' + actual.id + '-' + (VAR + 1) + '.jpg'; }
   campo('cp-bajar').onclick = function () {
     blob().then(function (b) { var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = nombreArchivo(); document.body.appendChild(a); a.click(); a.remove(); avisar('Imagen descargada.'); });
   };

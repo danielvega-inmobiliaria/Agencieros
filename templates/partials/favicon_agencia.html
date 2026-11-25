@@ -1,0 +1,11 @@
+{# Favicon + ícono de app + manifiesto PROPIOS de la agencia, con su logo (25/11/2026).
+   Variables: `slug_ico` (slug de la web activa de la agencia, o vacío), `color_app` (color de marca).
+   Sin logo o sin web activa: cae al favicon de siempre. #}
+{% if slug_ico %}
+<link rel="icon" type="image/png" sizes="48x48" href="/a/{{ slug_ico }}/icono-48.png">
+<link rel="apple-touch-icon" href="/a/{{ slug_ico }}/icono-180.png">
+<link rel="manifest" href="/a/{{ slug_ico }}/manifest.webmanifest">
+<meta name="theme-color" content="{{ color_app or '#1f4fa8' }}">
+{% else %}
+{% include "partials/favicon_publico.html" %}
+{% endif %}

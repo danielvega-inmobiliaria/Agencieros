@@ -1462,6 +1462,13 @@ def _forma_pago_texto(vehiculo, datos):
     return " · ".join(partes)
 
 
+def _color_marca(agencia_id):
+    """Color de marca elegido por la agencia en «Mi web» (#rrggbb) o None si no eligió ninguno."""
+    f = query("SELECT web_color FROM agencias WHERE id = ?", (agencia_id,), one=True)
+    c = (f["web_color"] if f else None) or ""
+    return c if re.fullmatch(r"#[0-9a-fA-F]{6}", c) else None
+
+
 def _campos_compartir(vehiculo, datos, titulo_v, nombre_ag, lugar, agencia_cfg):
     """Textos iniciales (todos editables en pantalla) de las plantillas de
     imagen para redes (09/11/2026): salen de la ficha."""
@@ -1677,6 +1684,7 @@ def ficha(vehiculo_id):
             "texto": "\n".join(lineas),
             "campos": _campos_compartir(vehiculo, datos, titulo_v, nombre_ag, lugar, agencia_cfg),
             "logo": agencia_cfg.get("logo_url"),
+            "color": _color_marca(vehiculo["agencia_id"] or 1),
             "link": link_ficha,
             "titulo": titulo_v,
             "fotos": [f["url"] for f in datos.get("fotos") or []],
@@ -1710,8 +1718,14 @@ def ficha(vehiculo_id):
         # Link compartido por WhatsApp (el cliente ya está en el chat con la
         # agencia) o panel Publicar: la ficha va sin el botón de WhatsApp.
         datos["whatsapp_link"] = None
+    # Ícono propio de la agencia (logo) si tiene web activa y logo cargado (25/11/2026).
+    _ag_web = query("SELECT web_slug, web_color FROM agencias WHERE id = ? AND web_activa = 1 AND web_slug IS NOT NULL AND web_slug != ''",
+                    (vehiculo["agencia_id"] or 1,), one=True)
+    _slug_ico = _ag_web["web_slug"] if (_ag_web and agencia_cfg.get("logo_url")) else ""
+    _color_ico = (_ag_web["web_color"] if _ag_web else None) or "#1f4fa8"
     return render_template(
         "stock/ficha.html",
+        slug_ico=_slug_ico, color_app=_color_ico,
         ico=icono_de_agencia(vehiculo["agencia_id"] or 1),
         vehiculo=vehiculo,
         datos=datos,

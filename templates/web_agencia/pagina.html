@@ -3,7 +3,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-{% include "partials/favicon_publico.html" %}
+{% set slug_ico = slug if icono_propio else "" %}{% set color_app = color %}{% include "partials/favicon_agencia.html" %}
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ nombre }}{% if lugar %} · {{ lugar }}{% endif %} — {{ tipo_titulo }}</title>
 <meta name="description" content="{{ items|length }} {{ tipo_titulo|lower }} disponibles en {{ nombre }}{% if lugar %}, {{ lugar }}{% endif %}. Consultá por WhatsApp.">
@@ -193,6 +193,7 @@
     <a href="#compramos">Compramos tu auto</a>
     {% if not vista_previa %}<button type="button" class="compartir" id="btn-compartir-web" aria-label="Compartir esta web" title="Compartir"
       data-titulo="{{ nombre }} — {{ tipo_titulo }}" data-texto="{{ items|length }} autos disponibles{% if lugar %} · {{ lugar }}{% endif %}" data-url="{{ url_canonica }}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.8l7.4-4.4M8.3 13.2l7.4 4.4"/></svg></button>{% endif %}
+    {% if icono_propio and not vista_previa %}<button type="button" class="compartir instalar" id="btn-instalar-web" hidden aria-label="Instalar la app de {{ nombre }}" title="Instalar app"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></svg></button>{% endif %}
     <span class="corte"></span>
     {% if items %}<button type="button" id="btn-buscador" aria-expanded="false">Buscador</button>{% endif %}
     <a href="#contacto">Contacto</a>
@@ -518,6 +519,26 @@
       if (navigator.share) { navigator.share(d).catch(function (e) { if (e && e.name !== 'AbortError') copiar(d.url); }); }
       else { copiar(d.url); }
     });
+  })();
+</script>
+<script>
+  // App instalable de la agencia (con su logo): botón «Instalar app».
+  (function () {
+    var b = document.getElementById('btn-instalar-web');
+    if (!b) return;
+    var aviso = document.getElementById('aviso-compartir'), t = null, evento = null;
+    function decir(m) { aviso.textContent = m; aviso.hidden = false; clearTimeout(t); t = setTimeout(function () { aviso.hidden = true; }, 5000); }
+    var instalada = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    if (instalada) return;
+    var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !/crios|fxios/i.test(navigator.userAgent);
+    window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); evento = e; b.hidden = false; });
+    window.addEventListener('appinstalled', function () { b.hidden = true; });
+    if (ios) b.hidden = false;
+    b.addEventListener('click', function () {
+      if (evento) { evento.prompt(); evento.userChoice.then(function () { evento = null; b.hidden = true; }); }
+      else if (ios) { decir('En el iPhone: tocá Compartir y elegí «Agregar a inicio».'); }
+    });
+    if ('serviceWorker' in navigator) window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
   })();
 </script>
 </body>

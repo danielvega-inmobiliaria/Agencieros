@@ -12,6 +12,7 @@ Dos rutas:
 - GET/POST /mi-web/configuracion  la agencia activa su web (configuración); /mi-web = autos que se muestran. Antes: la agencia activa su web, elige el nombre del link y
                        marca qué autos se muestran.
 """
+import io
 import json
 import os
 import re
@@ -150,7 +151,56 @@ def pagina(slug):
         wa_compramos=(f"{wa_base}?text={quote_plus('Hola! Quiero vender mi auto, vi que lo compran en tu web.')}" if wa_base else None),
         color=color_valido(ag["web_color"]), color_txt=_texto_sobre(color_valido(ag["web_color"])),
         vista_previa=(es_dueno and not ag["web_activa"]), activa=bool(ag["web_activa"]),
+        icono_propio=bool(cfg.get("logo_url")) and bool(ag["web_activa"]),
     )
+
+
+def _agencia_con_logo(slug):
+    """(agencia, config, ruta del logo) de una web activa; abort(404) si no existe."""
+    from routes.stock import _ruta_subida
+    ag = query("SELECT id, nombre_agencia, activo, web_activa, web_color FROM agencias WHERE web_slug = ?",
+               (slug.lower(),), one=True)
+    if not ag or ag["activo"] == 0 or not ag["web_activa"]:
+        abort(404)
+    cfg = dict(obtener_config_agencia(ag["id"]))
+    return ag, cfg, _ruta_subida(cfg.get("logo_url"))
+
+
+@bp.route("/a/<slug>/icono-<int:px>.png")
+def icono(slug, px):
+    """Favicon / ícono de app de la agencia, con su logo (si no tiene, el de AGENCIEROS)."""
+    from flask import send_file, redirect
+    from utils.icono_agencia import png_de_logo
+    ag, cfg, ruta = _agencia_con_logo(slug)
+    datos = png_de_logo(ruta, px, color_valido(ag["web_color"]))
+    if not datos:
+        return redirect(url_for("static", filename="icons/icon-agencieros-512.png" if px > 192 else "icons/icon-agencieros-192.png"))
+    resp = send_file(io.BytesIO(datos), mimetype="image/png")
+    resp.headers["Cache-Control"] = "public, max-age=3600"
+    return resp
+
+
+@bp.route("/a/<slug>/manifest.webmanifest")
+def manifiesto(slug):
+    """Manifiesto de la app instalable de la agencia (nombre, color y logo propios)."""
+    ag, cfg, ruta = _agencia_con_logo(slug)
+    slug = slug.lower()
+    nombre = cfg.get("nombre_agencia") or ag["nombre_agencia"] or "Agencia"
+    color = color_valido(ag["web_color"])
+    base = f"/a/{slug}"
+    datos = {
+        "id": base, "name": nombre, "short_name": nombre[:12], "description": f"Autos de {nombre}",
+        "start_url": base + "?utm_source=app", "scope": base, "display": "standalone",
+        "background_color": "#ffffff", "theme_color": color,
+        "icons": [
+            {"src": f"{base}/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+            {"src": f"{base}/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+        ],
+    }
+    resp = jsonify(datos)
+    resp.mimetype = "application/manifest+json"
+    resp.headers["Cache-Control"] = "public, max-age=3600"
+    return resp
 
 
 def _agencia_web():
