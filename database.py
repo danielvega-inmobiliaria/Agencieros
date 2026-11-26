@@ -1894,6 +1894,10 @@ def init_db():
     _migrar_planes_oferta(conn)
     _migrar_zonas_fundador(conn)
     _migrar_fundador_reglas(conn)
+    # Red: cierra publicaciones activas de vehículos ya vendidos (25/11/2026).
+    conn.execute("""UPDATE red_publicaciones SET estado = 'cerrado'
+                    WHERE estado = 'activo' AND vehiculo_id IS NOT NULL
+                      AND vehiculo_id IN (SELECT id FROM vehiculos WHERE estado = 'vendido')""")
     _crear_superadmin_desde_env(conn)
     import mercado_ml
     mercado_ml.asegurar_tablas(conn)

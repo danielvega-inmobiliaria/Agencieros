@@ -87,7 +87,9 @@ def index():
     condiciones, params = condiciones_sql(filtros, campo_precio="precio", campo_km="km",
                                           campo_marca=rp + "marca", campo_modelo=rp + "modelo",
                                           campo_version=rp + "version", campo_anio=rp + "anio")
+    cerrar_red_de_vendidos()
     condiciones.append("red_publicaciones.estado = 'activo'")
+    condiciones.append("(v.id IS NULL OR v.estado != 'vendido')")
     from utils.demo import condicion_red
     condiciones.append(condicion_red("red_publicaciones."))
     if tipo_filtro in ("ofrezco", "busco"):
@@ -251,6 +253,15 @@ def cerrar_red_de_vehiculo(vehiculo_id):
     """Se llama al vender la unidad (Stock, Editar y Financiación)."""
     execute("UPDATE red_publicaciones SET estado = 'cerrado' WHERE vehiculo_id = ? AND estado = 'activo'",
             (vehiculo_id,))
+
+
+def cerrar_red_de_vendidos():
+    """Red de seguridad (25/11/2026): cierra toda publicación activa cuyo vehículo ya figura
+    «vendido» (caso real: Peugeot 408 de Italia seguía ofrecido estando en Vendidos). Es
+    idempotente; se corre al listar la Red y al arrancar la app."""
+    execute("""UPDATE red_publicaciones SET estado = 'cerrado'
+               WHERE estado = 'activo' AND vehiculo_id IS NOT NULL
+                 AND vehiculo_id IN (SELECT id FROM vehiculos WHERE estado = 'vendido')""")
 
 
 # ---------------------------------------------------------------------
