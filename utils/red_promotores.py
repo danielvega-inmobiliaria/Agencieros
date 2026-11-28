@@ -7,11 +7,19 @@ Variables de entorno (Railway de Agencieros):
   RED_PROMOTORES_AGENCIA_ID   id de la agencia de Agencieros que usa la función
                               (default: STOCK_SYNC_AGENCIA_ID o 1 = Italia)
 Sin URL o sin token el botón no aparece.
+
+Sincronización automática: una vez compartida una unidad (vehiculos.red_promotores = 1),
+cualquier cambio de precio, fotos, costos o estado se reenvía solo (en segundo plano).
+Si deja de estar disponible (señada, vendida, etc.) se quita de la Red; si vuelve a
+disponible, reaparece.
 """
 import json
 import os
+import threading
 import urllib.error
 import urllib.request
+
+from flask import g
 
 
 def _agencia_id():
@@ -40,3 +48,20 @@ def enviar(payload):
         return False, "Red de Promotores respondió %s" % e.code
     except Exception as e:
         return False, "No se pudo conectar con Red de Promotores (%s)" % type(e).__name__
+
+
+def marcar(vehiculo_id):
+    """Anota la unidad para reenviarla a la Red al terminar el request (si está compartida)."""
+    try:
+        g.setdefault("red_promotores_pendientes", set()).add(int(vehiculo_id))
+    except (RuntimeError, TypeError, ValueError):
+        pass
+
+
+def enviar_en_segundo_plano(payload):
+    """Envía sin demorar la pantalla del usuario (la Red descarga las fotos y puede tardar)."""
+    def _trabajo():
+        ok, r = enviar(payload)
+        if not ok:
+            print("[red_promotores] sync %s: %s" % (payload.get("ref_externa"), r), flush=True)
+    threading.Thread(target=_trabajo, daemon=True).start()

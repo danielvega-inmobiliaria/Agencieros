@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 
 from database import query, execute, obtener_catalogo
+from utils import red_promotores
 
 bp = Blueprint("financiacion", __name__, url_prefix="/financiacion")
 
@@ -573,6 +574,7 @@ def nuevo():
                    fecha_venta = ?, vendido_por_id = ?, updated_at = datetime('now') WHERE id = ?""",
                 (precio_venta, str(fecha_venta), session.get("usuario_id"), vehiculo_id),
             )
+            red_promotores.marcar(vehiculo_id)
             from routes.red import cerrar_red_de_vehiculo
             cerrar_red_de_vehiculo(vehiculo_id)
 
@@ -886,6 +888,7 @@ def guardar():
                 "UPDATE vehiculos SET estado = 'senado', senado_por_id = ?, updated_at = datetime('now') WHERE id = ?",
                 (session.get("usuario_id"), vehiculo_id),
             )
+            red_promotores.marcar(vehiculo_id)
 
     # `permuta_valor` es siempre el número final que se cargó en el campo
     # (sugerido por la tasación, editable/redondeable), tasación de por
@@ -1025,6 +1028,7 @@ def completar_datos(financiacion_id):
                 "UPDATE vehiculos SET estado = 'disponible', updated_at = datetime('now') WHERE id = ?",
                 (fin["vehiculo_id"],),
             )
+            red_promotores.marcar(fin["vehiculo_id"])
 
     if nuevo_vehiculo_id:
         vehiculo = query("SELECT * FROM vehiculos WHERE id = ?", (nuevo_vehiculo_id,), one=True)
@@ -1033,6 +1037,7 @@ def completar_datos(financiacion_id):
                 "UPDATE vehiculos SET estado = 'senado', senado_por_id = ?, updated_at = datetime('now') WHERE id = ?",
                 (session.get("usuario_id"), nuevo_vehiculo_id),
             )
+            red_promotores.marcar(nuevo_vehiculo_id)
 
     try:
         precio_venta = float(f.get("precio_venta")) if f.get("precio_venta") else None
@@ -1165,6 +1170,7 @@ def eliminar(financiacion_id):
                 "UPDATE vehiculos SET estado = 'disponible', updated_at = datetime('now') WHERE id = ?",
                 (fin["vehiculo_id"],),
             )
+            red_promotores.marcar(fin["vehiculo_id"])
 
     execute("DELETE FROM garantes WHERE financiacion_id = ?", (financiacion_id,))
     execute("DELETE FROM financiacion_cuotas WHERE financiacion_id = ?", (financiacion_id,))
@@ -1201,6 +1207,7 @@ def confirmar_venta(financiacion_id):
                fecha_venta = ?, vendido_por_id = ?, updated_at = datetime('now') WHERE id = ?""",
             (precio_venta, str(date.today()), session.get("usuario_id"), fin["vehiculo_id"]),
         )
+        red_promotores.marcar(fin["vehiculo_id"])
         from routes.red import cerrar_red_de_vehiculo
         cerrar_red_de_vehiculo(fin["vehiculo_id"])
     execute("UPDATE financiaciones SET estado = 'activo' WHERE id = ?", (financiacion_id,))
@@ -1236,6 +1243,7 @@ def cancelar_reserva(financiacion_id):
                 "UPDATE vehiculos SET estado = 'disponible', updated_at = datetime('now') WHERE id = ?",
                 (fin["vehiculo_id"],),
             )
+            red_promotores.marcar(fin["vehiculo_id"])
 
     hoy = str(date.today())
     nota = f"[Reserva cancelada {hoy}]"

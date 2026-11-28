@@ -3,7 +3,7 @@ import re
 import uuid
 from datetime import date
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort, session, g
 from urllib.parse import quote_plus
 
 from utils.permisos import es_vendedor, nombres_usuarios
@@ -1417,16 +1417,9 @@ def promotores(vehiculo_id):
     if vehiculo["estado"] != "disponible":
         flash("Solo se pueden compartir con promotores unidades disponibles.", "error")
         return redirect(destino)
-    datos = _datos_ficha(vehiculo)
-    titulo = " ".join(str(x) for x in [vehiculo["marca"], vehiculo["modelo"], vehiculo["version"], vehiculo["anio"]] if x)
-    km = f"{int(vehiculo['km']):,} km".replace(",", ".") if vehiculo["km"] else ""
-    desc = " · ".join(str(x) for x in [km, vehiculo["combustible"], vehiculo["caja"]] if x)
-    equip = " · ".join((datos.get("equipamiento") or [])[:5])
-    fotos = [_url_publica(f["url"]) if f["url"].startswith("/") else f["url"] for f in datos.get("fotos") or []]
-    ok, r = rp.enviar({
-        "ref_externa": str(vehiculo_id), "titulo": titulo, "precio": vehiculo["valor_publicado"] or 0,
-        "descripcion": " · ".join(x for x in [desc, equip] if x)[:500], "fotos": fotos[:10], "activo": True,
-    })
+    payload = _payload_red(vehiculo)
+    fotos = payload["fotos"]
+    ok, r = rp.enviar(payload)
     if ok:
         execute("UPDATE vehiculos SET red_promotores = 1 WHERE id = ?", (vehiculo_id,))
         extra = "" if r.get("fotos") or not fotos else " (las fotos no se pudieron enviar: volvé a intentar)"
@@ -1434,6 +1427,50 @@ def promotores(vehiculo_id):
     else:
         flash(r, "error")
     return redirect(destino)
+
+
+def _payload_red(vehiculo):
+    """Datos que se mandan a la Red de Promotores (costo = compra + gastos, solo para la cuenta del comercio)."""
+    datos = _datos_ficha(vehiculo)
+    titulo = " ".join(str(x) for x in [vehiculo["marca"], vehiculo["modelo"], vehiculo["version"], vehiculo["anio"]] if x)
+    km = f"{int(vehiculo['km']):,} km".replace(",", ".") if vehiculo["km"] else ""
+    desc = " · ".join(str(x) for x in [km, vehiculo["combustible"], vehiculo["caja"]] if x)
+    equip = " · ".join((datos.get("equipamiento") or [])[:5])
+    fotos = [_url_publica(f["url"]) if f["url"].startswith("/") else f["url"] for f in datos.get("fotos") or []]
+    costo = (vehiculo["valor_compra"] or 0) + (vehiculo["gastos"] or 0)
+    return {
+        "ref_externa": str(vehiculo["id"]), "titulo": titulo, "precio": vehiculo["valor_publicado"] or 0,
+        "descripcion": " · ".join(x for x in [desc, equip] if x)[:500], "fotos": fotos[:10], "activo": True,
+        "costo": costo or None,
+    }
+
+
+@bp.after_app_request
+def _sincronizar_red_promotores(respuesta):
+    """Reenvía a la Red de Promotores las unidades compartidas que cambiaron en este request:
+    cualquier POST del stock sobre una unidad, más las marcadas con red_promotores.marcar()
+    (señas y ventas desde Financiación). No disponible = se quita de la Red."""
+    try:
+        from utils import red_promotores as rp
+        ids = set(g.pop("red_promotores_pendientes", None) or ())
+        if request.method == "POST" and request.blueprint == "stock" and request.endpoint != "stock.promotores":
+            vid = (request.view_args or {}).get("vehiculo_id")
+            if vid:
+                ids.add(int(vid))
+            elif request.endpoint == "stock.sincronizar":  # la sincronización desde STOCK puede cambiar precios
+                ids.update(r["id"] for r in query(
+                    "SELECT id FROM vehiculos WHERE red_promotores = 1 AND agencia_id = ?", (session.get("agencia_id"),)))
+        for vid in ids:
+            v = query("SELECT * FROM vehiculos WHERE id = ?", (vid,), one=True)
+            if not v or not v["red_promotores"] or not rp.habilitado(v["agencia_id"] or 1):
+                continue
+            if v["estado"] == "disponible":
+                rp.enviar_en_segundo_plano(_payload_red(v))
+            else:
+                rp.enviar_en_segundo_plano({"ref_externa": str(vid), "activo": False})
+    except Exception as e:  # nunca romper la pantalla por la sincronización
+        current_app.logger.warning("[red_promotores] no se pudo sincronizar: %s", e)
+    return respuesta
 
 
 def _volver_seguro(destino, por_defecto):
